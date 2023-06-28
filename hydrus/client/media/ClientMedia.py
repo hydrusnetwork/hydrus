@@ -1391,7 +1391,7 @@ class MediaCollection( MediaList, Media ):
         self._RecalcArchiveInbox()
         
         self._size = sum( [ media.GetSize() for media in self._sorted_media ] )
-        self._size_definite = not False in ( media.IsSizeDefinite() for media in self._sorted_media )
+        self._size_definite = False not in ( media.IsSizeDefinite() for media in self._sorted_media )
         
         duration_sum = sum( [ media.GetDurationMS() for media in self._sorted_media if media.HasDuration() ] )
         
@@ -1838,14 +1838,14 @@ class MediaSingleton( Media ):
                 
                 timestamp = timestamps_manager.GetDeletedTimestamp( local_file_service.GetServiceKey() )
                 
-                l = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) )
+                line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) )
                 
                 if len( deleted_local_file_services ) == 1:
                     
-                    l = '{} ({})'.format( l, local_file_deletion_reason )
+                    line = f'{line} ({local_file_deletion_reason})'
                     
                 
-                lines.append( ( True, l ) )
+                lines.append( ( True, line ) )
                 
             
             if len( deleted_local_file_services ) > 1:
@@ -2235,7 +2235,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         
         if sort_metatype == 'system':
             
-            if sort_data in ( CC.SORT_FILES_BY_MIME, CC.SORT_FILES_BY_RANDOM, CC.SORT_FILES_BY_HASH ):
+            if sort_data in ( CC.SORT_FILES_BY_MIME, CC.SORT_FILES_BY_RANDOM ):
                 
                 return False
                 
@@ -2583,7 +2583,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
-            sort_string_lookup[ CC.SORT_FILES_BY_HASH ] = ( 'hash', 'hash', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_HASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first', CC.SORT_ASC )

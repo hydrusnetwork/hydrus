@@ -1,8 +1,9 @@
+import collections.abc
 import os
 import re
 import typing
 
-from qtpy import QtCore as QC, QtWidgets as QW
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
@@ -49,7 +50,7 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
     for row in rows:
         
-        if isinstance( row, typing.Collection ) and len( row ) == 2:
+        if isinstance( row, HydrusData.LIST_LIKE_COLLECTION ) and len( row ) == 2:
             
             ( text, control ) = row
             

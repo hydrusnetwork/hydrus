@@ -1267,6 +1267,13 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         system_predicates = file_search_context.GetSystemPredicates()
         
+        system_limit = system_predicates.GetLimit( apply_implicit_limit = apply_implicit_limit )
+        
+        if system_limit == 0:
+            
+            return []
+            
+        
         location_context = file_search_context.GetLocationContext()
         tag_context = file_search_context.GetTagContext()
         
@@ -2277,9 +2284,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
-        limit = system_predicates.GetLimit( apply_implicit_limit = apply_implicit_limit )
-        
-        we_are_applying_limit = limit is not None and limit < len( query_hash_ids )
+        we_are_applying_limit = system_limit is not None and system_limit < len( query_hash_ids )
         
         if we_are_applying_limit and limit_sort_by is not None and sort_by is None:
             
@@ -2299,11 +2304,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if not did_sort:
                 
-                query_hash_ids = random.sample( query_hash_ids, limit )
+                query_hash_ids = random.sample( query_hash_ids, system_limit )
                 
             else:
                 
-                query_hash_ids = query_hash_ids[:limit]
+                query_hash_ids = query_hash_ids[:system_limit]
                 
             
         
@@ -2589,7 +2594,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 hash_ids = sorted( hash_ids, key = lambda hash_id: hash_ids_to_hex_hashes[ hash_id ] )
                 
-                did_sort = True
+                reverse = sort_order == CC.SORT_DESC
                 
             
         

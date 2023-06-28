@@ -254,7 +254,7 @@ def GetUPnPMappingsParseResponse( stdout ):
         
         while i < len( lines ):
             
-            if not lines[ i ][0] in ( ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ): break
+            if lines[ i ][0] not in ( ' ', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' ): break
             
             data_lines.append( lines[ i ] )
             

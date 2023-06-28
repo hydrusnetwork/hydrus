@@ -14,11 +14,14 @@ from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
+from hydrus.core.interfaces import HydrusControllerInterface
 from hydrus.core.networking import HydrusNATPunch
 
-class HydrusController( object ):
+class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
     
     def __init__( self, db_dir ):
+        
+        HydrusControllerInterface.HydrusControllerInterface.__init__( self )
         
         HG.controller = self
         

@@ -27,7 +27,6 @@ from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientAPI
-from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons
 from hydrus.client import ClientDefaults
@@ -38,6 +37,7 @@ from hydrus.client import ClientOptions
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
+from hydrus.client.caches import ClientCaches
 from hydrus.client.db import ClientDB
 from hydrus.client.gui import ClientGUI
 from hydrus.client.gui import ClientGUIDialogs
@@ -2283,14 +2283,23 @@ class Controller( HydrusController.HydrusController ):
             
         elif data_type == 'bmp':
             
-            media = data
+            ( media, optional_target_resolution_tuple ) = data
             
             image_renderer = self.GetCache( 'images' ).GetImageRenderer( media )
             
             def CopyToClipboard():
                 
+                if optional_target_resolution_tuple is None:
+                    
+                    target_resolution = None
+                    
+                else:
+                    
+                    target_resolution = QC.QSize( optional_target_resolution_tuple[0], optional_target_resolution_tuple[1] )
+                    
+                
                 # this is faster than qpixmap, which converts to a qimage anyway
-                qt_image = image_renderer.GetQtImage().copy()
+                qt_image = image_renderer.GetQtImage( target_resolution = target_resolution ).copy()
                 
                 QW.QApplication.clipboard().setImage( qt_image )
                 

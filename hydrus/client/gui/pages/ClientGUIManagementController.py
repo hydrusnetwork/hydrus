@@ -830,11 +830,21 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
         
         if name in self._variables:
             
-            if type( value ) == type( self._variables[ name ] ):
+            existing_value = self._variables[ name ]
+            
+            if isinstance( value, type( existing_value ) ):
                 
                 if isinstance( value, HydrusSerialisable.SerialisableBase ):
                     
-                    if value.GetSerialisableTuple() == self._variables[ name ].GetSerialisableTuple():
+                    if value is existing_value:
+                        
+                        # assume that it was changed and we can't detect that
+                        self._SerialisableChangeMade()
+                        
+                        return
+                        
+                    
+                    if value.GetSerialisableTuple() == existing_value.GetSerialisableTuple():
                         
                         return
                         

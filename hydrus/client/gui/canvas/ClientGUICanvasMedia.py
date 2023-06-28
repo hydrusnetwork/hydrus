@@ -35,6 +35,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
+from hydrus.client.gui.canvas import ClientGUIMediaVolume
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
 
@@ -2975,6 +2976,9 @@ class QtMediaPlayer( QW.QWidget ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
         
+        HG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
+        HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
+        
     
     def _MediaStatusChanged( self, status ):
         
@@ -3211,6 +3215,9 @@ class QtMediaPlayer( QW.QWidget ):
             self._media_player.play()
             
         
+        self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) )
+        self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+        
     
     def TryToUnload( self ):
         
@@ -3219,6 +3226,16 @@ class QtMediaPlayer( QW.QWidget ):
             
             self._media_player.setSource( '' )
             
+        
+    
+    def UpdateAudioMute( self ):
+        
+        self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+        
+
+    def UpdateAudioVolume( self ):
+        
+        self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) )
         
     
 

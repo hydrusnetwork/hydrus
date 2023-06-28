@@ -1,5 +1,4 @@
 import bisect
-import collections
 import os
 import queue
 import random
@@ -13,6 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusTime
+from hydrus.core.interfaces import HydrusThreadingInterface
 
 NEXT_THREAD_CLEAROUT = 0
 
@@ -401,7 +401,7 @@ class THREADCallToThread( DAEMON ):
                     
                     try:
                         
-                        ( callable, args, kwargs ) = self._queue.get( 1.0 )
+                        ( callable, args, kwargs ) = self._queue.get( timeout = 1.0 )
                         
                     except queue.Empty:
                         
@@ -524,7 +524,7 @@ class JobScheduler( threading.Thread ):
             
         
     
-    def _SortWaiting( self ) -> bool:
+    def _SortWaiting( self ):
         
         # sort the waiting jobs in ascending order of expected work time
         
@@ -716,11 +716,14 @@ class JobScheduler( threading.Thread ):
             
         
     
-class SchedulableJob( object ):
+
+class SchedulableJob( HydrusThreadingInterface.SchedulableJobInterface ):
     
     PRETTY_CLASS_NAME = 'job base'
     
     def __init__( self, controller, scheduler: JobScheduler, initial_delay, work_callable ):
+        
+        HydrusThreadingInterface.SchedulableJobInterface.__init__( self )
         
         self._controller = controller
         self._scheduler = scheduler
@@ -769,6 +772,13 @@ class SchedulableJob( object ):
             
         
         return self._currently_working.is_set()
+        
+    
+    def Delay( self, delay ) -> None:
+        
+        self._next_work_time = HydrusTime.GetNowFloat() + delay
+        
+        self._scheduler.WorkTimesHaveChanged()
         
     
     def GetDueString( self ) -> str:
@@ -931,6 +941,7 @@ class SchedulableJob( object ):
             
         
     
+
 class SingleJob( SchedulableJob ):
     
     PRETTY_CLASS_NAME = 'single job'
@@ -954,6 +965,7 @@ class SingleJob( SchedulableJob ):
         self._work_complete.set()
         
     
+
 class RepeatingJob( SchedulableJob ):
     
     PRETTY_CLASS_NAME = 'repeating job'
@@ -972,18 +984,6 @@ class RepeatingJob( SchedulableJob ):
         SchedulableJob.Cancel( self )
         
         self._stop_repeating.set()
-        
-    
-    def Delay( self, delay ) -> None:
-        
-        self._next_work_time = HydrusTime.GetNowFloat() + delay
-        
-        self._scheduler.WorkTimesHaveChanged()
-        
-    
-    def IsRepeatingWorkFinished( self ) -> bool:
-        
-        return self._stop_repeating.is_set()
         
     
     def StartWork( self ) -> None:

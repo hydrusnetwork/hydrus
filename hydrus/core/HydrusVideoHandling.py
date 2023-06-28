@@ -673,7 +673,7 @@ def ParseFFMPEGDuration( lines ):
     try:
         
         # had a vid with 'Duration:' in title, ha ha, so now a regex
-        line = [ l for l in lines if re.search( r'^\s*Duration:', l ) is not None ][0]
+        line = [ line for line in lines if re.search( r'^\s*Duration:', line ) is not None ][0]
         
         if 'Duration: N/A' in line:
             
@@ -929,7 +929,7 @@ def ParseFFMPEGMimeText( lines ):
     
     try:
         
-        ( input_line, ) = [ l for l in lines if l.startswith( 'Input #0' ) ]
+        ( input_line, ) = [ line for line in lines if line.startswith( 'Input #0' ) ]
         
         # Input #0, matroska, webm, from 'm.mkv':
         
@@ -1014,7 +1014,7 @@ def ParseFFMPEGVideoLine( lines, png_ok = False ) -> str:
     
     # get the output line that speaks about video
     # the ^\sStream is to exclude the 'title' line, when it exists, includes the string 'Video: ', ha ha
-    lines_video = [ l for l in lines if re.search( r'^\s*Stream', l ) is not None and 'Video: ' in l and True not in ( 'Video: {}'.format( bad_video_format ) in l for bad_video_format in bad_video_formats ) ] # mp3 says it has a 'png' video stream
+    lines_video = [ line for line in lines if re.search( r'^\s*Stream', line ) is not None and 'Video: ' in line and True not in ( 'Video: {}'.format( bad_video_format ) in line for bad_video_format in bad_video_formats ) ] # mp3 says it has a 'png' video stream
     
     if len( lines_video ) == 0:
         

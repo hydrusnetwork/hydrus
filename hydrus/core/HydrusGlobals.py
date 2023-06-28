@@ -1,10 +1,13 @@
-import collections
 import threading
+import typing
 
-controller = None
-client_controller = None
-server_controller = None
-test_controller = None
+from hydrus.core.interfaces import HydrusControllerInterface
+
+controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
+client_controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
+server_controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
+test_controller: typing.Optional[ HydrusControllerInterface.HydrusControllerInterface ] = None
+
 started_shutdown = False
 view_shutdown = False
 model_shutdown = False

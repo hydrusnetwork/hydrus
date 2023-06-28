@@ -1154,41 +1154,43 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _ClearOrphanFiles( self ):
         
-        text = 'This job will iterate through every file in your database\'s file storage, removing any it does not expect to be there. It may take some time.'
+        text = 'This job will iterate through every file in your database\'s file storage, extracting any it does not expect to be there. This is particularly useful for \'re-syncing\' your file storage to what it should be, and is particularly useful if you are marrying an older/newer database with a newer/older file storage.'
         text += os.linesep * 2
-        text += 'Files and thumbnails will be inaccessible while this occurs, so it is best to leave the client alone until it is done.'
+        text += 'You can choose to move the orphans in your file directories somewhere or delete them. Orphans in your thumbnail directories will always be deleted.'
+        text += os.linesep * 2
+        text += 'Files and thumbnails will be inaccessible while this runs, so it is best to leave the client alone until it is done. It may take some time.'
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'get started', no_label = 'forget it' )
+        yes_tuples = []
         
-        if result == QW.QDialog.Accepted:
+        yes_tuples.append( ( 'move them somewhere', 'move' ) )
+        yes_tuples.append( ( 'delete them', 'delete' ) )
+        
+        try:
             
-            text = 'What would you like to do with the orphaned files? Note that all orphaned thumbnails will be deleted.'
+            result = ClientGUIDialogsQuick.GetYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' )
             
-            client_files_manager = self._controller.client_files_manager
+        except HydrusExceptions.CancelledException:
             
-            ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose what do to with the orphans.', yes_label = 'move them somewhere', no_label = 'delete them', check_for_cancelled = True )
+            return
             
-            if was_cancelled:
+        
+        client_files_manager = self._controller.client_files_manager
+        
+        if result == 'move':
+            
+            with QP.DirDialog( self, 'Select location.' ) as dlg_3:
                 
-                return
-                
-            
-            if result == QW.QDialog.Accepted:
-                
-                with QP.DirDialog( self, 'Select location.' ) as dlg_3:
+                if dlg_3.exec() == QW.QDialog.Accepted:
                     
-                    if dlg_3.exec() == QW.QDialog.Accepted:
-                        
-                        path = dlg_3.GetPath()
-                        
-                        self._controller.CallToThread( client_files_manager.ClearOrphans, path )
-                        
+                    path = dlg_3.GetPath()
+                    
+                    self._controller.CallToThread( client_files_manager.ClearOrphans, path )
                     
                 
-            elif result == QW.QDialog.Rejected:
-                
-                self._controller.CallToThread( client_files_manager.ClearOrphans )
-                
+            
+        elif result == 'delete':
+            
+            self._controller.CallToThread( client_files_manager.ClearOrphans )
             
         
     

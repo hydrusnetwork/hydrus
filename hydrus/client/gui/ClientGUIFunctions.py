@@ -269,7 +269,7 @@ def IsQtAncestor( child: QW.QWidget, ancestor: QW.QWidget, through_tlws = False 
     
     if through_tlws:
         
-        while not parent is None:
+        while parent is not None:
             
             if parent == ancestor:
                 

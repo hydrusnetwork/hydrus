@@ -29,11 +29,12 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 * [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): a booru client for Android that can talk to hydrus
 * [Anime Boxes](https://www.animebox.es/): a booru browser, now supports adding your client as a Hydrus Server
 * [FlipFlip](https://ififfy.github.io/flipflip/#/): an advanced slideshow interface, now supports hydrus as a source
+* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru neural network tagging for Hydrus
+* [Hydrus Video Deduplicator](https://github.com/appleappleapplenanner/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter 
+* [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser
+* [tagrank](https://github.com/matjojo/tagrank): Shows you comparison images and cleverly ranks your favourite tag.
+* [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations
 * [Send to Hydrus](https://github.com/Wyrrrd/send-to-hydrus): send URLs from your Android device to your client
 * [Iwara-Hydrus](https://github.com/GoAwayNow/Iwara-Hydrus): a userscript to simplify sending Iwara videos to Hydrus Network
-* [tagrank](https://github.com/matjojo/tagrank): Shows you comparison images and cleverly ranks your favourite tag.
-* [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser
-* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru neural network tagging for Hydrus
-* [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations
 * [dolphin-hydrus-actions](https://gitgud.io/prkc/dolphin-hydrus-actions): Adds Hydrus right-click context menu actions to Dolphin file manager.
 * [more projects on github](https://github.com/stars/hydrusnetwork/lists/hydrus-related-projects)

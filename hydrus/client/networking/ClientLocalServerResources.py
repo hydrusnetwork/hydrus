@@ -2026,7 +2026,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                         
                         tag = tag_item
                         
-                    elif isinstance( tag_item, collections.abc.Collection ) and len( tag_item ) == 2:
+                    elif isinstance( tag_item, HydrusData.LIST_LIKE_COLLECTION ) and len( tag_item ) == 2:
                         
                         ( tag, reason ) = tag_item
                         

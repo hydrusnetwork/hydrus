@@ -691,6 +691,15 @@ def IntelligentMassIntersect( sets_to_reduce ):
         return answer
         
     
+
+# ok protip, don't do isinstance( possible_list, collections.abc.Collection ) for a 'list' detection--strings pass it (and sometimes with infinite recursion) lol!
+LIST_LIKE_COLLECTION = typing.Union[
+    typing.Tuple,
+    typing.List,
+    typing.Set,
+    typing.FrozenSet
+]
+
 def IsAlreadyRunning( db_path, instance ):
     
     path = os.path.join( db_path, instance + '_running' )

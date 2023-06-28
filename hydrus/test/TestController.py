@@ -1,7 +1,6 @@
 import collections
 import os
 import threading
-import collections
 import tempfile
 import time
 import traceback
@@ -19,10 +18,8 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusThreading
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientAPI
-from hydrus.client import ClientCaches
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
@@ -30,6 +27,7 @@ from hydrus.client import ClientOptions
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
+from hydrus.client.caches import ClientCaches
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui.lists import ClientGUIListManager

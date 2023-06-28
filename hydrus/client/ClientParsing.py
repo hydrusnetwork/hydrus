@@ -587,7 +587,7 @@ def GetTitleFromAllParseResults( all_parse_results ):
 def GetHTTPHeadersFromParseResults( parse_results ):
     
     headers = {}
-        
+    
     for ( ( name, content_type, additional_info ), parsed_text ) in parse_results:
         
         if content_type == HC.CONTENT_TYPE_HTTP_HEADERS:

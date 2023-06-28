@@ -2993,17 +2993,17 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             if self._service.GetServiceType() == HC.TAG_REPOSITORY:
                 
-                l = HC.TAG_REPOSITORY_SERVICE_INFO_TYPES
+                service_info_types = HC.TAG_REPOSITORY_SERVICE_INFO_TYPES
                 
             else:
                 
-                l = HC.FILE_REPOSITORY_SERVICE_INFO_TYPES
+                service_info_types = HC.FILE_REPOSITORY_SERVICE_INFO_TYPES
                 
             
             message = 'Note that num file hashes and tags here include deleted content so will likely not line up with your review services value, which is only for current content.'
             message += os.linesep * 2
             
-            tuples = [ ( HC.service_info_enum_str_lookup[ info_type ], HydrusData.ToHumanInt( service_info_dict[ info_type ] ) ) for info_type in l if info_type in service_info_dict ]
+            tuples = [ ( HC.service_info_enum_str_lookup[ info_type ], HydrusData.ToHumanInt( service_info_dict[ info_type ] ) ) for info_type in service_info_types if info_type in service_info_dict ]
             string_rows = [ '{}: {}'.format( info_type, info ) for ( info_type, info ) in tuples ]
             
             message += os.linesep.join( string_rows )

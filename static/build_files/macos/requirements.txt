@@ -23,9 +23,12 @@ Twisted>=20.3.0
 
 opencv-python-headless==4.5.5.64
 python-mpv==1.0.3
-QtPy==2.2.1
 requests==2.31.0
-setuptools==65.5.1
 
 zope==5.5.0
+
+QtPy==2.3.0
 PyQt6==6.4.1
+PyQt6-Qt6==6.5.0
+
+setuptools==65.5.1

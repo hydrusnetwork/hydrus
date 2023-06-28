@@ -103,7 +103,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
                     
                     label = selectable_media_page.GetNameForMenu()
                     
-                    if not query in label:
+                    if query not in label:
                         
                         continue
                         
@@ -213,7 +213,7 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
                     
                 else:
                     
-                    if not query in action.text() and not query in actionText:
+                    if query not in action.text() and query not in actionText:
                         
                         continue
                         
@@ -341,7 +341,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
                     
                 else:
                     
-                    if not query in action.text() and not query in actionText:
+                    if query not in action.text() and query not in actionText:
                         
                         continue
                     
@@ -379,4 +379,3 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         return str() #TODO fill this in
         
 # TODO: provider for page tab right click menu actions?
- 

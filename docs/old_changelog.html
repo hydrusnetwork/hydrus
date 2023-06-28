@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_533"><a href="#version_533">version 533</a></h2>
+                    <ul>
+                        <li><h3>macOS App crashes</h3></li>
+                        <li>unfortunately, last week's eventFilter work did not fix the macOS build's crashing--however, thanks to user help, we figured out that it was some half-hidden auxiliary Qt library that updated in the background starting v530 (the excellently named `PyQt6-Qt6` package). the build script is updated to roll back this version and it seems like things are fixed. this particular issue shouldn't happen again. sorry for the trouble, and let me know if there are any new issues! (issue #1379)</li>
+                        <li><h3>misc</h3></li>
+                        <li>the download panels in subscription popup windows are now significantly more responsive. ever since the popup manager was embedded into the gui, popup messages were not doing the 'should I update myself?' test correctly, and their network UI was not being updated without other events like surrounding widgets resizing. I was wondering what was going on here for ages--turns out it was regular stupidity</li>
+                        <li>if an image has width or height > 1024, the 'share->copy' menu now shows a second, 'source lookup' bitmap, with the resolution clipped to 1024x1024</li>
+                        <li>'sort files by hash' can now be sorted asc or desc. this also fixes a bug where it was secretly either sorting asc or desc based on the previous selection. well done to the user who noticed and tested this</li>
+                        <li>if system:limit=0 is in a search, the search is no longer run--it comes back immediately empty. also, the system:limit edit panel now has a minimum value of 1 to dissuade this state</li>
+                        <li>the experimental QtMediaPlayer now initialises with the correct volume/mute and updates on volume/mute events. the scanbar and volume control UI are still hidden behind the OpenGL frame for now, but one step forward</li>
+                        <li>the system that caches media results now hangs on to the most recent 2048 files aggressively for two minutes after initial load. previously, if you refreshed a page of unique files, or did some repeated client api work on files that were not loaded somewhere as thumbs, in the interim periods those media objects were not strictly in non-weak memory anywhere in the client and could have been eligible for clearing out of the cache. now they are a bit more sticky</li>
+                        <li>added some info on editing predicates and the various undocumented click shortcuts the taglist supports (e.g. ctrl+double-left-click) to the 'getting started with searching and sorting' help page</li>
+                        <li>added a link to the Client API help for 'Hydrus Video Deduplicator' (https://github.com/appleappleapplenanner/hydrus-video-deduplicator), which neatly discovers duplicate videos in your client and queues them up in the duplicate filter by marking them as 'potential dupes'</li>
+                        <li><h3>sub-gallery url network parsing gubbins</h3></li>
+                        <li>sub-gallery import objects now get the tags and custom headers that are parsed with them. if the sub-gallery urls are parsed in 'posts' using a subsidiary parser, they only inherit the metadata within their post</li>
+                        <li>sub-gallery import objects now use their parent gallery urls as referral header</li>
+                        <li>sub-gallery import objects now inherit the 'can generate more pages' state of their parents (previously it was always 'yes')</li>
+                        <li>'next page' gallery urls do not get the tags they are parsed with. this behaviour makes a little less sense, and I suspect it _could_ cause various troubles, so I'll wait for more input, bug reports, and a larger cleanup and overhaul of how metadata is managed and passed down from one item to the next in the downloader system</li>
+                        <li>generally speaking, when file and gallery import objects have the opportunity to acquire tags or headers, they'll now add to the existing store rather than replace it. this should mean if they both inherit and parse stuff, it won't all overwrite each other. this is all a giant mess so I have a cleanup overhaul planned</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>if a critical drive error occurs (e.g. running out of space on a storage drive), the popup message saying 'hey everything just got mega-paused' is now a little clearer about what has happened and how to fix it</li>
+                        <li>similarly, the specific 'all watchers are paused'-style messages now specifically state 'network->pause to resume!' to point users to this menu to fix this tricky issue. this has frustrated a couple of newer users before</li>
+                        <li>to reduce confusion, the 'clear orphan files' pre-job now only presents the user one combined dialog</li>
+                        <li>improved how pages test and recognise that they have changes and thus should be saved--it works faster, and a bunch of false negatives should be removed</li>
+                        <li>improved the safety routine that ensures multiple-column list data is read-only</li>
+                        <li>fixed .txt sidecar importers' description labels, which were missing extra text munging</li>
+                        <li>to relieve some latency stress on session load, pages that are loading their initial files in the background now do so in batches of 64 rather than 256</li>
+                        <li>fixed some bad error handling in the master client db update routine</li>
+                        <li>fixed a scatter of linting problems a user found</li>
+                        <li>last week's pixiv parser hotfix is reinforced this week for anyone who got the early 532 release</li>
+                        <li>made some primitive interfaces for the main controller and schedulable job classes and ensured the main hydrusglobals has type hinting for these--now everything that talks to the controller has a _bit_ of an idea what it is actually doing, and as I continue to work on this, we'll get better linting</li>
+                        <li>moved the client DataCache object and its friends to a new 'caches' module and cleaned some of the code</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_532"><a href="#version_532">version 532</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

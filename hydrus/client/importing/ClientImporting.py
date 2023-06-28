@@ -62,7 +62,7 @@ def ConvertAllParseResultsToFileSeeds( all_parse_results, source_url, file_impor
             
             file_seed.SetReferralURL( source_url )
             
-            file_seed.SetRequestHeaders( parsed_request_headers )
+            file_seed.AddRequestHeaders( parsed_request_headers )
             
             file_seed.AddParseResults( parse_results, file_import_options )
             

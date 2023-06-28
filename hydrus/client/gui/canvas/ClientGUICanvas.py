@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
@@ -377,7 +378,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def _CopyBMPToClipboard( self ):
+    def _CopyBMPToClipboard( self, resolution = None ):
         
         copied = False
         
@@ -385,7 +386,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if self._current_media.GetMime() in HC.IMAGES:
                 
-                HG.client_controller.pub( 'clipboard', 'bmp', self._current_media )
+                HG.client_controller.pub( 'clipboard', 'bmp', ( self._current_media, resolution ) )
                 
                 copied = True
                 
@@ -1550,7 +1551,16 @@ class CanvasPanel( Canvas ):
             
             if self._current_media.GetMime() in HC.IMAGES:
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a bmp.', self._CopyBMPToClipboard )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
+
+                ( width, height ) = self._current_media.GetResolution()
+                
+                if width > 1024 or height > 1024:
+                    
+                    ( clip_rect, clipped_res ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( self._current_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'source lookup bitmap ({}x{})'.format( clipped_res[0], clipped_res[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', self._CopyBMPToClipboard, clipped_res )
+                    
                 
 
             ClientGUIMenus.AppendMenuItem( copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )
@@ -4545,7 +4555,16 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self._current_media.GetMime() in HC.IMAGES:
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'image (bitmap)', 'Copy this file to your clipboard as a BMP image.', self._CopyBMPToClipboard )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
+                
+                ( width, height ) = self._current_media.GetResolution()
+                
+                if width > 1024 or height > 1024:
+                    
+                    ( clip_rect, clipped_res ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( self._current_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, 'source lookup bitmap ({}x{})'.format( clipped_res[0], clipped_res[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', self._CopyBMPToClipboard, clipped_res )
+                    
                 
 
             ClientGUIMenus.AppendMenuItem( copy_menu, 'path', 'Copy this file\'s path to your clipboard.', self._CopyPathToClipboard )

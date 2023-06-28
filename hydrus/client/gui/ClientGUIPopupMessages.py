@@ -129,6 +129,7 @@ class PopupMessage( PopupWindow ):
         self._no.hide()
         
         self._network_job_ctrl = ClientGUINetworkJobControl.NetworkJobControl( self )
+        self._network_job_ctrl.SetShouldUpdateFreely( True )
         self._network_job_ctrl.hide()
         self._time_network_job_disappeared = 0
         

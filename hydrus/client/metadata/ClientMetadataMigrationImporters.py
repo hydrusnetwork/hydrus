@@ -766,7 +766,7 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
             full_munge_text = ''
             
         
-        return 'from .txt sidecar'.format( full_munge_text )
+        return 'from .txt sidecar{}'.format( full_munge_text )
         
     
 

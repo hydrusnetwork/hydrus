@@ -67,6 +67,21 @@ This is particularly useful if you have a number of files with commonly structur
 
 In this case, selecting the `title:cool pic*` predicate will return all three images in the same search, where you can conveniently give them some more-easily searched tags like `series:cool pic` and `page:1`, `page:2`, `page:3`.
 
+### Editing Predicates
+
+You can edit any selected 'active' search predicates by either its <kbd>Right-Click</kbd> menu or through <kbd>Shift+Double-Left-Click</kbd> on the selection. For simple tags, this means just changing the text (and, say, adding/removing a leading hyphen for negation/inclusion), but any 'system' predicate can be fully edited with its original panel. If you entered 'system:filesize < 200KB' and want to make it a little bigger, don't delete and re-add--just edit the existing one in place.
+
+### Other Shortcuts
+
+These will eventually be migrated to the shortcut system where they will be more visible and changeable, but for now:
+
+- <kbd>Left-Click</kbd> on any taglist is draggable, if you want to select multiple tags quickly.
+- <kbd>Shift+Left-Click</kbd> across any taglist will do a multi-select. This click is also draggable.
+- <kbd>Ctrl+Left-Click</kbd> on any taglist will add to or remove from the selection. This is draggable, and if you start on a 'remove', the drag will be a 'remove' drag. Play with it--you'll see how it works.
+- <kbd>Double-Left-Click</kbd> on one or more tags in the 'selection tags' box moves them to the active search box. Doing the same on the active search box removes them.
+- <kbd>Ctrl+Double-Left-Click</kbd> on one or more tags in the 'selection tags' box will add their negation (i.e. '-skirt').
+- <kbd>Shift+Double-Left-Click</kbd> on more than one tags in the 'selection tags' box will add their 'OR' to the active search box. What's an OR? Well:
+
 ## OR searching
 Searches find files that match every search 'predicate' in the list (it is an **AND** search), which makes it difficult to search for files that include one **OR** another tag. For example the query `red eyes` **AND** `green eyes` (aka what you get if you enter each tag by itself) will only find files that has both tags. While the query `red eyes` **OR** `green eyes` will present you with files that are tagged with red eyes or green eyes, or both.
 

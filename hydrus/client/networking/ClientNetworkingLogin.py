@@ -1090,7 +1090,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         self._login_steps = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_login_steps )
         
         # convert lists to tups for listctrl data hashing
-        self._example_domains_info = [ tuple( l ) for l in self._example_domains_info ]
+        self._example_domains_info = [ tuple( list_of_info ) for list_of_info in self._example_domains_info ]
         
     
     def _UpdateSerialisableInfo( self, version, old_serialisable_info ):

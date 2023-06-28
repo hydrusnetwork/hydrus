@@ -1,6 +1,7 @@
 #This file is licensed under the Do What the Fuck You Want To Public License aka WTFPL
 
 import os
+import typing
 
 import qtpy
 
@@ -2185,16 +2186,18 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
             
         
     
-def ListsToTuples( l ): # Since lists are not hashable, we need to (recursively) convert lists to tuples in data that is to be added to BetterListCtrl
+
+def ListsToTuples( potentially_nested_lists ):
     
-    if isinstance( l, list ) or isinstance( l, tuple ):
-
-        return tuple( map( ListsToTuples, l ) )
-
+    if isinstance( potentially_nested_lists, HydrusData.LIST_LIKE_COLLECTION ):
+        
+        return tuple( map( ListsToTuples, potentially_nested_lists ) )
+        
     else:
         
-        return l
-
+        return potentially_nested_lists
+        
+    
 
 class WidgetEventFilter ( QC.QObject ):
     
@@ -2216,7 +2219,7 @@ class WidgetEventFilter ( QC.QObject ):
 
     def _ExecuteCallbacks( self, event_name, event ):
         
-        if not event_name in self._callback_map: return
+        if event_name not in self._callback_map: return
         
         event_killed = False
         

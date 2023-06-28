@@ -2,6 +2,7 @@ import os
 import numpy
 import threading
 import time
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -18,6 +19,7 @@ from hydrus.core import HydrusVideoHandling
 from hydrus.client import ClientFiles
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientVideoHandling
+from hydrus.client.caches import ClientCachesBase
 
 def FrameIndexOutOfRange( index, range_start, range_end ):
     
@@ -68,9 +70,11 @@ def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
     
     return HydrusBitmap( pil_image.tobytes(), pil_image.size, depth, compressed = compressed )
     
-class ImageRenderer( object ):
+class ImageRenderer( ClientCachesBase.CacheableObject ):
     
     def __init__( self, media, this_is_for_metadata_alone = False ):
+        
+        ClientCachesBase.CacheableObject.__init__( self )
         
         self._numpy_image = None
         
@@ -290,7 +294,7 @@ class ImageRenderer( object ):
     
     def GetResolution( self ): return self._resolution
     
-    def GetQtImage( self, clip_rect = None, target_resolution = None ):
+    def GetQtImage( self, clip_rect: typing.Optional[ QC.QRect ] = None, target_resolution: typing.Optional[ QC.QSize ] = None ):
         
         if clip_rect is None:
             
@@ -408,9 +412,11 @@ class ImageRenderer( object ):
         return self._numpy_image is not None
         
     
-class ImageTile( object ):
+class ImageTile( ClientCachesBase.CacheableObject ):
     
     def __init__( self, hash: bytes, clip_rect: QC.QRect, qt_pixmap: QG.QPixmap ):
+        
+        ClientCachesBase.CacheableObject.__init__( self )
         
         self.hash = hash
         self.clip_rect = clip_rect
@@ -972,9 +978,11 @@ class RasterContainerVideo( RasterContainer ):
         self._stop = True
         
     
-class HydrusBitmap( object ):
+class HydrusBitmap( ClientCachesBase.CacheableObject ):
     
     def __init__( self, data, size, depth, compressed = True ):
+        
+        ClientCachesBase.CacheableObject.__init__( self )
         
         self._compressed = compressed
         

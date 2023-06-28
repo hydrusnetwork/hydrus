@@ -171,14 +171,6 @@ class GIFRenderer( object ):
         
         self._pil_global_palette = self._pil_image.palette
         
-        # TODO: u wot mate, why is this 'and False'? I assume this is preservation/transferrance of frame/image metadata, but it's been off for years probably, so...
-        if self._pil_global_palette is not None and False:
-            
-            self._pil_dirty = self._pil_image.palette.dirty
-            self._pil_mode = self._pil_image.palette.mode
-            self._pil_rawmode = self._pil_image.palette.rawmode
-            
-        
         self._next_render_index = 0
         self._last_frame = None
         

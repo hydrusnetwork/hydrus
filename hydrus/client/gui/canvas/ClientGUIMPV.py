@@ -1,4 +1,3 @@
-import functools
 import locale
 import os
 import traceback
@@ -12,7 +11,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -21,6 +19,7 @@ from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.canvas import ClientGUIMediaVolume
 from hydrus.client.media import ClientMedia
 
 mpv_failed_reason = 'MPV seems ok!'
@@ -284,46 +283,6 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
         return ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
-        
-    
-    def _GetCorrectCurrentMute( self ):
-        
-        ( global_mute_option_name, global_volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
-        
-        mute_option_name = global_mute_option_name
-        
-        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
-            
-            ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
-            
-        elif self._canvas_type == CC.CANVAS_PREVIEW:
-            
-            ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_PREVIEW ]
-            
-        
-        return HG.client_controller.new_options.GetBoolean( mute_option_name ) or HG.client_controller.new_options.GetBoolean( global_mute_option_name )
-        
-    
-    def _GetCorrectCurrentVolume( self ):
-        
-        ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_GLOBAL ]
-        
-        if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
-            
-            if HG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
-                
-                ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
-                
-            
-        elif self._canvas_type == CC.CANVAS_PREVIEW:
-            
-            if HG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
-                
-                ( mute_option_name, volume_option_name ) = ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_PREVIEW ]
-                
-            
-        
-        return HG.client_controller.new_options.GetInteger( volume_option_name )
         
     
     def _InitialiseMPVCallbacks( self ):
@@ -774,8 +733,8 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 HydrusData.ShowException( e )
                 
             
-            self._player.volume = self._GetCorrectCurrentVolume()
-            self._player.mute = mute_override or self._GetCorrectCurrentMute()
+            self._player.volume = ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type )
+            self._player.mute = mute_override or ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
             self._player.pause = start_paused
             
         
@@ -787,12 +746,12 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def UpdateAudioMute( self ):
         
-        self._player.mute = self._GetCorrectCurrentMute()
+        self._player.mute = ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
         
 
     def UpdateAudioVolume( self ):
         
-        self._player.volume = self._GetCorrectCurrentVolume()
+        self._player.volume = ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type )
         
     
     def UpdateConf( self ):

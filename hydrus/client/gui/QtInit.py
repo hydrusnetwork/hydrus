@@ -1,59 +1,9 @@
 import os
 import traceback
+from hydrus.client.gui import QtInitImportTest
 
 # If not explicitly set, prefer PySide instead of PyQt, which is the qtpy default
 # It is critical that this runs on startup *before* anything is imported from qtpy.
-
-def get_qt_library_str_status():
-    
-    infos = []
-    
-    try:
-        
-        import PyQt5
-        
-        infos.append( 'PyQt5 imported ok' )
-        
-    except Exception as e:
-        
-        infos.append( 'PyQt5 did not import ok:\n{}'.format( traceback.format_exc() ) )
-        
-    
-    try:
-        
-        import PySide2
-        
-        infos.append( 'PySide2 imported ok' )
-        
-    except Exception as e:
-        
-        infos.append( 'PySide2 did not import ok:\n{}'.format( traceback.format_exc() ) )
-        
-    
-    try:
-        
-        import PyQt6
-        
-        infos.append( 'PyQt6 imported ok' )
-        
-    except Exception as e:
-        
-        infos.append( 'PyQt6 did not import ok:\n{}'.format( traceback.format_exc() ) )
-        
-    
-    try:
-        
-        import PySide6
-        
-        infos.append( 'PySide6 imported ok' )
-        
-    except Exception as e:
-        
-        infos.append( 'PySide6 did not import ok:\n{}'.format( traceback.format_exc() ) )
-        
-    
-    return '\n'.join( infos )
-    
 
 if 'QT_API' in os.environ:
     
@@ -179,7 +129,7 @@ except ModuleNotFoundError as e:
     
     message += '\n' * 2
     
-    message += 'Here is info on your available Qt Libraries:\n{}'.format( get_qt_library_str_status() )
+    message += 'Here is info on your available Qt Libraries:\n{}'.format( QtInitImportTest.get_qt_library_str_status() )
     
     raise Exception( message )
     
@@ -218,7 +168,7 @@ except ModuleNotFoundError as e:
     
     message += '\n' * 2
     
-    message += 'Here is info on your available Qt Libraries:\n\n{}'.format( get_qt_library_str_status() )
+    message += 'Here is info on your available Qt Libraries:\n\n{}'.format( QtInitImportTest.get_qt_library_str_status() )
     
     message += '\n' * 2
     

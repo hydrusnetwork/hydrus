@@ -7,13 +7,13 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
-def Profile( summary, code, g, l, min_duration_ms = 20, show_summary = False ):
+def Profile( summary, code, global_vars, local_vars, min_duration_ms = 20, show_summary = False ):
     
     profile = cProfile.Profile()
     
     started = HydrusTime.GetNowPrecise()
     
-    profile.runctx( code, g, l )
+    profile.runctx( code, global_vars, local_vars )
     
     finished = HydrusTime.GetNowPrecise()
     

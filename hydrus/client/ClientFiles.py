@@ -350,7 +350,7 @@ class ClientFilesManager( object ):
         self._controller.new_options.SetBoolean( 'pause_subs_sync', True )
         self._controller.new_options.SetBoolean( 'pause_all_file_queues', True )
         
-        HydrusData.ShowText( 'All paged file import queues, subscriptions, and import folders have been paused. Resume them after restart under the file and network menus!' )
+        HydrusData.ShowText( 'A critical drive error has occurred. All importers--subscriptions, import folders, and paged file import queues--have been paused. Once the issue is clear, restart the client and resume your imports after restart under the file and network menus!' )
         
         self._controller.pub( 'notify_refresh_network_menu' )
         

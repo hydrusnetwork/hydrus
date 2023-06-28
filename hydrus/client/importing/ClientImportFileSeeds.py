@@ -530,6 +530,16 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def AddExternalAdditionalServiceKeysToTags( self, service_keys_to_tags ):
+        
+        self._external_additional_service_keys_to_tags.update( service_keys_to_tags )
+        
+    
+    def AddExternalFilterableTags( self, tags ):
+        
+        self._external_filterable_tags.update( tags )
+        
+    
     def AddParseResults( self, parse_results, file_import_options: FileImportOptions.FileImportOptions ):
         
         for ( hash_type, hash ) in ClientParsing.GetHashesFromParseResults( parse_results ):
@@ -562,6 +572,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
         self._UpdateModified()
+        
+    
+    def AddRequestHeaders( self, request_headers: dict ):
+        
+        self._request_headers.update( request_headers )
         
     
     def AddTags( self, tags ):
@@ -1216,16 +1231,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetExternalAdditionalServiceKeysToTags( self, service_keys_to_tags ):
-        
-        self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( service_keys_to_tags )
-        
-    
-    def SetExternalFilterableTags( self, tags ):
-        
-        self._external_filterable_tags = set( tags )
-        
-    
     def SetHash( self, hash ):
         
         if hash is not None:
@@ -1237,11 +1242,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     def SetReferralURL( self, referral_url: str ):
         
         self._referral_url = referral_url
-        
-    
-    def SetRequestHeaders( self, request_headers: dict ):
-        
-        self._request_headers = dict( request_headers )
         
     
     def SetStatus( self, status: int, note: str = '', exception = None ):
@@ -1458,8 +1458,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         for file_seed in file_seeds:
                             
-                            file_seed.SetExternalFilterableTags( self._external_filterable_tags )
-                            file_seed.SetExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
+                            file_seed.AddExternalFilterableTags( self._external_filterable_tags )
+                            file_seed.AddExternalAdditionalServiceKeysToTags( self._external_additional_service_keys_to_tags )
                             
                             file_seed.AddPrimaryURLs( set( self._primary_urls ) )
                             
@@ -1562,7 +1562,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 duplicate_file_seed.SetReferralURL( url_for_child_referral )
 
-                                duplicate_file_seed.SetRequestHeaders( self._request_headers )
+                                duplicate_file_seed.AddRequestHeaders( self._request_headers )
                                 
                                 if self._referral_url is not None:
                                     

@@ -1612,7 +1612,7 @@ class PanelPredicateSystemLimit( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._limit = ClientGUICommon.BetterSpinBox( self, max=1000000, width = 60 )
+        self._limit = ClientGUICommon.BetterSpinBox( self, min = 1, max=1000000, width = 60 )
         
         #
         

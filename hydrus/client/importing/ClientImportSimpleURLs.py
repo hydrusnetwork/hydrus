@@ -1278,8 +1278,8 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                     
                     file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, url )
                     
-                    file_seed.SetExternalFilterableTags( filterable_tags )
-                    file_seed.SetExternalAdditionalServiceKeysToTags( additional_service_keys_to_tags )
+                    file_seed.AddExternalFilterableTags( filterable_tags )
+                    file_seed.AddExternalAdditionalServiceKeysToTags( additional_service_keys_to_tags )
                     
                     file_seeds.append( file_seed )
                     
@@ -1289,8 +1289,8 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
                     
                     gallery_seed = ClientImportGallerySeeds.GallerySeed( url, can_generate_more_pages = can_generate_more_pages )
                     
-                    gallery_seed.SetExternalFilterableTags( filterable_tags )
-                    gallery_seed.SetExternalAdditionalServiceKeysToTags( additional_service_keys_to_tags )
+                    gallery_seed.AddExternalFilterableTags( filterable_tags )
+                    gallery_seed.AddExternalAdditionalServiceKeysToTags( additional_service_keys_to_tags )
                     
                     gallery_seeds.append( gallery_seed )
                     

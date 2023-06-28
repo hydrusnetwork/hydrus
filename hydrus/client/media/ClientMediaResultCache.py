@@ -11,6 +11,20 @@ from hydrus.core import HydrusTime
 
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
+from hydrus.client.caches import ClientCachesBase
+
+class MediaResultCacheContainer( ClientCachesBase.CacheableObject ):
+    
+    def __init__( self, media_result ):
+        
+        self._media_result = media_result
+        
+    
+    def GetEstimatedMemoryFootprint( self ) -> int:
+        
+        return 1
+        
+    
 
 class MediaResultCache( object ):
     
@@ -20,6 +34,12 @@ class MediaResultCache( object ):
         
         self._hash_ids_to_media_results = weakref.WeakValueDictionary()
         self._hashes_to_media_results = weakref.WeakValueDictionary()
+        
+        # ok this is a bit of an experiment, it may be a failure and just add overhead for no great reason. it force-keeps the most recent fetched media results for two minutes
+        # this means that if a user refreshes a search and the existing media result handles briefly go to zero...
+        # or if the client api makes repeated requests on the same media results...
+        # then that won't be a chance for the weakvaluedict to step in. we'll keep this scratchpad of stuff
+        self._fifo_timeout_cache = ClientCachesBase.DataCache( HG.client_controller, 'media result cache', 2048, 120 )
         
         HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
         HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
@@ -38,6 +58,8 @@ class MediaResultCache( object ):
                 
                 self._hash_ids_to_media_results[ hash_id ] = media_result
                 self._hashes_to_media_results[ hash ] = media_result
+                
+                self._fifo_timeout_cache.AddData( hash_id, MediaResultCacheContainer( media_result ) )
                 
             
         
@@ -59,6 +81,8 @@ class MediaResultCache( object ):
                 
                 del self._hashes_to_media_results[ hash ]
                 
+            
+            self._fifo_timeout_cache.DeleteData( hash_id )
             
         
     
@@ -96,6 +120,8 @@ class MediaResultCache( object ):
                 else:
                     
                     media_results.append( media_result )
+                    
+                    self._fifo_timeout_cache.TouchKey( hash_id )
                     
                 
             

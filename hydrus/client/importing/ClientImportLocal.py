@@ -82,7 +82,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
                 if path in paths_to_additional_service_keys_to_tags:
                     
-                    file_seed.SetExternalAdditionalServiceKeysToTags( paths_to_additional_service_keys_to_tags[ path ] )
+                    file_seed.AddExternalAdditionalServiceKeysToTags( paths_to_additional_service_keys_to_tags[ path ] )
                     
                 
                 file_seeds.append( file_seed )
@@ -149,7 +149,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
                 if path in paths_to_additional_service_keys_to_tags:
                     
-                    file_seed.SetExternalAdditionalServiceKeysToTags( paths_to_additional_service_keys_to_tags[ path ] )
+                    file_seed.AddExternalAdditionalServiceKeysToTags( paths_to_additional_service_keys_to_tags[ path ] )
                     
                 
             

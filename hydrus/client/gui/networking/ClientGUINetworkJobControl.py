@@ -28,6 +28,8 @@ class NetworkJobControl( QW.QFrame ):
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
+        self._should_update_freely = False
+        
         self._network_job = None
         
         self._auto_override_bandwidth_rules = False
@@ -379,6 +381,11 @@ class NetworkJobControl( QW.QFrame ):
         self._error_button.show()
         
     
+    def SetShouldUpdateFreely( self, should: bool ):
+        
+        self._should_update_freely = should
+        
+    
     def ShowError( self ):
         
         if self._error_text is None:
@@ -393,7 +400,7 @@ class NetworkJobControl( QW.QFrame ):
         
         self._OverrideBandwidthIfAppropriate()
         
-        if HG.client_controller.gui.IShouldRegularlyUpdate( self ):
+        if self._should_update_freely or HG.client_controller.gui.IShouldRegularlyUpdate( self ):
             
             self._Update()
             
