@@ -139,6 +139,7 @@ try:
     from qtpy import QtCore as QC
     from qtpy import QtWidgets as QW
     from qtpy import QtGui as QG
+    from qtpy import QtSvg 
     
 except ModuleNotFoundError as e:
     
