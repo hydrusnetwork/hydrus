@@ -90,6 +90,7 @@ Now:
 *   **application/pdf** (.pdf)
 *   **application/x-photoshop** (.psd)
 *   **application/clip** (.clip)
+*   **application/sai2** (.sai2)
 *   **application/vnd.rar** (.rar)
 *   **application/zip** (.zip)
 *   **application/x-7z-compressed** (.7z)
