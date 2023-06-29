@@ -21,8 +21,8 @@ def AppendMenu( menu, submenu, label ):
     menu_action = menu.addMenu( submenu )
     
     return menu_action
-    
-def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **kwargs ):
+
+def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.QIcon, callable, *args, **kwargs ):
     
     label = SanitiseLabel( label )
     
@@ -39,13 +39,17 @@ def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **k
     menu_item.setToolTip( description )
     menu_item.setWhatsThis( description )
     
-    menu_item.setIcon( QG.QIcon( bitmap ) )
+    menu_item.setIcon( icon )
     
     menu.addAction(menu_item)
     
     BindMenuItem( menu_item, callable, *args, **kwargs )
     
     return menu_item
+    
+def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **kwargs ):
+    
+    return AppendMenuIconItem(menu, label, description, QG.QIcon( bitmap ), callable, *args, **kwargs)
     
 def AppendMenuCheckItem( menu, label, description, initial_value, callable, *args, **kwargs ):
     
