@@ -579,11 +579,6 @@ class GlobalPixmaps( object ):
         self.paste = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'paste.png' ) )
         
         self.eight_chan = QG.QPixmap( os.path.join( HC.STATIC_DIR, '8chan.png' ) )
-        self.twitter = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'twitter.png' ) )
-        self.tumblr = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'tumblr.png' ) )
-        self.discord = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'discord.png' ) )
-        self.patreon = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'patreon.png' ) )
-        self.github = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'github.png' ) )
         
         self.first = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'first.png' ) )
         self.previous = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'previous.png' ) )
@@ -593,6 +588,38 @@ class GlobalPixmaps( object ):
         
 
 global_pixmaps = GlobalPixmaps.instance
+
+class GlobalIcons( object ):
+    
+    my_instance = None
+    
+    def __init__( self ):
+        
+        self._Initialise()
+        
+    
+    @staticmethod
+    def instance() -> 'GlobalIcons':
+        
+        if GlobalIcons.my_instance is None:
+            
+            GlobalIcons.my_instance = GlobalIcons()
+            
+        
+        return GlobalIcons.my_instance
+        
+    
+    def _Initialise( self ):
+                
+        self.hydrus = QG.QIcon( os.path.join( HC.STATIC_DIR, 'hydrus_black.svg' ) )
+        self.github = QG.QIcon( os.path.join( HC.STATIC_DIR, 'github.svg' ) )
+        self.twitter = QG.QIcon( os.path.join( HC.STATIC_DIR, 'twitter.svg' ) )
+        self.tumblr = QG.QIcon( os.path.join( HC.STATIC_DIR, 'tumblr.svg' ) )
+        self.discord = QG.QIcon( os.path.join( HC.STATIC_DIR, 'discord.svg' ) )
+        self.patreon = QG.QIcon( os.path.join( HC.STATIC_DIR, 'patreon.svg' ) )
+
+
+global_icons = GlobalIcons.instance
 
 DEFAULT_LOCAL_TAG_SERVICE_KEY = b'local tags'
 
