@@ -529,7 +529,7 @@ def GenerateThumbnailBytesPIL( pil_image: PILImage.Image ) -> bytes:
 
 def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
     
-    if pil_image.format in ( 'JPEG', 'TIFF' ) and hasattr( pil_image, '_getexif' ):
+    if pil_image.format in ( 'JPEG', 'TIFF', 'PNG' ) and hasattr( pil_image, '_getexif' ):
         
         try:
             

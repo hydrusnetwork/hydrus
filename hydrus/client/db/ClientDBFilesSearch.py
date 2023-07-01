@@ -2445,6 +2445,12 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 if sort_data == CC.SORT_FILES_BY_IMPORT_TIME:
                     
+                    def deal_with_none( x ):
+                        
+                        if x is None: return -1
+                        else: return x
+                        
+                    
                     def key( row ):
                         
                         hash_id = row[0]
@@ -2452,7 +2458,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         
                         # hash_id to differentiate files imported in the same second
                         
-                        return ( timestamp, hash_id )
+                        return ( deal_with_none( timestamp ), hash_id )
                         
                     
                 elif sort_data == CC.SORT_FILES_BY_RATIO:
