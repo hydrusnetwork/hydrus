@@ -1865,7 +1865,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._comparison_statements_vbox = QP.VBoxLayout()
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'exif_data', 'embedded_metadata', 'icc_profile' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio' ]
         
         self._comparison_statements_sts = {}
         
