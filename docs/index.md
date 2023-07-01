@@ -16,7 +16,7 @@ Currently importable filetypes are:
 *   images - jpg, gif (including animated), png (including animated!), tiff, webp, bmp
 *   video - webm, mp4, mpeg, avi, mov, mkv, flv, wmv
 *   audio - mp3, flac, ogg, wma
-*   misc - swf, pdf, psd, zip, rar, 7z
+*   misc - swf, pdf, psd, clip, sai2, zip, rar, 7z
 
 On the Windows and Linux builds, an MPV window is embedded to play video and audio smoothly. For files like pdf, which cannot currently be viewed in the client, it is easy to launch any file with your OS's default program.
 

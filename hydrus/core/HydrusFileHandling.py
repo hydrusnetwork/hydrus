@@ -64,6 +64,7 @@ headers_and_mime.extend( [
     ( ( ( 0, b'8BPS\x00\x01' ), ), HC.APPLICATION_PSD ),
     ( ( ( 0, b'8BPS\x00\x02' ), ), HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
     ( ( ( 0, b'CSFCHUNK' ), ), HC.APPLICATION_CLIP ),
+    ( ( ( 0, b'SAI-CANVAS' ), ), HC.APPLICATION_SAI2 ),
     ( ( ( 0, b'PK\x03\x04' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x05\x06' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x07\x08' ), ), HC.APPLICATION_ZIP ),
