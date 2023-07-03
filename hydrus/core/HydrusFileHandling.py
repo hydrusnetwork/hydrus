@@ -460,6 +460,9 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         return HC.TEXT_HTML
         
+    if HydrusText.LooksLikeSVG( bit_to_check ): 
+        
+        return HC.IMAGE_SVG
     
     # it is important this goes at the end, because ffmpeg has a billion false positives!
     # for instance, it once thought some hydrus update files were mpegs
