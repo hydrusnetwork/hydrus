@@ -12,6 +12,13 @@ SQUARE = 1
 FAT_STAR = 2
 PENTAGRAM_STAR = 3
 
+shape_to_str_lookup_dict = {
+    CIRCLE : 'circle',
+    SQUARE : 'square',
+    FAT_STAR : 'fat star',
+    PENTAGRAM_STAR : 'pentagram star'
+}
+
 def GetIncDecStateFromMedia( media, service_key ):
     
     values_seen = { m.GetRatingsManager().GetRating( service_key ) for m in media }

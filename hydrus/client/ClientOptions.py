@@ -1282,6 +1282,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
+            if mime == HC.APPLICATION_UNKNOWN:
+                
+                return ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, False, False )
+                
+            
             ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._GetMediaViewOptions( mime )
             
             ( possible_show_actions, can_start_paused, can_start_with_embed ) = CC.media_viewer_capabilities[ mime ]
@@ -1365,6 +1370,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     def GetPreviewShowAction( self, mime ):
         
         with self._lock:
+            
+            if mime == HC.APPLICATION_UNKNOWN:
+                
+                return ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, False, False )
+                
             
             ( media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) = self._GetMediaViewOptions( mime )
             

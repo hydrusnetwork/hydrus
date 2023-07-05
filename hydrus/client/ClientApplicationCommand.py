@@ -152,6 +152,7 @@ SIMPLE_ZOOM_DEFAULT = 143
 SIMPLE_SHOW_DUPLICATES = 144
 SIMPLE_MANAGE_FILE_TIMESTAMPS = 145
 SIMPLE_OPEN_FILE_IN_FILE_EXPLORER = 146
+SIMPLE_COPY_LITTLE_BMP = 147
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -163,7 +164,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_CLOSE_MEDIA_VIEWER : 'close media viewer',
     SIMPLE_CLOSE_PAGE : 'close page',
     SIMPLE_COPY_BMP : 'copy bmp of image',
-    SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE : 'copy bmp of image, or copy file of other files',
+    SIMPLE_COPY_LITTLE_BMP : 'copy small bmp of image for quick source lookups',
+    SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE : 'copy bmp of image; otherwise copy file',
     SIMPLE_COPY_FILE : 'copy file',
     SIMPLE_COPY_MD5_HASH : 'copy md5 hash',
     SIMPLE_COPY_PATH : 'copy file paths',

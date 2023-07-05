@@ -2189,7 +2189,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             lambdas = [ number_test.GetLambda() for number_test in specific_number_tests ]
             
-            megalambda = lambda x: False not in ( l( x ) for l in lambdas )
+            megalambda = lambda x: False not in ( lamb( x ) for lamb in lambdas )
             
             with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
                 

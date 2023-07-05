@@ -384,7 +384,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_media is not None:
             
-            if self._current_media.GetMime() in HC.IMAGES:
+            if self._current_media.IsImage():
                 
                 HG.client_controller.pub( 'clipboard', 'bmp', ( self._current_media, resolution ) )
                 
@@ -897,15 +897,32 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._Archive()
                 
-            elif action == CAC.SIMPLE_COPY_BMP:
+            elif action in ( CAC.SIMPLE_COPY_BMP, CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE, CAC.SIMPLE_COPY_LITTLE_BMP ):
                 
-                self._CopyBMPToClipboard()
+                if self._current_media is None:
+                    
+                    return
+                    
                 
-            elif action == CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE:
+                copied = False
                 
-                copied = self._CopyBMPToClipboard()
+                if self._current_media.IsImage():
+                    
+                    ( width, height ) = self._current_media.GetResolution()
+                    
+                    if action == CAC.SIMPLE_COPY_LITTLE_BMP and ( width > 1024 or height > 1024 ):
+                        
+                        ( clip_rect, clipped_res ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( self._current_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                        
+                        copied = self._CopyBMPToClipboard( resolution = clipped_res )
+                        
+                    else:
+                        
+                        copied = self._CopyBMPToClipboard()
+                        
+                    
                 
-                if not copied:
+                if action == CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE and not copied:
                     
                     self._CopyFileToClipboard()
                     
@@ -1549,7 +1566,7 @@ class CanvasPanel( Canvas ):
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
             
-            if self._current_media.GetMime() in HC.IMAGES:
+            if self._current_media.IsImage():
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
 

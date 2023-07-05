@@ -135,11 +135,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def __init__( self, controller, db_dir, db_name ):
         
-        if HydrusPaths.GetFreeSpace( db_dir ) < 500 * 1048576:
-            
-            raise Exception( 'Sorry, it looks like the db partition has less than 500MB, please free up some space.' )
-            
-        
         HydrusDBBase.DBBase.__init__( self )
         
         self._controller = controller
@@ -219,6 +214,17 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             self._InitDB()
             self._CloseDBConnection()
+            
+        
+        total_db_size = self.GetApproxTotalFileSize()
+        
+        size_check = min( int( total_db_size * 0.5 ), 500 * 1048576 )
+        
+        size_check = max( size_check, 64 * 1048576 )
+        
+        if HydrusPaths.GetFreeSpace( db_dir ) < size_check:
+            
+            raise HydrusExceptions.DBAccessException( 'Sorry, it looks like the database drive partition has less than {} free space. It needs this for database transactions, so please free up some space.'.format( HydrusData.ToHumanBytes( size_check ) ) )
             
         
         self._InitDB()
@@ -691,7 +697,10 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
             path = os.path.join( self._db_dir, filename )
             
-            total += os.path.getsize( path )
+            if os.path.exists( path ):
+                
+                total += os.path.getsize( path )
+                
             
         
         return total

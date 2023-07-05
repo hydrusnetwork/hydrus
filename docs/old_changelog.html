@@ -35,6 +35,47 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_534"><a href="#version_534">version 534</a></h2>
+                    <ul>
+                        <li><h3>user submissions</h3></li>
+                        <li>thanks to a user, we now have SAI2 (.sai2) file support!</li>
+                        <li>thanks to a user, the duplicate filter now says if one file has audio. this complements the recent Hydrus Video Deduplicator (https://github.com/appleappleapplenanner/hydrus-video-deduplicator), which can queue videos up in your dupe filter</li>
+                        <li>thanks to a user, we now have some nice svg images in the help->links(?) menu instead of gritty bitmaps</li>
+                        <li>thanks to a user, some help documentation for recent client vs hydrus_client changes got fixed</li>
+                        <li><h3>quality of life/new stuff</h3></li>
+                        <li>the media viewer's top-area 'removed from x' lines for files deleted from a local file service no longer appear--unless that file is currently in the trash. on clients with busy multiple local file services, they were mostly just annoying and spammy. if you need this data, hit up the right-click menu of the file--it is still listed there</li>
+                        <li>the 'loading' media page now draws a background in the same colour as the thumbnail grid, so new searches or refreshes will no longer flash to a default grey colour--it should just be a smooth thumbs gone/thumbs back now</li>
+                        <li>added a new shortcut action, 'copy small bmp of image for quick source lookups', for last week's new bitmap copy action</li>
+                        <li>it turns out PNG and WEBP files can have EXIF data, and our existing scanner works with them, so the EXIF scanner now looks at PNGs and WEBPs too. PNGs appear to be rare, about 1-in-200. I will retroactively scan your existing WEBPs, since they have EXIF more commonly, maybe as high as 1-in-5, and are less common as a filetype anyway so the scan will be less work, but when you update you will get a yes/no dialog asking if you want to do PNGs too. it isn't a big deal and you can always queue it up later if you want</li>
+                        <li><h3>fixes</h3></li>
+                        <li>I banged my head against the notes layout code and actually had great success--a variety of borked note-spilling-over-into-nothing and note-stretching-itself-crazy and note-has-fifty-pixels-of-margin issues are fixed. let me know if you still have crazy notes anywhere</li>
+                        <li>the duplicate filter right-hand hover is now more aggressive about getting out of the way of the notes hover, especially when the notes hover jitter-resizes itself a few extra pixels of height. the notes hover should no longer ever overlap the duplicate filter hover's top buttons--very sorry this took so long</li>
+                        <li>when you drag and drop thumbnails out of the program while using an automatic pattern to rename them (_options->gui_), all the filenames are now unique, adding '(x)' after their name as needed for dedupe. previously, on duplicates, it was basically doing a weird spam-merge</li>
+                        <li>fixed an issue when sanitizing export filenames when the destination directory's file system type cannot be determined</li>
+                        <li>fixed a bug when doing a search in a deleted file domain with 'file import time' as the file sort</li>
+                        <li>fixed a bug when hitting the shortcut for 'open file in media viewer' on a non-local file</li>
+                        <li>fixed a bug when the client wants to figure out view options for a file that has mime 'application/unknown'</li>
+                        <li>I may have improved the 'woah the db caches are unsynced' error handling in the 'what siblings and parents does this have?' check when you right-click tags</li>
+                        <li><h3>weird bitmap pastes</h3></li>
+                        <li>fixed the new 'paste image' button under `system:similar files` for a certain category of unusual clipboard bitmaps, including several that hydrus itself generates, where it turns out the QImage storage system stores extra padding bytes on each line of pixels</li>
+                        <li>fixed the new 'paste image' button when the incoming bitmap has a useless alpha channel (e.g. 100% transparent). this was not being stripped like it is for imported images, and so some similar files data was not lining up</li>
+                        <li>many bitmaps copied from other programs like Firefox remain slightly different to what hydrus generates (even though both are at 100% scale). my best guess here is that there is some differing ICC-profile-like colour adjustment happening somewhere, probably either a global browser setting, the browser obeying a global GPU setting, a simply better application of such image metadata on the browser's side, or maybe a stripping of such data, since it seems a 'copy image' event in Firefox also generates and attaches to your clipboard a temporary png file in your temp folder, so maybe the bitmap that we pull from the clipboard is actually generated during some conversion process amidst all that, and it loses some jpeg colour data. whatever the case here, it changes the pixel hash and subtly alters the perceptual hash in many cases. I'm bumping the default distance on this search predicate up to 8 now, to catch the weirder instances</li>
+                        <li><h3>misc</h3></li>
+                        <li>the 'does the db partition have 500MB free?' check that runs on database boot now occurs after some initial database cleanup, and it will use half the total database size instead, if that is smaller than 500MB, down to 64MB (issue #1373)</li>
+                        <li>added a note to the 'running from source' help that the newer mpv dll seems to work on Qt5 and Windows 7 (issue #1338)</li>
+                        <li>the twitter parsers and gugs are removed from the defaults for new users. a shame, but we'll see what happens in future</li>
+                        <li>more misc linting cleanup</li>
+                        <li><h3>ratings on the client api</h3></li>
+                        <li>the services object now shows `star_shape` and `min_stars` and `max_stars` for like/dislike and numerical rating services</li>
+                        <li>the file metadata object now has a 'ratings' key, which lists `rating_service_key->rating` for all the client's rating services. this thing is simple and uses human-friendly values, but it can hold several different data types, so check the help for details and examples</li>
+                        <li>a new permission, 'edit ratings', is added.</li>
+                        <li>a new command, `/edit_ratings/set_rating`, is added. Guess what it does! (issue #343)</li>
+                        <li>the help is updated for these</li>
+                        <li>the unit tests are updated for these</li>
+                        <li>the client api version is now 48</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_533"><a href="#version_533">version 533</a></h2>
                     <ul>
                         <li><h3>macOS App crashes</h3></li>

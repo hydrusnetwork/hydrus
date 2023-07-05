@@ -2179,6 +2179,20 @@ class Controller( HydrusController.HydrusController ):
             
             QP.CallAfter( QW.QApplication.exit )
             
+        except HydrusExceptions.DBAccessException as e:
+            
+            trace = traceback.format_exc()
+            
+            HydrusData.DebugPrint( trace )
+            
+            text = 'A serious problem occurred while trying to start the program. Full details have been written to the log. The error is:'
+            text += '\n' * 2
+            text += str( e )
+            
+            self.SafeShowCriticalMessage( 'boot error', text )
+            
+            QP.CallAfter( QW.QApplication.exit, 1 )
+            
         except Exception as e:
             
             text = 'A serious error occurred while trying to start the program. The error will be shown next in a window. More information may have been written to client.log.'

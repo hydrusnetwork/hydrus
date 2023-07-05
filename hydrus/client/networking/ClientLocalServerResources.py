@@ -43,6 +43,7 @@ from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
@@ -62,7 +63,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 # if a variable name isn't defined here, a GET with it won't work
 
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
-CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2' }
+CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
@@ -186,18 +187,36 @@ def GetServicesDict():
     
     services = HG.client_controller.services_manager.GetServices( service_types )
     
-    service_dict = {}
+    services_dict = {}
     
     for service in services:
         
-        service_dict[ service.GetServiceKey().hex() ] = {
+        service_dict = {
             'name' : service.GetName(),
             'type' : service.GetServiceType(),
             'type_pretty' : HC.service_string_lookup[ service.GetServiceType() ]
         }
         
+        if service.GetServiceType() in HC.STAR_RATINGS_SERVICES:
+            
+            shape_label = ClientRatings.shape_to_str_lookup_dict[ service.GetShape() ]
+            
+            service_dict[ 'star_shape' ] =  shape_label
+            
+        
+        if service.GetServiceType() == HC.LOCAL_RATING_NUMERICAL:
+            
+            allows_zero = service.AllowZero()
+            num_stars = service.GetNumStars()
+            
+            service_dict[ 'min_stars' ] = 0 if allows_zero else 1
+            service_dict[ 'max_stars' ] = num_stars
+            
+        
+        services_dict[ service.GetServiceKey().hex() ] = service_dict
+        
     
-    return service_dict
+    return services_dict
     
 
 def GetServiceKeyFromName( service_name: str ):
@@ -1473,6 +1492,7 @@ class HydrusResourceClientAPIRestrictedGetService( HydrusResourceClientAPIRestri
         request.client_api_permissions.CheckAtLeastOnePermission(
             (
                 ClientAPI.CLIENT_API_PERMISSION_ADD_FILES,
+                ClientAPI.CLIENT_API_PERMISSION_EDIT_RATINGS,
                 ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS,
                 ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES,
                 ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES,
@@ -1560,6 +1580,7 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
         request.client_api_permissions.CheckAtLeastOnePermission(
             (
                 ClientAPI.CLIENT_API_PERMISSION_ADD_FILES,
+                ClientAPI.CLIENT_API_PERMISSION_EDIT_RATINGS,
                 ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS,
                 ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES,
                 ClientAPI.CLIENT_API_PERMISSION_MANAGE_PAGES,
@@ -2186,6 +2207,7 @@ class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPI
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddURLs( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2193,6 +2215,7 @@ class HydrusResourceClientAPIRestrictedAddURLs( HydrusResourceClientAPIRestricte
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_URLS )
         
     
+
 class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClientAPIRestrictedAddURLs ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2278,6 +2301,7 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientAPIRestrictedAddURLs ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2451,6 +2475,110 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         return response_context
         
     
+
+class HydrusResourceClientAPIRestrictedEditRatings( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_EDIT_RATINGS )
+        
+    
+
+class HydrusResourceClientAPIRestrictedEditRatingsSetRating( HydrusResourceClientAPIRestrictedEditRatings ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        rating_service_key = request.parsed_request_args.GetValue( 'rating_service_key', bytes )
+        
+        applicable_hashes = set( ParseHashes( request ) )
+        
+        if len( applicable_hashes ) == 0:
+            
+            raise HydrusExceptions.BadRequestException( 'Did not find any hashes to apply the ratings to!' )
+            
+        
+        if 'rating' not in request.parsed_request_args:
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, you need to give a rating to set it to!' )
+            
+        
+        rating = request.parsed_request_args[ 'rating' ]
+        
+        rating_service = HG.client_controller.services_manager.GetService( rating_service_key )
+        
+        rating_service_type = rating_service.GetServiceType()
+        
+        none_ok = True
+        
+        if rating_service_type == HC.LOCAL_RATING_LIKE:
+            
+            expecting_type = bool
+            
+        elif rating_service_type == HC.LOCAL_RATING_NUMERICAL:
+            
+            expecting_type = int
+            
+        elif rating_service_type == HC.LOCAL_RATING_INCDEC:
+            
+            expecting_type = int
+            
+            none_ok = False
+            
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'That service is not a rating service!' )
+            
+        
+        if rating is None:
+            
+            if not none_ok:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, this service does not allow a null rating!' )
+                
+            
+        elif not isinstance( rating, expecting_type ):
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, this service expects a "{}" rating!'.format( expecting_type.__name__ ) )
+            
+        
+        rating_for_content_update = rating
+        
+        if rating_service_type == HC.LOCAL_RATING_LIKE:
+            
+            if isinstance( rating, bool ):
+                
+                rating_for_content_update = 1.0 if rating else 0.0
+                
+            
+        elif rating_service_type == HC.LOCAL_RATING_NUMERICAL:
+            
+            if isinstance( rating, int ):
+                
+                rating_for_content_update = rating_service.ConvertStarsToRating( rating )
+                
+            
+        elif rating_service_type == HC.LOCAL_RATING_INCDEC:
+            
+            if rating < 0:
+                
+                rating_for_content_update = 0
+                
+            
+        
+        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating_for_content_update, applicable_hashes ) )
+        
+        service_keys_to_content_updates = collections.defaultdict( list )
+        
+        service_keys_to_content_updates[ rating_service_key ].append( content_update )
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
 class HydrusResourceClientAPIRestrictedGetFiles( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2762,6 +2890,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
             services_manager = HG.client_controller.services_manager
             
+            rating_service_keys = services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
             tag_service_keys = services_manager.GetServiceKeys( HC.ALL_TAG_SERVICES )
             service_keys_to_types = { service.GetServiceKey() : service.GetServiceType() for service in services_manager.GetServices() }
             service_keys_to_names = services_manager.GetServiceKeysToNames()
@@ -2904,6 +3033,19 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                         metadata_row[ 'detailed_known_urls' ] = detailed_known_urls
                         
+                    
+                    ratings_manager = media_result.GetRatingsManager()
+                    
+                    ratings_dict = {}
+                    
+                    for rating_service_key in rating_service_keys:
+                        
+                        rating_object = ratings_manager.GetRatingForAPI( rating_service_key )
+                        
+                        ratings_dict[ rating_service_key.hex() ] = rating_object
+                        
+                    
+                    metadata_row[ 'ratings' ] = ratings_dict
                     
                     tags_manager = media_result.GetTagsManager()
                     

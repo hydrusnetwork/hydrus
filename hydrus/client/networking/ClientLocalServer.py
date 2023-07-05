@@ -60,6 +60,12 @@ class HydrusServiceClientAPI( HydrusClientService ):
         
         add_tags = NoResource()
         
+        root.putChild( b'edit_ratings', add_tags )
+        
+        add_tags.putChild( b'set_rating', ClientLocalServerResources.HydrusResourceClientAPIRestrictedEditRatingsSetRating( self._service, self._client_requests_domain ) )
+        
+        add_tags = NoResource()
+        
         root.putChild( b'add_tags', add_tags )
         
         add_tags.putChild( b'add_tags', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddTagsAddTags( self._service, self._client_requests_domain ) )

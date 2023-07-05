@@ -1834,23 +1834,26 @@ class MediaSingleton( Media ):
             
         elif len( deleted_local_file_services ) > 0:
             
-            for local_file_service in deleted_local_file_services:
+            if CC.TRASH_SERVICE_KEY in current_service_keys or not only_interesting_lines:
                 
-                timestamp = timestamps_manager.GetDeletedTimestamp( local_file_service.GetServiceKey() )
-                
-                line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) )
-                
-                if len( deleted_local_file_services ) == 1:
+                for local_file_service in deleted_local_file_services:
                     
-                    line = f'{line} ({local_file_deletion_reason})'
+                    timestamp = timestamps_manager.GetDeletedTimestamp( local_file_service.GetServiceKey() )
+                    
+                    line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) )
+                    
+                    if len( deleted_local_file_services ) == 1:
+                        
+                        line = f'{line} ({local_file_deletion_reason})'
+                        
+                    
+                    lines.append( ( True, line ) )
                     
                 
-                lines.append( ( True, line ) )
-                
-            
-            if len( deleted_local_file_services ) > 1:
-                
-                lines.append( ( False, 'Deletion reason: {}'.format( local_file_deletion_reason ) ) )
+                if len( deleted_local_file_services ) > 1:
+                    
+                    lines.append( ( False, 'Deletion reason: {}'.format( local_file_deletion_reason ) ) )
+                    
                 
             
         

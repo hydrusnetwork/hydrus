@@ -101,12 +101,16 @@ def GetExampleServicesDict():
         HG.test_controller.example_like_rating_service_key.hex() : {
             'name' : 'example local rating like service',
             'type' : 7,
-            'type_pretty' : 'local like/dislike rating service'
+            'type_pretty' : 'local like/dislike rating service',
+            'star_shape' : 'circle'
         },
         HG.test_controller.example_numerical_rating_service_key.hex() : {
             'name' : 'example local rating numerical service',
             'type' : 6,
-            'type_pretty' : 'local numerical rating service'
+            'type_pretty' : 'local numerical rating service',
+            'min_stars' : 0,
+            'max_stars' : 5,
+            'star_shape' : 'circle'
         },
         HG.test_controller.example_incdec_rating_service_key.hex() : {
             'name' : 'example local rating inc/dec service',
@@ -1289,6 +1293,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
+    
     def _test_add_notes( self, connection, set_up_permissions ):
         
         hash = os.urandom( 32 )
@@ -1567,6 +1572,280 @@ class TestClientAPI( unittest.TestCase ):
         expected_service_keys_to_content_updates = collections.defaultdict( list )
         
         expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '789' ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+    
+    def _test_add_ratings( self, connection, set_up_permissions ):
+        
+        hash = os.urandom( 32 )
+        hash_hex = hash.hex()
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        # set like like
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_like_rating_service_key.hex(), 'rating' : True }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_like_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set like dislike
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_like_rating_service_key.hex(), 'rating' : False }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_like_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set like None
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_like_rating_service_key.hex(), 'rating' : None }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_like_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set numerical 0
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 0 }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set numerical 2 (0.4)
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 2 }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.4, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set numerical 5 (1.0)
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : 5 }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set numerical None
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_numerical_rating_service_key.hex(), 'rating' : None }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set incdec 0
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : 0 }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_incdec_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set incdec 5
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : 5 }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_incdec_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 5, { hash } ) ) ]
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # set incdec -3
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/edit_ratings/set_rating'
+        
+        body_dict = { 'hash' : hash_hex, 'rating_service_key' : HG.test_controller.example_incdec_rating_service_key.hex(), 'rating' : -3 }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        
+        expected_service_keys_to_content_updates[ HG.test_controller.example_incdec_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ]
         
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
@@ -4215,6 +4494,24 @@ class TestClientAPI( unittest.TestCase ):
                 urls = urls,
                 service_keys_to_filenames = service_keys_to_filenames
             )
+            
+            ratings_dict = {}
+            
+            if random.random() > 0.6:
+                
+                ratings_dict[ HG.test_controller.example_like_rating_service_key ] = 0.0 if random.random() < 0 else 1.0
+                
+            
+            if random.random() > 0.6:
+                
+                ratings_dict[ HG.test_controller.example_numerical_rating_service_key ] = random.random()
+                
+            
+            if random.random() > 0.6:
+                
+                ratings_dict[ HG.test_controller.example_incdec_rating_service_key ] = int( random.random() * 16 )
+                
+            
             ratings_manager = ClientMediaManagers.RatingsManager( {} )
             notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
             file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
@@ -4316,6 +4613,19 @@ class TestClientAPI( unittest.TestCase ):
                     metadata_row[ 'ipfs_multihashes' ][ i_s_k.hex() ] = multihash
                     
                 
+            
+            ratings_manager = media_result.GetRatingsManager()
+            
+            ratings_dict = {}
+            
+            rating_service_keys = services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
+            
+            for rating_service_key in rating_service_keys:
+                
+                ratings_dict[ rating_service_key.hex() ] = ratings_manager.GetRatingForAPI( rating_service_key )
+                
+            
+            metadata_row[ 'ratings' ] = ratings_dict
             
             tags_manager = media_result.GetTagsManager()
             
@@ -5183,6 +5493,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_files_add_file( connection, set_up_permissions )
         self._test_add_files_other_actions( connection, set_up_permissions )
         self._test_add_notes( connection, set_up_permissions )
+        self._test_add_ratings( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )

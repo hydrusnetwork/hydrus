@@ -1291,7 +1291,7 @@ class NotesManager( object ):
     
 class RatingsManager( object ):
     
-    def __init__( self, service_keys_to_ratings: typing.Dict[ bytes, typing.Union[ None, float ] ] ):
+    def __init__( self, service_keys_to_ratings: typing.Dict[ bytes, typing.Union[ None, float, int ] ] ):
         
         self._service_keys_to_ratings = service_keys_to_ratings
         
@@ -1310,6 +1310,47 @@ class RatingsManager( object ):
         else:
             
             service_type = HG.client_controller.services_manager.GetServiceType( service_key )
+            
+            if service_type == HC.LOCAL_RATING_INCDEC:
+                
+                return 0
+                
+            else:
+                
+                return None
+                
+            
+        
+    
+    def GetRatingForAPI( self, service_key ) -> typing.Union[ int, bool, None ]:
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+        service_type = service.GetServiceType()
+        
+        if service_key in self._service_keys_to_ratings:
+            
+            rating = self._service_keys_to_ratings[ service_key ]
+            
+            if rating is None:
+                
+                return None
+                
+            
+            if service_type == HC.LOCAL_RATING_LIKE:
+                
+                return rating >= 0.5
+                
+            elif service_type == HC.LOCAL_RATING_NUMERICAL:
+                
+                return service.ConvertRatingToStars( rating )
+                
+            elif service_type == HC.LOCAL_RATING_INCDEC:
+                
+                return int( rating )
+                
+            
+        else:
             
             if service_type == HC.LOCAL_RATING_INCDEC:
                 
