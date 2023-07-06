@@ -66,8 +66,10 @@ headers_and_mime.extend( [
     ( ( ( 0, b'8BPS\x00\x02' ), ), HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
     ( ( ( 0, b'CSFCHUNK' ), ), HC.APPLICATION_CLIP ),
     ( ( ( 0, b'SAI-CANVAS' ), ), HC.APPLICATION_SAI2 ),
-    ( ( ( 38, b'application/x-kritaPK' ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
-    ( ( ( 58, b'application/x-kritaPK' ), ), HC.APPLICATION_KRITA ), # changes offset when compressed with zip64
+    ( ( ( 38, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
+    ( ( ( 42, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/master/data/freedesktop.org.xml.in#L2829
+    ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
+    ( ( ( 63, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
     ( ( ( 0, b'PK\x03\x04' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x05\x06' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x07\x08' ), ), HC.APPLICATION_ZIP ),
