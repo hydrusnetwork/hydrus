@@ -102,6 +102,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
         
+        self.setWidget( self._InnerWidget( self ) )
+        self.setWidgetResizable( True )
+        
     
     def __bool__( self ):
         
@@ -973,6 +976,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         if self._HasFocusSingleton():
             
             media = self._GetFocusSingleton()
+            
+            if not media.GetLocationsManager().IsLocal():
+                
+                return
+                
             
             new_options = HG.client_controller.new_options
             
@@ -2044,15 +2052,32 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             action = command.GetSimpleAction()
             
-            if action == CAC.SIMPLE_COPY_BMP:
+            if action in ( CAC.SIMPLE_COPY_BMP, CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE, CAC.SIMPLE_COPY_LITTLE_BMP ):
                 
-                self._CopyBMPToClipboard()
+                if self._focused_media is None:
+                    
+                    return
+                    
                 
-            elif action == CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE:
+                copied = False
                 
-                copied = self._CopyBMPToClipboard()
+                if self._focused_media.IsImage():
+                    
+                    ( width, height ) = self._focused_media.GetResolution()
+                    
+                    if action == CAC.SIMPLE_COPY_LITTLE_BMP and ( width > 1024 or height > 1024 ):
+                        
+                        ( clip_rect, clipped_res ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                        
+                        copied = self._CopyBMPToClipboard( resolution = clipped_res )
+                        
+                    else:
+                        
+                        copied = self._CopyBMPToClipboard()
+                        
+                    
                 
-                if not copied:
+                if action == CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE and not copied:
                     
                     self._CopyFilesToClipboard()
                     
@@ -2437,6 +2462,38 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         pass
         
     
+    class _InnerWidget( QW.QWidget ):
+        
+        def __init__( self, parent ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._parent = parent
+            
+        
+        def paintEvent( self, event ):
+            
+            painter = QG.QPainter( self )
+            
+            bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+            
+            painter.setBackground( QG.QBrush( bg_colour ) )
+            
+            painter.eraseRect( painter.viewport() )
+            
+            background_pixmap = HG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
+            
+            if background_pixmap is not None:
+                
+                my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
+                
+                pixmap_size = background_pixmap.size()
+                
+                painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
+                
+            
+        
+    
 class MediaPanelLoading( MediaPanel ):
     
     def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController ):
@@ -2492,8 +2549,6 @@ class MediaPanelThumbnails( MediaPanel ):
         self._num_rows_per_canvas_page = 1
         self._num_rows_per_actual_page = 1
         
-        MediaPanel.__init__( self, parent, page_key, management_controller, media_results )
-        
         self._last_size = QC.QSize( 20, 20 )
         self._num_columns = 1
         
@@ -2502,14 +2557,13 @@ class MediaPanelThumbnails( MediaPanel ):
         self._thumbnails_being_faded_in = {}
         self._hashes_faded = set()
         
+        MediaPanel.__init__( self, parent, page_key, management_controller, media_results )
+        
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
         thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
-        
-        self.setWidget( MediaPanelThumbnails._InnerWidget( self ) )
-        self.setWidgetResizable( True )
         
         self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
@@ -3346,125 +3400,6 @@ class MediaPanelThumbnails( MediaPanel ):
     def showEvent( self, event ):
         
         self._UpdateScrollBars()
-        
-    
-    class _InnerWidget( QW.QWidget ):
-        
-        def __init__( self, parent ):
-            
-            QW.QWidget.__init__( self, parent )
-            
-            self._parent = parent
-            
-        
-        def mousePressEvent( self, event ):
-            
-            self._parent._drag_init_coordinates = QG.QCursor.pos()
-            
-            thumb = self._parent._GetThumbnailUnderMouse( event )
-            
-            right_on_whitespace = event.button() == QC.Qt.RightButton and thumb is None
-            
-            if not right_on_whitespace:
-                
-                self._parent._HitMedia( thumb, event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
-                
-            
-            # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
-            
-        
-        def paintEvent( self, event ):
-            
-            if self._parent.devicePixelRatio() != self._parent._last_device_pixel_ratio:
-                
-                self._parent._last_device_pixel_ratio = self._parent.devicePixelRatio()
-                
-                self._parent._DirtyAllPages()
-                self._parent._DeleteAllDirtyPages()
-                
-            
-            painter = QG.QPainter( self )
-            
-            ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
-            
-            page_height = self._parent._num_rows_per_canvas_page * thumbnail_span_height
-            
-            page_indices_to_display = self._parent._CalculateVisiblePageIndices()
-            
-            earliest_page_index_to_display = min( page_indices_to_display )
-            last_page_index_to_display = max( page_indices_to_display )
-            
-            page_indices_to_draw = list( page_indices_to_display )
-            
-            if earliest_page_index_to_display > 0:
-                
-                page_indices_to_draw.append( earliest_page_index_to_display - 1 )
-                
-            
-            page_indices_to_draw.append( last_page_index_to_display + 1 )
-            
-            page_indices_to_draw.sort()
-            
-            potential_clean_indices_to_steal = [ page_index for page_index in self._parent._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
-            
-            random.shuffle( potential_clean_indices_to_steal )
-            
-            y_start = self._parent._GetYStart()
-            
-            earliest_y = y_start
-            
-            bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
-            
-            painter.setBackground( QG.QBrush( bg_colour ) )
-            
-            painter.eraseRect( painter.viewport() )
-            
-            background_pixmap = HG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
-            
-            if background_pixmap is not None:
-                
-                my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
-                
-                pixmap_size = background_pixmap.size()
-                
-                painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
-                
-            
-            for page_index in page_indices_to_draw:
-                
-                if page_index not in self._parent._clean_canvas_pages:
-                    
-                    if len( self._parent._dirty_canvas_pages ) == 0:
-                        
-                        if len( potential_clean_indices_to_steal ) > 0:
-                            
-                            index_to_steal = potential_clean_indices_to_steal.pop()
-                            
-                            self._parent._DirtyPage( index_to_steal )
-                            
-                        else:
-                            
-                            self._parent._CreateNewDirtyPage()
-                            
-                        
-                    
-                    canvas_page = self._parent._dirty_canvas_pages.pop()
-                    
-                    self._parent._DrawCanvasPage( page_index, canvas_page )
-                    
-                    self._parent._clean_canvas_pages[ page_index ] = canvas_page
-                    
-                
-                if page_index in page_indices_to_display:
-                    
-                    canvas_page = self._parent._clean_canvas_pages[ page_index ]
-                    
-                    page_virtual_y = page_height * page_index
-                    
-                    painter.drawImage( 0, page_virtual_y, canvas_page )
-                    
-                
-            
         
     
     def EventResize( self, event ):
@@ -4574,6 +4509,125 @@ class MediaPanelThumbnails( MediaPanel ):
         if self._page_key == page_key:
             
             self._FadeThumbnails( thumbnails )
+            
+        
+    
+    class _InnerWidget( QW.QWidget ):
+        
+        def __init__( self, parent ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._parent = parent
+            
+        
+        def mousePressEvent( self, event ):
+            
+            self._parent._drag_init_coordinates = QG.QCursor.pos()
+            
+            thumb = self._parent._GetThumbnailUnderMouse( event )
+            
+            right_on_whitespace = event.button() == QC.Qt.RightButton and thumb is None
+            
+            if not right_on_whitespace:
+                
+                self._parent._HitMedia( thumb, event.modifiers() & QC.Qt.ControlModifier, event.modifiers() & QC.Qt.ShiftModifier )
+                
+            
+            # this specifically does not scroll to media, as for clicking (esp. double-clicking attempts), the scroll can be jarring
+            
+        
+        def paintEvent( self, event ):
+            
+            if self._parent.devicePixelRatio() != self._parent._last_device_pixel_ratio:
+                
+                self._parent._last_device_pixel_ratio = self._parent.devicePixelRatio()
+                
+                self._parent._DirtyAllPages()
+                self._parent._DeleteAllDirtyPages()
+                
+            
+            painter = QG.QPainter( self )
+            
+            ( thumbnail_span_width, thumbnail_span_height ) = self._parent._GetThumbnailSpanDimensions()
+            
+            page_height = self._parent._num_rows_per_canvas_page * thumbnail_span_height
+            
+            page_indices_to_display = self._parent._CalculateVisiblePageIndices()
+            
+            earliest_page_index_to_display = min( page_indices_to_display )
+            last_page_index_to_display = max( page_indices_to_display )
+            
+            page_indices_to_draw = list( page_indices_to_display )
+            
+            if earliest_page_index_to_display > 0:
+                
+                page_indices_to_draw.append( earliest_page_index_to_display - 1 )
+                
+            
+            page_indices_to_draw.append( last_page_index_to_display + 1 )
+            
+            page_indices_to_draw.sort()
+            
+            potential_clean_indices_to_steal = [ page_index for page_index in self._parent._clean_canvas_pages.keys() if page_index not in page_indices_to_draw ]
+            
+            random.shuffle( potential_clean_indices_to_steal )
+            
+            y_start = self._parent._GetYStart()
+            
+            earliest_y = y_start
+            
+            bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+            
+            painter.setBackground( QG.QBrush( bg_colour ) )
+            
+            painter.eraseRect( painter.viewport() )
+            
+            background_pixmap = HG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
+            
+            if background_pixmap is not None:
+                
+                my_size = QP.ScrollAreaVisibleRect( self._parent ).size()
+                
+                pixmap_size = background_pixmap.size()
+                
+                painter.drawPixmap( my_size.width() - pixmap_size.width(), my_size.height() - pixmap_size.height(), background_pixmap )
+                
+            
+            for page_index in page_indices_to_draw:
+                
+                if page_index not in self._parent._clean_canvas_pages:
+                    
+                    if len( self._parent._dirty_canvas_pages ) == 0:
+                        
+                        if len( potential_clean_indices_to_steal ) > 0:
+                            
+                            index_to_steal = potential_clean_indices_to_steal.pop()
+                            
+                            self._parent._DirtyPage( index_to_steal )
+                            
+                        else:
+                            
+                            self._parent._CreateNewDirtyPage()
+                            
+                        
+                    
+                    canvas_page = self._parent._dirty_canvas_pages.pop()
+                    
+                    self._parent._DrawCanvasPage( page_index, canvas_page )
+                    
+                    self._parent._clean_canvas_pages[ page_index ] = canvas_page
+                    
+                
+                if page_index in page_indices_to_display:
+                    
+                    canvas_page = self._parent._clean_canvas_pages[ page_index ]
+                    
+                    page_virtual_y = page_height * page_index
+                    
+                    painter.drawImage( 0, page_virtual_y, canvas_page )
+                    
+                
             
         
     

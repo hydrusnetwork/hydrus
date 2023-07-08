@@ -2137,6 +2137,8 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
                 numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
                 
+                numpy_image = HydrusImageHandling.StripOutAnyUselessAlphaChannel( numpy_image )
+                
                 pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
                 
                 perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
@@ -2218,7 +2220,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         pixel_hashes = tuple()
         perceptual_hashes = tuple()
-        max_hamming = 4
+        max_hamming = 8
         
         return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, max_hamming ) )
         

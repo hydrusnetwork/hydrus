@@ -803,11 +803,26 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
     
     def ConvertStarsToRating( self, stars: int ) -> float:
         
+        if stars > self._num_stars:
+            
+            stars = self._num_stars
+            
+        
         if self._allow_zero:
+            
+            if stars < 0:
+                
+                stars = 0
+                
             
             rating = stars / self._num_stars
             
         else:
+            
+            if stars < 1:
+                
+                stars = 1
+                
             
             rating = ( stars - 1 ) / ( self._num_stars - 1 )
             

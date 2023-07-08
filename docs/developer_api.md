@@ -218,7 +218,7 @@ When it does this, it gives you this structure, typically under a `services` key
   },
   "616c6c206c6f63616c206d65646961" : {
     "name" : "all my files",
-    "ype" : 21,
+    "type" : 21,
     "type_pretty" : "virtual combined local media service"
   },
   "616c6c206b6e6f776e2066696c6573" : {
@@ -234,12 +234,16 @@ When it does this, it gives you this structure, typically under a `services` key
   "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : {
     "name" : "example local rating like service",
     "type" : 7,
-    "type_pretty" : "local like/dislike rating service"
+    "type_pretty" : "local like/dislike rating service",
+    "star_shape" : "circle"
   },
   "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf" : {
     "name" : "example local rating numerical service",
     "type" : 6,
-    "type_pretty" : "local numerical rating service"
+    "type_pretty" : "local numerical rating service",
+    "star_shape" : "fat star",
+    "min_stars" : 1,
+    "max_stars" : 5
   },
   "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106" : {
     "name" : "example local rating inc/dec service",
@@ -290,9 +294,14 @@ You won't see all of these, but the service `type` enum is:
 
 `type_pretty` is something you can show users. Hydrus uses the same labels in _manage services_ and so on.
 
-If you want to know the services in a client, hit up [/get\_services](#get_services), which simply gives the above. The same structure has recently been added to [/get\_files/file\_metadata](#get_files_file_metadata) for convenience, since that refers to many different services when it is talking about file locations and ratings and so on.
+Rating services now have some extra data:
 
-I expect to hang more information off these in future, particularly star info for ratings.
+- like/dislike and numerical services have `star_shape`, which is one of `circle | square | fat star | pentagram star`
+- numerical services have `min_stars` (0 or 1) and `max_stars` (1 to 20)
+
+If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a 4/5, select from a dropdown list, do whatever you like!
+
+If you want to know the services in a client, hit up [/get\_services](#get_services), which simply gives the above. The same structure has recently been added to [/get\_files/file\_metadata](#get_files_file_metadata) for convenience, since that refers to many different services when it is talking about file locations and ratings and so on.
 
 Note: If you need to do some quick testing, you should be able to copy the `service_key` of any service by hitting the 'copy service key' button in _review services_.
 
@@ -342,7 +351,8 @@ Arguments:
         *   5 - Manage Cookies and Headers
         *   6 - Manage Database
         *   7 - Edit File Notes
-        *   8 - Manage File Relationships
+        *   8 - Edit File Relationships
+        *   9 - Edit File Ratings
 
     ``` title="Example request"
     /request_new_permissions?name=my%20import%20script&basic_permissions=[0,1]
@@ -351,7 +361,9 @@ Arguments:
 Response: 
 :   Some JSON with your access key, which is 64 characters of hex. This will not be valid until the user approves the request in the client ui.
 ```json title="Example response"
-{"access_key" : "73c9ab12751dcf3368f028d3abbe1d8e2a3a48d0de25e64f3a8f00f3a1424c57"}
+{
+    "access_key" : "73c9ab12751dcf3368f028d3abbe1d8e2a3a48d0de25e64f3a8f00f3a1424c57"
+}
 ```     
 
 ### **GET `/session_key`** { id="session_key" }
@@ -477,7 +489,9 @@ Arguments (in JSON):
 :   - `path`: (the path you want to import)
 
 ```json title="Example request body"
-{"path" : "E:\\to_import\\ayanami.jpg"}
+{
+  "path" : "E:\\to_import\\ayanami.jpg"
+}
 ```
 
 Arguments (as bytes): 
@@ -524,7 +538,9 @@ Arguments (in JSON):
 *   `reason`: (optional, string, the reason attached to the delete action)
 
 ```json title="Example request body"
-{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{
+  "hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"
+}
 ```
     
 Response:
@@ -549,7 +565,9 @@ Arguments (in JSON):
 *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
 
 ```json title="Example request body"
-{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{
+  "hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"
+}
 ```
 
 Response: 
@@ -576,7 +594,9 @@ Arguments (in JSON):
 *   [files](#parameters_files)
 
 ```json title="Example request body"
-{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{
+  "hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"
+}
 ```
     
 Response: 
@@ -601,7 +621,9 @@ Arguments (in JSON):
 *   [files](#parameters_files)
 
 ```json title="Example request body"
-{"hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"}
+{
+  "hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"
+}
 ```
     
 Response: 
@@ -996,6 +1018,52 @@ Response description:
     
     So, _do_ be careful about how you spam delete unless it is something that doesn't matter or it is something you'll only be touching again via the API anyway.
 
+## Editing File Ratings
+
+### **POST `/edit_ratings/set_rating`** { id="edit_ratings_set_rating" }
+
+_Add or remove ratings associated with a file._
+
+Restricted access: 
+:   YES. Edit Ratings permission needed.
+    
+Required Headers:
+:       
+    *   `Content-Type`: `application/json`
+    
+Arguments (in percent-encoded JSON):
+:   
+*   [files](#parameters_files)
+*   `rating_service_key` : (hexadecimal, the rating service you want to edit)
+*   `rating` : (mixed datatype, the rating value you want to set)
+
+```json title="Example request body"
+{
+  "hash" : "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba",
+  "rating_service_key" : "282303611ba853659aa60aeaa5b6312d40e05b58822c52c57ae5e320882ba26e",
+  "rating" : 2
+}
+```
+
+This is fairly simple, but there are some caveats around the different rating service types and the actual data you are setting here. It is the same as you'll see in [GET /get\_files/file\_metadata](#get_files_file_metadata). 
+
+#### Like/Dislike Ratings
+
+Send `true` for 'like', `false` for 'dislike', or `null` for 'unset'.
+
+#### Numerical Ratings
+
+Send an `int` for the number of stars to set, or `null` for 'unset'.
+
+#### Inc/Dec Ratings
+
+Send an `int` for the number to set. 0 is your minimum.
+
+As with [GET /get\_files/file\_metadata](#get_files_file_metadata), check [The Services Object](#services_object) for the min/max stars on a numerical rating service. 
+
+Response: 
+:   200 and no content.
+
 ## Editing File Notes
 
 ### **POST `/add_notes/set_notes`** { id="add_notes_set_notes" }
@@ -1373,6 +1441,11 @@ Response:
       "has_human_readable_embedded_metadata" : true,
       "has_icc_profile" : true,
       "known_urls" : [],
+      "ratings" : {
+        "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : null,
+        "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf" : null,
+        "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106" : 0
+      },
       "tags" : {
         "6c6f63616c2074616773" : {
           "storage_tags" : {},
@@ -1441,6 +1514,11 @@ Response:
         "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
         "http://origin-orig.deviantart.net/ed31/f/2019/210/7/8/beachqueen_samus_by_dandonfuga-ddcu1xg.jpg"
       ],
+      "ratings" : {
+        "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : true,
+        "90769255dae5c205c975fc4ce2efff796b8be8a421f786c1737f87f98187ffaf" : 3,
+        "b474e0cbbab02ca1479c12ad985f1c680ea909a54eb028e3ad06750ea40d4106" : 11
+      },
       "tags" : {
         "6c6f63616c2074616773" : {
           "storage_tags" : {
@@ -1552,9 +1630,19 @@ The `tags` structure is similar to the [/add\_tags/add\_tags](#add_tags_add_tags
 
 While the 'storage_tags' represent the actual tags stored on the database for a file, 'display_tags' reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, refer to the storage tags. If you want to render to the user, use the display tags. The display tag calculation logic is very complicated; if the storage tags change, do not try to guess the new display tags yourself--just ask the API again. 
 
+#### ratings
+
+The `ratings` structure is simple, but it holds different data types. For each service:
+
+- For a like/dislike service, 'no rating' is null. 'like' is true, 'dislike' is false.
+- For a numerical service, 'no rating' is null. Otherwise it will be an integer, for the number of stars.
+- For an inc/dec service, it is always an integer. The default value is 0 for all files.
+
+Check [The Services Object](#services_object) to see the shape of a rating star, and min/max number of stars in a numerical service. 
+
 #### services
 
-The 'tags' and 'file_services' structures use the hexadecimal `service_key` extensively. If you need to look up the respective service name or type, check [The Services Object](#services_object) under the top level `services` key.
+The `tags`, `ratings`, and `file_services` structures use the hexadecimal `service_key` extensively. If you need to look up the respective service name or type, check [The Services Object](#services_object) under the top level `services` key.
 
 !!! note
     If you look, those file structures actually include the service name and type already, but this bloated data is deprecated and will be deleted in 2024, so please transition over.

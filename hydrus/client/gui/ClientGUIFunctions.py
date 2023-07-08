@@ -95,7 +95,25 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage ):
         data_bytes = data_bytearray.asstring( height * width * depth )
         
     
-    numpy_image = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( height, width, depth ) )
+    if qt_image.bytesPerLine() == width * depth:
+        
+        numpy_image = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( height, width, depth ) )
+        
+    else:
+        
+        # ok bro, so in some cases a qt_image stores its lines with a bit of \x00 padding. you have a 990-pixel line that is 2970+2 bytes long
+        # apparently this is system memory storage limitations blah blah blah. it can also happen when you qt_image.copy(), so I guess it makes for pleasant memory layout little-endian something
+        # so far I have only encountered simple instances of this, with data up front and zero bytes at the end
+        # so let's just strip it lad
+        
+        bytes_per_line = qt_image.bytesPerLine()
+        desired_bytes_per_line = width * depth
+        excess_bytes_to_trim = bytes_per_line - desired_bytes_per_line
+        
+        numpy_padded = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( height, bytes_per_line ) )
+        
+        numpy_image = numpy_padded[ :, : -excess_bytes_to_trim ].reshape( ( height, width, depth ) )
+        
     
     return numpy_image
     

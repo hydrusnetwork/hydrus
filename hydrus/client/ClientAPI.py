@@ -19,8 +19,9 @@ CLIENT_API_PERMISSION_MANAGE_HEADERS = 5
 CLIENT_API_PERMISSION_MANAGE_DATABASE = 6
 CLIENT_API_PERMISSION_ADD_NOTES = 7
 CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS = 8
+CLIENT_API_PERMISSION_EDIT_RATINGS = 9
 
-ALLOWED_PERMISSIONS = ( CLIENT_API_PERMISSION_ADD_FILES, CLIENT_API_PERMISSION_ADD_TAGS, CLIENT_API_PERMISSION_ADD_URLS, CLIENT_API_PERMISSION_SEARCH_FILES, CLIENT_API_PERMISSION_MANAGE_PAGES, CLIENT_API_PERMISSION_MANAGE_HEADERS, CLIENT_API_PERMISSION_MANAGE_DATABASE, CLIENT_API_PERMISSION_ADD_NOTES, CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS )
+ALLOWED_PERMISSIONS = ( CLIENT_API_PERMISSION_ADD_FILES, CLIENT_API_PERMISSION_ADD_TAGS, CLIENT_API_PERMISSION_ADD_URLS, CLIENT_API_PERMISSION_SEARCH_FILES, CLIENT_API_PERMISSION_MANAGE_PAGES, CLIENT_API_PERMISSION_MANAGE_HEADERS, CLIENT_API_PERMISSION_MANAGE_DATABASE, CLIENT_API_PERMISSION_ADD_NOTES, CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS, CLIENT_API_PERMISSION_EDIT_RATINGS )
 
 basic_permission_to_str_lookup = {}
 
@@ -32,7 +33,8 @@ basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_PAGES ] = 'manage p
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_HEADERS ] = 'manage cookies and headers'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_DATABASE ] = 'manage database'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_NOTES ] = 'edit file notes'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS ] = 'manage file relationships'
+basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS ] = 'edit file relationships'
+basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_EDIT_RATINGS ] = 'edit file ratings'
 
 SEARCH_RESULTS_CACHE_TIMEOUT = 4 * 3600
 
@@ -407,9 +409,9 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
         
         with self._lock:
             
-            l = sorted( ( basic_permission_to_str_lookup[ p ] for p in self._basic_permissions ) )
+            sorted_perms = sorted( ( basic_permission_to_str_lookup[ p ] for p in self._basic_permissions ) )
             
-            return ', '.join( l )
+            return ', '.join( sorted_perms )
             
         
     

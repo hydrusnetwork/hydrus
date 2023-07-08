@@ -6,7 +6,9 @@ from hydrus.core import HydrusPaths
 
 def DeletePath( path, always_delete_fully = False ):
     
-    if HC.options[ 'delete_to_recycle_bin' ] == True and not always_delete_fully:
+    delete_to_recycle_bin = HC.options[ 'delete_to_recycle_bin' ]
+    
+    if delete_to_recycle_bin and not always_delete_fully:
         
         HydrusPaths.RecyclePath( path )
         

@@ -7,6 +7,56 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 534](https://github.com/hydrusnetwork/hydrus/releases/tag/v534)
+
+### user submissions
+
+* thanks to a user, we now have SAI2 (.sai2) file support!
+* thanks to a user, the duplicate filter now says if one file has audio. this complements the recent Hydrus Video Deduplicator (https://github.com/appleappleapplenanner/hydrus-video-deduplicator), which can queue videos up in your dupe filter
+* thanks to a user, we now have some nice svg images in the help->links(?) menu instead of gritty bitmaps
+* thanks to a user, some help documentation for recent client vs hydrus_client changes got fixed
+
+### quality of life/new stuff
+
+* the media viewer's top-area 'removed from x' lines for files deleted from a local file service no longer appear--unless that file is currently in the trash. on clients with busy multiple local file services, they were mostly just annoying and spammy. if you need this data, hit up the right-click menu of the file--it is still listed there
+* the 'loading' media page now draws a background in the same colour as the thumbnail grid, so new searches or refreshes will no longer flash to a default grey colour--it should just be a smooth thumbs gone/thumbs back now
+* added a new shortcut action, 'copy small bmp of image for quick source lookups', for last week's new bitmap copy action
+* it turns out PNG and WEBP files can have EXIF data, and our existing scanner works with them, so the EXIF scanner now looks at PNGs and WEBPs too. PNGs appear to be rare, about 1-in-200. I will retroactively scan your existing WEBPs, since they have EXIF more commonly, maybe as high as 1-in-5, and are less common as a filetype anyway so the scan will be less work, but when you update you will get a yes/no dialog asking if you want to do PNGs too. it isn't a big deal and you can always queue it up later if you want
+
+### fixes
+
+* I banged my head against the notes layout code and actually had great success--a variety of borked note-spilling-over-into-nothing and note-stretching-itself-crazy and note-has-fifty-pixels-of-margin issues are fixed. let me know if you still have crazy notes anywhere
+* the duplicate filter right-hand hover is now more aggressive about getting out of the way of the notes hover, especially when the notes hover jitter-resizes itself a few extra pixels of height. the notes hover should no longer ever overlap the duplicate filter hover's top buttons--very sorry this took so long
+* when you drag and drop thumbnails out of the program while using an automatic pattern to rename them (_options->gui_), all the filenames are now unique, adding '(x)' after their name as needed for dedupe. previously, on duplicates, it was basically doing a weird spam-merge
+* fixed an issue when sanitizing export filenames when the destination directory's file system type cannot be determined
+* fixed a bug when doing a search in a deleted file domain with 'file import time' as the file sort
+* fixed a bug when hitting the shortcut for 'open file in media viewer' on a non-local file
+* fixed a bug when the client wants to figure out view options for a file that has mime 'application/unknown'
+* I may have improved the 'woah the db caches are unsynced' error handling in the 'what siblings and parents does this have?' check when you right-click tags
+
+### weird bitmap pastes
+
+* fixed the new 'paste image' button under `system:similar files` for a certain category of unusual clipboard bitmaps, including several that hydrus itself generates, where it turns out the QImage storage system stores extra padding bytes on each line of pixels
+* fixed the new 'paste image' button when the incoming bitmap has a useless alpha channel (e.g. 100% transparent). this was not being stripped like it is for imported images, and so some similar files data was not lining up
+* many bitmaps copied from other programs like Firefox remain slightly different to what hydrus generates (even though both are at 100% scale). my best guess here is that there is some differing ICC-profile-like colour adjustment happening somewhere, probably either a global browser setting, the browser obeying a global GPU setting, a simply better application of such image metadata on the browser's side, or maybe a stripping of such data, since it seems a 'copy image' event in Firefox also generates and attaches to your clipboard a temporary png file in your temp folder, so maybe the bitmap that we pull from the clipboard is actually generated during some conversion process amidst all that, and it loses some jpeg colour data. whatever the case here, it changes the pixel hash and subtly alters the perceptual hash in many cases. I'm bumping the default distance on this search predicate up to 8 now, to catch the weirder instances
+
+### misc
+
+* the 'does the db partition have 500MB free?' check that runs on database boot now occurs after some initial database cleanup, and it will use half the total database size instead, if that is smaller than 500MB, down to 64MB (issue #1373)
+* added a note to the 'running from source' help that the newer mpv dll seems to work on Qt5 and Windows 7 (issue #1338)
+* the twitter parsers and gugs are removed from the defaults for new users. a shame, but we'll see what happens in future
+* more misc linting cleanup
+
+### ratings on the client api
+
+* the services object now shows `star_shape` and `min_stars` and `max_stars` for like/dislike and numerical rating services
+* the file metadata object now has a 'ratings' key, which lists `rating_service_key->rating` for all the client's rating services. this thing is simple and uses human-friendly values, but it can hold several different data types, so check the help for details and examples
+* a new permission, 'edit ratings', is added.
+* a new command, `/edit_ratings/set_rating`, is added. Guess what it does! (issue #343)
+* the help is updated for these
+* the unit tests are updated for these
+* the client api version is now 48
+
 ## [Version 533](https://github.com/hydrusnetwork/hydrus/releases/tag/v533)
 
 ### macOS App crashes
@@ -307,60 +357,3 @@ title: Changelog
 * the 'API URL' system for url classes now supports File URLs--this may help you figure out some CDN redirects and similar. in a special rule for these File URLs, both URLs will be associated with the imported file (normally, Post API URLs are not saved as Known URLs). relatedly, I have renamed this system broadly to 'api/redirect url', since we use it for a bunch of non-API stuff now
 * fixed a problem where deleting one of the new inc/dec rating services was not clearing the actual number ratings for that service from the database, causing service-id error hell on loading files with those orphaned rating records. sorry for the trouble, this slipped through testing! any users who were affected by this will also be fixed (orphan records cleared out) on update (issue #1357)
 * the client cleans up the temporary paths used by file imports more carefully now: it tries more times to delete 'sticky' temp files; it tries to clear them again immediately on shutdown; and it stores them all in the hydrus temp subdirectory where they are less loose and will be captured by the final directory clear on shutdown (issue #1356)
-
-## [Version 524](https://github.com/hydrusnetwork/hydrus/releases/tag/v524)
-
-### timestamp sidecars
-
-* the sidecars system now supports timestamps. it just uses the unix timestamp number, but if you need it, you can use string conversion to create a full datestring. each sidecar node only selects/sets that one timestamp, so this may get spammy if you want to migrate everything, but you can now migrate archived/imported/whatever time from one client to another! the content updates from sidecar imports apply immediately _after_ the file is fully imported, so it is safe and good to sidecar-import 'my files imported time' etc.. for new files, and it should all get set correctly, but obviously let me know otherwise. if you set 'archived time', the files have to be in an archived state immediately after import, which means importing and archiving them previously, or hitting 'archive all imports' on the respective file import options
-* sidecars are getting complex, so I expect I will soon add a button that sets up a 'full' JSON sidecar import/export in one click, basically just spamming/sucking everything the sidecar system can do, pretty soon, so it is easier to set up larger migrations
-
-### timestamp merge
-
-* the duplicate merge options now have an action for 'sync file modified date?'. you can set so both files get their earliest (the new default for 'they are the same'), or that the earlier worse can be applied to the later better (the new default for 'this is better') (issue #1203)
-* in the duplicate system, when URLs are merged, their respective domain-based timestamps are also merged according to the earliest, as above
-
-### more timestamps
-
-* hydrus now supports timestamps before 1970. should be good now, lol, back to 1AD (and my tests show BC dates seem to be working too?). it is probably a meme to apply a modified date of 1505 to some painting, but when I add timestamps to the API maybe we can have some fun. btw calendar calculations and timezones are hell on earth at times, and there's a decent chance that your pre-1970 dates may show up on hour out of phase in labels (a daylight savings time thing) of what you enter in some other area of UI. in either case, my code is not clever enough to apply DST schedules retroactively to older dates, so your search ranges may simply be an hour out back in 1953. it sounds stupid, but it may matter if we are talking midnight boundaries, so let me know how you find it
-* when you set a new file modified date, the file on disk's modified date will only be updated if the date set is after 1980-01-01 (Windows) or 1970-01-01 (Linux) due to system limitations
-* fixed a typo bug in last week's work that meant file service timestamp editing was not updating the media object (i.e. changes were not visible until a restart)
-* fixed a bug where collections that contained files with delete timestamps were throwing errors on display. (they were calculating aggregate timestamp data wrong)
-* I rejiggered how the 'is this timestamp sensible?' test applies. this test essentially discounts any timestamp before 1970-01-08 to catch any weird mis-parses and stop them nuking your aggregate modified timestamp values. it now won't apply to internal duplicate merge and so on, but it still applies when you parse timestamps in the downloader system, so you still can't parse anything pre-1970 for now
-* one thing I noticed is my '5 years 1 months ago' calculation, which uses a fixed 30 day month and doesn't count the extra day of leap years, is showing obviously increasingly inaccurate numbers here. I'll fix it up
-
-### export folders
-
-* export folders can now show a popup while they work. there's a new checkbox for it in their edit UI. default is ON, so you'll start seeing popups for export folders that run in the background. this popup is cancellable, too, so you can now stop in-progress export runs if things seem wrong
-* both import and export folders will force-show working popups whenever you trigger them manually
-* export folders no longer have the weird and confusing 'paused' and 'run regularly?' duality. this was a legacy error handling thing, now cleaned up and merged into 'run regularly?'
-* when 'run regularly?' is unchecked, the run period and new 'show popup while working regularly?' checkboxes are now disabled
-
-### misc
-
-* added 'system:ratio is square/portrait/landscape' nicer label aliases for =/taller/wider 1:1 ratio. I added them to the quick-select list on the edit panel, too. they also parse in the system predicate parser!
-* I added a bit to the 'getting started with downloading' help page about getting access to difficult sites. I refer to Hydrus Companion as a good internal login solution, and link to yt-dlp, gallery-dl, and imgbrd-grabber with a little discussion on setting up external import workflows. I tried gallery-dl on twitter this week and it was excellent. it can also take your login credentials as either user/pass or cookies.txt (or pull cookies straight from firefox/safari) and give access to nsfw. since twitter has rapidly become a pain for us recently, I will be pointing people to gallery-dl for now
-* fixed my Qt subclass definitions for PySide6 6.5.0, which strictly requires the Qt object to be the rightmost base class in multiple inheritance subclasses, wew. this his AUR users last week, I understand!
-
-### client api (and local booru lol)
-
-* if you set the Client API to not allow non-local connections, it now binds to 127.0.0.1 and ::1 specifically, which tell your OS we only want the loopback interface. this increases security, and on Windows _should_ mean it only does that first-time firewall dialog popup when 'allow non-local connections' is unchecked
-* I brushed up the manage services UI for the Client API. the widgets all line up better now, and turning the service on and off isn't the awkward '[] do not run the service' any more
-* fixed the 'disable idle mode if the client api does stuff' check, which was wired up wrong! also, the reset here now fires as a request starts, not when it is complete, meaning if you are already in idle mode, a client api request will now quickly cancel idle mode and hopefully free up any locked database situation promptly
-
-### boring cleanup and stuff
-
-* reworked all timestamp-datetime conversion to be happier with pre-1970 dates regardless of system/python support. it is broadly improved all around
-* refactored all of the HydrusData time functions and much of ClientTime to a new HydrusTime module
-* refactored the ClientData time stuff to ClientTime
-* refactored some thread/process functions from HydrusData to HydrusThreading
-* refactored some list splitting/throttling functions from HydrusData to a new HydrusLists module
-* refactored the file filter out of ClientMedia and into the new ClientMediaFileFilter, and reworked things so the medialist filter jobs now happen at the filter level. this was probably done the wrong way around, but oh well
-* expanded the new TimestampData object a bit, it can now give a nice descriptive string of itself
-* wrote a new widget to edit TimestampData stubs
-* wrote some unit tests for the new timestamp sidecar importer and exporter
-* updated my multi-column list system to handle the deprecation of a column definition (today it was the 'paused' column in manage export folders list)
-* it should also be able to handle new column definitions appearing
-* fixed an error popup that still said 'run repair invalid tags' instead of 'run fix invalid tags'
-* the FILE_SERVICES constant now holds the 'all deleted files' virtual domain. this domain keeps slipping my logic, so fingers crossed this helps. also means you can select it in 'system:file service' and stuff now
-* misc cleaning and linting work

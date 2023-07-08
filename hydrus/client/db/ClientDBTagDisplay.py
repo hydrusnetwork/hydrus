@@ -407,7 +407,9 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
             existing_tags = { tag for tag in tags if self.modules_tags.TagExists( tag ) }
             
-            existing_tag_ids = { self.modules_tags.GetTagId( tag ) for tag in existing_tags }
+            existing_tag_ids_to_tags = self.modules_tags.GetTagIdsToTags( tags = existing_tags )
+            
+            existing_tag_ids = set( existing_tag_ids_to_tags.keys() )
             
             tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
             
@@ -427,14 +429,13 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
             tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = all_tag_ids )
             
-            for tag_id in existing_tag_ids:
+            for ( tag_id, tag ) in existing_tag_ids_to_tags.items():
                 
                 ideal_tag_id = tag_ids_to_ideal_tag_ids[ tag_id ]
                 sibling_chain_ids = ideal_tag_ids_to_sibling_chain_ids[ ideal_tag_id ]
                 descendant_tag_ids = ideal_tag_ids_to_descendant_tag_ids[ ideal_tag_id ]
                 ancestor_tag_ids = ideal_tag_ids_to_ancestor_tag_ids[ ideal_tag_id ]
                 
-                tag = tag_ids_to_tags[ tag_id ]
                 ideal_tag = tag_ids_to_tags[ ideal_tag_id ]
                 sibling_chain_members = { tag_ids_to_tags[ sibling_chain_id ] for sibling_chain_id in sibling_chain_ids }
                 descendants = { tag_ids_to_tags[ descendant_tag_id ] for descendant_tag_id in descendant_tag_ids }

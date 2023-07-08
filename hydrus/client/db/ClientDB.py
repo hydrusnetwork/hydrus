@@ -9474,6 +9474,50 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 533:
+            
+            def ask_what_to_do_png_stuff():
+                
+                message = 'Hey, v534 adds the ability to see EXIF data in PNG and WEBP files. PNGs with EXIF are generally rare, typically less than one in a hundred. It is usually info about the software that made the PNG.'
+                message += '\n' * 2
+                message += 'The client will scan all new PNGs for EXIF. Do you want it to also, over the next few days/weeks in the background, scan all your existing PNG files for EXIF data? It does not take a lot of resources, but it will ultimately load every single PNG you have. If you say no, you can always queue the job up yourself under _database->file maintenance_ later.'
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
+                result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Scan PNGs?', yes_label = 'do it', no_label = 'do not do it' )
+                
+                return result == QW.QDialog.Accepted
+                
+            
+            try:
+                
+                do_png_stuff = self._controller.CallBlockingToQt( None, ask_what_to_do_png_stuff )
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    mimes_we_want = [ HC.IMAGE_WEBP ]
+                    
+                    if do_png_stuff:
+                        
+                        mimes_we_want.append( HC.IMAGE_PNG )
+                        
+                    
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( mimes_we_want ) ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some exif-scanning failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

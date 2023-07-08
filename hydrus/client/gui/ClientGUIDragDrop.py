@@ -85,6 +85,8 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
     elif discord_dnd_fix_possible and os.path.exists( temp_dir ):
         
+        seen_export_filenames = set()
+        
         fallback_filename_terms = ClientExportingFiles.ParseExportPhrase( '{hash}' )
         
         try:
@@ -106,12 +108,14 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
         for ( i, ( m, original_path ) ) in enumerate( media_and_original_paths ):
             
-            filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, filename_terms, i + 1 )
+            filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
             
             if filename == HC.mime_ext_lookup[ m.GetMime() ]:
                 
-                filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, fallback_filename_terms, i + 1 )
+                filename = ClientExportingFiles.GenerateExportFilename( temp_dir, m, fallback_filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
                 
+            
+            seen_export_filenames.add( filename )
             
             dnd_path = os.path.join( temp_dir, filename )
             

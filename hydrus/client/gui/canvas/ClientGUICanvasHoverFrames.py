@@ -355,6 +355,8 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
 
 class CanvasHoverFrame( QW.QFrame ):
     
+    hoverResizedOrMoved = QC.Signal()
+    
     sendApplicationCommand = QC.Signal( CAC.ApplicationCommand )
     
     def __init__( self, parent: QW.QWidget, my_canvas, canvas_key ):
@@ -453,12 +455,19 @@ class CanvasHoverFrame( QW.QFrame ):
                 self.resize( my_ideal_size )
                 
             
-            if my_ideal_position != self.pos():
+            should_move = my_ideal_position != self.pos()
+            
+            if should_move:
                 
                 self.move( my_ideal_position )
                 
             
             self._position_initialised = True
+            
+            if should_resize or should_move:
+                
+                self.hoverResizedOrMoved.emit()
+                
             
         
     
@@ -1489,7 +1498,7 @@ class NotePanel( QW.QWidget ):
         vbox = QP.VBoxLayout( margin = 0 )
         
         QP.AddToLayout( vbox, self._note_name, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._note_text, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._note_text, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._note_text.setVisible( self._note_visible )
         
@@ -1573,6 +1582,14 @@ class NotePanel( QW.QWidget ):
         return self._note_visible
         
     
+    def sizeHint( self ) -> QC.QSize:
+        
+        width = self.parentWidget().GetNoteWidth()
+        height = self.heightForWidth( width )
+        
+        return QC.QSize( width, height )
+        
+    
 class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_right_hover: CanvasHoverFrameTopRight, canvas_key ):
@@ -1581,7 +1598,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         self._top_right_hover = top_right_hover
         
-        self._vbox = QP.VBoxLayout()
+        self._vbox = QP.VBoxLayout( spacing = 2, margin = 2 )
         self._names_to_note_panels = {}
         
         self.setSizePolicy( QW.QSizePolicy.Fixed, QW.QSizePolicy.Expanding )
@@ -1638,7 +1655,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         # the problem here is that sizeHint produces what width the static text wants based on its own word wrap rules
         # we want to say 'with this fixed width, how tall are we?'
         # VBoxLayout doesn't support heightForWidth, but statictext does, so let's hack it
-        # ideal solution here is to write a new layout that delivers heightforwidth, but lmao. maybe Qt6 will do it
+        # ideal solution here is to write a new layout that delivers heightforwidth, but lmao. maybe Qt6 will do it. EDIT: It didn't really work?
         
         spacing = self.layout().spacing()
         margin = self.layout().contentsMargins().top()
@@ -1667,7 +1684,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         note_panel_names_with_hidden_notes = set()
         
-        for ( name, note_panel ) in self._names_to_note_panels.items():
+        for ( name, note_panel ) in list( self._names_to_note_panels.items() ):
             
             if not note_panel.IsNoteVisible():
                 
@@ -1712,6 +1729,13 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             
         
         return CanvasHoverFrame._ShouldBeHidden( self )
+        
+    
+    def GetNoteWidth( self ):
+        
+        note_panel_width = self.width() - ( self.frameWidth() + self.layout().contentsMargins().left() ) * 2
+        
+        return note_panel_width
         
     
     def ProcessContentUpdates( self, service_keys_to_content_updates ):
@@ -1918,6 +1942,8 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
         HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        
+        self._right_notes_hover.hoverResizedOrMoved.connect( self._SizeAndPosition )
         
     
     def _EditBackgroundSwitchIntensity( self ):

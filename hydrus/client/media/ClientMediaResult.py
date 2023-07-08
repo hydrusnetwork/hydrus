@@ -119,7 +119,7 @@ class MediaResult( object ):
         return self._file_info_manager.num_words
         
     
-    def GetRatingsManager( self ):
+    def GetRatingsManager( self ) -> ClientMediaManagers.RatingsManager:
         
         return self._ratings_manager
         
