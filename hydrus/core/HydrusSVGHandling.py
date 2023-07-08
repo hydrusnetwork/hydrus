@@ -31,8 +31,12 @@ def GenerateThumbnailBytesFromSVGPath(path: str, target_resolution: tuple[int, i
     ( target_width, target_height ) = target_resolution
 
     renderer = LoadSVGRenderer(path)
+
+    # Seems to help for some weird floating point dimension SVGs
+    renderer.setAspectRatioMode(QC.Qt.AspectRatioMode.KeepAspectRatio)
     
     try:
+        
         qt_image = QG.QImage( target_width, target_height, QG.QImage.Format_RGBA8888 )
 
         qt_image.fill( QC.Qt.transparent )
