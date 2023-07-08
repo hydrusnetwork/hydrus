@@ -96,11 +96,33 @@ def LooksLikeHTML( file_data ):
     
     if isinstance( file_data, bytes ):
         
-        search_elements = ( b'<html', b'<HTML', b'<title', b'<TITLE' )
+        search_elements = ( b'<html', b'<HTML', b'<!DOCTYPE html', b'<!DOCTYPE HTML' )
         
     else:
         
-        search_elements = ( '<html', '<HTML', '<title', '<TITLE' )
+        search_elements = ( '<html', '<HTML', '<!DOCTYPE html', '<!DOCTYPE HTML' )
+        
+    
+    for s_e in search_elements:
+        
+        if s_e in file_data:
+            
+            return True
+            
+        
+    
+    return False
+
+def LooksLikeSVG( file_data ):
+
+
+    if isinstance( file_data, bytes ):
+        
+        search_elements = ( b'<svg', b'<SVG', b'<!DOCTYPE svg', b'<!DOCTYPE SVG' )
+        
+    else:
+        
+        search_elements = ( '<svg', '<SVG', '<!DOCTYPE svg', '<!DOCTYPE SVG' )
         
     
     for s_e in search_elements:
