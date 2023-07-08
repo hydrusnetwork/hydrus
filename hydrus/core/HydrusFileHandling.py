@@ -4,6 +4,7 @@ import struct
 
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusClipHandling
+from hydrus.core import HydrusKritaHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
@@ -65,6 +66,10 @@ headers_and_mime.extend( [
     ( ( ( 0, b'8BPS\x00\x02' ), ), HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
     ( ( ( 0, b'CSFCHUNK' ), ), HC.APPLICATION_CLIP ),
     ( ( ( 0, b'SAI-CANVAS' ), ), HC.APPLICATION_SAI2 ),
+    ( ( ( 38, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
+    ( ( ( 42, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/master/data/freedesktop.org.xml.in#L2829
+    ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
+    ( ( ( 63, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
     ( ( ( 0, b'PK\x03\x04' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x05\x06' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x07\x08' ), ), HC.APPLICATION_ZIP ),
@@ -152,7 +157,28 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
+
+    elif mime == HC.APPLICATION_KRITA:
         
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        
+        try:
+            
+            HydrusKritaHandling.ExtractZippedImageToPath( path, temp_path )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            
+        except Exception as e:
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'krita.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+        
+
     elif mime == HC.APPLICATION_FLASH:
         
         ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
@@ -314,6 +340,10 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames ) = HydrusClipHandling.GetClipProperties( path )
         
+    elif mime == HC.APPLICATION_KRITA:
+        
+        ( width, height ) = HydrusKritaHandling.GetKraProperties( path )
+
     elif mime == HC.APPLICATION_FLASH:
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
