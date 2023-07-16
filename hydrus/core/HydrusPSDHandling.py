@@ -23,7 +23,6 @@ def GenerateThumbnailBytesFromPSDPath(path: str, target_resolution: tuple[int, i
     no_alpha = psd._record.layer_and_mask_information.layer_info is not None and psd._record.layer_and_mask_information.layer_info.layer_count > 0
 
     if(HydrusImageHandling.PILImageHasTransparency(pil_image) and no_alpha):
-        print("no alpha")
         # merged image from psd-tools has transparency when it shouldn't
         # see https://github.com/psd-tools/psd-tools/issues/369
 
