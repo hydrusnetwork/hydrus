@@ -29,3 +29,5 @@ QtPy==2.3.0
 PySide6==6.4.1
 
 setuptools==65.5.1
+
+psd-tools>=1.9.28

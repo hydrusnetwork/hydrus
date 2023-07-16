@@ -6,6 +6,7 @@ from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusKritaHandling
 from hydrus.core import HydrusSVGHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
@@ -118,24 +119,16 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
         
     elif mime == HC.APPLICATION_PSD:
-        
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
-        
+                
         try:
             
-            HydrusVideoHandling.RenderImageToImagePath( path, temp_path )
-            
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            thumbnail_bytes = HydrusPSDHandling.GenerateThumbnailBytesFromPSDPath( path, target_resolution, clip_rect = clip_rect )
             
         except:
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
             
             thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
-            
-        finally:
-            
-            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     elif mime == HC.APPLICATION_CLIP:
@@ -379,7 +372,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
     elif mime == HC.APPLICATION_PSD:
         
-        ( width, height ) = HydrusImageHandling.GetPSDResolution( path )
+        ( width, height ) = HydrusPSDHandling.GetPSDResolution( path )
         
     elif mime in HC.VIDEO:
         

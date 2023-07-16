@@ -793,21 +793,6 @@ def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
     
     return None
     
-
-def GetPSDResolution( path ):
-    
-    with open( path, 'rb' ) as f:
-        
-        f.seek( 14 )
-        
-        height_bytes = f.read( 4 )
-        width_bytes = f.read( 4 )
-        
-    
-    height = struct.unpack( '>L', height_bytes )[0]
-    width = struct.unpack( '>L', width_bytes )[0]
-    
-    return ( width, height )
     
 def GetResolutionNumPy( numpy_image ):
     

@@ -23,3 +23,5 @@ Twisted>=20.3.0
 
 requests==2.31.0
 setuptools==65.5.1
+
+psd-tools>=1.9.28
