@@ -33,6 +33,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
+from hydrus.core import HydrusPSDHandling
 
 PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
 
@@ -249,7 +250,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
         
         HydrusData.ShowText( 'Loading media: ' + path )
         
-    
+
     if not OPENCV_OK:
         
         force_pil = True
@@ -295,8 +296,17 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             pass
             
         
-    
-    if mime in PIL_ONLY_MIMETYPES or force_pil:
+    if mime == HC.APPLICATION_PSD:
+         
+        if HG.media_load_report_mode:
+        
+            HydrusData.ShowText( 'Loading PSD' )
+            
+        pil_image = HydrusPSDHandling.MergedPILImageFromPSD( path )
+        
+        numpy_image = GenerateNumPyImageFromPILImage( pil_image )
+
+    elif mime in PIL_ONLY_MIMETYPES or force_pil:
         
         if HG.media_load_report_mode:
             

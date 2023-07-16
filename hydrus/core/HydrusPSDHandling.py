@@ -11,13 +11,6 @@ def MergedPILImageFromPSD(path: str) -> PILImage:
     
     psd = PSDImage.open(path)
 
-    return psd.topil()
-
-
-def GenerateThumbnailBytesFromPSDPath(path: str, target_resolution: tuple[int, int], clip_rect = None) -> bytes:
-    
-    psd = PSDImage.open(path)
-
     pil_image = psd.topil()
 
     no_alpha = psd._record.layer_and_mask_information.layer_info is not None and psd._record.layer_and_mask_information.layer_info.layer_count > 0
@@ -30,6 +23,12 @@ def GenerateThumbnailBytesFromPSDPath(path: str, target_resolution: tuple[int, i
         # that has to happen for the thumbnail anyway.
         pil_image = pil_image.convert("RGB")
 
+    return pil_image
+
+
+def GenerateThumbnailBytesFromPSDPath(path: str, target_resolution: tuple[int, int], clip_rect = None) -> bytes:
+    
+    pil_image = MergedPILImageFromPSD(path)
 
     if clip_rect is not None:
         
