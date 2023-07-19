@@ -917,28 +917,7 @@ class HydrusResourceRestrictedNumPetitions( HydrusResourceRestricted ):
         return response_context
         
     
-class HydrusResourceRestrictedPetitionSummaryList( HydrusResourceRestricted ):
-    
-    def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
-        
-        content_type = request.parsed_request_args[ 'content_type' ]
-        
-        request.hydrus_account.CheckPermission( content_type, HC.PERMISSION_ACTION_MODERATE )
-        
-    
-    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
-        
-        # fetch cached summary list
-        # ( account_key, reason, size of petition )
-        petition_summary_list = []
-        
-        body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'petition_summary_list' : petition_summary_list } )
-        
-        response_context = HydrusServerResources.ResponseContext( 200, body = body )
-        
-        return response_context
-        
-    
+
 class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -950,12 +929,38 @@ class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        subject_account_key = request.parsed_request_args.GetValueOrNone( 'subject_account_key', bytes )
-        # add reason to here some time, for when we eventually select petitions from a summary list of ( account, reason, size ) stuff
         content_type = request.parsed_request_args[ 'content_type' ]
         status = request.parsed_request_args[ 'status' ]
+        subject_account_key = request.parsed_request_args.GetValueOrNone( 'subject_account_key', bytes )
+        reason = request.parsed_request_args.GetValueOrNone( 'reason', str )
         
-        petition = HG.server_controller.Read( 'petition', self._service_key, request.hydrus_account, content_type, status, subject_account_key = subject_account_key )
+        if subject_account_key is None or reason is None:
+            
+            petitions_summary = HG.server_controller.Read( 'petitions_summary', self._service_key, request.hydrus_account, content_type, status, limit = 1, subject_account_key = subject_account_key )
+            
+            if len( petitions_summary ) == 0:
+                
+                if subject_account_key is None and reason is None:
+                    
+                    raise HydrusExceptions.NotFoundException( f'Sorry, no petitions were found!' )
+                    
+                elif subject_account_key is None:
+                    
+                    raise HydrusExceptions.NotFoundException( f'Sorry, no petitions were found for the given reason {reason}!' )
+                    
+                else:
+                    
+                    raise HydrusExceptions.NotFoundException( 'Sorry, no petitions were found for the given account_key {}!'.format( subject_account_key.hex() ) )
+                    
+                
+            
+            petition_header = petitions_summary[0]
+            
+            subject_account_key = petition_header.account_key
+            reason = petition_header.reason
+            
+        
+        petition = HG.server_controller.Read( 'petition', self._service_key, request.hydrus_account, content_type, status, subject_account_key, reason )
         
         body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'petition' : petition } )
         
@@ -964,6 +969,35 @@ class HydrusResourceRestrictedPetition( HydrusResourceRestricted ):
         return response_context
         
     
+
+class HydrusResourceRestrictedPetitionsSummary( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        content_type = request.parsed_request_args[ 'content_type' ]
+        
+        request.hydrus_account.CheckPermission( content_type, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        content_type = request.parsed_request_args.GetValue( 'content_type', int )
+        status = request.parsed_request_args.GetValue( 'status', int )
+        num = request.parsed_request_args.GetValue( 'num', int )
+        
+        subject_account_key = request.parsed_request_args.GetValueOrNone( 'subject_account_key', bytes )
+        reason = request.parsed_request_args.GetValueOrNone( 'reason', str )
+        
+        petitions_summary = HG.server_controller.Read( 'petitions_summary', self._service_key, request.hydrus_account, content_type, status, num, subject_account_key = subject_account_key, reason = reason )
+        
+        body = HydrusNetworkVariableHandling.DumpHydrusArgsToNetworkBytes( { 'petitions_summary' : petitions_summary } )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, body = body )
+        
+        return response_context
+        
+    
+
 class HydrusResourceRestrictedRegistrationKeys( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):

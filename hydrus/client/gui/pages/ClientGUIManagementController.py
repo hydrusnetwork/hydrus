@@ -166,6 +166,11 @@ def CreateManagementControllerPetitions( petition_service_key ):
     
     management_controller.SetVariable( 'petition_service_key', petition_service_key )
     
+    management_controller.SetVariable( 'petition_type_content_type', None )
+    management_controller.SetVariable( 'petition_type_status', None )
+    management_controller.SetVariable( 'num_petitions_to_fetch', 40 )
+    management_controller.SetVariable( 'num_files_to_show', 256 )
+    
     return management_controller
     
 
@@ -188,7 +193,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_MANAGEMENT_CONTROLLER
     SERIALISABLE_NAME = 'Client Page Management Controller'
-    SERIALISABLE_VERSION = 12
+    SERIALISABLE_VERSION = 13
     
     def __init__( self, page_name = 'page' ):
         
@@ -534,6 +539,27 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( page_name, management_type, serialisable_variables )
             
             return ( 12, new_serialisable_info )
+            
+        
+        if version == 12:
+            
+            ( page_name, management_type, serialisable_variables ) = old_serialisable_info
+            
+            if management_type == MANAGEMENT_TYPE_PETITIONS:
+                
+                variables = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_variables )
+                
+                variables[ 'petition_type_content_type' ] = None
+                variables[ 'petition_type_status' ] = None
+                variables[ 'num_petitions_to_fetch' ] = 40
+                variables[ 'num_files_to_show' ] = 256
+                
+                serialisable_variables = variables.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( page_name, management_type, serialisable_variables )
+            
+            return ( 13, new_serialisable_info )
             
         
     
