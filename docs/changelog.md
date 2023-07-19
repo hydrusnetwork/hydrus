@@ -11,7 +11,7 @@ title: Changelog
 
 ### misc
 
-* thanks to a user, we now have Krita (.kra, .krz) support! it even pulls thumbnails]
+* thanks to a user, we now have Krita (.kra, .krz) support! it even pulls thumbnails!
 * thanks to another user, we now have SVG (.svg) support! it even generates thumbnails!
 * I think I fixed a comparison statement calculator divide-by-zero error in the duplicate filter when you compare a file with a resolution with a file without one
 
