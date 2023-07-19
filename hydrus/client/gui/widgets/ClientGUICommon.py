@@ -1446,7 +1446,7 @@ class ListBook( QW.QWidget ):
         
     
 class NoneableSpinCtrl( QW.QWidget ):
-
+    
     valueChanged = QC.Signal()
     
     def __init__( self, parent, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):

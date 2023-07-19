@@ -100,7 +100,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 534
+SOFTWARE_VERSION = 535
 CLIENT_API_VERSION = 48
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -794,6 +794,7 @@ mime_enum_lookup = {
     'application/x-shockwave-flash' : APPLICATION_FLASH,
     'application/x-photoshop' : APPLICATION_PSD,
     'image/vnd.adobe.photoshop' : APPLICATION_PSD,
+    'application/vnd.adobe.photoshop' : APPLICATION_PSD,
     'application/clip' : APPLICATION_CLIP,
     'application/sai2': APPLICATION_SAI2,
     'application/x-krita': APPLICATION_KRITA,
@@ -855,10 +856,10 @@ mime_string_lookup = {
     APPLICATION_JSON : 'json',
     APPLICATION_CBOR : 'cbor',
     APPLICATION_PDF : 'pdf',
-    APPLICATION_PSD : 'photoshop psd',
+    APPLICATION_PSD : 'psd',
     APPLICATION_CLIP : 'clip',
     APPLICATION_SAI2 : 'sai2',
-    APPLICATION_KRITA : 'kra',
+    APPLICATION_KRITA : 'krita',
     APPLICATION_ZIP : 'zip',
     APPLICATION_RAR : 'rar',
     APPLICATION_7Z : '7z',
@@ -917,7 +918,7 @@ mime_mimetype_string_lookup = {
     APPLICATION_JSON : 'application/json',
     APPLICATION_CBOR : 'application/cbor',
     APPLICATION_PDF : 'application/pdf',
-    APPLICATION_PSD : 'application/x-photoshop',
+    APPLICATION_PSD : 'image/vnd.adobe.photoshop',
     APPLICATION_CLIP : 'application/clip',
     APPLICATION_SAI2: 'application/sai2',
     APPLICATION_KRITA: 'application/x-krita',

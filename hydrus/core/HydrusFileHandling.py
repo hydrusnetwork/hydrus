@@ -485,6 +485,18 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         if it_passes:
             
+            if mime == HC.APPLICATION_ZIP:
+                
+                # TODO: since we'll be expanding this to other zip-likes, we should make the zipfile object up here and pass that to various checkers downstream
+                if HydrusKritaHandling.ZipLooksLikeAKrita( path ):
+                    
+                    return HC.APPLICATION_KRITA
+                    
+                else:
+                    
+                    return HC.APPLICATION_ZIP
+                    
+                
             if mime in ( HC.UNDETERMINED_WM, HC.UNDETERMINED_MP4 ):
                 
                 return HydrusVideoHandling.GetMime( path )
@@ -511,9 +523,11 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         return HC.TEXT_HTML
         
+    
     if HydrusText.LooksLikeSVG( bit_to_check ): 
         
         return HC.IMAGE_SVG
+        
     
     # it is important this goes at the end, because ffmpeg has a billion false positives!
     # for instance, it once thought some hydrus update files were mpegs

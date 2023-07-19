@@ -120,61 +120,66 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     if s_size != c_size:
         
-        absolute_size_ratio = max( s_size, c_size ) / min( s_size, c_size )
+        all_measurements_are_good = None not in ( s_size, c_size ) and True not in ( d <= 0 for d in ( s_size, c_size ) )
         
-        if absolute_size_ratio > 2.0:
+        if all_measurements_are_good:
             
-            if s_size > c_size:
+            absolute_size_ratio = max( s_size, c_size ) / min( s_size, c_size )
+            
+            if absolute_size_ratio > 2.0:
                 
-                operator = '>>'
-                score = duplicate_comparison_score_much_higher_filesize
+                if s_size > c_size:
+                    
+                    operator = '>>'
+                    score = duplicate_comparison_score_much_higher_filesize
+                    
+                else:
+                    
+                    operator = '<<'
+                    score = -duplicate_comparison_score_much_higher_filesize
+                    
+                
+            elif absolute_size_ratio > 1.05:
+                
+                if s_size > c_size:
+                    
+                    operator = '>'
+                    score = duplicate_comparison_score_higher_filesize
+                    
+                else:
+                    
+                    operator = '<'
+                    score = -duplicate_comparison_score_higher_filesize
+                    
                 
             else:
                 
-                operator = '<<'
-                score = -duplicate_comparison_score_much_higher_filesize
+                operator = CC.UNICODE_ALMOST_EQUAL_TO
+                score = 0
                 
-            
-        elif absolute_size_ratio > 1.05:
             
             if s_size > c_size:
                 
-                operator = '>'
-                score = duplicate_comparison_score_higher_filesize
+                sign = '+'
+                percentage_difference = ( s_size / c_size ) - 1.0
                 
             else:
                 
-                operator = '<'
-                score = -duplicate_comparison_score_higher_filesize
+                sign = ''
+                percentage_difference = ( s_size / c_size ) - 1.0
                 
             
-        else:
+            percentage_different_string = ' ({}{})'.format( sign, HydrusData.ConvertFloatToPercentage( percentage_difference ) )
             
-            operator = CC.UNICODE_ALMOST_EQUAL_TO
-            score = 0
+            if is_a_pixel_dupe:
+                
+                score = 0
+                
             
-        
-        if s_size > c_size:
+            statement = '{} {} {}{}'.format( HydrusData.ToHumanBytes( s_size ), operator, HydrusData.ToHumanBytes( c_size ), percentage_different_string )
             
-            sign = '+'
-            percentage_difference = ( s_size / c_size ) - 1.0
+            statements_and_scores[ 'filesize' ]  = ( statement, score )
             
-        else:
-            
-            sign = ''
-            percentage_difference = ( s_size / c_size ) - 1.0
-            
-        
-        percentage_different_string = ' ({}{})'.format( sign, HydrusData.ConvertFloatToPercentage( percentage_difference ) )
-        
-        if is_a_pixel_dupe:
-            
-            score = 0
-            
-        
-        statement = '{} {} {}{}'.format( HydrusData.ToHumanBytes( s_size ), operator, HydrusData.ToHumanBytes( c_size ), percentage_different_string )
-        
-        statements_and_scores[ 'filesize' ]  = ( statement, score )
         
     
     # higher/same res
@@ -433,7 +438,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if s_label != c_label:
             
-            if c_jpeg_quality is None or s_jpeg_quality is None:
+            if c_jpeg_quality is None or s_jpeg_quality is None or c_jpeg_quality <= 0 or s_jpeg_quality <= 0:
                 
                 score = 0
                 

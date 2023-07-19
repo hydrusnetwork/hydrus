@@ -1444,11 +1444,27 @@ class Controller( HydrusController.HydrusController ):
             
         
     
+    def PageAliveAndNotClosed( self, page_key ):
+        
+        with self._page_key_lock:
+            
+            return page_key in self._alive_page_keys and page_key not in self._closed_page_keys
+            
+        
+    
     def PageClosedButNotDestroyed( self, page_key ):
         
         with self._page_key_lock:
             
             return page_key in self._closed_page_keys
+            
+        
+    
+    def PageDestroyed( self, page_key ):
+        
+        with self._page_key_lock:
+            
+            return page_key not in self._alive_page_keys and page_key not in self._closed_page_keys
             
         
     

@@ -114,8 +114,7 @@ def LooksLikeHTML( file_data ):
     return False
 
 def LooksLikeSVG( file_data ):
-
-
+    
     if isinstance( file_data, bytes ):
         
         search_elements = ( b'<svg', b'<SVG', b'<!DOCTYPE svg', b'<!DOCTYPE SVG' )
@@ -135,6 +134,7 @@ def LooksLikeSVG( file_data ):
     
     return False
     
+
 def LooksLikeJSON( file_data ):
     
     try:
