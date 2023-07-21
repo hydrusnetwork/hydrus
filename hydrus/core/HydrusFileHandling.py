@@ -136,10 +136,20 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             thumbnail_bytes = HydrusPSDHandling.GenerateThumbnailBytesFromPSDPath( path, target_resolution, clip_rect = clip_rect )
             
         except:
+
+            try:
+
+                ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
+
+                HydrusVideoHandling.RenderImageToImagePath( path, temp_path )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
+                thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
             
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            except: 
+
+                thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
+                
+                thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
             
         
     elif mime == HC.APPLICATION_CLIP:
