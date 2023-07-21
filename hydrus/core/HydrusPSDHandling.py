@@ -11,7 +11,7 @@ try:
     from psd_tools import PSDImage
     from psd_tools.constants import ChannelID, Tag, ColorMode, Resource
     
-    PSD_TOOLS_OK = False
+    PSD_TOOLS_OK = True
     
 except:
     
