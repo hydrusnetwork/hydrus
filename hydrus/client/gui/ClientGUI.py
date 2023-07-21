@@ -21,7 +21,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
-from hydrus.core import HydrusCompression
+from hydrus.core import HydrusCompression, HydrusPSDHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
@@ -823,6 +823,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
         library_version_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         library_version_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
+        library_version_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )
         library_version_lines.append( 'speedcopy (experimental test) present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
         library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
         library_version_lines.append( 'db dir: {}'.format( HG.client_controller.db_dir ) )

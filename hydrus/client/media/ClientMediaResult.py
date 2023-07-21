@@ -1,6 +1,6 @@
 import typing
 
-from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC, HydrusPSDHandling
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
@@ -173,10 +173,19 @@ class MediaResult( object ):
     
     def IsStaticImage( self ):
         
-        image = self._file_info_manager.mime in HC.IMAGES
-        static_animation = self._file_info_manager.mime in HC.ANIMATIONS and self._file_info_manager.duration in ( 0, None )
+        if self._file_info_manager.mime in HC.IMAGES:
+            
+            return True
         
-        return image or static_animation
+        if self._file_info_manager.mime in HC.ANIMATIONS and self._file_info_manager.duration in ( 0, None ):
+
+            return True
+        
+        if self._file_info_manager.mime in HC.VIEWABLE_APPLICATIONS:
+            
+            return True
+        
+        return False
         
     
     def ProcessContentUpdate( self, service_key, content_update ):
