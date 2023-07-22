@@ -4570,7 +4570,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
             
-            if self._current_media.GetMime() in HC.IMAGES:
+            if self._current_media.IsImage():
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
                 

@@ -312,9 +312,9 @@ def GetShowAction( media: ClientMedia.MediaSingleton, canvas_type: int ):
         
         action = HG.client_controller.new_options.GetMediaShowAction( mime )
         
-    if mime == HC.APPLICATION_PSD and not HydrusPSDHandling.PSD_TOOLS_OK and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE:
+    if mime == HC.APPLICATION_PSD and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and not HydrusPSDHandling.PSD_TOOLS_OK :
 
-        # fall back to open externally button when psd_tools not available 
+        # fallback to open externally button when psd_tools not available 
         action = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, start_paused, start_with_embed )
 
     return action

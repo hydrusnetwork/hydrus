@@ -19,6 +19,10 @@ except:
 
 
 def MergedPILImageFromPSD(path: str) -> PILImage:
+
+    if not PSD_TOOLS_OK:
+        
+        raise Exception( 'psd_tools unavailable' )
     
     psd = PSDImage.open(path)
 
@@ -39,10 +43,6 @@ def MergedPILImageFromPSD(path: str) -> PILImage:
 
 
 def GenerateThumbnailBytesFromPSDPath(path: str, target_resolution: typing.Tuple[int, int], clip_rect = None) -> bytes:
-    
-    if not PSD_TOOLS_OK:
-        
-        raise Exception( 'psd_tools unavailable' )
 
     pil_image = MergedPILImageFromPSD(path)
 
