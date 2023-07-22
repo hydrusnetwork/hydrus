@@ -35,6 +35,44 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_535"><a href="#version_535">version 535</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>thanks to a user, we now have Krita (.kra, .krz) support! it even pulls thumbnails!</li>
+                        <li>thanks to another user, we now have SVG (.svg) support! it even generates thumbnails!</li>
+                        <li>I think I fixed a comparison statement calculator divide-by-zero error in the duplicate filter when you compare a file with a resolution with a file without one</li>
+                        <li><h3>petitions overview</h3></li>
+                        <li>_this is a workflow/usability update only for server janitors_</li>
+                        <li>tl;dr: the petitions page now fetches many petitions at once. update your servers and clients for it all to work right</li>
+                        <li>so, the petitions page now fetches lots of petitions with each 'fetch' button click. you can set how many it will fetch with a new number control</li>
+                        <li>the petitions are shown in a new multi-column list that shows action, account id, reason, and total weight. the actual data for the petitions will load in quickly, reflected in the list. as soon as the first is loaded, it is highlighted, but double-click any to highlight it in the old petition UI as normal</li>
+                        <li>when you process petitions, the client moves instantly to the next, all fitting into the existing workflow, without having to wait for the server to fetch a new one after you commit</li>
+                        <li>you can also mass approve/deny from here! if one account is doing great or terrible stuff, you can now blang it all in one go</li>
+                        <li><h3>petitions details</h3></li>
+                        <li>the 'fetch x petition' buttons now show `(*)` in their label if they are the active petition type being worked on</li>
+                        <li>petition pages now remember: the last petition type they were looking at; the number of petitions to fetch; and the number of files to show</li>
+                        <li>the petition page will pause any ongoing petition fetches if you close it, and resume if you unclose it</li>
+                        <li>a system where multi-mapping petitions would be broken up and delivered in tags with weight-similar chunks (e.g. if would say 'aaa for 11 files' and 'bbb in 15 files' in the same fetch, but not 'ccc in 542,154 files') is abandoned. this was not well explained and was causing confusion and code complexity. these petitions now appear clientside in full</li>
+                        <li>another system, where multi-mapping petitions would be delivered in same-namespace chunks, is also abandoned, for similar reasons. it was causing more confusion, especially when compared to the newer petition counting tech I've added. perhaps it will come back in as a clientside filter option</li>
+                        <li>the list of petitions you are given _should_ also be neatly grouped by account id, so rather than randomly sampling from all petitions, you'll get batches by user x, y, or z, and in most cases you'll be looking at everything by user x, and y, and then z up to the limit of num petitions you chose to fetch</li>
+                        <li>drawback: since petitions' content can overlap in complicated ways, and janitors can work on the same list at the same time, in edge cases the list you see can be slightly out of sync with what the server actually has. this isn't a big deal, and the worst case is wasted work as you approve the same thing twice. I tried to implement 'refresh list if count drops more than expected' tech, but the situation is complicated and it was spamming too much. I will let you refresh the list with a button click yourself for now, as you like, and please let me know where it works and fails</li>
+                        <li>drawback: I added some new objects, so you have to update both server and client for this to work. older/newer combinations will give you some harmless errors</li>
+                        <li>also, if your list starts running low, but there are plenty more petitions to work on, it will auto-refresh. again, it won't interrupt your current work, but it will fetch more. let me know how it works out</li>
+                        <li>drawback: while the new petition summary list is intentionally lightweight, I do spend some extra CPU figuring it out. with a high 'num petitions to fetch', it may take several seconds for a very busy server like the PTR just to fetch the initial list, so please play around with different fetch sizes and let me know what works well and what is way too slow</li>
+                        <li>there are still some things I want to do to this page, which I want to slip in the near future. I want to hide/show the sort and 'num files to show' widgets as appropriate, figure out a right-click menu for the new list to retry failures, and get some shortcut support going</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>wrote a new petition header object to hold content type, petition status, account id, and reason for petitions</li>
+                        <li>serverside petition fetching is now split into 'get petition headers' and 'get petition data'. the 'headers' section supports filtering by account id and in future reason</li>
+                        <li>the clientside petition management UI code pretty much got a full pass</li>
+                        <li>cleaned a bunch of ancient server db code</li>
+                        <li>cleaned a bunch of the clientside petition code. it was a real tangle</li>
+                        <li>improved the resilience of the hydrus server when it is given unacceptable tags in a content update</li>
+                        <li>all fetches of multiple rows of data from multi-column lists now happen sorted. this is just a little thing, but it'll probably dejank a few operations where you edit several things at once or get some errors and are trying to figure out which of five things caused it</li>
+                        <li>the hydrus official mimetype for psd files is now 'image/vnd.adobe.photoshop' (instead of 'application/x-photoshop')</li>
+                        <li>with krita file (which are actually just zip files) support, we now have the very barebones of archive tech started. I'll expand it a bit more and we should be able to improve support for other archive-like formats in the future</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_534"><a href="#version_534">version 534</a></h2>
                     <ul>
                         <li><h3>user submissions</h3></li>

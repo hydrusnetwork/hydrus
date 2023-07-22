@@ -7,6 +7,49 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 535](https://github.com/hydrusnetwork/hydrus/releases/tag/v535)
+
+### misc
+
+* thanks to a user, we now have Krita (.kra, .krz) support! it even pulls thumbnails!
+* thanks to another user, we now have SVG (.svg) support! it even generates thumbnails!
+* I think I fixed a comparison statement calculator divide-by-zero error in the duplicate filter when you compare a file with a resolution with a file without one
+
+### petitions overview
+
+* _this is a workflow/usability update only for server janitors_
+* tl;dr: the petitions page now fetches many petitions at once. update your servers and clients for it all to work right
+* so, the petitions page now fetches lots of petitions with each 'fetch' button click. you can set how many it will fetch with a new number control
+* the petitions are shown in a new multi-column list that shows action, account id, reason, and total weight. the actual data for the petitions will load in quickly, reflected in the list. as soon as the first is loaded, it is highlighted, but double-click any to highlight it in the old petition UI as normal
+* when you process petitions, the client moves instantly to the next, all fitting into the existing workflow, without having to wait for the server to fetch a new one after you commit
+* you can also mass approve/deny from here! if one account is doing great or terrible stuff, you can now blang it all in one go
+
+### petitions details
+
+* the 'fetch x petition' buttons now show `(*)` in their label if they are the active petition type being worked on
+* petition pages now remember: the last petition type they were looking at; the number of petitions to fetch; and the number of files to show
+* the petition page will pause any ongoing petition fetches if you close it, and resume if you unclose it
+* a system where multi-mapping petitions would be broken up and delivered in tags with weight-similar chunks (e.g. if would say 'aaa for 11 files' and 'bbb in 15 files' in the same fetch, but not 'ccc in 542,154 files') is abandoned. this was not well explained and was causing confusion and code complexity. these petitions now appear clientside in full
+* another system, where multi-mapping petitions would be delivered in same-namespace chunks, is also abandoned, for similar reasons. it was causing more confusion, especially when compared to the newer petition counting tech I've added. perhaps it will come back in as a clientside filter option
+* the list of petitions you are given _should_ also be neatly grouped by account id, so rather than randomly sampling from all petitions, you'll get batches by user x, y, or z, and in most cases you'll be looking at everything by user x, and y, and then z up to the limit of num petitions you chose to fetch
+* drawback: since petitions' content can overlap in complicated ways, and janitors can work on the same list at the same time, in edge cases the list you see can be slightly out of sync with what the server actually has. this isn't a big deal, and the worst case is wasted work as you approve the same thing twice. I tried to implement 'refresh list if count drops more than expected' tech, but the situation is complicated and it was spamming too much. I will let you refresh the list with a button click yourself for now, as you like, and please let me know where it works and fails
+* drawback: I added some new objects, so you have to update both server and client for this to work. older/newer combinations will give you some harmless errors
+* also, if your list starts running low, but there are plenty more petitions to work on, it will auto-refresh. again, it won't interrupt your current work, but it will fetch more. let me know how it works out
+* drawback: while the new petition summary list is intentionally lightweight, I do spend some extra CPU figuring it out. with a high 'num petitions to fetch', it may take several seconds for a very busy server like the PTR just to fetch the initial list, so please play around with different fetch sizes and let me know what works well and what is way too slow
+* there are still some things I want to do to this page, which I want to slip in the near future. I want to hide/show the sort and 'num files to show' widgets as appropriate, figure out a right-click menu for the new list to retry failures, and get some shortcut support going
+
+### boring code cleanup
+
+* wrote a new petition header object to hold content type, petition status, account id, and reason for petitions
+* serverside petition fetching is now split into 'get petition headers' and 'get petition data'. the 'headers' section supports filtering by account id and in future reason
+* the clientside petition management UI code pretty much got a full pass
+* cleaned a bunch of ancient server db code
+* cleaned a bunch of the clientside petition code. it was a real tangle
+* improved the resilience of the hydrus server when it is given unacceptable tags in a content update
+* all fetches of multiple rows of data from multi-column lists now happen sorted. this is just a little thing, but it'll probably dejank a few operations where you edit several things at once or get some errors and are trying to figure out which of five things caused it
+* the hydrus official mimetype for psd files is now 'image/vnd.adobe.photoshop' (instead of 'application/x-photoshop')
+* with krita file (which are actually just zip files) support, we now have the very barebones of archive tech started. I'll expand it a bit more and we should be able to improve support for other archive-like formats in the future
+
 ## [Version 534](https://github.com/hydrusnetwork/hydrus/releases/tag/v534)
 
 ### user submissions
@@ -332,28 +375,3 @@ title: Changelog
 * the main build script no longer uses set-output commands (these are deprecated and being dropped later in the year I think, in favour of some ENV stuff)
 * tidied some cruft from the main build script
 * I moved the 'new' python-mpv in the requirements.txts from 1.0.1 to 1.0.3. source users might like to rebuild their venvs again, particularly Windows users who updated to the new mpv dll recently
-
-## [Version 525](https://github.com/hydrusnetwork/hydrus/releases/tag/v525)
-
-### library updates
-
-* after successful testing amongst source users, I am finally updating the official builds and the respective requirements.txts for Qt, from 6.3.1 to 6.4.1 (with 'test' now 6.5.0), opencv-python-headless from 4.5.3.56 to 4.5.5.64 (with a new 'test' of 4.7.0.72), and in the Windows build, the mpv dll from 2022-05-01 to 2023-02-12 (API 2.0 to 2.1). if you use my normal builds, you don't have to do anything special in the update, and with luck you'll get slightly faster images, video, and UI, and with fewer bugs. if you run from source, you might want to re-run your setup_venv script--it'll update you automatically--and if you are a modern Windows source user and haven't yet, grab the new dll here and rename it to mpv-2.dll https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z . there is a chance that some older OSes will not be able to boot this new build, but I think these people were already migrated to being source users when Win 7-level was no longer supported. in any case, let me know how you get on, and if you are on an older OS, be prepared to rollback if this version doesn't boot
-* setup_venv.bat (Windows source) now adds PyWin32, just like the builds (the new version of pympler, a memory management module, moans on boot if it doesn't have it)
-
-### timestamps
-
-* a couple places where fixed calendar time-deltas are converted to absolute datestrings now work better over longer times. going back (5 years, 3 months) should now work out the actual calendar dates (previously they used a rough total_num_seconds estimation) and go back to the same day of the destination month, also accounting for if that has fewer days than the starting month and handling leap years. it also handles >'12 months' better now
-* in system:time predicates that use since/before a delta, it now allows much larger values in the UI, like '72 months', and it won't merge those into the larger values in the label. so if you set a gap of 100 days, it'll say that, not 3 months 10 days or whatever
-* the main copy button on 'manage file times' is now a menu button letting you choose to copy all timestamps or just those for the file services. as a hacky experiment, you can also copy the file service timestamps plus one second (in case you want to try finick-ily going through a handful of files to force a certain import sort order)
-* the system predicate time parsing is now more flexible. for archived, modified, last viewed, and imported time, you can now generally say all variants in the form 'import' or 'imported' and 'time' or 'date' and 'time imported' or 'imported time'.
-* fixed an issue that meant editing existing delta 'system:archived time' predicates was launching the 'date' edit panel
-
-### misc
-
-* in the 'exif and other embedded metadata' review window, which is launched from a button on the the media viewer's top hover, jpegs now state their subsampling and whether they are progressive
-* every simple place where the client eats clipboard data and tries to import something now has a unified error-reporting process. before, it would make a popup with something like 'I could not understandwhat was in the clipboard!'. Now it makes a popup with info on what was pasted, what was expected, and actual exception info. Longer info is printed to the log
-* many places across the program say the specific exception type when they report errors now, not just the string summary
-* the sankaku downloader is updated with a new url class for their new md5 links. also, the file parser is updated to associate the old id URL, and the gallery parser is updated to skip the 'get sank pro' thumbnail links if you are not logged in. if you have sank subscriptions, they are going to go crazy this week due to the URL format changing--sorry, there's no nice way around it!--just ignore their popups about hitting file limits and wait them out. unfortunately, due to an unusual 404-based redirect, the id-based URLs will not work in hydrus any more
-* the 'API URL' system for url classes now supports File URLs--this may help you figure out some CDN redirects and similar. in a special rule for these File URLs, both URLs will be associated with the imported file (normally, Post API URLs are not saved as Known URLs). relatedly, I have renamed this system broadly to 'api/redirect url', since we use it for a bunch of non-API stuff now
-* fixed a problem where deleting one of the new inc/dec rating services was not clearing the actual number ratings for that service from the database, causing service-id error hell on loading files with those orphaned rating records. sorry for the trouble, this slipped through testing! any users who were affected by this will also be fixed (orphan records cleared out) on update (issue #1357)
-* the client cleans up the temporary paths used by file imports more carefully now: it tries more times to delete 'sticky' temp files; it tries to clear them again immediately on shutdown; and it stores them all in the hydrus temp subdirectory where they are less loose and will be captured by the final directory clear on shutdown (issue #1356)

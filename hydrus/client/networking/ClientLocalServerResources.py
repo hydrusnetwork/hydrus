@@ -702,7 +702,7 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
         
         if len( hash_ids_to_hashes ) > 0:
             
-            hashes.extend( hash_ids_to_hashes[ hash_id ] )
+            hashes.append(hash_ids_to_hashes[ hash_id ])
             
         
     

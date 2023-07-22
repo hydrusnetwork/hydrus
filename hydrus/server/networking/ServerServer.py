@@ -70,7 +70,7 @@ class HydrusServiceRepository( HydrusServiceRestricted ):
         
         root.putChild( b'num_petitions', ServerServerResources.HydrusResourceRestrictedNumPetitions( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'petition', ServerServerResources.HydrusResourceRestrictedPetition( self._service, HydrusServer.REMOTE_DOMAIN ) )
-        root.putChild( b'petition_summary_list', ServerServerResources.HydrusResourceRestrictedPetitionSummaryList( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'petitions_summary', ServerServerResources.HydrusResourceRestrictedPetitionsSummary( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'update', ServerServerResources.HydrusResourceRestrictedUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
         #root.putChild( b'immediate_update', ServerServerResources.HydrusResourceRestrictedImmediateUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'metadata', ServerServerResources.HydrusResourceRestrictedMetadataUpdate( self._service, HydrusServer.REMOTE_DOMAIN ) )
