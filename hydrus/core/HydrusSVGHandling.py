@@ -1,3 +1,4 @@
+import typing
 from qtpy import QtSvg
 from qtpy import QtGui as QG
 from qtpy import QtCore as QC
@@ -24,7 +25,7 @@ def LoadSVGRenderer(path: str):
     
     return renderer
 
-def GenerateThumbnailBytesFromSVGPath(path: str, target_resolution: tuple[int, int], clip_rect = None) -> bytes:
+def GenerateThumbnailBytesFromSVGPath(path: str, target_resolution: typing.Tuple[int, int], clip_rect = None) -> bytes:
     
     # TODO handle clipping
 
