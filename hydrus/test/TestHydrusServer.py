@@ -400,15 +400,28 @@ class TestServer( unittest.TestCase ):
         
         # petition
         
-        petitioner_account = HydrusNetwork.Account.GenerateUnknownAccount()
+        petitioner_account = HydrusNetwork.Account.GenerateUnknownAccount( HydrusData.GenerateKey() )
         reason = 'it sucks'
         actions_and_contents = ( HC.CONTENT_UPDATE_PETITION, [ HydrusNetwork.Content( HC.CONTENT_TYPE_FILES, [ HydrusData.GenerateKey() for i in range( 10 ) ] ) ] )
         
-        petition = HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
+        petition_header = HydrusNetwork.PetitionHeader(
+            content_type = HC.CONTENT_TYPE_FILES,
+            status = HC.CONTENT_STATUS_PETITIONED,
+            account_key = petitioner_account.GetAccountKey(),
+            reason = reason
+        )
+        
+        petition = HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
         HG.test_controller.SetRead( 'petition', petition )
         
         response = service.Request( HC.GET, 'petition', { 'content_type' : HC.CONTENT_TYPE_FILES, 'status' : HC.CONTENT_UPDATE_PETITION } )
+        
+        self.assertEqual( response[ 'petition' ].GetSerialisableTuple(), petition.GetSerialisableTuple() )
+        
+        HG.test_controller.SetRead( 'petition', petition )
+        
+        response = service.Request( HC.GET, 'petition', { 'content_type' : HC.CONTENT_TYPE_FILES, 'status' : HC.CONTENT_UPDATE_PETITION, 'account_key' : petitioner_account.GetAccountKey(), reason : reason } )
         
         self.assertEqual( response[ 'petition' ].GetSerialisableTuple(), petition.GetSerialisableTuple() )
         

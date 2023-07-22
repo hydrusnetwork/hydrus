@@ -1,5 +1,7 @@
+import collections
 import os
 import random
+import threading
 import time
 import typing
 
@@ -21,6 +23,7 @@ from hydrus.client import ClientDuplicates
 from hydrus.client import ClientLocation
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
+from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIAsync
@@ -3835,6 +3838,41 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
     
 management_panel_types_to_classes[ ClientGUIManagementController.MANAGEMENT_TYPE_IMPORT_URLS ] = ManagementPanelImporterURLs
 
+def GetPetitionActionInfo( petition: HydrusNetwork.Petition ):
+    
+    add_contents = petition.GetContents( HC.CONTENT_UPDATE_PEND )
+    delete_contents = petition.GetContents( HC.CONTENT_UPDATE_PETITION )
+    
+    have_add = len( add_contents ) > 0
+    have_delete = len( delete_contents ) > 0
+    
+    action_text = 'UNKNOWN'
+    hydrus_text = 'default'
+    object_name = 'normal'
+    
+    if have_add or have_delete:
+        
+        if have_add and have_delete:
+            
+            action_text = 'REPLACE'
+            
+        elif have_add:
+            
+            action_text = 'ADD'
+            hydrus_text = 'valid'
+            object_name = 'HydrusValid'
+            
+        else:
+            
+            action_text = 'DELETE'
+            hydrus_text = 'invalid'
+            object_name = 'HydrusInvalid'
+            
+        
+    
+    return ( action_text, hydrus_text, object_name )
+    
+
 class ManagementPanelPetitions( ManagementPanel ):
     
     TAG_DISPLAY_TYPE = ClientTags.TAG_DISPLAY_STORAGE
@@ -3850,47 +3888,71 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         service_type = self._service.GetServiceType()
         
-        self._num_petition_info = None
+        self._petition_types_to_count = collections.Counter()
         self._current_petition = None
         
-        self._last_petition_type_fetched = None
+        content_type = management_controller.GetVariable( 'petition_type_content_type' )
+        status = management_controller.GetVariable( 'petition_type_status' )
+        
+        if content_type is None or status is None:
+            
+            self._last_petition_type_fetched = None
+            
+        else:
+            
+            self._last_petition_type_fetched = ( content_type, status )
+            
         
         self._last_fetched_subject_account_key = None
         
+        self._petition_headers_to_fetched_petitions_cache = {}
+        self._petition_headers_we_failed_to_fetch = set()
+        self._petition_headers_we_are_fetching = []
+        self._outgoing_petition_headers_to_petitions = {}
+        self._failed_outgoing_petition_headers_to_petitions = {}
+        
+        self._petition_fetcher_and_uploader_work_lock = threading.Lock()
+        
         #
         
-        self._petitions_info_panel = ClientGUICommon.StaticBox( self, 'petitions info' )
+        self._petition_numbers_panel = ClientGUICommon.StaticBox( self, 'counts' )
         
-        self._petition_account_key = QW.QLineEdit( self._petitions_info_panel )
+        self._petition_account_key = QW.QLineEdit( self._petition_numbers_panel )
         self._petition_account_key.setPlaceholderText( 'account id filter' )
         
-        self._refresh_num_petitions_button = ClientGUICommon.BetterButton( self._petitions_info_panel, 'refresh counts', self._FetchNumPetitions )
+        self._num_petitions_to_fetch = ClientGUICommon.BetterSpinBox( self._petition_numbers_panel, min = 1, max = 10000 )
+        
+        self._num_petitions_to_fetch.setValue( management_controller.GetVariable( 'num_petitions_to_fetch' ) )
+        
+        self._refresh_num_petitions_button = ClientGUICommon.BetterButton( self._petition_numbers_panel, 'refresh counts', self._StartFetchNumPetitions )
         
         self._petition_types_to_controls = {}
         
         content_type_hboxes = []
         
-        petition_types = []
+        self._my_petition_types = []
         
         if service_type == HC.FILE_REPOSITORY:
             
-            petition_types.append( ( HC.CONTENT_TYPE_FILES, HC.CONTENT_STATUS_PETITIONED ) )
+            self._my_petition_types.append( ( HC.CONTENT_TYPE_FILES, HC.CONTENT_STATUS_PETITIONED ) )
             
         elif service_type == HC.TAG_REPOSITORY:
             
-            petition_types.append( ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED ) )
-            petition_types.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING ) )
-            petition_types.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PETITIONED ) )
-            petition_types.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PENDING ) )
-            petition_types.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PETITIONED ) )
+            self._my_petition_types.append( ( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED ) )
+            self._my_petition_types.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING ) )
+            self._my_petition_types.append( ( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PETITIONED ) )
+            self._my_petition_types.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PENDING ) )
+            self._my_petition_types.append( ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PETITIONED ) )
             
         
-        for ( content_type, status ) in petition_types:
+        for petition_type in self._my_petition_types:
             
-            func = HydrusData.Call( self._FetchPetition, content_type, status )
+            ( content_type, status ) = petition_type
             
-            st = ClientGUICommon.BetterStaticText( self._petitions_info_panel )
-            button = ClientGUICommon.BetterButton( self._petitions_info_panel, 'fetch ' + HC.content_status_string_lookup[ status ] + ' ' + HC.content_type_string_lookup[ content_type ] + ' petition', func )
+            func = HydrusData.Call( self._FetchPetitionsSummary, petition_type )
+            
+            st = ClientGUICommon.BetterStaticText( self._petition_numbers_panel )
+            button = ClientGUICommon.BetterButton( self._petition_numbers_panel, 'fetch ' + HC.content_status_string_lookup[ status ] + ' ' + HC.content_type_string_lookup[ content_type ] + ' petitions', func )
             
             button.setEnabled( False )
             
@@ -3906,11 +3968,24 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         #
         
-        self._petition_panel = ClientGUICommon.StaticBox( self, 'petition' )
+        self._petitions_panel = ClientGUICommon.StaticBox( self, 'petitions' )
+        
+        self._petitions_summary_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._petitions_panel )
+        
+        self._petitions_summary_list = ClientGUIListCtrl.BetterListCtrl( self._petitions_summary_list_panel, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, 12, self._ConvertDataToListCtrlTuples, activation_callback = self._ActivateToHighlightPetition )
+        
+        self._petitions_summary_list_panel.SetListCtrl( self._petitions_summary_list )
+        
+        self._petitions_summary_list_panel.AddButton( 'mass-approve', self._ApproveSelected, enabled_check_func = self._OnlySelectingLoadedPetitions, tooltip = 'Approve the selected petitions' )
+        self._petitions_summary_list_panel.AddButton( 'mass-deny', self._DenySelected, enabled_check_func = self._OnlySelectingLoadedPetitions, tooltip = 'Deny the selected petitions' )
+        
+        #
+        
+        self._petition_panel = ClientGUICommon.StaticBox( self, 'highlighted petition' )
         
         self._num_files_to_show = ClientGUICommon.NoneableSpinCtrl( self._petition_panel, message = 'number of files to show', min = 1 )
         
-        self._num_files_to_show.SetValue( 256 )
+        self._num_files_to_show.SetValue( management_controller.GetVariable( 'num_files_to_show' ) )
         
         self._action_text = ClientGUICommon.BetterStaticText( self._petition_panel, label = '' )
         
@@ -3948,7 +4023,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         self._contents_delete.setFixedHeight( min_height )
         
         self._process = QW.QPushButton( 'process', self._petition_panel )
-        self._process.clicked.connect( self.EventProcess )
+        self._process.clicked.connect( self.ProcessCurrentPetition )
         self._process.setObjectName( 'HydrusAccept' )
         
         self._copy_account_key_button = ClientGUICommon.BetterButton( self._petition_panel, 'copy petitioner account id', self._CopyAccountKey )
@@ -3960,13 +4035,20 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         #
         
-        self._petitions_info_panel.Add( self._petition_account_key, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._petitions_info_panel.Add( self._refresh_num_petitions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_numbers_panel.Add( self._petition_account_key, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_numbers_panel.Add( self._refresh_num_petitions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_numbers_panel.Add( ClientGUICommon.WrapInText( self._num_petitions_to_fetch, self, 'number of petitions to fetch' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         for hbox in content_type_hboxes:
             
-            self._petitions_info_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._petition_numbers_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+        
+        #
+        
+        self._petitions_panel.Add( self._petitions_summary_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
         
         check_hbox = QP.HBoxLayout()
         
@@ -3979,14 +4061,14 @@ class ManagementPanelPetitions( ManagementPanel ):
         QP.AddToLayout( sort_hbox, self._sort_by_left, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( sort_hbox, self._sort_by_right, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
-        self._petition_panel.Add( ClientGUICommon.BetterStaticText( self._petition_panel, label = 'Double-click a petition to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( ClientGUICommon.BetterStaticText( self._petition_panel, label = 'Double-click a petition row to see its files, if it has them.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._num_files_to_show, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._action_text, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._reason_text, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._petition_panel.Add( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.Add( sort_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.Add( self._contents_add, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._contents_delete, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._petition_panel.Add( check_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._petition_panel.Add( self._process, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._copy_account_key_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._petition_panel.Add( self._modify_petitioner, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3996,7 +4078,8 @@ class ManagementPanelPetitions( ManagementPanel ):
         QP.AddToLayout( vbox, self._media_sort_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._media_collect_widget, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        QP.AddToLayout( vbox, self._petitions_info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._petition_numbers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._petitions_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._petition_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         if service_type == HC.TAG_REPOSITORY:
@@ -4017,8 +4100,63 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._petition_account_key.textChanged.connect( self._UpdateAccountKey )
         
+        self._num_files_to_show.valueChanged.connect( self._NotifyNumsUpdated )
+        self._num_petitions_to_fetch.valueChanged.connect( self._NotifyNumsUpdated )
+        
         self._UpdateAccountKey()
         self._DrawCurrentPetition()
+        
+    
+    def _ActivateToHighlightPetition( self ):
+        
+        for eligible_petition_header in self._petitions_summary_list.GetData( only_selected = True ):
+            
+            if self._CanHighlight( eligible_petition_header ):
+                
+                self._HighlightPetition( eligible_petition_header )
+                
+                break
+                
+            
+        
+    
+    def _ApproveSelected( self ):
+        
+        selected_petition_headers = self._petitions_summary_list.GetData( only_selected = True )
+        
+        viable_petitions = [ self._petition_headers_to_fetched_petitions_cache[ petition_header ] for petition_header in selected_petition_headers if self._CanHighlight( petition_header ) ]
+        
+        if len( viable_petitions ) > 0:
+            
+            text = 'Approve all the content in these {} petitions?'.format( HydrusData.ToHumanInt( len( viable_petitions ) ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result == QW.QDialog.Accepted:
+                
+                for petition in viable_petitions:
+                    
+                    petition.ApproveAll()
+                    
+                
+                self._StartUploadingCompletedPetitions( viable_petitions )
+                
+            
+        
+    
+    def _CanHighlight( self, petition_header: HydrusNetwork.PetitionHeader ):
+        
+        if petition_header in self._outgoing_petition_headers_to_petitions:
+            
+            return False
+            
+        
+        if petition_header in self._failed_outgoing_petition_headers_to_petitions:
+            
+            return False
+            
+        
+        return petition_header in self._petition_headers_to_fetched_petitions_cache
         
     
     def _CheckAll( self ):
@@ -4047,6 +4185,101 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
     
+    def _ClearCurrentPetition( self ):
+        
+        if self._current_petition is not None:
+            
+            petition_header = self._current_petition.GetPetitionHeader()
+            
+            self._current_petition = None
+            
+            if self._petitions_summary_list.HasData( petition_header ):
+                
+                self._petitions_summary_list.UpdateDatas( ( petition_header, ) )
+                
+            
+            self._DrawCurrentPetition()
+            
+            self._ShowHashes( [] )
+            
+        
+    
+    def _ClearPetitionsSummary( self ):
+        
+        self._petitions_summary_list.DeleteDatas( self._petitions_summary_list.GetData() )
+        
+        self._petition_headers_we_are_fetching = []
+        self._petition_headers_we_failed_to_fetch = set()
+        self._failed_outgoing_petition_headers_to_petitions = {}
+        
+        self._ClearCurrentPetition()
+        
+    
+    def _ConvertDataToListCtrlTuples( self, petition_header: HydrusNetwork.PetitionHeader ):
+        
+        pretty_action = ''
+        pretty_content = 'fetching\u2026'
+        
+        sort_content = 1
+        
+        petition = None
+        this_is_current_petition = False
+        
+        if petition_header in self._outgoing_petition_headers_to_petitions:
+            
+            petition = self._outgoing_petition_headers_to_petitions[ petition_header ]
+            
+            pretty_content = 'uploading\u2026'
+            
+        elif petition_header in self._failed_outgoing_petition_headers_to_petitions:
+            
+            petition = self._failed_outgoing_petition_headers_to_petitions[ petition_header ]
+            
+            pretty_content = 'failed to upload!'
+            
+        elif petition_header in self._petition_headers_to_fetched_petitions_cache:
+            
+            petition = self._petition_headers_to_fetched_petitions_cache[ petition_header ]
+            
+            pretty_content = petition.GetContentSummary()
+            
+            this_is_current_petition = False
+            
+            if self._current_petition is not None and petition_header == self._current_petition.GetPetitionHeader():
+                
+                this_is_current_petition = True
+                
+            
+        elif petition_header in self._petition_headers_we_failed_to_fetch:
+            
+            pretty_content = 'failed to fetch!'
+            
+        
+        if petition is not None:
+            
+            pretty_action = GetPetitionActionInfo( petition )[0]
+            
+            sort_content = petition.GetActualContentWeight()
+            
+        
+        if this_is_current_petition:
+            
+            pretty_action = f'* {pretty_action}'
+            
+        
+        pretty_account_key = petition_header.account_key.hex()
+        pretty_reason = petition_header.reason
+        
+        sort_action = pretty_action
+        sort_account_key = pretty_account_key
+        sort_reason = pretty_reason
+        
+        display_tuple = ( pretty_action, pretty_account_key, pretty_reason, pretty_content )
+        sort_tuple = ( sort_action, sort_account_key, sort_reason, sort_content )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
     def _CopyAccountKey( self ):
         
         if self._current_petition is None:
@@ -4057,6 +4290,30 @@ class ManagementPanelPetitions( ManagementPanel ):
         account_key = self._current_petition.GetPetitionerAccount().GetAccountKey()
         
         HG.client_controller.pub( 'clipboard', 'text', account_key.hex() )
+        
+    
+    def _DenySelected( self ):
+        
+        selected_petition_headers = self._petitions_summary_list.GetData( only_selected = True )
+        
+        viable_petitions = [ self._petition_headers_to_fetched_petitions_cache[ petition_header ] for petition_header in selected_petition_headers if self._CanHighlight( petition_header ) ]
+        
+        if len( viable_petitions ) > 0:
+            
+            text = 'Deny all the content in these {} petitions?'.format( HydrusData.ToHumanInt( len( viable_petitions ) ) )
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, text )
+            
+            if result == QW.QDialog.Accepted:
+                
+                for petition in viable_petitions:
+                    
+                    petition.DenyAll()
+                    
+                
+                self._StartUploadingCompletedPetitions( viable_petitions )
+                
+            
         
     
     def _DrawCurrentPetition( self ):
@@ -4094,29 +4351,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             have_add = len( add_contents ) > 0
             have_delete = len( delete_contents ) > 0
             
-            action_text = 'UNKNOWN'
-            hydrus_text = 'default'
-            object_name = 'normal'
-            
-            if have_add or have_delete:
-                
-                if have_add and have_delete:
-                    
-                    action_text = 'REPLACE'
-                    
-                elif have_add:
-                    
-                    action_text = 'ADD'
-                    hydrus_text = 'valid'
-                    object_name = 'HydrusValid'
-                    
-                else:
-                    
-                    action_text = 'DELETE'
-                    hydrus_text = 'invalid'
-                    object_name = 'HydrusInvalid'
-                    
-                
+            ( action_text, hydrus_text, object_name ) = GetPetitionActionInfo( self._current_petition )
             
             self._action_text.setText( action_text )
             self._action_text.setObjectName( object_name )
@@ -4165,197 +4400,104 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def _DrawNumPetitions( self ):
         
-        if self._num_petition_info is None:
+        for ( petition_type, ( st, button ) ) in self._petition_types_to_controls.items():
             
-            for ( petition_type, ( st, button ) ) in self._petition_types_to_controls.items():
-                
-                st.setText( '0 petitions' )
-                
-                button.setEnabled( False )
-                
+            count = self._petition_types_to_count[ petition_type ]
             
-        else:
+            ( st, button ) = self._petition_types_to_controls[ petition_type ]
             
-            for ( content_type, status, count ) in self._num_petition_info:
-                
-                petition_type = ( content_type, status )
-                
-                if petition_type in self._petition_types_to_controls:
-                    
-                    ( st, button ) = self._petition_types_to_controls[ petition_type ]
-                    
-                    st.setText( HydrusData.ToHumanInt( count )+' petitions' )
-                    
-                    if count > 0:
-                        
-                        button.setEnabled( True )
-                        
-                    else:
-                        
-                        button.setEnabled( False )
-                        
-                    
-                
+            st.setText( '{} petitions'.format( HydrusData.ToHumanInt( count ) ) )
+            
+            button.setEnabled( count > 0 )
             
         
     
-    def _FetchBestPetition( self ):
+    def _FetchBestPetitionsSummary( self ):
         
         top_petition_type_with_count = None
         
-        for ( content_type, status, count ) in self._num_petition_info:
+        for petition_type in self._my_petition_types:
+            
+            count = self._petition_types_to_count[ petition_type ]
             
             if count == 0:
                 
                 continue
                 
             
-            petition_type = ( content_type, status )
+            if self._last_petition_type_fetched is not None and self._last_petition_type_fetched == petition_type:
+                
+                self._FetchPetitionsSummary( petition_type )
+                
+                return
+                
             
             if top_petition_type_with_count is None:
                 
                 top_petition_type_with_count = petition_type
                 
             
-            if self._last_petition_type_fetched is not None and self._last_petition_type_fetched == petition_type:
-                
-                self._FetchPetition( content_type, status )
-                
-                return
-                
-            
         
         if top_petition_type_with_count is not None:
             
-            ( content_type, status ) = top_petition_type_with_count
-            
-            self._FetchPetition( content_type, status )
+            self._FetchPetitionsSummary( top_petition_type_with_count )
             
         
     
-    def _FetchNumPetitions( self ):
+    def _FetchPetitionsSummary( self, petition_type ):
         
-        def do_it( service, subject_account_key = None ):
-            
-            def qt_draw( n_p_i ):
-                
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
-                
-                self._num_petition_info = n_p_i
-                
-                self._DrawNumPetitions()
-                
-                if self._current_petition is None:
-                    
-                    self._FetchBestPetition()
-                    
-                
-            
-            def qt_reset():
-                
-                if not self or not QP.isValid( self ):
-                    
-                    return
-                    
-                
-                self._refresh_num_petitions_button.setText( 'refresh counts' )
-                
-            
-            try:
-                
-                if subject_account_key is None:
-                    
-                    response = service.Request( HC.GET, 'num_petitions' )
-                    
-                else:
-                    
-                    try:
-                        
-                        response = service.Request( HC.GET, 'num_petitions', { 'subject_account_key' : subject_account_key } )
-                        
-                    except HydrusExceptions.NotFoundException:
-                        
-                        HydrusData.ShowText( 'That account id was not found!' )
-                        
-                        QP.CallAfter( qt_draw, None )
-                        
-                        return
-                        
-                    
-                
-                num_petition_info = response[ 'num_petitions' ]
-                
-                QP.CallAfter( qt_draw, num_petition_info )
-                
-            finally:
-                
-                QP.CallAfter( qt_reset )
-                
-            
+        ( st, button ) = self._petition_types_to_controls[ petition_type ]
         
-        self._refresh_num_petitions_button.setText( 'Fetching\u2026' )
+        ( content_type, status ) = petition_type
+        
+        num_to_fetch = self._num_petitions_to_fetch.value()
         
         subject_account_key = self._GetSubjectAccountKey()
         
-        self._last_fetched_subject_account_key = subject_account_key
-        
-        self._controller.CallToThread( do_it, self._service, subject_account_key )
-        
-    
-    def _FetchPetition( self, content_type, status ):
-        
-        self._last_petition_type_fetched = ( content_type, status )
-        
-        ( st, button ) = self._petition_types_to_controls[ ( content_type, status ) ]
-        
-        def qt_setpet( petition ):
+        def qt_set_petitions_summary( petitions_summary ):
             
-            if not self or not QP.isValid( self ):
+            if self._last_petition_type_fetched != petition_type:
                 
-                return
+                last_petition_type = self._last_petition_type_fetched
+                
+                self._last_petition_type_fetched = petition_type
+                
+                self._management_controller.SetVariable( 'petition_type_content_type', content_type )
+                self._management_controller.SetVariable( 'petition_type_status', status )
+                
+                self._UpdateFetchButtonText( last_petition_type )
                 
             
-            self._current_petition = petition
-            
-            self._DrawCurrentPetition()
-            
-            self._ShowHashes( [] )
+            self._SetPetitionsSummary( petitions_summary )
             
         
         def qt_done():
             
-            if not self or not QP.isValid( self ):
-                
-                return
-                
-            
             button.setEnabled( True )
-            button.setText( 'fetch {} {} petition'.format( HC.content_status_string_lookup[ status ], HC.content_type_string_lookup[ content_type ] ) )
+            
+            self._UpdateFetchButtonText( self._last_petition_type_fetched )
             
         
-        def do_it( service, subject_account_key = None ):
+        def do_it( service ):
             
             try:
                 
                 if subject_account_key is None:
                     
-                    response = service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status } )
+                    response = service.Request( HC.GET, 'petitions_summary', { 'content_type' : content_type, 'status' : status, 'num' : num_to_fetch } )
                     
                 else:
                     
-                    response = service.Request( HC.GET, 'petition', { 'content_type' : content_type, 'status' : status, 'subject_account_key' : subject_account_key } )
+                    response = service.Request( HC.GET, 'petitions_summary', { 'content_type' : content_type, 'status' : status, 'num' : num_to_fetch, 'subject_account_key' : subject_account_key } )
                     
                 
-                QP.CallAfter( qt_setpet, response['petition'] )
+                HG.client_controller.CallBlockingToQt( self, qt_set_petitions_summary, response[ 'petitions_summary' ] )
                 
             except HydrusExceptions.NotFoundException:
                 
                 job_key = ClientThreading.JobKey()
                 
-                job_key.SetStatusText( 'Hey, the server did not have a petition after all. Please hit refresh counts.' )
+                job_key.SetStatusText( 'Hey, the server did not have that type of petition after all. Please hit refresh counts.' )
                 
                 job_key.Delete( 5 )
                 
@@ -4363,25 +4505,19 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             finally:
                 
-                QP.CallAfter( qt_done )
+                HG.client_controller.CallBlockingToQt( self, qt_done )
                 
             
         
-        if self._current_petition is not None:
+        if petition_type != self._last_petition_type_fetched:
             
-            self._current_petition = None
-            
-            self._DrawCurrentPetition()
-            
-            self._ShowHashes( [] )
+            self._ClearPetitionsSummary()
             
         
         button.setEnabled( False )
         button.setText( 'Fetching\u2026' )
         
-        subject_account_key = self._GetSubjectAccountKey()
-        
-        self._controller.CallToThread( do_it, self._service, subject_account_key )
+        self._controller.CallToThread( do_it, self._service )
         
     
     def _FlipSelected( self ):
@@ -4451,6 +4587,67 @@ class ManagementPanelPetitions( ManagementPanel ):
                 return None
                 
             
+        
+    
+    def _HighlightAPetitionIfNeeded( self ):
+        
+        if self._current_petition is None:
+            
+            for eligible_petition_header in self._petitions_summary_list.GetData():
+                
+                if self._CanHighlight( eligible_petition_header ):
+                    
+                    self._HighlightPetition( eligible_petition_header )
+                    
+                    break
+                    
+                
+            
+        
+    
+    def _HighlightPetition( self, petition_header ):
+        
+        if not self._CanHighlight( petition_header ):
+            
+            return
+            
+        
+        if self._current_petition is not None and petition_header == self._current_petition.GetPetitionHeader():
+            
+            self._ClearCurrentPetition()
+            
+        elif petition_header in self._petition_headers_to_fetched_petitions_cache:
+            
+            petition = self._petition_headers_to_fetched_petitions_cache[ petition_header ]
+            
+            self._SetCurrentPetition( petition )
+            
+        
+    
+    def _OnlySelectingLoadedPetitions( self ):
+        
+        petition_headers = self._petitions_summary_list.GetData( only_selected = True )
+        
+        if len( petition_headers ) == 0:
+            
+            return False
+            
+        
+        for petition_header in petition_headers:
+            
+            if petition_header not in self._petition_headers_to_fetched_petitions_cache:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+    def _NotifyNumsUpdated( self ):
+        
+        self._management_controller.SetVariable( 'num_petitions_to_fetch', self._num_petitions_to_fetch.value() )
+        self._management_controller.SetVariable( 'num_files_to_show', self._num_files_to_show.GetValue() )
         
     
     def _SetContentsAndChecks( self, action, contents_and_checks, sort_type ):
@@ -4529,6 +4726,49 @@ class ManagementPanelPetitions( ManagementPanel ):
         contents.setFixedHeight( ideal_height_in_pixels )
         
     
+    def _SetCurrentPetition( self, petition: HydrusNetwork.Petition ):
+        
+        self._ClearCurrentPetition()
+        
+        self._current_petition = petition
+        
+        self._petitions_summary_list.UpdateDatas( ( self._current_petition.GetPetitionHeader(), ) )
+        
+        self._DrawCurrentPetition()
+        
+        self._ShowHashes( [] )
+        
+    
+    def _SetPetitionsSummary( self, petitions_summary: typing.List[ HydrusNetwork.PetitionHeader ] ):
+        
+        # note we can't make this a nice 'append' so easily, since we still need to cull petitions that were processed without us looking
+        # we'll keep the current since the user is looking, but otherwise we'll be good for now
+        # maybe add a hard refresh button in future? we'll see how common these issues are
+        
+        if self._current_petition is not None:
+            
+            current_petition_header = self._current_petition.GetPetitionHeader()
+            
+            if current_petition_header not in petitions_summary:
+                
+                petitions_summary.append( current_petition_header )
+                
+            
+        
+        self._petitions_summary_list.SetData( petitions_summary )
+        
+        sorted_petition_headers = self._petitions_summary_list.GetData()
+        
+        self._petition_headers_we_are_fetching = [ petition_header for petition_header in sorted_petition_headers if petition_header not in self._petition_headers_to_fetched_petitions_cache ]
+        
+        if len( self._petition_headers_we_are_fetching ) > 0:
+            
+            HG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
+            
+        
+        self._HighlightAPetitionIfNeeded()
+        
+    
     def _ShowHashes( self, hashes ):
         
         with ClientGUICommon.BusyCursor():
@@ -4553,6 +4793,110 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._SetContentsAndChecks( action, contents_and_checks, sort_type )
             
+        
+    
+    def _StartFetchNumPetitions( self ):
+        
+        def do_it( service, subject_account_key = None ):
+            
+            def qt_draw( petition_count_rows ):
+                
+                if not self or not QP.isValid( self ):
+                    
+                    return
+                    
+                
+                num_petitions_currently_listed = len( self._petitions_summary_list.GetData() )
+                
+                old_petition_types_to_count = self._petition_types_to_count
+                
+                self._petition_types_to_count = collections.Counter()
+                
+                # we had a whole thing here that did 'if count dropped by more than 1, refresh summary' and 'if we only have 20% left of our desired count, refresh summary'
+                # but the count from the server and the count of what we see differs for mappings, where petitions are bunched, and it was just a pain
+                # maybe try again later, with better counting tech and more experience of what is actually wanted here
+                
+                for ( content_type, status, count ) in petition_count_rows:
+                    
+                    petition_type = ( content_type, status )
+                    
+                    self._petition_types_to_count[ petition_type ] = count
+                    
+                
+                self._DrawNumPetitions()
+                
+                if num_petitions_currently_listed == 0:
+                    
+                    self._FetchBestPetitionsSummary()
+                    
+                
+            
+            def qt_reset():
+                
+                if not self or not QP.isValid( self ):
+                    
+                    return
+                    
+                
+                self._refresh_num_petitions_button.setText( 'refresh counts' )
+                
+            
+            try:
+                
+                if subject_account_key is None:
+                    
+                    response = service.Request( HC.GET, 'num_petitions' )
+                    
+                else:
+                    
+                    try:
+                        
+                        response = service.Request( HC.GET, 'num_petitions', { 'subject_account_key' : subject_account_key } )
+                        
+                    except HydrusExceptions.NotFoundException:
+                        
+                        HydrusData.ShowText( 'That account id was not found!' )
+                        
+                        QP.CallAfter( qt_draw, [] )
+                        
+                        return
+                        
+                    
+                
+                num_petition_info = response[ 'num_petitions' ]
+                
+                QP.CallAfter( qt_draw, num_petition_info )
+                
+            finally:
+                
+                QP.CallAfter( qt_reset )
+                
+            
+        
+        self._refresh_num_petitions_button.setText( 'Fetching\u2026' )
+        
+        subject_account_key = self._GetSubjectAccountKey()
+        
+        self._last_fetched_subject_account_key = subject_account_key
+        
+        self._controller.CallToThread( do_it, self._service, subject_account_key )
+        
+    
+    def _StartUploadingCompletedPetitions( self, petitions: typing.Collection[ HydrusNetwork.Petition ] ):
+        
+        for petition in petitions:
+            
+            self._outgoing_petition_headers_to_petitions[ petition.GetPetitionHeader() ] = petition
+            
+            if petition == self._current_petition:
+                
+                self._ClearCurrentPetition()
+                
+            
+        
+        self._HighlightAPetitionIfNeeded()
+        
+        HG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
         
     
     def _UpdateAccountKey( self ):
@@ -4588,7 +4932,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if self._GetSubjectAccountKey() != self._last_fetched_subject_account_key:
                 
-                self._FetchNumPetitions()
+                self._StartFetchNumPetitions()
                 
             
         else:
@@ -4597,6 +4941,25 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
         self._petition_account_key.style().polish( self._petition_account_key )
+        
+    
+    def _UpdateFetchButtonText( self, petition_type ):
+        
+        if petition_type is not None:
+            
+            ( st, button ) = self._petition_types_to_controls[ petition_type ]
+            
+            ( content_type, status ) = petition_type
+            
+            label = 'fetch {} {} petitions'.format( HC.content_status_string_lookup[ status ], HC.content_type_string_lookup[ content_type ] )
+            
+            if petition_type == self._last_petition_type_fetched:
+                
+                label = f'{label} (*)'
+                
+            
+            button.setText( label )
+            
         
     
     def ContentsAddDoubleClick( self, item ):
@@ -4642,181 +5005,6 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             self._ShowHashes( hashes )
             
-        
-    
-    def EventProcess( self ):
-        
-        def break_contents_into_chunks( some_contents ):
-            
-            chunks_of_some_contents = []
-            chunk_of_some_contents = []
-            
-            weight = 0
-            
-            for content in some_contents:
-                
-                for content_chunk in content.IterateUploadableChunks(): # break 20K-strong mappings petitions into smaller bits to POST back
-                    
-                    chunk_of_some_contents.append( content_chunk )
-                    
-                    weight += content.GetVirtualWeight()
-                    
-                    if weight > 50:
-                        
-                        chunks_of_some_contents.append( chunk_of_some_contents )
-                        
-                        chunk_of_some_contents = []
-                        
-                        weight = 0
-                        
-                    
-                
-            
-            if len( chunk_of_some_contents ) > 0:
-                
-                chunks_of_some_contents.append( chunk_of_some_contents )
-                
-            
-            return chunks_of_some_contents
-            
-        
-        def do_it( controller, service, petition_service_key, add_approved_contents, add_denied_contents, delete_approved_contents, delete_denied_contents, petition ):
-            
-            jobs = [
-                ( HC.CONTENT_UPDATE_PEND, True, add_approved_contents ),
-                ( HC.CONTENT_UPDATE_PEND, False, add_denied_contents ),
-                ( HC.CONTENT_UPDATE_PETITION, True, delete_approved_contents ),
-                ( HC.CONTENT_UPDATE_PETITION, False, delete_denied_contents ),
-            ]
-            
-            num_done = 0
-            num_to_do = 0
-            
-            for ( action, approved, contents ) in jobs:
-                
-                num_to_do += len( contents )
-                
-            
-            if num_to_do > 1:
-                
-                job_key = ClientThreading.JobKey( cancellable = True )
-                
-                job_key.SetStatusTitle( 'committing petitions' )
-                
-                HG.client_controller.pub( 'message', job_key )
-                
-            else:
-                
-                job_key = None
-                
-            
-            reason = petition.GetReason()
-            
-            try:
-                
-                for ( action, approved, contents ) in jobs:
-                    
-                    if len( contents ) == 0:
-                        
-                        continue
-                        
-                    
-                    chunks_of_contents = break_contents_into_chunks( contents )
-                    
-                    num_to_do += len( chunks_of_contents ) - 1
-                    
-                    for chunk_of_contents in chunks_of_contents:
-                        
-                        if job_key is not None:
-                            
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
-                            
-                            if should_quit:
-                                
-                                return
-                                
-                            
-                            job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
-                            
-                        
-                        content_updates = []
-                        
-                        if approved:
-                            
-                            ( update, content_updates ) = petition.GetApproval( action, chunk_of_contents, reason )
-                            
-                        else:
-                            
-                            update = petition.GetDenial( action, chunk_of_contents, reason )
-                            
-                        
-                        service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
-                        
-                        if len( content_updates ) > 0:
-                            
-                            controller.WriteSynchronous( 'content_updates', { petition_service_key : content_updates } )
-                            
-                        
-                        num_done += 1
-                        
-                    
-                
-            finally:
-                
-                if job_key is not None:
-                    
-                    job_key.Delete()
-                    
-                
-                def qt_fetch():
-                    
-                    if not self or not QP.isValid( self ):
-                        
-                        return
-                        
-                    
-                    self._FetchNumPetitions()
-                    
-                
-                QP.CallAfter( qt_fetch )
-                
-            
-        
-        add_approved_contents = []
-        add_denied_contents = []
-        
-        delete_approved_contents = []
-        delete_denied_contents = []
-        
-        jobs = [
-            ( self._contents_add, add_approved_contents, add_denied_contents ),
-            ( self._contents_delete, delete_approved_contents, delete_denied_contents )
-        ]
-        
-        for ( contents, approved_contents, denied_contents ) in jobs:
-            
-            for index in range( contents.count() ):
-                
-                content = contents.GetData( index )
-                
-                if contents.IsChecked( index ):
-                    
-                    approved_contents.append( content )
-                    
-                else:
-                    
-                    denied_contents.append( content )
-                    
-                
-            
-        
-        HG.client_controller.CallToThread( do_it, self._controller, self._service, self._petition_service_key, add_approved_contents, add_denied_contents, delete_approved_contents, delete_denied_contents, self._current_petition )
-        
-        self._current_petition = None
-        
-        self._DrawCurrentPetition()
-        
-        self._ShowHashes( [] )
         
     
     def EventModifyPetitioner( self ):
@@ -4918,6 +5106,45 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
     
+    def PageShown( self ):
+        
+        ManagementPanel.PageShown( self )
+        
+        HG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
+        
+    
+    def ProcessCurrentPetition( self ):
+        
+        if self._current_petition is None:
+            
+            return
+            
+        
+        jobs = [
+            ( self._contents_add, HC.CONTENT_UPDATE_PEND ),
+            ( self._contents_delete, HC.CONTENT_UPDATE_PETITION )
+        ]
+        
+        for ( contents_list, action ) in jobs:
+            
+            for index in range( contents_list.count() ):
+                
+                content = contents_list.GetData( index )
+                
+                if contents_list.IsChecked( index ):
+                    
+                    self._current_petition.Approve( action, content )
+                    
+                else:
+                    
+                    self._current_petition.Deny( action, content )
+                    
+                
+            
+        
+        self._StartUploadingCompletedPetitions( ( self._current_petition, ) )
+        
+    
     def RefreshQuery( self ):
         
         self._DrawCurrentPetition()
@@ -4925,9 +5152,239 @@ class ManagementPanelPetitions( ManagementPanel ):
     
     def Start( self ):
         
-        QP.CallAfter( self._FetchNumPetitions )
+        QP.CallAfter( self._StartFetchNumPetitions )
         
     
+    def THREADPetitionFetcherAndUploader( self, work_lock: threading.Lock, service: ClientServices.ServiceRepository ):
+        
+        def qt_get_work():
+            
+            fetch_petition_header = None
+            outgoing_petition = None
+            
+            if len( self._petition_headers_we_are_fetching ) > 0:
+                
+                if HG.client_controller.PageAliveAndNotClosed( self._page_key ):
+                    
+                    fetch_petition_header = self._petition_headers_we_are_fetching[0]
+                    
+                elif HG.client_controller.PageDestroyed( self._page_key ):
+                    
+                    self._petition_headers_we_are_fetching = []
+                    
+                
+            
+            if len( self._outgoing_petition_headers_to_petitions ) > 0:
+                
+                item = list( self._outgoing_petition_headers_to_petitions.keys() )[0]
+                
+                outgoing_petition = self._outgoing_petition_headers_to_petitions[ item ]
+                
+            
+            return ( fetch_petition_header, outgoing_petition )
+            
+        
+        def qt_petition_cleared( petition: HydrusNetwork.Petition ):
+            
+            petition_header = petition.GetPetitionHeader()
+            
+            if petition_header in self._outgoing_petition_headers_to_petitions:
+                
+                del self._outgoing_petition_headers_to_petitions[ petition_header ]
+                
+            
+            if petition_header in self._failed_outgoing_petition_headers_to_petitions:
+                
+                del self._failed_outgoing_petition_headers_to_petitions[ petition_header ]
+                
+            
+            if petition_header in self._petition_headers_to_fetched_petitions_cache:
+                
+                del self._petition_headers_to_fetched_petitions_cache[ petition_header ]
+                
+            
+            if self._petitions_summary_list.HasData( petition_header ):
+                
+                self._petitions_summary_list.DeleteDatas( ( petition_header, ) )
+                
+            
+            self._StartFetchNumPetitions()
+            
+        
+        def qt_petition_clear_failed( petition: HydrusNetwork.Petition ):
+            
+            petition_header = petition.GetPetitionHeader()
+            
+            if petition_header in self._outgoing_petition_headers_to_petitions:
+                
+                del self._outgoing_petition_headers_to_petitions[ petition_header ]
+                
+            
+            self._failed_outgoing_petition_headers_to_petitions[ petition_header ] = petition
+            
+            if self._petitions_summary_list.HasData( petition_header ):
+                
+                self._petitions_summary_list.UpdateDatas( ( petition_header, ) )
+                
+            
+        
+        def qt_petition_fetch_404( petition_header: HydrusNetwork.PetitionHeader ):
+            
+            if petition_header in self._petition_headers_we_are_fetching:
+                
+                self._petition_headers_we_are_fetching.remove( petition_header )
+                
+            
+            if self._petitions_summary_list.HasData( petition_header ):
+                
+                self._petitions_summary_list.DeleteDatas( ( petition_header, ) )
+                
+            
+        
+        def qt_petition_fetch_failed( petition_header: HydrusNetwork.PetitionHeader ):
+            
+            if petition_header in self._petition_headers_we_are_fetching:
+                
+                self._petition_headers_we_are_fetching.remove( petition_header )
+                
+            
+            self._petition_headers_we_failed_to_fetch.add( petition_header )
+            
+            if self._petitions_summary_list.HasData( petition_header ):
+                
+                self._petitions_summary_list.UpdateDatas( ( petition_header, ) )
+                
+            
+        
+        def qt_petition_fetched( petition: HydrusNetwork.Petition ):
+            
+            petition_header = petition.GetPetitionHeader()
+            
+            if petition_header in self._petition_headers_we_are_fetching:
+                
+                self._petition_headers_we_are_fetching.remove( petition_header )
+                
+            
+            self._petition_headers_we_failed_to_fetch.discard( petition_header )
+            
+            if self._petitions_summary_list.HasData( petition_header ):
+                
+                self._petition_headers_to_fetched_petitions_cache[ petition_header ] = petition
+                
+                self._petitions_summary_list.UpdateDatas( ( petition_header, ) )
+                
+            
+            if self._current_petition is None:
+                
+                self._HighlightAPetitionIfNeeded()
+                
+            
+        
+        with work_lock:
+            
+            while True:
+                
+                fetch_petition_header = None
+                outgoing_petition = None
+                
+                ( fetch_petition_header, outgoing_petition ) = HG.client_controller.CallBlockingToQt( self, qt_get_work )
+                
+                if fetch_petition_header is None and outgoing_petition is None:
+                    
+                    break
+                    
+                
+                if fetch_petition_header is not None:
+                    
+                    try:
+                        
+                        request_dict = {
+                            'content_type' : fetch_petition_header.content_type,
+                            'status' : fetch_petition_header.status,
+                            'subject_account_key' : fetch_petition_header.account_key,
+                            'reason' : fetch_petition_header.reason
+                        }
+                        
+                        response = service.Request( HC.GET, 'petition', request_dict )
+                        
+                        petition = response[ 'petition' ]
+                        
+                        HG.client_controller.CallBlockingToQt( self, qt_petition_fetched, petition )
+                        
+                    except HydrusExceptions.NotFoundException:
+                        
+                        HG.client_controller.CallBlockingToQt( self, qt_petition_fetch_404, fetch_petition_header )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowText( 'Failed to fetch a petition!' )
+                        HydrusData.ShowException( e )
+                        
+                        HG.client_controller.CallBlockingToQt( self, qt_petition_fetch_failed, fetch_petition_header )
+                        
+                    
+                
+                if outgoing_petition is not None:
+                    
+                    try:
+                        
+                        job_key = ClientThreading.JobKey( cancellable = True )
+                        
+                        job_key.SetStatusTitle( 'committing petition' )
+                        
+                        time_started = HydrusTime.GetNowFloat()
+                        
+                        try:
+                            
+                            updates_and_content_updates = outgoing_petition.GetAllCompletedUpdates()
+                            
+                            num_to_do = len( updates_and_content_updates )
+                            
+                            for ( num_done, ( update, content_updates ) ) in enumerate( updates_and_content_updates ):
+                                
+                                if HydrusTime.TimeHasPassed( time_started + 3 ):
+                                    
+                                    HG.client_controller.pub( 'message', job_key )
+                                    
+                                
+                                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                                
+                                if should_quit:
+                                    
+                                    return
+                                    
+                                
+                                service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
+                                
+                                if len( content_updates ) > 0:
+                                    
+                                    HG.client_controller.WriteSynchronous( 'content_updates', { service.GetServiceKey() : content_updates } )
+                                    
+                                
+                                job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                                job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                                
+                            
+                        finally:
+                            
+                            job_key.Delete()
+                            
+                        
+                        HG.client_controller.CallBlockingToQt( self, qt_petition_cleared, outgoing_petition )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowText( 'Failed to upload a petition!' )
+                        HydrusData.ShowException( e )
+                        
+                        HG.client_controller.CallBlockingToQt( self, qt_petition_clear_failed, outgoing_petition )
+                        
+                    
+                
+            
+        
+    
+
 management_panel_types_to_classes[ ClientGUIManagementController.MANAGEMENT_TYPE_PETITIONS ] = ManagementPanelPetitions
 
 class ManagementPanelQuery( ManagementPanel ):

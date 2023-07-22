@@ -329,7 +329,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         return ( display_tuple, sort_tuple )
         
     
-    def _GetSelected( self ):           
+    def _GetSelectedIndices( self ) -> typing.List[ int ]:
         
         indices = []
         
@@ -520,7 +520,12 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def DeleteDatas( self, datas: typing.Iterable[ object ] ):
         
-        deletees = [ ( self._data_to_indices[ data ], data ) for data in datas ]
+        deletees = [ ( self._data_to_indices[ data ], data ) for data in datas if data in self._data_to_indices ]
+        
+        if len( deletees ) == 0:
+            
+            return
+            
         
         deletees.sort( reverse = True )
         
@@ -552,7 +557,7 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def DeleteSelected( self ):
         
-        indices = self._GetSelected()
+        indices = self._GetSelectedIndices()
         
         indices.sort( reverse = True )
         
@@ -655,12 +660,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         if only_selected:
             
-            indices = self._GetSelected()
+            indices = self._GetSelectedIndices()
             
         else:
             
             indices = list( self._indices_to_data_info.keys() )
             
+        
+        indices.sort()
         
         result = []
         

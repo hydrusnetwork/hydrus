@@ -5,7 +5,18 @@ import struct
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusKritaHandling
-from hydrus.core import HydrusSVGHandling
+
+try:
+    
+    from hydrus.core import HydrusSVGHandling
+    
+    SVG_OK = True
+    
+except:
+    
+    SVG_OK = False
+    
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
@@ -67,6 +78,7 @@ headers_and_mime.extend( [
     ( ( ( 0, b'8BPS\x00\x02' ), ), HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
     ( ( ( 0, b'CSFCHUNK' ), ), HC.APPLICATION_CLIP ),
     ( ( ( 0, b'SAI-CANVAS' ), ), HC.APPLICATION_SAI2 ),
+    ( ( ( 0, b'gimp xcf ' ), ), HC.APPLICATION_XCF ),
     ( ( ( 38, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
     ( ( ( 42, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/master/data/freedesktop.org.xml.in#L2829
     ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
@@ -184,6 +196,11 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
     elif mime == HC.IMAGE_SVG: 
 
         try:
+            
+            if not SVG_OK:
+                
+                raise Exception( 'No SVG thumbs' )
+                
             
             thumbnail_bytes = HydrusSVGHandling.GenerateThumbnailBytesFromSVGPath( path, target_resolution, clip_rect = clip_rect )
             
@@ -361,11 +378,14 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     elif mime == HC.APPLICATION_KRITA:
         
         ( width, height ) = HydrusKritaHandling.GetKraProperties( path )
-
+        
     elif mime == HC.IMAGE_SVG:
-
-        ( width, height ) = HydrusSVGHandling.GetSVGResolution( path )
-
+        
+        if SVG_OK:
+            
+            ( width, height ) = HydrusSVGHandling.GetSVGResolution( path )
+            
+        
     elif mime == HC.APPLICATION_FLASH:
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
@@ -486,6 +506,18 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         if it_passes:
             
+            if mime == HC.APPLICATION_ZIP:
+                
+                # TODO: since we'll be expanding this to other zip-likes, we should make the zipfile object up here and pass that to various checkers downstream
+                if HydrusKritaHandling.ZipLooksLikeAKrita( path ):
+                    
+                    return HC.APPLICATION_KRITA
+                    
+                else:
+                    
+                    return HC.APPLICATION_ZIP
+                    
+                
             if mime in ( HC.UNDETERMINED_WM, HC.UNDETERMINED_MP4 ):
                 
                 return HydrusVideoHandling.GetMime( path )
@@ -512,9 +544,11 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
         return HC.TEXT_HTML
         
+    
     if HydrusText.LooksLikeSVG( bit_to_check ): 
         
         return HC.IMAGE_SVG
+        
     
     # it is important this goes at the end, because ffmpeg has a billion false positives!
     # for instance, it once thought some hydrus update files were mpegs

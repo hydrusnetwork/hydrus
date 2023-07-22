@@ -109,6 +109,7 @@ class DB( HydrusDB.HydrusDB ):
             'is_an_orphan' : self._IsAnOrphan,
             'num_petitions' : self._RepositoryGetNumPetitions,
             'petition' : self._RepositoryGetPetition,
+            'petitions_summary' : self._RepositoryGetPetitionsSummary,
             'registration_keys' : self._GenerateRegistrationKeysFromAccount,
             'service_has_file' : self._RepositoryHasFile,
             'service_info' : self._GetServiceInfo,
@@ -1929,6 +1930,58 @@ class DB( HydrusDB.HydrusDB ):
         self._RepositoryUpdateServiceInfo( service_id, HC.SERVICE_INFO_NUM_TAG_SIBLINGS, self._GetRowCount() )
         
     
+    def _RepositoryConvertPetitionIdsToSummary( self, content_type: int, status: int, petition_ids: typing.Collection[ typing.Tuple[ int, int ] ], limit: int ) -> typing.List[ HydrusNetwork.PetitionHeader ]:
+        
+        if len( petition_ids ) == 0:
+            
+            raise HydrusExceptions.NotFoundException( 'No petitions!' )
+            
+        
+        if len( petition_ids ) > limit:
+            
+            # we don't want a random sample, we want to sample grouped by account id, so let's be a bit more clever about it
+            
+            petitioner_account_ids_to_reason_ids = HydrusData.BuildKeyToListDict( petition_ids )
+            
+            petition_ids = []
+            
+            num_rows = 0
+            
+            petition_account_ids = list( petitioner_account_ids_to_reason_ids.keys() )
+            
+            random.shuffle( petition_account_ids )
+            
+            for petition_account_id in petition_account_ids:
+                
+                reason_ids = petitioner_account_ids_to_reason_ids[ petition_account_id ]
+                
+                if num_rows + len( reason_ids ) > limit:
+                    
+                    num_to_add = limit - num_rows
+                    
+                    reason_ids = reason_ids[ : num_to_add ]
+                    
+                
+                petition_ids.extend( ( ( petition_account_id, reason_id ) for reason_id in reason_ids ) )
+                
+                num_rows += len( reason_ids )
+                
+                if num_rows >= limit:
+                    
+                    break
+                    
+                
+            
+        
+        petitioner_account_ids = { petitioner_account_id for ( petitioner_account_id, reason_id ) in petition_ids }
+        reason_ids = { reason_id for ( petitioner_account_id, reason_id ) in petition_ids }
+        
+        petitioner_account_ids_to_account_keys = { petitioner_account_id : self._GetAccountKeyFromAccountId( petitioner_account_id ) for petitioner_account_id in petitioner_account_ids }
+        reason_ids_to_reasons = { reason_id : self._GetReason( reason_id ) for reason_id in reason_ids }
+        
+        return HydrusSerialisable.SerialisableList( [ HydrusNetwork.PetitionHeader( content_type = content_type, status = status, account_key = petitioner_account_ids_to_account_keys[ petitioner_account_id ], reason = reason_ids_to_reasons[ reason_id ] ) for ( petitioner_account_id, reason_id ) in petition_ids ] )
+        
+    
     def _RepositoryCreate( self, service_id ):
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
@@ -2863,33 +2916,20 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositoryGetFilePetition( self, service_id, account_id = None ):
+    def _RepositoryGetFilePetition( self, service_id, petitioner_account_id, reason_id ) -> HydrusNetwork.Petition:
         
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
-        
-        if account_id is None:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_files_table_name ) ).fetchall()
-            
-        else:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_files_table_name ), ( account_id, ) ).fetchall()
-            
-        
-        if len( result ) == 0:
-            
-            raise HydrusExceptions.NotFoundException( 'No petitions!' )
-            
-        
-        result = random.choice( result )
-        
-        ( petitioner_account_id, reason_id ) = result
         
         petitioner_account = self._GetAccount( service_id, petitioner_account_id )
         
         reason = self._GetReason( reason_id )
         
-        service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._Execute( 'SELECT service_hash_id FROM ' + petitioned_files_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ) ]
+        service_hash_ids = [ service_hash_id for ( service_hash_id, ) in self._Execute( f'SELECT service_hash_id FROM {petitioned_files_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ) ]
+        
+        if len( service_hash_ids ) == 0:
+            
+            raise HydrusExceptions.NotFoundException( 'Sorry, did not find a petition for that account and reason!' )
+            
         
         master_hash_ids = self._RepositoryGetMasterHashIds( service_id, service_hash_ids )
         
@@ -2903,7 +2943,44 @@ class DB( HydrusDB.HydrusDB ):
         
         actions_and_contents = [ ( action, contents ) ]
         
-        return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
+        petition_header = HydrusNetwork.PetitionHeader(
+            content_type = HC.CONTENT_TYPE_FILES,
+            status = HC.CONTENT_STATUS_PETITIONED,
+            account_key = petitioner_account.GetAccountKey(),
+            reason = reason
+        )
+        
+        return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
+        
+    
+    def _RepositoryGetFilePetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+        
+        ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
+        
+        petition_search_limit = max( limit * 5, 100 )
+        
+        preds = []
+        
+        if account_id is not None:
+            
+            preds.append( f'account_id = {account_id}' )
+            
+        
+        if reason_id is not None:
+            
+            preds.append( f'reason_id = {reason_id}' )
+            
+        
+        pred_string = ''
+        
+        if len( preds ) > 0:
+            
+            pred_string = ' WHERE {}'.format( ' AND '.join( preds ) )
+            
+        
+        potential_petition_ids = self._Execute( f'SELECT DISTINCT account_id, reason_id FROM {petitioned_files_table_name}{pred_string} ORDER BY account_id LIMIT ?;', ( petition_search_limit, ) ).fetchall()
+        
+        return self._RepositoryConvertPetitionIdsToSummary( HC.CONTENT_TYPE_FILES, HC.CONTENT_STATUS_PETITIONED, potential_petition_ids, limit )
         
     
     def _RepositoryGetIPTimestamp( self, service_key, account, hash ):
@@ -2924,43 +3001,22 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def _RepositoryGetMappingPetition( self, service_id, account_id = None ):
+    def _RepositoryGetMappingPetition( self, service_id, petitioner_account_id, reason_id ) -> HydrusNetwork.Petition:
         
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
-        
-        if account_id is None:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_mappings_table_name ) ).fetchall()
-            
-        else:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_mappings_table_name ), ( account_id, ) ).fetchall()
-            
-        
-        if len( result ) == 0:
-            
-            raise HydrusExceptions.NotFoundException( 'No petitions!' )
-            
-        
-        result = random.choice( result )
-        
-        ( petitioner_account_id, reason_id ) = result
         
         petitioner_account = self._GetAccount( service_id, petitioner_account_id )
         
         reason = self._GetReason( reason_id )
         
-        tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT service_tag_id, service_hash_id FROM ' + petitioned_mappings_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ) )
+        tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._Execute( f'SELECT service_tag_id, service_hash_id FROM {petitioned_mappings_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ) )
+        
+        if len( tag_ids_to_hash_ids ) == 0:
+            
+            raise HydrusExceptions.NotFoundException( 'Sorry, did not find a petition for that account and reason!' )
+            
         
         contents = []
-        
-        total_num_petitions = 0
-        total_weight = 0
-        
-        min_weight_permitted = None
-        max_weight_permitted = None
-        
-        max_total_weight = None
         
         petition_namespace = None
         
@@ -2970,65 +3026,12 @@ class DB( HydrusDB.HydrusDB ):
         
         for ( service_tag_id, service_hash_ids ) in petition_pairs:
             
-            content_weight = len( service_hash_ids )
-            
-            if min_weight_permitted is None:
-                
-                # group petitions of similar weight together rather than mixing weight 5000 in with a hundred weight 1s
-                
-                if content_weight == 1:
-                    
-                    min_weight_permitted = 1
-                    max_weight_permitted = 1
-                    
-                    max_total_weight = 2000
-                    
-                elif content_weight < 10:
-                    
-                    min_weight_permitted = 2
-                    max_weight_permitted = 9
-                    
-                    max_total_weight = 2000
-                    
-                elif content_weight < 50:
-                    
-                    min_weight_permitted = 10
-                    max_weight_permitted = 49
-                    
-                    max_total_weight = 2000
-                    
-                elif content_weight < 100:
-                    
-                    min_weight_permitted = 50
-                    max_weight_permitted = 99
-                    
-                    max_total_weight = 20000
-                    
-                else:
-                    
-                    min_weight_permitted = 100
-                    max_weight_permitted = None
-                    
-                    max_total_weight = 100000
-                    
-                
-            else:
-                
-                if content_weight < min_weight_permitted:
-                    
-                    continue
-                    
-                
-                if max_weight_permitted is not None and content_weight > max_weight_permitted:
-                    
-                    continue
-                    
-                
-            
             master_tag_id = self._RepositoryGetMasterTagId( service_id, service_tag_id )
             
             tag = self._GetTag( master_tag_id )
             
+            # taking this out for now. it is confusing when you look at counts
+            '''
             ( namespace, subtag ) = HydrusTags.SplitTag( tag )
             
             if petition_namespace is None:
@@ -3040,6 +3043,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 continue
                 
+            '''
             
             master_hash_ids = self._RepositoryGetMasterHashIds( service_id, service_hash_ids )
             
@@ -3049,19 +3053,49 @@ class DB( HydrusDB.HydrusDB ):
             
             contents.append( content )
             
-            total_weight += content_weight
-            
-            if total_weight >= max_total_weight:
-                
-                break
-                
-            
         
         action = HC.CONTENT_UPDATE_PETITION
         
         actions_and_contents = [ ( action, contents ) ]
         
-        return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
+        petition_header = HydrusNetwork.PetitionHeader(
+            content_type = HC.CONTENT_TYPE_MAPPINGS,
+            status = HC.CONTENT_STATUS_PETITIONED,
+            account_key = petitioner_account.GetAccountKey(),
+            reason = reason
+        )
+        
+        return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
+        
+    
+    def _RepositoryGetMappingPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
+        
+        petition_search_limit = max( limit * 5, 100 )
+        
+        preds = []
+        
+        if account_id is not None:
+            
+            preds.append( f'account_id = {account_id}' )
+            
+        
+        if reason_id is not None:
+            
+            preds.append( f'reason_id = {reason_id}' )
+            
+        
+        pred_string = ''
+        
+        if len( preds ) > 0:
+            
+            pred_string = ' WHERE {}'.format( ' AND '.join( preds ) )
+            
+        
+        potential_petition_ids = self._Execute( f'SELECT DISTINCT account_id, reason_id FROM {petitioned_mappings_table_name}{pred_string} ORDER BY account_id LIMIT ?;', ( petition_search_limit, ) ).fetchall()
+        
+        return self._RepositoryConvertPetitionIdsToSummary( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_STATUS_PETITIONED, potential_petition_ids, limit )
         
     
     def _RepositoryGetMasterHashIds( self, service_id, service_hash_ids ):
@@ -3169,61 +3203,113 @@ class DB( HydrusDB.HydrusDB ):
         return final_petition_count_info
         
     
-    def _RepositoryGetPetition( self, service_key, account, content_type, status, subject_account_key = None ):
-        
-        # TODO: update this guy to take reason too, for (account key, reason) tuple lookups
+    def _RepositoryGetPetition( self, service_key, account, content_type, status, subject_account_key, reason ) -> HydrusNetwork.Petition:
         
         service_id = self._GetServiceId( service_key )
         
-        try:
+        subject_account_id = self._GetAccountId( subject_account_key )
+        
+        reason_id = self._GetReasonId( reason )
+        
+        if content_type == HC.CONTENT_TYPE_FILES:
             
-            if subject_account_key is None:
+            petition = self._RepositoryGetFilePetition( service_id, subject_account_id, reason_id )
+            
+        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            petition = self._RepositoryGetMappingPetition( service_id, subject_account_id, reason_id )
+            
+        elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            
+            if status == HC.CONTENT_STATUS_PENDING:
                 
-                subject_account_id = None
+                petition = self._RepositoryGetTagParentPend( service_id, subject_account_id, reason_id )
                 
             else:
                 
-                subject_account_id = self._GetAccountId( subject_account_key )
+                petition = self._RepositoryGetTagParentPetition( service_id, subject_account_id, reason_id )
                 
             
-            if content_type == HC.CONTENT_TYPE_FILES:
+        elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            if status == HC.CONTENT_STATUS_PENDING:
                 
-                petition = self._RepositoryGetFilePetition( service_id, account_id = subject_account_id )
-                
-            elif content_type == HC.CONTENT_TYPE_MAPPINGS:
-                
-                petition = self._RepositoryGetMappingPetition( service_id, account_id = subject_account_id )
-                
-            elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
-                
-                if status == HC.CONTENT_STATUS_PENDING:
-                    
-                    petition = self._RepositoryGetTagParentPend( service_id, account_id = subject_account_id )
-                    
-                else:
-                    
-                    petition = self._RepositoryGetTagParentPetition( service_id, account_id = subject_account_id )
-                    
-                
-            elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
-                
-                if status == HC.CONTENT_STATUS_PENDING:
-                    
-                    petition = self._RepositoryGetTagSiblingPend( service_id, account_id = subject_account_id )
-                    
-                else:
-                    
-                    petition = self._RepositoryGetTagSiblingPetition( service_id, account_id = subject_account_id )
-                    
+                petition = self._RepositoryGetTagSiblingPend( service_id, subject_account_id, reason_id )
                 
             else:
                 
-                raise HydrusExceptions.BadRequestException( 'Unknown content type!' )
+                petition = self._RepositoryGetTagSiblingPetition( service_id, subject_account_id, reason_id )
                 
             
-        except HydrusExceptions.NotFoundException:
+        else:
             
-            if subject_account_key is None:
+            raise HydrusExceptions.BadRequestException( 'Unknown content type!' )
+            
+        
+        
+        return petition
+        
+    
+    def _RepositoryGetPetitionsSummary( self, service_key, account, content_type, status, limit = 100, subject_account_key = None, reason = None ) -> typing.List:
+        
+        service_id = self._GetServiceId( service_key )
+        
+        if subject_account_key is None:
+            
+            subject_account_id = None
+            
+        else:
+            
+            subject_account_id = self._GetAccountId( subject_account_key )
+            
+        
+        if reason is None:
+            
+            reason_id = None
+            
+        else:
+            
+            reason_id = self._GetReasonId( reason )
+            
+        
+        if content_type == HC.CONTENT_TYPE_FILES:
+            
+            petitions_summary = self._RepositoryGetFilePetitionsSummary( service_id, limit = limit, account_id = subject_account_id, reason_id = reason_id )
+            
+        elif content_type == HC.CONTENT_TYPE_MAPPINGS:
+            
+            petitions_summary = self._RepositoryGetMappingPetitionsSummary( service_id, limit = limit, account_id = subject_account_id, reason_id = reason_id )
+            
+        elif content_type == HC.CONTENT_TYPE_TAG_PARENTS:
+            
+            if status == HC.CONTENT_STATUS_PENDING:
+                
+                petitions_summary = self._RepositoryGetTagParentPendsSummary( service_id, limit = limit, account_id = subject_account_id, reason_id = reason_id )
+                
+            else:
+                
+                petitions_summary = self._RepositoryGetTagParentPetitionsSummary( service_id, limit = limit, account_id = subject_account_id, reason_id = reason_id )
+                
+            
+        elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
+            
+            if status == HC.CONTENT_STATUS_PENDING:
+                
+                petitions_summary = self._RepositoryGetTagSiblingPendsSummary( service_id, limit = limit, account_id = subject_account_id, reason_id = reason_id )
+                
+            else:
+                
+                petitions_summary = self._RepositoryGetTagSiblingPetitionsSummary( service_id, limit = limit, account_id = subject_account_id, reason_id = reason_id )
+                
+            
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'Unknown content type!' )
+            
+        
+        if len( petitions_summary ) == 0:
+            
+            if subject_account_key is None and reason is None:
                 
                 info_type = None
                 
@@ -3264,10 +3350,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-            raise
-            
         
-        return petition
+        return petitions_summary
         
     
     def _RepositoryGetServiceHashId( self, service_id, master_hash_id, timestamp ):
@@ -3336,9 +3420,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryGetServiceInfoSpecificForAccount( self, service_id: int, info_type: int, account_id: int ):
         
-        service_name = self._GetServiceName( service_id )
-        
-        ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryMasterMapTableNames( service_id )
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name ) = GenerateRepositoryFilesTableNames( service_id )
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
@@ -3472,33 +3553,20 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
-    def _RepositoryGetTagParentPend( self, service_id, account_id = None ):
+    def _RepositoryGetTagParentPend( self, service_id, petitioner_account_id, reason_id ) -> HydrusNetwork.Petition:
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
-        
-        if account_id is None:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_parents_table_name, petitioned_tag_parents_table_name ) ).fetchall()
-            
-        else:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE account_id = ? AND 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_parents_table_name, petitioned_tag_parents_table_name ), ( account_id, ) ).fetchall()
-            
-        
-        if len( result ) == 0:
-            
-            raise HydrusExceptions.NotFoundException( 'No petitions!' )
-            
-        
-        result = random.choice( result )
-        
-        ( petitioner_account_id, reason_id ) = result
         
         petitioner_account = self._GetAccount( service_id, petitioner_account_id )
         
         reason = self._GetReason( reason_id )
         
-        pairs = self._Execute( 'SELECT child_master_tag_id, parent_master_tag_id FROM ' + pending_tag_parents_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        pairs = self._Execute( f'SELECT child_master_tag_id, parent_master_tag_id FROM {pending_tag_parents_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        
+        if len( pairs ) == 0:
+            
+            raise HydrusExceptions.NotFoundException( 'Sorry, did not find a petition for that account and reason!' )
+            
         
         contents = []
         
@@ -3517,30 +3585,44 @@ class DB( HydrusDB.HydrusDB ):
         
         actions_and_contents = [ ( action, contents ) ]
         
-        return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
+        petition_header = HydrusNetwork.PetitionHeader(
+            content_type = HC.CONTENT_TYPE_TAG_PARENTS,
+            status = HC.CONTENT_STATUS_PENDING,
+            account_key = petitioner_account.GetAccountKey(),
+            reason = reason
+        )
+        
+        return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetTagParentPetition( self, service_id, account_id = None ):
+    def _RepositoryGetTagParentPendsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
         
         ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
-        if account_id is None:
+        petition_search_limit = max( limit * 5, 100 )
+        
+        preds = [ f'1 NOT IN ( SELECT 1 FROM {petitioned_tag_parents_table_name} WHERE account_id = a1 AND reason_id = r1 )' ]
+        
+        if account_id is not None:
             
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_tag_parents_table_name ) ).fetchall()
-            
-        else:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_tag_parents_table_name ), ( account_id, ) ).fetchall()
+            preds.append( f'account_id = {account_id}' )
             
         
-        if len( result ) == 0:
+        if reason_id is not None:
             
-            raise HydrusExceptions.NotFoundException( 'No petitions!' )
+            preds.append( f'reason_id = {reason_id}' )
             
         
-        result = random.choice( result )
+        pred_string = ' WHERE {}'.format( ' AND '.join( preds ) )
         
-        ( petitioner_account_id, reason_id ) = result
+        potential_petition_ids = self._Execute( f'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {pending_tag_parents_table_name}{pred_string} ORDER BY account_id LIMIT ?;', ( petition_search_limit, ) ).fetchall()
+        
+        return self._RepositoryConvertPetitionIdsToSummary( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PENDING, potential_petition_ids, limit )
+        
+    
+    def _RepositoryGetTagParentPetition( self, service_id, petitioner_account_id, reason_id ) -> HydrusNetwork.Petition:
+        
+        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
         
         petitioner_account = self._GetAccount( service_id, petitioner_account_id )
         
@@ -3550,7 +3632,12 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        pairs = self._Execute( 'SELECT child_service_tag_id, parent_service_tag_id FROM ' + petitioned_tag_parents_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        pairs = self._Execute( f'SELECT child_service_tag_id, parent_service_tag_id FROM {petitioned_tag_parents_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        
+        if len( pairs ) == 0:
+            
+            raise HydrusExceptions.NotFoundException( 'Sorry, did not find a petition for that account and reason!' )
+            
         
         contents = []
         
@@ -3574,7 +3661,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        pairs = self._Execute( 'SELECT child_master_tag_id, parent_master_tag_id FROM ' + pending_tag_parents_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        pairs = self._Execute( f'SELECT child_master_tag_id, parent_master_tag_id FROM {pending_tag_parents_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
         
         contents = []
         
@@ -3595,36 +3682,60 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
+        petition_header = HydrusNetwork.PetitionHeader(
+            content_type = HC.CONTENT_TYPE_TAG_PARENTS,
+            status = HC.CONTENT_STATUS_PETITIONED,
+            account_key = petitioner_account.GetAccountKey(),
+            reason = reason
+        )
+        
+        return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetTagSiblingPend( self, service_id, account_id = None ):
+    def _RepositoryGetTagParentPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+        
+        ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name ) = GenerateRepositoryTagParentsTableNames( service_id )
+        
+        petition_search_limit = max( limit * 5, 100 )
+        
+        preds = []
+        
+        if account_id is not None:
+            
+            preds.append( f'account_id = {account_id}' )
+            
+        
+        if reason_id is not None:
+            
+            preds.append( f'reason_id = {reason_id}' )
+            
+        
+        pred_string = ''
+        
+        if len( preds ) > 0:
+            
+            pred_string = ' WHERE {}'.format( ' AND '.join( preds ) )
+            
+        
+        potential_petition_ids = self._Execute( f'SELECT DISTINCT account_id, reason_id FROM {petitioned_tag_parents_table_name}{pred_string} ORDER BY account_id LIMIT ?;', ( petition_search_limit, ) ).fetchall()
+        
+        return self._RepositoryConvertPetitionIdsToSummary( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_STATUS_PETITIONED, potential_petition_ids, limit )
+        
+    
+    def _RepositoryGetTagSiblingPend( self, service_id, petitioner_account_id, reason_id ) -> HydrusNetwork.Petition:
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
-        
-        if account_id is None:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) ).fetchall()
-            
-        else:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {} WHERE account_id = ? AND 1 NOT IN ( SELECT 1 FROM {} WHERE account_id = a1 AND reason_id = r1 ) LIMIT 100;'.format( pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ), ( account_id, ) ).fetchall()
-            
-        
-        if len( result ) == 0:
-            
-            raise HydrusExceptions.NotFoundException( 'No petitions!' )
-            
-        
-        result = random.choice( result )
-        
-        ( petitioner_account_id, reason_id ) = result
         
         petitioner_account = self._GetAccount( service_id, petitioner_account_id )
         
         reason = self._GetReason( reason_id )
         
-        pairs = self._Execute( 'SELECT bad_master_tag_id, good_master_tag_id FROM ' + pending_tag_siblings_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        pairs = self._Execute( f'SELECT bad_master_tag_id, good_master_tag_id FROM {pending_tag_siblings_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        
+        if len( pairs ) == 0:
+            
+            raise HydrusExceptions.NotFoundException( 'Sorry, did not find a petition for that account and reason!' )
+            
         
         contents = []
         
@@ -3643,30 +3754,44 @@ class DB( HydrusDB.HydrusDB ):
         
         actions_and_contents = [ ( action, contents ) ]
         
-        return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
+        petition_header = HydrusNetwork.PetitionHeader(
+            content_type = HC.CONTENT_TYPE_TAG_SIBLINGS,
+            status = HC.CONTENT_STATUS_PENDING,
+            account_key = petitioner_account.GetAccountKey(),
+            reason = reason
+        )
+        
+        return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
         
     
-    def _RepositoryGetTagSiblingPetition( self, service_id, account_id = None ):
+    def _RepositoryGetTagSiblingPendsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
         
         ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
-        if account_id is None:
+        petition_search_limit = max( limit * 5, 100 )
+        
+        preds = [ f'1 NOT IN ( SELECT 1 FROM {petitioned_tag_siblings_table_name} WHERE account_id = a1 AND reason_id = r1 )' ]
+        
+        if account_id is not None:
             
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} LIMIT 100;'.format( petitioned_tag_siblings_table_name ) ).fetchall()
-            
-        else:
-            
-            result = self._Execute( 'SELECT DISTINCT account_id, reason_id FROM {} WHERE account_id = ? LIMIT 100;'.format( petitioned_tag_siblings_table_name ), ( account_id, ) ).fetchall()
+            preds.append( f'account_id = {account_id}' )
             
         
-        if len( result ) == 0:
+        if reason_id is not None:
             
-            raise HydrusExceptions.NotFoundException( 'No petitions!' )
+            preds.append( f'reason_id = {reason_id}' )
             
         
-        result = random.choice( result )
+        pred_string = ' WHERE {}'.format( ' AND '.join( preds ) )
         
-        ( petitioner_account_id, reason_id ) = result
+        potential_petition_ids = self._Execute( f'SELECT DISTINCT account_id as a1, reason_id as r1 FROM {pending_tag_siblings_table_name}{pred_string} ORDER BY account_id LIMIT ?;', ( petition_search_limit, ) ).fetchall()
+        
+        return self._RepositoryConvertPetitionIdsToSummary( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PENDING, potential_petition_ids, limit )
+        
+    
+    def _RepositoryGetTagSiblingPetition( self, service_id, petitioner_account_id, reason_id ) -> HydrusNetwork.Petition:
+        
+        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
         
         petitioner_account = self._GetAccount( service_id, petitioner_account_id )
         
@@ -3676,7 +3801,12 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        pairs = self._Execute( 'SELECT bad_service_tag_id, good_service_tag_id FROM {} WHERE account_id = ? AND reason_id = ?;'.format( petitioned_tag_siblings_table_name ), ( petitioner_account_id, reason_id ) ).fetchall()
+        pairs = self._Execute( f'SELECT bad_service_tag_id, good_service_tag_id FROM {petitioned_tag_siblings_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        
+        if len( pairs ) == 0:
+            
+            raise HydrusExceptions.NotFoundException( 'Sorry, did not find a petition for that account and reason!' )
+            
         
         contents = []
         
@@ -3700,7 +3830,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        pairs = self._Execute( 'SELECT bad_master_tag_id, good_master_tag_id FROM ' + pending_tag_siblings_table_name + ' WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
+        pairs = self._Execute( f'SELECT bad_master_tag_id, good_master_tag_id FROM {pending_tag_siblings_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ).fetchall()
         
         contents = []
         
@@ -3721,7 +3851,44 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        return HydrusNetwork.Petition( petitioner_account, reason, actions_and_contents )
+        petition_header = HydrusNetwork.PetitionHeader(
+            content_type = HC.CONTENT_TYPE_TAG_SIBLINGS,
+            status = HC.CONTENT_STATUS_PETITIONED,
+            account_key = petitioner_account.GetAccountKey(),
+            reason = reason
+        )
+        
+        return HydrusNetwork.Petition( petitioner_account = petitioner_account, petition_header = petition_header, actions_and_contents = actions_and_contents )
+        
+    
+    def _RepositoryGetTagSiblingPetitionsSummary( self, service_id, limit = 100, account_id = None, reason_id = None ) -> typing.List:
+        
+        ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name ) = GenerateRepositoryTagSiblingsTableNames( service_id )
+        
+        petition_search_limit = max( limit * 5, 100 )
+        
+        preds = []
+        
+        if account_id is not None:
+            
+            preds.append( f'account_id = {account_id}' )
+            
+        
+        if reason_id is not None:
+            
+            preds.append( f'reason_id = {reason_id}' )
+            
+        
+        pred_string = ''
+        
+        if len( preds ) > 0:
+            
+            pred_string = ' WHERE {}'.format( ' AND '.join( preds ) )
+            
+        
+        potential_petition_ids = self._Execute( f'SELECT DISTINCT account_id, reason_id FROM {petitioned_tag_siblings_table_name}{pred_string} ORDER BY account_id LIMIT ?;', ( petition_search_limit, ) ).fetchall()
+        
+        return self._RepositoryConvertPetitionIdsToSummary( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_STATUS_PETITIONED, potential_petition_ids, limit )
         
     
     def _RepositoryHasFile( self, service_key, hash ):
@@ -4113,7 +4280,14 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( tag, hashes ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND ):
                 
-                master_tag_id = self._GetMasterTagId( tag )
+                try:
+                    
+                    master_tag_id = self._GetMasterTagId( tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 master_hash_ids = self._GetMasterHashIds( hashes )
                 
@@ -4127,7 +4301,14 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( tag, hashes ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION ):
                 
-                master_tag_id = self._GetMasterTagId( tag )
+                try:
+                    
+                    master_tag_id = self._GetMasterTagId( tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id, timestamp )
                 
@@ -4152,7 +4333,14 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( tag, hashes ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
                 
-                master_tag_id = self._GetMasterTagId( tag )
+                try:
+                    
+                    master_tag_id = self._GetMasterTagId( tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 service_tag_id = self._RepositoryGetServiceTagId( service_id, master_tag_id, timestamp )
                 
@@ -4170,8 +4358,15 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( child_tag, parent_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND ):
                 
-                child_master_tag_id = self._GetMasterTagId( child_tag )
-                parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                try:
+                    
+                    child_master_tag_id = self._GetMasterTagId( child_tag )
+                    parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 if can_create_tag_parents or can_moderate_tag_parents:
                     
@@ -4189,8 +4384,15 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( child_tag, parent_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION ):
                 
-                child_master_tag_id = self._GetMasterTagId( child_tag )
-                parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                try:
+                    
+                    child_master_tag_id = self._GetMasterTagId( child_tag )
+                    parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, timestamp )
                 parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, timestamp )
@@ -4212,16 +4414,30 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( child_tag, parent_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PEND ):
                 
-                child_master_tag_id = self._GetMasterTagId( child_tag )
-                parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                try:
+                    
+                    child_master_tag_id = self._GetMasterTagId( child_tag )
+                    parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 self._RepositoryDenyTagParentPend( service_id, child_master_tag_id, parent_master_tag_id )
                 
             
             for ( ( child_tag, parent_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DENY_PETITION ):
                 
-                child_master_tag_id = self._GetMasterTagId( child_tag )
-                parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                try:
+                    
+                    child_master_tag_id = self._GetMasterTagId( child_tag )
+                    parent_master_tag_id = self._GetMasterTagId( parent_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 child_service_tag_id = self._RepositoryGetServiceTagId( service_id, child_master_tag_id, timestamp )
                 parent_service_tag_id = self._RepositoryGetServiceTagId( service_id, parent_master_tag_id, timestamp )
@@ -4238,8 +4454,15 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( bad_tag, good_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION ):
                 
-                bad_master_tag_id = self._GetMasterTagId( bad_tag )
-                good_master_tag_id = self._GetMasterTagId( good_tag )
+                try:
+                    
+                    bad_master_tag_id = self._GetMasterTagId( bad_tag )
+                    good_master_tag_id = self._GetMasterTagId( good_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, timestamp )
                 good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, timestamp )
@@ -4258,8 +4481,15 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( bad_tag, good_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND ):
                 
-                bad_master_tag_id = self._GetMasterTagId( bad_tag )
-                good_master_tag_id = self._GetMasterTagId( good_tag )
+                try:
+                    
+                    bad_master_tag_id = self._GetMasterTagId( bad_tag )
+                    good_master_tag_id = self._GetMasterTagId( good_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 if can_create_tag_siblings or can_moderate_tag_siblings:
                     
@@ -4280,16 +4510,30 @@ class DB( HydrusDB.HydrusDB ):
             
             for ( ( bad_tag, good_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PEND ):
                 
-                bad_master_tag_id = self._GetMasterTagId( bad_tag )
-                good_master_tag_id = self._GetMasterTagId( good_tag )
+                try:
+                    
+                    bad_master_tag_id = self._GetMasterTagId( bad_tag )
+                    good_master_tag_id = self._GetMasterTagId( good_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 self._RepositoryDenyTagSiblingPend( service_id, bad_master_tag_id, good_master_tag_id )
                 
             
             for ( ( bad_tag, good_tag ), reason ) in client_to_server_update.GetContentDataIterator( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DENY_PETITION ):
                 
-                bad_master_tag_id = self._GetMasterTagId( bad_tag )
-                good_master_tag_id = self._GetMasterTagId( good_tag )
+                try:
+                    
+                    bad_master_tag_id = self._GetMasterTagId( bad_tag )
+                    good_master_tag_id = self._GetMasterTagId( good_tag )
+                    
+                except:
+                    
+                    continue
+                    
                 
                 bad_service_tag_id = self._RepositoryGetServiceTagId( service_id, bad_master_tag_id, timestamp )
                 good_service_tag_id = self._RepositoryGetServiceTagId( service_id, good_master_tag_id, timestamp )
