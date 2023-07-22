@@ -6,7 +6,7 @@ import threading
 import time
 import typing
 
-from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusConstants as HC, HydrusPSDHandling
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
@@ -2006,22 +2006,34 @@ class FilesMaintenanceManager( object ):
         if mime not in HC.FILES_THAT_CAN_HAVE_ICC_PROFILE:
             
             return False
-            
         
         try:
             
             path = self._controller.client_files_manager.GetFilePath( hash, mime )
             
-            try:
+            if mime == HC.APPLICATION_PSD:
+
+                try:
+
+                    has_icc_profile = HydrusPSDHandling.PSDHasICCProfile(path)
+
+                except:
+
+                    return None
                 
-                pil_image = HydrusImageHandling.RawOpenPILImage( path )
-                
-            except:
-                
-                return None
+            else:
+
+                try:
+                    
+                    pil_image = HydrusImageHandling.RawOpenPILImage( path )
+                    
+                except:
+                    
+                    return None
                 
             
-            has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
+                has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
+            
             
             additional_data = has_icc_profile
             

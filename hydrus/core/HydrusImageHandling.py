@@ -302,6 +302,8 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             HydrusData.ShowText( 'Loading PSD' )
             
         pil_image = HydrusPSDHandling.MergedPILImageFromPSD( path )
+ 
+        pil_image = DequantizePILImage( pil_image )
         
         numpy_image = GenerateNumPyImageFromPILImage( pil_image )
 
