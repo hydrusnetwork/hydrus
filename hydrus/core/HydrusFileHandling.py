@@ -89,6 +89,7 @@ headers_and_mime.extend( [
     ( ( ( 0, b'7z\xBC\xAF\x27\x1C' ), ), HC.APPLICATION_7Z ),
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x00' ), ), HC.APPLICATION_RAR ),
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00' ), ), HC.APPLICATION_RAR ),
+    ( ( ( 0, b'\x1f\x8b' ), ), HC.APPLICATION_GZIP ),
     ( ( ( 0, b'hydrus encrypted zip' ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
     ( ( ( 4, b'ftypmp4' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypisom' ), ), HC.UNDETERMINED_MP4 ),
