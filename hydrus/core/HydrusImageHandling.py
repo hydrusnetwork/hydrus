@@ -5,7 +5,6 @@ import typing
 
 import numpy
 import numpy.core.multiarray # important this comes before cv!
-import struct
 import warnings
 
 try:

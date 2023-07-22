@@ -3,13 +3,11 @@ import typing
 
 from PIL import Image as PILImage
 
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusImageHandling
 
 try:
     
     from psd_tools import PSDImage
-    from psd_tools.constants import ChannelID, Tag, ColorMode, Resource
     
     PSD_TOOLS_OK = True
     

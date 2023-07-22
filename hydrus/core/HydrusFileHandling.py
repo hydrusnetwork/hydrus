@@ -1,6 +1,5 @@
 import hashlib
 import os
-import struct
 
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusClipHandling

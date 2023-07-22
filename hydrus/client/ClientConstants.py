@@ -2,7 +2,7 @@ import os
 
 from qtpy import QtGui as QG
 
-from hydrus.core import HydrusConstants as HC, HydrusPSDHandling
+from hydrus.core import HydrusConstants as HC
 
 #
 

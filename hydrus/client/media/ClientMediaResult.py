@@ -1,6 +1,6 @@
 import typing
 
-from hydrus.core import HydrusConstants as HC, HydrusPSDHandling
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
