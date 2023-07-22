@@ -96,6 +96,7 @@ Now:
 *   **application/vnd.rar** (.rar)
 *   **application/zip** (.zip)
 *   **application/x-7z-compressed** (.7z)
+*   **application/gzip** (.gz)
 
 Although some support is imperfect for the complicated filetypes. For the Windows and Linux built releases, hydrus now embeds an MPV player for video, audio and gifs, which provides smooth playback and audio, but some other environments may not support MPV and so will default when possible to the native hydrus software renderer, which does not support audio. When something does not render how you want, right-clicking on its thumbnail presents the option 'open externally', which will open the file in the appropriate default program (e.g. ACDSee, VLC).
 

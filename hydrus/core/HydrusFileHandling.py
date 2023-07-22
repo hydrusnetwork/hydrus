@@ -78,6 +78,7 @@ headers_and_mime.extend( [
     ( ( ( 0, b'8BPS\x00\x02' ), ), HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
     ( ( ( 0, b'CSFCHUNK' ), ), HC.APPLICATION_CLIP ),
     ( ( ( 0, b'SAI-CANVAS' ), ), HC.APPLICATION_SAI2 ),
+    ( ( ( 0, b'gimp xcf ' ), ), HC.APPLICATION_XCF ),
     ( ( ( 38, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
     ( ( ( 42, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/master/data/freedesktop.org.xml.in#L2829
     ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
@@ -88,6 +89,7 @@ headers_and_mime.extend( [
     ( ( ( 0, b'7z\xBC\xAF\x27\x1C' ), ), HC.APPLICATION_7Z ),
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x00' ), ), HC.APPLICATION_RAR ),
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00' ), ), HC.APPLICATION_RAR ),
+    ( ( ( 0, b'\x1f\x8b' ), ), HC.APPLICATION_GZIP ),
     ( ( ( 0, b'hydrus encrypted zip' ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
     ( ( ( 4, b'ftypmp4' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypisom' ), ), HC.UNDETERMINED_MP4 ),
