@@ -1,4 +1,5 @@
 import webbrowser
+import os
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
@@ -34,3 +35,20 @@ def LaunchURLInWebBrowser( url ):
         HydrusPaths.LaunchFile( url, launch_path = web_browser_path )
         
     
+def OpenDocumentation( documentation_constant : int ):
+
+    local, remote = HC.documentation_path_lookup[documentation_constant]
+
+    local_open = local
+
+    if "#" in local:
+
+        local = local[ :local.find("#") ]
+
+    if os.path.isfile( local ):
+
+        LaunchPathInWebBrowser( local_open )
+
+    else:
+
+        LaunchURLInWebBrowser( remote )

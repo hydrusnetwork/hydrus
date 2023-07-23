@@ -1094,6 +1094,46 @@ url_type_string_lookup = {
     URL_TYPE_SUB_GALLERY : 'sub-gallery url (is queued even if creator found no post/file urls)'
 }
 
+
+
+REMOTE_DOCS = "https://hydrusnetwork.github.io/hydrus"
+    
+DOCUMENTATION_CHANGELOG = 0
+DOCUMENTATION_DOWNLOADER_GUGS = 1
+DOCUMENTATION_DOWNLOADER_LOGIN = 2
+DOCUMENTATION_ADDING_NEW_DOWNLOADERS = 3
+DOCUMENTATION_DOWNLOADER_URL_CLASSES = 4
+DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS = 5
+DOCUMENTATION_DATABASE_MIGRATION = 6
+DOCUMENTATION_DUPLICATES = 7
+DOCUMENTATION_DOWNLOADER_SHARING = 8
+DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS__PAGE_PARSERS = 9
+DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS__CONTENT_PARSERS = 10
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__COMPOUND_FORMULA = 11
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__CONTEXT_VARIABLE_FORMULA = 12
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__HTML_FORMULA = 13
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__JSON_FORMULA = 14
+
+documentation_path_lookup = {
+    DOCUMENTATION_CHANGELOG                    : (os.path.join( HELP_DIR, 'changelog.html' ), f"{REMOTE_DOCS}/changelog.html#version_{SOFTWARE_VERSION}"),
+    DOCUMENTATION_DOWNLOADER_GUGS              : (os.path.join( HELP_DIR, 'downloader_gugs.html' ), f"{REMOTE_DOCS}/downloader_gugs.html"),
+    DOCUMENTATION_DOWNLOADER_LOGIN             : (os.path.join( HELP_DIR, 'downloader_login.html'), f"{REMOTE_DOCS}/downloader_login.html"),
+    DOCUMENTATION_ADDING_NEW_DOWNLOADERS       : (os.path.join( HELP_DIR, 'adding_new_downloaders.html'), f"{REMOTE_DOCS}/adding_new_downloaders.html"),
+    DOCUMENTATION_DOWNLOADER_URL_CLASSES       : (os.path.join( HELP_DIR, 'downloader_url_classes.html'), f"{REMOTE_DOCS}/downloader_url_classes.html"),
+    DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS: (os.path.join( HELP_DIR, 'getting_started_subscriptions.html'), f"{REMOTE_DOCS}/getting_started_subscriptions.html"),
+    DOCUMENTATION_DATABASE_MIGRATION           : (os.path.join( HELP_DIR, 'database_migration.html'), f"{REMOTE_DOCS}/database_migration.html"),
+    DOCUMENTATION_DUPLICATES                   : (os.path.join( HELP_DIR, 'duplicates.html'), f"{REMOTE_DOCS}/duplicates.html"),
+    DOCUMENTATION_DOWNLOADER_SHARING           : (os.path.join( HELP_DIR, 'downloader_sharing.html'), f"{REMOTE_DOCS}/downloader_sharing.html"),
+    DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS__PAGE_PARSERS        : (os.path.join( HELP_DIR, 'downloader_parsers_page_parsers.html#page_parsers'), f"{REMOTE_DOCS}/downloader_parsers_page_parsers.html#page_parsers"),
+    DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS__CONTENT_PARSERS  : (os.path.join( HELP_DIR, 'downloader_parsers_content_parsers.html#content_parsers'), f"{REMOTE_DOCS}/downloader_parsers_content_parsers.html#content_parsers"),
+    DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__COMPOUND_FORMULA        : (os.path.join( HELP_DIR, 'downloader_parsers_formulae.html#compound_formula'), f"{REMOTE_DOCS}/downloader_parsers_formulae.html#compound_formula"),
+    DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__CONTEXT_VARIABLE_FORMULA: (os.path.join( HELP_DIR, 'downloader_parsers_formulae.html#context_variable_formula'), f"{REMOTE_DOCS}/downloader_parsers_formulae.html#context_variable_formula"),
+    DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__HTML_FORMULA            : (os.path.join( HELP_DIR, 'downloader_parsers_formulae.html#html_formula'), f"{REMOTE_DOCS}/downloader_parsers_formulae.html#html_formula"),
+    DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__JSON_FORMULA            : (os.path.join( HELP_DIR, 'downloader_parsers_formulae.html#json_formula'), f"{REMOTE_DOCS}/downloader_parsers_formulae.html#json_formula"),
+}
+
+
+
 # default options
 
 DEFAULT_SERVER_ADMIN_PORT = 45870

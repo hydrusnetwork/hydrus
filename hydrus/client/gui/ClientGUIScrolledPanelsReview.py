@@ -142,7 +142,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'database_migration.html' ) )
+        page_func = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_DATABASE_MIGRATION )
         
         menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
         
@@ -1830,7 +1830,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'adding_new_downloaders.html' ) )
+        page_func = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_ADDING_NEW_DOWNLOADERS )
         
         menu_items.append( ( 'normal', 'open the easy downloader import help', 'Open the help page for easily importing downloaders in your web browser.', page_func ) )
         

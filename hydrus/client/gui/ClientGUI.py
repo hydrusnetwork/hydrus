@@ -3225,7 +3225,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendMenu( menu, links, 'links' )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientPaths.LaunchPathInWebBrowser, os.path.join( HC.HELP_DIR, 'changelog.html' ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientPaths.OpenDocumentation, HC.DOCUMENTATION_CHANGELOG )
         
         ClientGUIMenus.AppendSeparator( menu )
         
