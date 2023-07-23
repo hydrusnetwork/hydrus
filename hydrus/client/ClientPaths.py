@@ -35,9 +35,10 @@ def LaunchURLInWebBrowser( url ):
         HydrusPaths.LaunchFile( url, launch_path = web_browser_path )
         
     
-def OpenDocumentation( documentation_constant : int ):
+def OpenDocumentation( documentation_path : str ):
 
-    local, remote = HC.documentation_path_lookup[documentation_constant]
+    local = os.path.join( HC.HELP_DIR, documentation_path )
+    remote = "/".join((HC.REMOTE_HELP.rstrip("/"), documentation_path.lstrip("/"))) 
 
     local_open = local
 
