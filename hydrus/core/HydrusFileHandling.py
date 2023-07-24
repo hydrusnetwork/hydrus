@@ -537,8 +537,16 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 
                 return mime
                 
-            
+    # If the file starts with '{' it is probably JSON
+    # but we can't know for sure so we send it over to be checked
+    if bit_to_check.startswith(b'{'):
         
+        with open( path, 'rb' ) as f:
+
+            if HydrusText.LooksLikeJSON(f.read()):
+
+                return HC.APPLICATION_JSON
+    
     
     if HydrusText.LooksLikeHTML( bit_to_check ):
         
