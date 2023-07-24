@@ -5,6 +5,8 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 
+from hydrus.client.gui import ClientGUIDialogsQuick
+
 def DeletePath( path, always_delete_fully = False ):
     
     delete_to_recycle_bin = HC.options[ 'delete_to_recycle_bin' ]
@@ -51,5 +53,11 @@ def OpenDocumentation( documentation_path : str ):
         LaunchPathInWebBrowser( local_open )
 
     else:
+
+        remote = ClientGUIDialogsQuick.ConfirmOpenOnlineHelpIfLocalDoesntExist( None, remote )
+
+        if remote is None:
+
+            return
 
         LaunchURLInWebBrowser( remote )

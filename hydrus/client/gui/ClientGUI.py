@@ -4963,42 +4963,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
     
     def _OpenHelp( self ):
-        
-        help_path = os.path.join( HC.HELP_DIR, 'index.html' )
-        
-        if os.path.exists( help_path ):
-            
-            ClientPaths.LaunchPathInWebBrowser( help_path )
-            
-        else:
-            
-            message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
-            
-            yes_tuples = []
-            
-            yes_tuples.append( ( 'open online help', 0 ) )
-            yes_tuples.append( ( 'open how to build guide', 1 ) )
-            
-            try:
-                
-                result = ClientGUIDialogsQuick.GetYesYesNo( self, message, yes_tuples = yes_tuples, no_label = 'forget it' )
-                
-            except HydrusExceptions.CancelledException:
-                
-                return
-                
-            
-            if result == 0:
-                
-                url = 'https://hydrusnetwork.github.io/hydrus/'
-                
-            elif result == 1:
-                
-                url = 'https://hydrusnetwork.github.io/hydrus/about_docs.html'
-                
-            
-            ClientPaths.LaunchURLInWebBrowser( url )
-            
+
+        ClientPaths.OpenDocumentation( HC.DOCUMENTATION_INDEX )
         
     
     def _OpenInstallFolder( self ):

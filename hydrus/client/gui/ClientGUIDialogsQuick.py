@@ -255,4 +255,31 @@ def SelectServiceKey( service_types = None, service_keys = None, unallowed = Non
             return None
             
         
-    
+def ConfirmOpenOnlineHelpIfLocalDoesntExist( dialog_owner, online_help_link : str ) -> str:
+
+    message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
+            
+    yes_tuples = []
+            
+    yes_tuples.append( ( 'open online help', 0 ) )
+    yes_tuples.append( ( 'open how to build guide', 1 ) )
+            
+    try:
+                
+        result = GetYesYesNo( dialog_owner, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+                
+    except HydrusExceptions.CancelledException:
+                
+        return
+                
+            
+    if result == 0:
+                
+        url = online_help_link
+                
+    elif result == 1:
+                
+        url = "/".join( ( HC.REMOTE_HELP.rstrip("/"), HC.DOCUMENTATION_ABOUT_DOCS.lstrip("/") ) )
+
+    return url
+

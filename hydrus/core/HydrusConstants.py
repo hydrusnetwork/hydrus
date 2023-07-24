@@ -1098,6 +1098,7 @@ url_type_string_lookup = {
 
 REMOTE_HELP = "https://hydrusnetwork.github.io/hydrus"
     
+DOCUMENTATION_INDEX = "index.html"
 DOCUMENTATION_CHANGELOG = f"changelog.html#version_{SOFTWARE_VERSION}"
 DOCUMENTATION_DOWNLOADER_GUGS = "downloader_gugs.html"
 DOCUMENTATION_DOWNLOADER_LOGIN = 'downloader_login.html'
@@ -1113,7 +1114,7 @@ DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__COMPOUND_FORMULA = 'downloader_parser
 DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__CONTEXT_VARIABLE_FORMULA = 'downloader_parsers_formulae.html#context_variable_formula'
 DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__HTML_FORMULA = 'downloader_parsers_formulae.html#html_formula'
 DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__JSON_FORMULA = 'downloader_parsers_formulae.html#json_formula'
-
+DOCUMENTATION_ABOUT_DOCS = "about_docs.html"
 
 
 # default options
