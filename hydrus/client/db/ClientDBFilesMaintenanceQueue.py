@@ -2,7 +2,7 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientFiles
@@ -41,6 +41,8 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         #
         
         self._ExecuteMany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
+        
+        HG.client_controller.files_maintenance_manager.Wake()
         
     
     def AddJobsHashes( self, hashes, job_type, time_can_start = 0 ):

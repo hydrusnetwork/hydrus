@@ -7,6 +7,40 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 536](https://github.com/hydrusnetwork/hydrus/releases/tag/v536)
+
+### more new filetypes
+
+* thanks to a user, we have XCF and gzip filetype support!
+* I rejiggered the new SVG support so there is a firmer server/client split. the new tech needs Qt, which broke the headless Docker server last week at the last minute--now the server has some sensible stubs that safely revert to the default svg thumb and give unknown resolution, and the client patches in full support dynamically
+* the new SVG code now supports the 'scale to fill' thumbnail option
+
+### misc
+
+* I fixed the issue that was causing tags to stay in the tag autocomplete lookup despite going to 0 count. it should not happen for new cases, and **on update, a database routine will run to remove all your existing orphans. if you have ever synced with the PTR, it will take several minutes to run!**
+* sending the command to set a file as the best in its duplicate group now presents a yes/no dialog to confirm
+* hitting the shortcut for 'set the focused file as better than the other(s)' when you only have one file now asks if you just want to set that file as the best of its group
+* fixed an erroneous 'cannot show the best quality file of this file's group here' label in the file relationships menu--a count was off
+* fixed the 'set up a hydrus.desktop file' setup script to point to the new hydrus_client.sh startup script name
+* thanks to a user, a situation where certain unhandled URLs that deliver JSON were parsing as mpegs by ffmpeg and causing a weird loop is now caught and stopped. more investigation is needed to fix it properly
+
+### boring stuff
+
+* when a problem or file maintenance job causes a new file maintenance job to be queued (e.g. if the client in a metadata scan discovers the resolution of a file was not as expected, let's say it now recognises EXIF rotation, and starts a secondary thumbnail regen job), it now wakes the file maintenance manager immediately, which should help clear out and update for these jobs quickly when you are looking at the problem thumbnails
+* if you have an image type set to show as an 'open externally' button in the media viewer, then it is now no longer prefetched in the rendering system!
+* I added a very simple .editorconfig file for the project. since we have a variety of weird files in the directory tree, I've made it cautious and python-specific to start with. we'll expand as needed
+* I moved the similar files search tree and maintenance tracker from client.caches.db to client.db. while the former table is regeneratable, it isn't a cache or precomputation store, _per se_, so I finally agreed to move it to the main db. if you have a giganto database, it may take an extra minute to update
+* added a 'requirements_server.txt' to the advanced requirements.txts directory, just for future reference, and trimmed the Server Dockerfile down to reflect it
+
+### client api
+
+* thanks to a user, fixed a really stupid typo in the Client API when sending the 'file_id' parameter to set the file
+* wrote unit tests for file_id and file_ids parameters to stop this sort mistake in future
+* if you attempt to delete a file over the Client API when one of the given files is delete-locked (this is an advanced option that stops deletion of any archived file), the request now returns a 409 Conflict response, saying which hashes were bad, and does not delete anything
+* wrote a unit test to catch the new delete lock test
+* deleted the old-and-deprecated-in-one-week 'pair_rows' parameter-handling code in the set_file_relationships command
+* the client api version is now 49
+
 ## [Version 535](https://github.com/hydrusnetwork/hydrus/releases/tag/v535)
 
 ### misc
@@ -343,35 +377,3 @@ title: Changelog
 ### misc
 
 * if twisted fails to load, its exact error is saved, and if you try to launch a server, that error is printed to the log along with the notification popup
-
-## [Version 526](https://github.com/hydrusnetwork/hydrus/releases/tag/v526)
-
-### there will be an important update next week
-
-* next week's release will have two important program changes--I will integrate an OpenCV update, which will require 'extract' users to perform a clean install, and the executables are finally changing from 'client' and 'server' to 'hydrus_client' and 'hydrus_server'! be prepared to update your shortcuts and launch scripts
-
-### time
-
-* fixed a stupid logical bug in my new date code, which was throwing errors on system:time predicates that had a month value equal to the current month (e.g. 'x years, 5 months' during May)--sorry! (issue #1362)
-* when a subscription dies, the popup note about it says the death velocity period in the neat '180 days', as you set in UI, rather than converting to a date and stating the number of months and days using the recent calendar calculation updates
-* I unified some more 'xxxified date' UI labels to be 'xxxified time'. we're generally moving to the latter format as the ideal while still accepting various combinations for system parsing input
-
-### shortcuts
-
-* added 'media play-pause/previous/next' and 'volume up/down/mute' key recognition to the shortcut system. if your keyboard/headphones have media keys, they _should_ be mappable now. note, however, that, at least on Windows, while these capture in the hydrus UI, they seem to have global OS-level hooks, and as far as I can tell Qt can't stop that event propagating, so these may have limited effectiveness if you also have an mp3 player open, since Windows will also send the 'next' call to that etc... it may be there is a nice way to properly register a Qt app as a media thing for Windows to global-hook these events to, but I'm not sure!
-* also added 'mouse task button' to the mappable buttons. this is apparently a common Mouse6 mapping, so if you have it, knock yourself out
-* the code in the shortcut system that tries to detect and merge many small scroll wheel events (such as the emulated scroll that a trackpad may generate) now applies to all mouse devices, not just synthesised events. with luck, this will mean that mice that generate like 15 smoothscroll events of one degree instead of one of fifteen degrees for every wheel tick will no longer spam-navigate the media viewer wew
-
-### misc
-
-* to save you typing/pasting time, the 'enter your reason' prompts in manage tags, tag siblings, and tag parents now remember the last five custom reasons you enter! you can change the number saved using the new option under _options->tags_, including setting it to 0 to disable the system
-* fixed pasting tags in the manage tags dialog when the number of tags you are pasting is larger than the number of allowed 'recent tags'. previously it was saying 'did not understand what was in the clipboard', so hooray for the new error reporting
-* every multi-column list in the program now has a 'reset column widths' item in its header right-click menu! when these reset events happen, the respective lists also resize themselves immediately, no restart required
-* when you set 'try again' on an import object, it now clears all saved hashes from the import object (including the SHA256 which may have been linked from the database in an 'already in db'/'previously deleted' result). this will ensure the next attempt is not poisoned by these hashes (which can happen for various reasons) in the subsequent attempt. basically 'try again' resets better now (issue #1353)
-
-### some build stuff
-
-* the main build script now only uses Node16 sub-Actions (Node12 support is deprecated and being dropped in June)
-* the main build script no longer uses set-output commands (these are deprecated and being dropped later in the year I think, in favour of some ENV stuff)
-* tidied some cruft from the main build script
-* I moved the 'new' python-mpv in the requirements.txts from 1.0.1 to 1.0.3. source users might like to rebuild their venvs again, particularly Windows users who updated to the new mpv dll recently

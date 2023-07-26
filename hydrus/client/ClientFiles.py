@@ -21,6 +21,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientPaths
+from hydrus.client import ClientSVGHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.gui import QtPorting as QP
@@ -2792,5 +2793,10 @@ class FilesMaintenanceManager( object ):
     def Start( self ):
         
         self._controller.CallToThreadLongRunning( self.MainLoopBackgroundWork )
+        
+    
+    def Wake( self ):
+        
+        self._wake_background_event.set()
         
     

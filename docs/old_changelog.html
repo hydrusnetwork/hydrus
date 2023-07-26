@@ -35,6 +35,35 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_536"><a href="#version_536">version 536</a></h2>
+                    <ul>
+                        <li><h3>more new filetypes</h3></li>
+                        <li>thanks to a user, we have XCF and gzip filetype support!</li>
+                        <li>I rejiggered the new SVG support so there is a firmer server/client split. the new tech needs Qt, which broke the headless Docker server last week at the last minute--now the server has some sensible stubs that safely revert to the default svg thumb and give unknown resolution, and the client patches in full support dynamically</li>
+                        <li>the new SVG code now supports the 'scale to fill' thumbnail option</li>
+                        <li><h3>misc</h3></li>
+                        <li>I fixed the issue that was causing tags to stay in the tag autocomplete lookup despite going to 0 count. it should not happen for new cases, and **on update, a database routine will run to remove all your existing orphans. if you have ever synced with the PTR, it will take several minutes to run!**</li>
+                        <li>sending the command to set a file as the best in its duplicate group now presents a yes/no dialog to confirm</li>
+                        <li>hitting the shortcut for 'set the focused file as better than the other(s)' when you only have one file now asks if you just want to set that file as the best of its group</li>
+                        <li>fixed an erroneous 'cannot show the best quality file of this file's group here' label in the file relationships menu--a count was off</li>
+                        <li>fixed the 'set up a hydrus.desktop file' setup script to point to the new hydrus_client.sh startup script name</li>
+                        <li>thanks to a user, a situation where certain unhandled URLs that deliver JSON were parsing as mpegs by ffmpeg and causing a weird loop is now caught and stopped. more investigation is needed to fix it properly</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>when a problem or file maintenance job causes a new file maintenance job to be queued (e.g. if the client in a metadata scan discovers the resolution of a file was not as expected, let's say it now recognises EXIF rotation, and starts a secondary thumbnail regen job), it now wakes the file maintenance manager immediately, which should help clear out and update for these jobs quickly when you are looking at the problem thumbnails</li>
+                        <li>if you have an image type set to show as an 'open externally' button in the media viewer, then it is now no longer prefetched in the rendering system!</li>
+                        <li>I added a very simple .editorconfig file for the project. since we have a variety of weird files in the directory tree, I've made it cautious and python-specific to start with. we'll expand as needed</li>
+                        <li>I moved the similar files search tree and maintenance tracker from client.caches.db to client.db. while the former table is regeneratable, it isn't a cache or precomputation store, _per se_, so I finally agreed to move it to the main db. if you have a giganto database, it may take an extra minute to update</li>
+                        <li>added a 'requirements_server.txt' to the advanced requirements.txts directory, just for future reference, and trimmed the Server Dockerfile down to reflect it</li>
+                        <li><h3>client api</h3></li>
+                        <li>thanks to a user, fixed a really stupid typo in the Client API when sending the 'file_id' parameter to set the file</li>
+                        <li>wrote unit tests for file_id and file_ids parameters to stop this sort mistake in future</li>
+                        <li>if you attempt to delete a file over the Client API when one of the given files is delete-locked (this is an advanced option that stops deletion of any archived file), the request now returns a 409 Conflict response, saying which hashes were bad, and does not delete anything</li>
+                        <li>wrote a unit test to catch the new delete lock test</li>
+                        <li>deleted the old-and-deprecated-in-one-week 'pair_rows' parameter-handling code in the set_file_relationships command</li>
+                        <li>the client api version is now 49</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_535"><a href="#version_535">version 535</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

@@ -95,7 +95,9 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
                     
                 else:
                     
-                    if file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ] == 1:
+                    num_other_dupe_members_in_this_domain = file_duplicate_types_to_counts[ HC.DUPLICATE_MEMBER ]
+                    
+                    if num_other_dupe_members_in_this_domain == 0:
                         
                         ClientGUIMenus.AppendMenuLabel( duplicates_menu, 'cannot show the best quality file of this file\'s group here, it is not in this domain', 'The king of this group has probably been deleted from this domain.' )
                         

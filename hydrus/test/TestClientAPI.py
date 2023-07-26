@@ -1026,8 +1026,12 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
+        file_id = random.randint( 10000, 15000 )
+        
         hash = HydrusData.GenerateKey()
         hashes = { HydrusData.GenerateKey() for i in range( 10 ) }
+        
+        file_ids_to_hashes = { file_id : hash for ( file_id, hash ) in zip( random.sample( range( 2000 ), 10 ), hashes ) }
         
         #
         
@@ -1053,7 +1057,35 @@ class TestClientAPI( unittest.TestCase ):
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
-        #
+        # with file_id
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { file_id : hash } )
+        
+        path = '/add_files/delete_files'
+        
+        body_dict = { 'file_id' : file_id }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        HG.test_controller.ClearReads( 'hash_ids_to_hashes' )
+        
+        # with hashes
         
         HG.test_controller.ClearWrites( 'content_updates' )
         
@@ -1076,6 +1108,34 @@ class TestClientAPI( unittest.TestCase ):
         expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] }
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        # with file_ids
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
+        
+        path = '/add_files/delete_files'
+        
+        body_dict = { 'file_ids' : list( file_ids_to_hashes.keys() ) }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] }
+        
+        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+        HG.test_controller.ClearReads( 'hash_ids_to_hashes' )
         
         # now with a reason
         
@@ -1126,6 +1186,42 @@ class TestClientAPI( unittest.TestCase ):
         text = str( data, 'utf-8' )
         
         self.assertIn( not_existing_service_hex, text ) # error message should be complaining about it
+        
+        # test file lock, 409 response
+        
+        locked_hash = list( hashes )[0]
+        
+        media_result = HelperFunctions.GetFakeMediaResult( locked_hash )
+        
+        media_result.GetLocationsManager().inbox = False
+        
+        HG.test_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', True )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        HG.test_controller.SetRead( 'media_results', [ media_result ] )
+        
+        path = '/add_files/delete_files'
+        
+        body_dict = { 'hashes' : [ h.hex() for h in hashes ] }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 409 )
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertIn( locked_hash.hex(), text ) # error message should be complaining about it
+        
+        HG.client_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', False )
+        
+        HG.test_controller.ClearReads( 'media_results' )
         
         #
         
