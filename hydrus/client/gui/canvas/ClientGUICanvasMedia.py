@@ -365,6 +365,18 @@ def UserWantsUsToDisplayMedia( media: ClientMedia.MediaSingleton, canvas_type: i
     return True
     
 
+def WeAreExpectingToLoadThisMediaFile( media: ClientMedia.MediaSingleton, canvas_type: int ) -> bool:
+    
+    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media, canvas_type )
+    
+    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ):
+        
+        return True
+        
+    
+    return False
+    
+
 class Animation( QW.QWidget ):
     
     launchMediaViewer = QC.Signal()

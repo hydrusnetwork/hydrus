@@ -79,19 +79,20 @@ def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
         num_to_do = 0
         
     
-    i = 0
+    num_done = 0
     
-    while i < num_to_do:
+    while num_done < num_to_do:
         
-        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' WHERE job_id BETWEEN ? AND ?;', ( i, i + chunk_size - 1 ) ) ]
+        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' WHERE job_id BETWEEN ? AND ?;', ( num_done, num_done + chunk_size - 1 ) ) ]
         
-        i += len( chunk )
+        num_done += len( chunk )
         
-        yield ( chunk, i, num_to_do )
+        yield ( chunk, num_done, num_to_do )
         
     
     cursor.execute( 'DROP TABLE ' + table_name + ';' )
     
+
 def VacuumDB( db_path ):
     
     db = sqlite3.connect( db_path, isolation_level = None, detect_types = sqlite3.PARSE_DECLTYPES )

@@ -226,8 +226,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             ( [ 'hash_id' ], False, 451 )
         ]
         
-        index_generation_dict[ 'external_caches.shape_vptree' ] = [
-            ( [ 'parent_id' ], False, 400 )
+        index_generation_dict[ 'main.shape_vptree' ] = [
+            ( [ 'parent_id' ], False, 536 )
         ]
         
         index_generation_dict[ 'main.pixel_hash_map' ] = [
@@ -242,8 +242,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return {
             'external_master.shape_perceptual_hashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY, phash BLOB_BYTES UNIQUE );', 451 ),
             'external_master.shape_perceptual_hash_map' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER, hash_id INTEGER, PRIMARY KEY ( phash_id, hash_id ) );', 451 ),
-            'external_caches.shape_vptree' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );', 400 ),
-            'external_caches.shape_maintenance_branch_regen' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY );', 400 ),
+            'main.shape_vptree' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );', 536 ),
+            'main.shape_maintenance_branch_regen' : ( 'CREATE TABLE IF NOT EXISTS {} ( phash_id INTEGER PRIMARY KEY );', 536 ),
             'main.shape_search_cache' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, searched_distance INTEGER );', 451 ),
             'main.pixel_hash_map' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, pixel_hash_id INTEGER, PRIMARY KEY ( hash_id, pixel_hash_id ) );', 465 )
         }
@@ -514,7 +514,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def _RepairRepopulateTables( self, repopulate_table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        if 'external_caches.shape_vptree' in repopulate_table_names or 'external_caches.shape_maintenance_branch_regen' in repopulate_table_names:
+        if 'main.shape_vptree' in repopulate_table_names or 'main.shape_maintenance_branch_regen' in repopulate_table_names:
             
             self.RegenerateTree()
             

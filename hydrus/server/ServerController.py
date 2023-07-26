@@ -2,7 +2,7 @@ import os
 import requests
 import time
 import traceback
-requests.Request
+
 import twisted.internet.ssl
 from twisted.internet import threads, reactor, defer
 

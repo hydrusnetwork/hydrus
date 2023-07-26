@@ -9518,6 +9518,102 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 535:
+            
+            try:
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+                file_service_ids = list( self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES ) )
+                
+                file_service_ids.append( self.modules_services.combined_file_service_id )
+                
+                for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
+                    
+                    if file_service_id == self.modules_services.combined_file_service_id:
+                        
+                        message = f'cleaning combined tag fast search cache {tag_service_id}'
+                        
+                    else:
+                        
+                        message = f'cleaning specific tag fast search cache {file_service_id}_{tag_service_id}'
+                        
+                    
+                    self._controller.frame_splash_status.SetSubtext( f'{message} - setting up' )
+                    
+                    tags_table_name = self.modules_tag_search.GetTagsTableName( file_service_id, tag_service_id )
+                    
+                    CHUNK_SIZE = 65536
+                    
+                    for ( chunk_of_tag_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, f'SELECT tag_id FROM {tags_table_name};', CHUNK_SIZE ):
+                        
+                        num_string = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                        
+                        self._controller.frame_splash_status.SetSubtext( f'{message} - {num_string}' )
+                        
+                        with self._MakeTemporaryIntegerTable( chunk_of_tag_ids, 'tag_id' ) as temp_tag_id_table_name:
+                            
+                            results = self.modules_mappings_counts.GetCountsForTags( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, temp_tag_id_table_name ) 
+                            
+                            good_tag_ids = set()
+                            
+                            for ( tag_id, current_count, pending_count ) in results:
+                                
+                                # this should always be true, but w/e
+                                if current_count > 0 or pending_count > 0:
+                                    
+                                    good_tag_ids.add( tag_id )
+                                    
+                                
+                            
+                        
+                        # this tag does not exist here mate, it is an orphan
+                        # ...or it is a countless sibling/parent, in which case deletetags will filter it out a bit later, so don't panic
+                        orphan_tag_ids = set( chunk_of_tag_ids ).difference( good_tag_ids )
+                        
+                        if len( orphan_tag_ids ) > 0:
+                            
+                            self.modules_tag_search.DeleteTags( file_service_id, tag_service_id, orphan_tag_ids )
+                            
+                        
+                    
+                    time.sleep( 0.01 )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'The update failed to clear out some tag text search orphans! You might like to run _database->regenerate->tag text search cache_ yourself when you have some time. The error was written to the log--hydev would be interested in seeing it.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( 'migrating some similar file search data' )
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS main.shape_vptree ( phash_id INTEGER PRIMARY KEY, parent_id INTEGER, radius INTEGER, inner_id INTEGER, inner_population INTEGER, outer_id INTEGER, outer_population INTEGER );' )
+                self._Execute( 'CREATE TABLE IF NOT EXISTS main.shape_maintenance_branch_regen ( phash_id INTEGER PRIMARY KEY );' )
+                
+                self._Execute( 'INSERT OR IGNORE INTO main.shape_vptree SELECT * FROM external_caches.shape_vptree;' )
+                self._Execute( 'INSERT OR IGNORE INTO main.shape_maintenance_branch_regen SELECT * FROM external_caches.shape_maintenance_branch_regen;' )
+                
+                self._CreateIndex( 'main.shape_vptree', [ 'parent_id' ], False )
+                
+                self._Execute( 'DROP TABLE IF EXISTS external_caches.shape_vptree;' )
+                self._Execute( 'DROP TABLE IF EXISTS external_caches.shape_maintenance_branch_regen;' )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Migrating the similar files search tree from the caches database to the main failed. It probably occured because the table was missing and needed to be regenerated, which may have or may well happen at a different stage of boot. The error has been written to the log, which hydev may be interested in.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
