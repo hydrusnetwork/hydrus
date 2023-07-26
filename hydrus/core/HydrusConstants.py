@@ -820,7 +820,6 @@ mime_enum_lookup = {
     'application/hydrus-update-content' : APPLICATION_HYDRUS_UPDATE_CONTENT,
     'application/hydrus-update-definitions' : APPLICATION_HYDRUS_UPDATE_DEFINITIONS,
     'application' : APPLICATIONS,
-    'viewable application' : VIEWABLE_APPLICATIONS,
     'audio/mp4' : AUDIO_M4A,
     'audio/mp3' : AUDIO_MP3,
     'audio/ogg' : AUDIO_OGG,
