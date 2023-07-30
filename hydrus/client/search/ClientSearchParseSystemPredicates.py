@@ -90,6 +90,7 @@ def date_pred_generator( pred_type, o, v ):
     
     return ClientSearch.Predicate( pred_type, ( o, date_type, tuple( v ) ) )
     
+
 def num_file_relationships_pred_generator( o, v, u ):
     
     u_dict = {

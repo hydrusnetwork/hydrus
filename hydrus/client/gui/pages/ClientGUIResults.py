@@ -1782,6 +1782,15 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             if len( worse_flat_media ) == 0:
                 
+                message = 'Since you only selected one file, would you rather just set this file as the best file of its group?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    self._SetDuplicatesFocusedKing( silent = True )
+                    
+                
                 return
                 
             
@@ -1804,7 +1813,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
         
     
-    def _SetDuplicatesFocusedKing( self ):
+    def _SetDuplicatesFocusedKing( self, silent = False ):
         
         if self._HasFocusSingleton():
             
@@ -1812,7 +1821,30 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             focused_hash = media.GetHash()
             
-            HG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
+            # TODO: when media knows its duplicate gubbins, we can test num dupe files and if it is king already and stuff easier here
+            
+            do_it = False
+            
+            if silent:
+                
+                do_it = True
+                
+            else:
+                
+                message = 'Are you sure you want to set the focused file as the best file of its duplicate group?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    do_it = True
+                    
+                
+            
+            if do_it:
+                
+                HG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
+                
             
         else:
             

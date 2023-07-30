@@ -345,9 +345,14 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         #
         
         # we always include all chained guys regardless of count
-        chained_tag_ids = self.modules_tag_display.GetChainsMembers( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids )
+        chained_tag_ids = self.modules_tag_display.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids )
         
         tag_ids = tag_ids.difference( chained_tag_ids )
+        
+        if len( tag_ids ) == 0:
+            
+            return
+            
         
         #
         

@@ -3,31 +3,18 @@ import os
 
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusClipHandling
-from hydrus.core import HydrusKritaHandling
-
-try:
-    
-    from hydrus.core import HydrusSVGHandling
-    
-    SVG_OK = True
-    
-except:
-    
-    SVG_OK = False
-    
-
-from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFlashHandling
 from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusKritaHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusSVGHandling
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.networking import HydrusNetwork
 
@@ -172,8 +159,8 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         finally:
             
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-
-
+            
+        
     elif mime == HC.APPLICATION_KRITA:
         
         ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
@@ -193,29 +180,27 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         finally:
             
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-        
+            
         
     elif mime == HC.IMAGE_SVG: 
-
+        
         try:
-            
-            if not SVG_OK:
-                
-                raise Exception( 'No SVG thumbs' )
-                
             
             thumbnail_bytes = HydrusSVGHandling.GenerateThumbnailBytesFromSVGPath( path, target_resolution, clip_rect = clip_rect )
             
         except Exception as e:
             
-            HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
-            HydrusData.PrintException( e )
+            if not isinstance( e, HydrusExceptions.UnsupportedFileException ):
+                
+                HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
+                HydrusData.PrintException( e )
+                
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'svg.png' )
             
             thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
             
-            
+        
     elif mime == HC.APPLICATION_FLASH:
         
         ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
@@ -383,10 +368,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
     elif mime == HC.IMAGE_SVG:
         
-        if SVG_OK:
-            
-            ( width, height ) = HydrusSVGHandling.GetSVGResolution( path )
-            
+        ( width, height ) = HydrusSVGHandling.GetSVGResolution( path )
         
     elif mime == HC.APPLICATION_FLASH:
         
@@ -538,6 +520,19 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             else:
                 
                 return mime
+                
+            
+        
+    
+    # If the file starts with '{' it is probably JSON
+    # but we can't know for sure so we send it over to be checked
+    if bit_to_check.startswith( b'{' ) or bit_to_check.startswith( b'[' ):
+        
+        with open( path, 'rb' ) as f:
+            
+            if HydrusText.LooksLikeJSON( f.read() ):
+                
+                return HC.APPLICATION_JSON
                 
             
         

@@ -1740,9 +1740,23 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
         
         hashes = set( ParseHashes( request ) )
         
-        # expand this to take reason
-        
         location_context.LimitToServiceTypes( HG.client_controller.services_manager.GetServiceType, ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
+        
+        if HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
+            
+            media_results = HG.client_controller.Read( 'media_results', hashes )
+            
+            undeletable_media_results = [ m for m in media_results if m.IsDeleteLocked() ]
+            
+            if len( undeletable_media_results ) > 0:
+                
+                message = 'Sorry, some of the files you selected are currently delete locked. Their hashes are:'
+                message += '\n' * 2
+                message += '\n'.join( sorted( [ m.GetHash().hex() for m in undeletable_media_results ] ) )
+                
+                raise HydrusExceptions.ConflictException( message )
+                
+            
         
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason )
         
@@ -3784,19 +3798,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
         
         raw_rows = []
         
-        all_hashes = set()
-        
-        pair_rows_old_arg_raw_rows = request.parsed_request_args.GetValue( 'pair_rows', list, expected_list_type = list, default_value = [] )
-        
-        for row in pair_rows_old_arg_raw_rows:
-            
-            if len( row ) != 6:
-                
-                raise HydrusExceptions.BadRequestException( 'One of the pair rows was the wrong length!' )
-                
-            
-            raw_rows.append( row )
-            
+        # TODO: now I rewangled this to remove the pair_rows parameter, let's get an object or dict bouncing around so we aren't handling a mega-tuple
         
         raw_relationship_dicts = request.parsed_request_args.GetValue( 'relationships', list, expected_list_type = dict, default_value = [] )
         
@@ -3820,6 +3822,8 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
             HC.DUPLICATE_SAME_QUALITY,
             HC.DUPLICATE_POTENTIAL
         }
+        
+        all_hashes = set()
         
         # variable type testing
         for row in raw_rows:

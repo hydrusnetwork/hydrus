@@ -302,6 +302,7 @@ def ToHumanBytes( size ):
     
     return HydrusData.BaseToHumanBytes( size, sig_figs = sig_figs )
     
+
 HydrusData.ToHumanBytes = ToHumanBytes
 
 class Booru( HydrusData.HydrusYAMLBase ):

@@ -2792,7 +2792,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             hash = media.GetHash()
             mime = media.GetMime()
             
-            if media.IsStaticImage():
+            if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
@@ -3527,7 +3527,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             hash = media.GetHash()
             mime = media.GetMime()
             
-            if media.IsStaticImage():
+            if media.IsStaticImage() and ClientGUICanvasMedia.WeAreExpectingToLoadThisMediaFile( media, self.CANVAS_TYPE ):
                 
                 if not image_cache.HasImageRenderer( hash ):
                     
