@@ -1626,7 +1626,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_NAME = 'File Search Predicate'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__(
         self,
@@ -1982,6 +1982,30 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_MIME:
+                
+                mimes = list( serialisable_value )
+                
+                if HC.GENERAL_APPLICATION in mimes:
+                    
+                    mimes.append( HC.GENERAL_APPLICATION_ARCHIVE )
+                    mimes.append( HC.GENERAL_IMAGE_PROJECT )
+                    
+                
+                mimes = tuple( mimes )
+                
+                serialisable_value = mimes
+                
+            
+            new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
+            
+            return ( 7, new_serialisable_info )
             
         
     

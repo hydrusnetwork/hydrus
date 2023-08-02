@@ -35,6 +35,35 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_537"><a href="#version_537">version 537</a></h2>
+                    <ul>
+                        <li><h3>new filetype selector</h3></li>
+                        <li>I rewrote the expanding checkbox list that selects filetypes in 'system:filetype' and File Import Options into a more normal tree view with checkboxes. it is more compact and scrolls neatly, letting us stack it with all these new filetypes we've been adding and more in future. the 'clicking a category selects all children' logic is preserved</li>
+                        <li>I re-ordered the actual filetypes in each sublist here. I tried to put the most common filetypes at the top and listed the rest in alphabetical order below, going for the best of both worlds. you don't want to scroll down to find webm, but you don't want to hunt through a giant hydev-written 'popularity' list to find realmedia either. let's see how it works out</li>
+                        <li>I split all the archive types away from 'applications' into a new 'archives' group</li>
+                        <li>and I did the same for the 'image project files' like krita and xcf. svg and psd may be significantly more renderable soon, so this category may get further shake-up</li>
+                        <li>this leaves 'applications' as just flash and pdf for now</li>
+                        <li>it isn't a big deal, but these new groups are reflected in _options->media_ too</li>
+                        <li>all file import options and filetype system predicates that previously said 'all applications' _should_ now say 'all applications, image project files, or archives'</li>
+                        <li><h3>fast database delete</h3></li>
+                        <li>I have long planned a fix for 'the PTR takes ages to delete' problem. today marks the first step in this</li>
+                        <li>deleting a huge service like the PTR and deleting/resetting/regeneratting a variety of other large data stores are now essentially instant. the old tables are not deleted instantly, but renamed and moved to a deferred delete zone</li>
+                        <li>the maintenance task that actually does the deferred background delete is not yet ready, so for now these jobs sit in the landing zone taking up their original hard disk space. I expect to have it done for next week, so bear with me if you need to delete a lot this week</li>
+                        <li>as this system gets fleshed out, the new UI under _database>db maintenance->review deferred delete table data_ will finish up too</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed a bitrot issue in the v534 update code related to the file maintenance manager not existing at the time of db update. if you got the 'some exif scanning failed to schedule!' popup on update, don't worry about it. everything actually worked ok, it was just a final unimportant reporting step that failed (issue #1414)</li>
+                        <li>fixed the grid layout on 'migrate tags', which at some point in the recent past went completely bananas</li>
+                        <li>tightened up some of the code that calculates and schedules deferred physical file delete. it now catches a couple of cases it wasn't and skips some work it should've</li>
+                        <li>reduced some overhead in the hover window show/hide logic. in very-heavy-session clients, this was causing significant (7ms multiple times a second) lag</li>
+                        <li>when you ok the 'manage login scripts' dialog, it no longer re-links new entries for all those scripts into the 'manage logins' system. this now only happens once on database initialisation</li>
+                        <li>the manage login scripts test routine no longer spams test errors to popup dialogs. they are still written to log if you need more data</li>
+                        <li>silenced a bit of PIL warning logspam when a file with unusual or broken EXIF data is loaded</li>
+                        <li>silenced the long time logspam that oftens happens when generating flash thumbnails</li>
+                        <li>fixed a stupid typo error in the routine that schedules downloading files from file repositories</li>
+                        <li>`nose`, `six`, and `zope` are no longer in any of the requirements.txts. I think these were needed a million years ago as PyInstaller hacks, but the situation is much better these days</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_536"><a href="#version_536">version 536</a></h2>
                     <ul>
                         <li><h3>more new filetypes</h3></li>

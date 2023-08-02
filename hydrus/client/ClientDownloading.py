@@ -262,7 +262,7 @@ class QuickDownloadManager( object ):
                 continue
                 
             
-            hash = random.sample( hashes_still_to_download_in_this_run, 1 )[0]
+            hash = random.sample( list( hashes_still_to_download_in_this_run ), 1 )[0]
             
             hashes_still_to_download_in_this_run.discard( hash )
             

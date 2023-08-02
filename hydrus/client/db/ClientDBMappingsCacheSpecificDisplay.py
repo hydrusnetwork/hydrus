@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusTime
 
+from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsCountsUpdate
 from hydrus.client.db import ClientDBMappingsStorage
@@ -20,8 +21,9 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts, modules_mappings_counts_update: ClientDBMappingsCountsUpdate.ClientDBMappingsCountsUpdate, modules_mappings_storage: ClientDBMappingsStorage.ClientDBMappingsStorage, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance, modules_services: ClientDBServices.ClientDBMasterServices, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts, modules_mappings_counts_update: ClientDBMappingsCountsUpdate.ClientDBMappingsCountsUpdate, modules_mappings_storage: ClientDBMappingsStorage.ClientDBMappingsStorage, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay ):
         
+        self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         self.modules_mappings_counts = modules_mappings_counts
         self.modules_mappings_counts_update = modules_mappings_counts_update
@@ -308,8 +310,8 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
         
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_display_current_mappings_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_display_pending_mappings_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( cache_display_current_mappings_table_name )
+        self.modules_db_maintenance.DeferredDropTable( cache_display_pending_mappings_table_name )
         
         self.modules_mappings_counts.DropTables( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
         

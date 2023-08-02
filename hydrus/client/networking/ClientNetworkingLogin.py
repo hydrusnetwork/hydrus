@@ -631,7 +631,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetLoginScripts( self, login_scripts ):
+    def SetLoginScripts( self, login_scripts, auto_link = False ):
         
         with self._lock:
             
@@ -663,18 +663,21 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                             
                         else:
                             
-                            credentials = {}
-                            
-                            # if there is nothing to enter, turn it on by default, like HF click-through
-                            active = len( login_script.GetCredentialDefinitions() ) == 0
-                            
-                            validity = VALIDITY_UNTESTED
-                            validity_error_text = ''
-                            
-                            no_work_until = 0
-                            no_work_until_reason = ''
-                            
-                            self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+                            if auto_link:
+                                
+                                credentials = {}
+                                
+                                # if there is nothing to enter, turn it on by default, like HF click-through
+                                active = len( login_script.GetCredentialDefinitions() ) == 0
+                                
+                                validity = VALIDITY_UNTESTED
+                                validity_error_text = ''
+                                
+                                no_work_until = 0
+                                no_work_until_reason = ''
+                                
+                                self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+                                
                             
                         
                     

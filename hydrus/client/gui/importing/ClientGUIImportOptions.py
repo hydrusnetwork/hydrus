@@ -138,7 +138,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._allow_decompression_bombs.setToolTip( tt )
         
-        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimes( pre_import_panel, HC.ALLOWED_MIMES )
+        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimesTree( pre_import_panel, HC.ALLOWED_MIMES )
         
         self._min_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
         self._min_size.SetValue( 5 * 1024 )

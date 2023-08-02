@@ -218,6 +218,8 @@ media_viewer_capabilities = {
     HC.GENERAL_VIDEO : animated_full_support,
     HC.GENERAL_AUDIO : audio_full_support,
     HC.GENERAL_APPLICATION : no_support,
+    HC.GENERAL_APPLICATION_ARCHIVE : no_support,
+    HC.GENERAL_IMAGE_PROJECT : no_support
 }
 
 for mime in HC.SEARCHABLE_MIMES:

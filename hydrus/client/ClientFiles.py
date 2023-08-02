@@ -1261,7 +1261,7 @@ class ClientFilesManager( object ):
                         
                     except HydrusExceptions.FileMissingException:
                         
-                        HydrusData.Print( 'Wanted to physically delete the "{}" file, with expected mime "{}", but it was not found!'.format( file_hash.hex(), expected_mime ) )
+                        HydrusData.Print( 'Wanted to physically delete the "{}" file, with expected mime "{}", but it was not found!'.format( file_hash.hex(), HC.mime_string_lookup[ expected_mime ] ) )
                         
                     
                 

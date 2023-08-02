@@ -528,26 +528,6 @@ class CanvasHoverFrame( QW.QFrame ):
         
         focus_is_good = current_focus_tlw == self.window()
         
-        mouse_is_over_self_or_child = False
-        
-        for tlw in list( QW.QApplication.topLevelWidgets() ):
-            
-            if not tlw.isVisible():
-                
-                continue
-                
-            
-            if tlw == self or ClientGUIFunctions.IsQtAncestor( tlw, self, through_tlws = True ):
-                
-                if ClientGUIFunctions.MouseIsOverWidget( tlw ):
-                    
-                    mouse_is_over_self_or_child = True
-                    
-                    break
-                    
-                
-            
-        
         if self._ShouldBeShown():
             
             self._RaiseHover()
@@ -620,7 +600,7 @@ class CanvasHoverFrame( QW.QFrame ):
         hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
         
         ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open
-        ready_to_hide = not menu_open and not mouse_is_over_self_or_child and ( not in_position or dialog_is_open or not hide_focus_is_good )
+        ready_to_hide = not menu_open and ( not in_position or dialog_is_open or not hide_focus_is_good )
         
         def get_logic_report_string():
             
