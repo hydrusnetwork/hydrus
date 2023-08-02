@@ -400,7 +400,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( width, height ) = HydrusImageHandling.GetPSDResolution( path )
         
-    elif mime in HC.VIDEO:
+    elif mime in HC.VIDEO or mime == HC.IMAGE_AVIF_SEQUENCE:
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         

@@ -1228,8 +1228,6 @@ def RawOpenPILImage( path ) -> PILImage.Image:
         pil_image = PILImage.open( path )
         
     except Exception as e:
-
-        print(e)
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load the image--it was likely malformed!' )
         
