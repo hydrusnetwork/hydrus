@@ -13,6 +13,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsStorage
 from hydrus.client.db import ClientDBMaster
@@ -38,6 +39,7 @@ def ConvertWildcardToSQLiteLikeParameter( wildcard ):
     
     return like_param
     
+
 def GenerateCombinedFilesIntegerSubtagsTableName( tag_service_id ):
     
     name = 'combined_files_integer_subtags_cache'
@@ -46,6 +48,7 @@ def GenerateCombinedFilesIntegerSubtagsTableName( tag_service_id ):
     
     return integer_subtags_table_name
     
+
 def GenerateCombinedFilesSubtagsFTS4TableName( tag_service_id ):
     
     name = 'combined_files_subtags_fts4_cache'
@@ -54,6 +57,7 @@ def GenerateCombinedFilesSubtagsFTS4TableName( tag_service_id ):
     
     return subtags_fts4_table_name
     
+
 def GenerateCombinedFilesSubtagsSearchableMapTableName( tag_service_id ):
     
     name = 'combined_files_subtags_searchable_map_cache'
@@ -62,6 +66,7 @@ def GenerateCombinedFilesSubtagsSearchableMapTableName( tag_service_id ):
     
     return subtags_searchable_map_table_name
     
+
 def GenerateCombinedFilesTagsTableName( tag_service_id ):
     
     name = 'combined_files_tags_cache'
@@ -70,6 +75,7 @@ def GenerateCombinedFilesTagsTableName( tag_service_id ):
     
     return tags_table_name
     
+
 def GenerateCombinedTagsTagsTableName( file_service_id ):
     
     name = 'combined_tags_tags_cache'
@@ -78,6 +84,7 @@ def GenerateCombinedTagsTagsTableName( file_service_id ):
     
     return tags_table_name
     
+
 def GenerateSpecificIntegerSubtagsTableName( file_service_id, tag_service_id ):
     
     name = 'specific_integer_subtags_cache'
@@ -88,6 +95,7 @@ def GenerateSpecificIntegerSubtagsTableName( file_service_id, tag_service_id ):
     
     return integer_subtags_table_name
     
+
 def GenerateSpecificSubtagsFTS4TableName( file_service_id, tag_service_id ):
     
     name = 'specific_subtags_fts4_cache'
@@ -98,6 +106,7 @@ def GenerateSpecificSubtagsFTS4TableName( file_service_id, tag_service_id ):
     
     return subtags_fts4_table_name
     
+
 def GenerateSpecificSubtagsSearchableMapTableName( file_service_id, tag_service_id ):
     
     name = 'specific_subtags_searchable_map_cache'
@@ -108,6 +117,7 @@ def GenerateSpecificSubtagsSearchableMapTableName( file_service_id, tag_service_
     
     return subtags_searchable_map_table_name
     
+
 def GenerateSpecificTagsTableName( file_service_id, tag_service_id ):
     
     name = 'specific_tags_cache'
@@ -118,6 +128,7 @@ def GenerateSpecificTagsTableName( file_service_id, tag_service_id ):
     
     return tags_table_name
     
+
 def WildcardHasFTS4SearchableCharacters( wildcard: str ):
     
     # fts4 says it can do alphanumeric or unicode with a value >= 128
@@ -132,12 +143,14 @@ def WildcardHasFTS4SearchableCharacters( wildcard: str ):
     
     return False
     
+
 class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay, modules_tag_siblings: ClientDBTagSiblings.ClientDBTagSiblings, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance, modules_services: ClientDBServices.ClientDBMasterServices, modules_tags: ClientDBMaster.ClientDBMasterTags, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay, modules_tag_siblings: ClientDBTagSiblings.ClientDBTagSiblings, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts ):
         
+        self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         self.modules_tags = modules_tags
         self.modules_tag_display = modules_tag_display
@@ -401,19 +414,19 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         tags_table_name = self.GetTagsTableName( file_service_id, tag_service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( tags_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( tags_table_name )
         
         subtags_fts4_table_name = self.GetSubtagsFTS4TableName( file_service_id, tag_service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( subtags_fts4_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( subtags_fts4_table_name )
         
         subtags_searchable_map_table_name = self.GetSubtagsSearchableMapTableName( file_service_id, tag_service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( subtags_searchable_map_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( subtags_searchable_map_table_name )
         
         integer_subtags_table_name = self.GetIntegerSubtagsTableName( file_service_id, tag_service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( integer_subtags_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( integer_subtags_table_name )
         
     
     def FilterExistingTagIds( self, file_service_id, tag_service_id, tag_ids_table_name ):

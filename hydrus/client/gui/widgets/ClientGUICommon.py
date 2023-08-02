@@ -23,10 +23,13 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUIColourPicker
 
-def AddGridboxStretchSpacer( layout: QW.QGridLayout ):
+def AddGridboxStretchSpacer( win: QW.QWidget, layout: QW.QGridLayout ):
     
-    layout.addItem( QW.QSpacerItem( 10, 10, QW.QSizePolicy.Expanding, QW.QSizePolicy.Fixed ) )
+    widget = QW.QWidget( win )
     
+    QP.AddToLayout( layout, widget, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+    
+
 def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
     gridbox = QP.GridLayout( cols = 2 )

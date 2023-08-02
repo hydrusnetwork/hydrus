@@ -6,9 +6,9 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
-from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBDefinitionsCache
+from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 from hydrus.client.db import ClientDBTagSiblings
@@ -42,11 +42,13 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     def __init__(
         self,
         cursor: sqlite3.Cursor,
+        modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance,
         modules_services: ClientDBServices.ClientDBMasterServices,
         modules_tags_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalTags,
         modules_tag_siblings: ClientDBTagSiblings.ClientDBTagSiblings
     ):
         
+        self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         self.modules_tags_local_cache = modules_tags_local_cache
         self.modules_tag_siblings = modules_tag_siblings
@@ -172,8 +174,8 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_actual_tag_parents_lookup_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( cache_ideal_tag_parents_lookup_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( cache_actual_tag_parents_lookup_table_name )
+        self.modules_db_maintenance.DeferredDropTable( cache_ideal_tag_parents_lookup_table_name )
         
         self._Execute( 'DELETE FROM tag_parent_application WHERE master_service_id = ? OR application_service_id = ?;', ( tag_service_id, tag_service_id ) )
         

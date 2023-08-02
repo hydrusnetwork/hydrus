@@ -41,7 +41,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_IMPORT_OPTIONS
     SERIALISABLE_NAME = 'File Import Options'
-    SERIALISABLE_VERSION = 9
+    SERIALISABLE_VERSION = 10
     
     def __init__( self ):
         
@@ -276,6 +276,33 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default )
             
             return ( 9, new_serialisable_info )
+            
+        
+        if version == 9:
+            
+            ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default ) = old_serialisable_info
+            
+            ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbours, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
+            
+            filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate )
+            
+            mimes = list( filetype_filter_predicate.GetValue() )
+            
+            if HC.GENERAL_APPLICATION in mimes:
+                
+                mimes.append( HC.GENERAL_APPLICATION_ARCHIVE )
+                mimes.append( HC.GENERAL_IMAGE_PROJECT )
+                
+                filetype_filter_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = mimes )
+                
+            
+            serialisable_filetype_filter_predicate = filetype_filter_predicate.GetSerialisableTuple()
+            
+            pre_import_options = ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbours, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context )
+            
+            new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default )
+            
+            return ( 10, new_serialisable_info )
             
         
     

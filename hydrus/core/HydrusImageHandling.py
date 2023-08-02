@@ -57,6 +57,7 @@ def EnableLoadTruncatedImages():
         return False
         
     
+
 if not hasattr( PILImage, 'DecompressionBombError' ):
     
     # super old versions don't have this, so let's just make a stub, wew
@@ -68,6 +69,7 @@ if not hasattr( PILImage, 'DecompressionBombError' ):
     
     PILImage.DecompressionBombError = DBEStub
     
+
 if not hasattr( PILImage, 'DecompressionBombWarning' ):
     
     # super old versions don't have this, so let's just make a stub, wew
@@ -79,8 +81,12 @@ if not hasattr( PILImage, 'DecompressionBombWarning' ):
     
     PILImage.DecompressionBombWarning = DBWStub
     
+
 warnings.simplefilter( 'ignore', PILImage.DecompressionBombWarning )
 warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )
+
+# PIL moaning about weirdo TIFFs
+warnings.filterwarnings( "ignore", "(Possibly )?corrupt EXIF data", UserWarning )
 
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew

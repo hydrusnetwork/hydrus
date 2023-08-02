@@ -3064,6 +3064,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         maintenance_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'review deferred delete table data', 'See how many tables are being deleted in the background.', self._ReviewDeferredDeleteTableData )
         ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'review vacuum data', 'See whether it is worth rebuilding the database to reformat tables and recover disk space.', self._ReviewVacuumData )
         
         ClientGUIMenus.AppendSeparator( maintenance_submenu )
@@ -5516,6 +5517,42 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         panel = ClientGUINetwork.ReviewAllBandwidthPanel( frame, self._controller )
         
         frame.SetPanel( panel )
+        
+    
+    def _ReviewDeferredDeleteTableData( self ):
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        def work_callable():
+            
+            deferred_delete_data = self._controller.Read( 'deferred_delete_data' )
+            
+            return deferred_delete_data
+            
+        
+        def publish_callable( deferred_delete_data ):
+            
+            if job_key.IsCancelled():
+                
+                return
+                
+            
+            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review vacuum data' )
+            
+            panel = ClientGUIScrolledPanelsReview.ReviewDeferredDeleteTableData( frame, self._controller, deferred_delete_data )
+            
+            frame.SetPanel( panel )
+            
+            job_key.Delete()
+            
+        
+        job_key.SetStatusText( 'loading database data' )
+        
+        self._controller.pub( 'message', job_key )
+        
+        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        job.start()
         
     
     def _ReviewFileMaintenance( self ):

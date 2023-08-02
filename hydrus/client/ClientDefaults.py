@@ -719,9 +719,10 @@ def SetDefaultFavouriteSearchManagerData( favourite_search_manager ):
     
     favourite_search_manager.SetFavouriteSearchRows( rows )
     
+
 def SetDefaultLoginManagerScripts( login_manager ):
     
     default_login_scripts = GetDefaultLoginScripts()
     
-    login_manager.SetLoginScripts( default_login_scripts )
+    login_manager.SetLoginScripts( default_login_scripts, auto_link = True )
     

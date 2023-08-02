@@ -1196,7 +1196,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'filter' ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'action' ), CC.FLAGS_CENTER )
         QP.AddToLayout( gridbox, ClientGUICommon.BetterStaticText( self._migration_panel, 'destination' ), CC.FLAGS_CENTER )
-        ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         
         QP.AddToLayout( gridbox, self._migration_content_type, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._migration_source, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -1205,36 +1205,23 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( gridbox, self._migration_destination, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, self._migration_go, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         QP.AddToLayout( gridbox, self._migration_source_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( gridbox, file_left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         QP.AddToLayout( gridbox, self._migration_destination_archive_path_button, CC.FLAGS_EXPAND_BOTH_WAYS )
-        ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         
-        ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         QP.AddToLayout( gridbox, self._migration_source_hash_type_st, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( gridbox, tag_right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         QP.AddToLayout( gridbox, dest_hash_type_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        ClientGUICommon.AddGridboxStretchSpacer( gridbox )
+        ClientGUICommon.AddGridboxStretchSpacer( self._migration_panel, gridbox )
         
         self._migration_panel.Add( gridbox )
         
         #
-        
-        vbox = QP.VBoxLayout()
-        
-        message = 'Regarding '
-        
-        if self._hashes is None:
-            
-            message += 'all'
-            
-        else:
-            
-            message += HydrusData.ToHumanInt( len( self._hashes ) )
-            
         
         message = 'The content from the SOURCE that the FILTER ALLOWS is applied using the ACTION to the DESTINATION.'
         message += os.linesep * 2
@@ -1247,8 +1234,12 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         st = ClientGUICommon.BetterStaticText( self, message )
         st.setWordWrap( True )
         
-        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._migration_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        #vbox.addStretch( 1 )
         
         self.widget().setLayout( vbox )
         
@@ -3892,6 +3883,101 @@ class ThreadsPanel( QW.QWidget ):
         self._list_ctrl.SetData( threads )
         
     
+
+class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
+    
+    def __init__( self, parent, controller, deferred_delete_data ):
+        
+        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        
+        self._controller = controller
+        
+        #
+        
+        info_message = '''When large database objects are no longer needed, they are not deleted immediately. This is an evolving, in-work system.'''
+        
+        st = ClientGUICommon.BetterStaticText( self, label = info_message )
+        
+        st.setWordWrap( True )
+        
+        deferred_delete_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
+        
+        self._vacuum_listctrl = ClientGUIListCtrl.BetterListCtrl( deferred_delete_listctrl_panel, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, 24, self._ConvertRowToListCtrlTuples )
+        
+        deferred_delete_listctrl_panel.SetListCtrl( self._vacuum_listctrl )
+        
+        # TODO: refresh button?
+        
+        deferred_delete_listctrl_panel.AddButton( 'work hard now', self._DoWorkNow, enabled_check_func = self._CanWork )
+        
+        #
+        
+        self._vacuum_listctrl.SetData( deferred_delete_data )
+        
+        self._vacuum_listctrl.Sort()
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, deferred_delete_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def _CanWork( self ):
+        
+        # TODO: anything in the list?
+        
+        return False
+        
+    
+    def _ConvertRowToListCtrlTuples( self, row ):
+        
+        ( name, num_rows ) = row
+        
+        sort_name = name
+        pretty_name = name
+        
+        if num_rows is None:
+            
+            sort_num_rows = -1
+            pretty_num_rows = 'unknown'
+            
+        else:
+            
+            sort_num_rows = num_rows
+            pretty_num_rows = HydrusData.ToHumanInt( sort_num_rows )
+            
+        
+        display_tuple = ( pretty_name, pretty_num_rows )
+        sort_tuple = ( sort_name, sort_num_rows )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _DoWorkNow( self ):
+        
+        # TODO: wake up the maintenance lad and tell it to burn time
+        
+        # switch button to 'slow down'
+        
+        pass
+        
+    
+    def _GetVacuumTimeEstimate( self, db_size ):
+        
+        from hydrus.core import HydrusDB
+        
+        vacuum_time_estimate = HydrusDB.GetApproxVacuumDuration( db_size )
+        
+        pretty_vacuum_time_estimate = '{} to {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate / 40 ), HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate ) )
+        
+        return ( vacuum_time_estimate, pretty_vacuum_time_estimate )
+        
+    
+
 class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
@@ -3917,6 +4003,7 @@ class ReviewThreads( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
     
+
 class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller, vacuum_data ):

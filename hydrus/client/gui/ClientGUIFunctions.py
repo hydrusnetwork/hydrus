@@ -132,6 +132,7 @@ def ConvertTextToPixelWidth( window, char_cols ) -> int:
     
     return round( char_cols * one_char_width )
     
+
 def DialogIsOpen():
     
     tlws = QW.QApplication.topLevelWidgets()
@@ -412,6 +413,7 @@ def TLWOrChildIsActive( win ):
     
     return False
     
+
 def UpdateAppDisplayName():
     
     app_display_name = HG.client_controller.new_options.GetString( 'app_display_name' )
@@ -430,6 +432,7 @@ def UpdateAppDisplayName():
             
         
     
+
 def WidgetOrAnyTLWChildHasFocus( window ):
     
     active_window = QW.QApplication.activeWindow()

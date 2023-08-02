@@ -7,6 +7,38 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 537](https://github.com/hydrusnetwork/hydrus/releases/tag/v537)
+
+### new filetype selector
+
+* I rewrote the expanding checkbox list that selects filetypes in 'system:filetype' and File Import Options into a more normal tree view with checkboxes. it is more compact and scrolls neatly, letting us stack it with all these new filetypes we've been adding and more in future. the 'clicking a category selects all children' logic is preserved
+* I re-ordered the actual filetypes in each sublist here. I tried to put the most common filetypes at the top and listed the rest in alphabetical order below, going for the best of both worlds. you don't want to scroll down to find webm, but you don't want to hunt through a giant hydev-written 'popularity' list to find realmedia either. let's see how it works out
+* I split all the archive types away from 'applications' into a new 'archives' group
+* and I did the same for the 'image project files' like krita and xcf. svg and psd may be significantly more renderable soon, so this category may get further shake-up
+* this leaves 'applications' as just flash and pdf for now
+* it isn't a big deal, but these new groups are reflected in _options->media_ too
+* all file import options and filetype system predicates that previously said 'all applications' _should_ now say 'all applications, image project files, or archives'
+
+### fast database delete
+
+* I have long planned a fix for 'the PTR takes ages to delete' problem. today marks the first step in this
+* deleting a huge service like the PTR and deleting/resetting/regeneratting a variety of other large data stores are now essentially instant. the old tables are not deleted instantly, but renamed and moved to a deferred delete zone
+* the maintenance task that actually does the deferred background delete is not yet ready, so for now these jobs sit in the landing zone taking up their original hard disk space. I expect to have it done for next week, so bear with me if you need to delete a lot this week
+* as this system gets fleshed out, the new UI under _database>db maintenance->review deferred delete table data_ will finish up too
+
+### misc
+
+* fixed a bitrot issue in the v534 update code related to the file maintenance manager not existing at the time of db update. if you got the 'some exif scanning failed to schedule!' popup on update, don't worry about it. everything actually worked ok, it was just a final unimportant reporting step that failed (issue #1414)
+* fixed the grid layout on 'migrate tags', which at some point in the recent past went completely bananas
+* tightened up some of the code that calculates and schedules deferred physical file delete. it now catches a couple of cases it wasn't and skips some work it should've
+* reduced some overhead in the hover window show/hide logic. in very-heavy-session clients, this was causing significant (7ms multiple times a second) lag
+* when you ok the 'manage login scripts' dialog, it no longer re-links new entries for all those scripts into the 'manage logins' system. this now only happens once on database initialisation
+* the manage login scripts test routine no longer spams test errors to popup dialogs. they are still written to log if you need more data
+* silenced a bit of PIL warning logspam when a file with unusual or broken EXIF data is loaded
+* silenced the long time logspam that oftens happens when generating flash thumbnails
+* fixed a stupid typo error in the routine that schedules downloading files from file repositories
+* `nose`, `six`, and `zope` are no longer in any of the requirements.txts. I think these were needed a million years ago as PyInstaller hacks, but the situation is much better these days
+
 ## [Version 536](https://github.com/hydrusnetwork/hydrus/releases/tag/v536)
 
 ### more new filetypes
@@ -334,46 +366,3 @@ title: Changelog
 * cleaned up the PyInstall spec files a little more, removing some 'hidden-import' stuff from the pyinstaller spec files that was no longer used and pushing the server executables to the binaries section
 * added a short section to the Windows 'running from source' help regarding pinning a shortcut to a bat to Start--there's a neat way to do it, if Windows won't let you
 * updated a couple little more areas in the help for client->hydrus_client
-
-## [Version 527](https://github.com/hydrusnetwork/hydrus/releases/tag/v527)
-
-### important updates
-
-* There are important technical updates this week that will require most users to update differently!
-* first, OpenCV is updated to a new version, and this causes a dll conflict on at least one platform, necessitating a clean install
-* second, the program executables are renamed from 'client' and 'server' to 'hydrus_client' and 'hydrus_server', necessitating shortcut updates
-* as always, but doubly so this week, I strongly recommend you make a backup before updating. the instructions are simple, but if there is a problem, you'll always be able to roll back
-* so, in summary, for each install type--
-* - if you use the windows installer, install as normal. your start menu 'hydrus client' shortcut should be overwritten with one to the new executable, so you don't have to do anything there, but if you use a custom shortcut, you will need to update that too
-* - if you use one of the normal extract builds, you will have to do a 'clean install', as here https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs . you also need to update your program shortcuts
-* - macOS users have no special instructions. update as normal
-* - source users, git pull as normal. if you haven't already, feel free to run setup_venv again to get the new OpenCV. update your launch scripts to point at the new 'hydrus_client.py' scripts
-* - if you have patched my code, particularly the boot code, obviously update your patches! the 'hydrus_client.py' scripts just under 'hydrus' module all got renamed to '\_boot' too!
-* also, some related stuff like firewall rules (if you run the Client API) may need updating!
-
-### boring related update stuff
-
-* the Windows build's sqlite3.dll and exe command line interface are updated to the latest, 3.41.2
-* the 'updating' help now has a short section for the 526->527 update step, reiterating the above
-* the builds no longer include the hydrus source in the 'hydrus' subdirectory. this was an old failed test in dual-booting that was mostly forgotten about and now cleaned up. if you want to run from source, get the source
-* the windows hydrus_client and hydrus_server executables now have proper version info if you right-click->properties and look at the details tab
-
-### Qt Media Player
-
-* THIS IS VERY BUGGY AND SOMETIMES CRASHY; DISABLED FOR MOST USERS; NOT FOR NORMAL USE YET
-* I have integrated Qt's Media Player into hydrus. it is selectable in _options->media_ (if you are an advanced user and running from source) and it works like my native viewer or mpv. it has good pixels-on-screen performance and audio support, but it is buggy and my implementation is experimental. for some reason, it crashes instantly when running from a frozen executable, so it is only available for source users atm. I would like feedback from advanced source users who have had trouble with mpv--does it work? how well? any crashes?
-* this widget appears to be under active development by the Qt guys. the differences between 6.4.1 vs 6.5.0 are significant. I hope the improvements continue!
-* current limitations are:
-* - It is only available on Qt6, sorry legacy Qt5 source users
-* - this thing crashed the program like hell during development. I tightened it up and can't get it to crash any more with my test files on source, but be careful
-* - the video renderer is OpenGL and in Qt world that seems to mean it is ALWAYS ON TOP at all times. although it doesn't interfere with click events if you aim for the scanbar (so Qt's z-indexing logic is still correct), its pixels nonetheless cover the scanbar and my media viewer hover windows (I will have to figure out a different scanbar layout with this thing)
-* - longer audio-only files often stutter intolerably
-* - many videos can't scan beyond the start
-* - some videos turn into pixel wash mess
-* - some videos seem to be cropped wrong with green bars in the spare space
-* - it spams a couple lines of file parsing error/warning info to the log for many videos. sometimes it spams a lot continuously. no idea how to turn it off!
-* anyway, despite the bugs and crashing, I found this thing impressive and I hope it can be a better fallback than my rubbish native viewer in future. it is a shame it crashes when built, but I'll see what I can do. maybe it'll be ready for our purposes by Qt7
-
-### misc
-
-* if twisted fails to load, its exact error is saved, and if you try to launch a server, that error is printed to the log along with the notification popup

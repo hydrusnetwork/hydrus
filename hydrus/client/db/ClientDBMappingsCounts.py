@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusDBBase
 
 from hydrus.client import ClientData
+from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 from hydrus.client.metadata import ClientTags
@@ -48,8 +49,9 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance, modules_services: ClientDBServices.ClientDBMasterServices ):
         
+        self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         
         ClientDBModule.ClientDBModule.__init__( self, 'client mappings counts', cursor )
@@ -207,7 +209,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         table_name = self.GetCountsCacheTableName( tag_display_type, file_service_id, tag_service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( table_name )
         
     
     def FilterExistingTagIds( self, tag_display_type, file_service_id, tag_service_id, tag_ids_table_name ):

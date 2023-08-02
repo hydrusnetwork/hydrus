@@ -3019,6 +3019,8 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,text), CC.FLAGS_EXPAND_PERPENDICULAR )
         
+        # TODO: Yo this layout sucks, figure out some better dynamic presentation of these options based on mime viewing capability, atm doing enable/disable and weird hide/show here is bad
+        
         rows = []
         
         rows.append( ( 'media viewer show action: ', self._media_show_action ) )
@@ -3050,7 +3052,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             rows.append( ( 'if the media is smaller than the media viewer canvas: ', self._media_scale_up ) )
             rows.append( ( 'if the media is larger than the media viewer canvas: ', self._media_scale_down ) )
-            rows.append( ( 'if the media is smaller than the preview canvas: ', self._preview_scale_up) )
+            rows.append( ( 'if the media is smaller than the preview canvas: ', self._preview_scale_up ) )
             rows.append( ( 'if the media is larger than the preview canvas: ', self._preview_scale_down ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -3131,6 +3133,10 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         is_application = self._mime == HC.GENERAL_APPLICATION or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_APPLICATION ]
+        is_archive = self._mime == HC.GENERAL_APPLICATION_ARCHIVE or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_APPLICATION_ARCHIVE ]
+        
+        # this is the one that is likely to get tricky, with SVG and PSD. maybe we'll move to 'renderable image projects' something
+        is_image_project = self._mime == HC.GENERAL_IMAGE_PROJECT or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_IMAGE_PROJECT ]
         is_image = self._mime == HC.GENERAL_IMAGE or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_IMAGE ]
         is_audio = self._mime == HC.GENERAL_AUDIO or self._mime in HC.general_mimetypes_to_mime_groups[ HC.GENERAL_AUDIO ]
         
@@ -3140,7 +3146,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._scale_down_quality.setEnabled( False )
             
         
-        if is_image or is_application:
+        if is_image or is_application or is_archive or is_image_project:
             
             self._media_start_paused.setEnabled( False )
             self._preview_start_paused.setEnabled( False )

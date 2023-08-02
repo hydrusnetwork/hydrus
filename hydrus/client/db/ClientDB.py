@@ -4645,7 +4645,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_files_storage = ClientDBFilesStorage.ClientDBFilesStorage( self._c, self._cursor_transaction_wrapper, self.modules_services, self.modules_hashes, self.modules_texts )
+        self.modules_files_storage = ClientDBFilesStorage.ClientDBFilesStorage( self._c, self._cursor_transaction_wrapper, self.modules_db_maintenance, self.modules_services, self.modules_hashes, self.modules_texts )
         
         self._modules.append( self.modules_files_storage )
         
@@ -4663,7 +4663,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_mappings_counts = ClientDBMappingsCounts.ClientDBMappingsCounts( self._c, self.modules_services )
+        self.modules_mappings_counts = ClientDBMappingsCounts.ClientDBMappingsCounts( self._c, self.modules_db_maintenance, self.modules_services )
         
         self._modules.append( self.modules_mappings_counts )
         
@@ -4685,7 +4685,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_mappings_storage = ClientDBMappingsStorage.ClientDBMappingsStorage( self._c, self.modules_services )
+        self.modules_mappings_storage = ClientDBMappingsStorage.ClientDBMappingsStorage( self._c, self.modules_db_maintenance, self.modules_services )
         
         self._modules.append( self.modules_mappings_storage )
         
@@ -4697,11 +4697,11 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_tag_siblings = ClientDBTagSiblings.ClientDBTagSiblings( self._c, self.modules_services, self.modules_tags, self.modules_tags_local_cache )
+        self.modules_tag_siblings = ClientDBTagSiblings.ClientDBTagSiblings( self._c, self.modules_db_maintenance, self.modules_services, self.modules_tags, self.modules_tags_local_cache )
         
         self._modules.append( self.modules_tag_siblings )
         
-        self.modules_tag_parents = ClientDBTagParents.ClientDBTagParents( self._c, self.modules_services, self.modules_tags_local_cache, self.modules_tag_siblings )
+        self.modules_tag_parents = ClientDBTagParents.ClientDBTagParents( self._c, self.modules_db_maintenance, self.modules_services, self.modules_tags_local_cache, self.modules_tag_siblings )
         
         self._modules.append( self.modules_tag_parents )
         
@@ -4712,11 +4712,11 @@ class DB( HydrusDB.HydrusDB ):
         # when you do the mappings caches, storage and display, consider carefully how you want them slotting in here
         # don't rush into it
         
-        self.modules_tag_search = ClientDBTagSearch.ClientDBTagSearch( self._c, self.modules_services, self.modules_tags, self.modules_tag_display, self.modules_tag_siblings, self.modules_mappings_counts )
+        self.modules_tag_search = ClientDBTagSearch.ClientDBTagSearch( self._c, self.modules_db_maintenance, self.modules_services, self.modules_tags, self.modules_tag_display, self.modules_tag_siblings, self.modules_mappings_counts )
         
         self._modules.append( self.modules_tag_search )
         
-        self.modules_mappings_counts_update = ClientDBMappingsCountsUpdate.ClientDBMappingsCountsUpdate( self._c, self.modules_services, self.modules_mappings_counts, self.modules_tags_local_cache, self.modules_tag_display, self.modules_tag_search )
+        self.modules_mappings_counts_update = ClientDBMappingsCountsUpdate.ClientDBMappingsCountsUpdate( self._c, self.modules_db_maintenance, self.modules_services, self.modules_mappings_counts, self.modules_tags_local_cache, self.modules_tag_display, self.modules_tag_search )
         
         self._modules.append( self.modules_mappings_counts_update )
         
@@ -4730,7 +4730,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._modules.append( self.modules_mappings_cache_combined_files_storage )
         
-        self.modules_mappings_cache_specific_display = ClientDBMappingsCacheSpecificDisplay.ClientDBMappingsCacheSpecificDisplay( self._c, self.modules_services, self.modules_mappings_counts, self.modules_mappings_counts_update, self.modules_mappings_storage, self.modules_tag_display )
+        self.modules_mappings_cache_specific_display = ClientDBMappingsCacheSpecificDisplay.ClientDBMappingsCacheSpecificDisplay( self._c, self.modules_db_maintenance, self.modules_services, self.modules_mappings_counts, self.modules_mappings_counts_update, self.modules_mappings_storage, self.modules_tag_display )
         
         self._modules.append( self.modules_mappings_cache_specific_display )
         
@@ -4758,7 +4758,7 @@ class DB( HydrusDB.HydrusDB ):
         
         # how about a module for 'local file services', it can do various filtering
         
-        self.modules_repositories = ClientDBRepositories.ClientDBRepositories( self._c, self._cursor_transaction_wrapper, self.modules_services, self.modules_files_storage, self.modules_files_metadata_basic, self.modules_hashes_local_cache, self.modules_tags_local_cache, self.modules_files_maintenance_queue )
+        self.modules_repositories = ClientDBRepositories.ClientDBRepositories( self._c, self._cursor_transaction_wrapper, self.modules_db_maintenance, self.modules_services, self.modules_files_storage, self.modules_files_metadata_basic, self.modules_hashes_local_cache, self.modules_tags_local_cache, self.modules_files_maintenance_queue )
         
         self._modules.append( self.modules_repositories )
         
@@ -6278,6 +6278,7 @@ class DB( HydrusDB.HydrusDB ):
         if action == 'autocomplete_predicates': result = self.modules_tag_search.GetAutocompletePredicates( *args, **kwargs )
         elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
         elif action == 'client_files_locations': result = self.modules_files_physical_storage.GetClientFilesLocations( *args, **kwargs )
+        elif action == 'deferred_delete_data': result = self.modules_db_maintenance.GetDeferredDeleteTableData( *args, **kwargs )
         elif action == 'deferred_physical_delete': result = self.modules_files_storage.GetDeferredPhysicalDelete( *args, **kwargs )
         elif action == 'duplicate_pairs_for_filtering': result = self._DuplicatesGetPotentialDuplicatePairsForFiltering( *args, **kwargs )
         elif action == 'file_duplicate_hashes': result = self.modules_files_duplicates.GetFileHashesByDuplicateType( *args, **kwargs )
@@ -9612,6 +9613,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.pub_initial_message( message )
                 
+            
+        
+        if version == 536:
+            
+            self._Execute( 'CREATE TABLE IF NOT EXISTS main.deferred_delete_tables ( name TEXT, num_rows INTEGER );' )
             
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )

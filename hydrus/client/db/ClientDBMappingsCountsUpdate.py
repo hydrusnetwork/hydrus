@@ -2,6 +2,7 @@ import sqlite3
 import typing
 
 from hydrus.client.db import ClientDBDefinitionsCache
+from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
@@ -11,8 +12,9 @@ from hydrus.client.metadata import ClientTags
 
 class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts, modules_tags_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalTags, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay, modules_tag_search: ClientDBTagSearch.ClientDBTagSearch ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance, modules_services: ClientDBServices.ClientDBMasterServices, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts, modules_tags_local_cache: ClientDBDefinitionsCache.ClientDBCacheLocalTags, modules_tag_display: ClientDBTagDisplay.ClientDBTagDisplay, modules_tag_search: ClientDBTagSearch.ClientDBTagSearch ):
         
+        self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         self.modules_mappings_counts = modules_mappings_counts
         self.modules_tags_local_cache = modules_tags_local_cache

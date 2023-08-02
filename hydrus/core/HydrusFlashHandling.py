@@ -21,6 +21,7 @@ elif HC.PLATFORM_WINDOWS:
     
     SWFRENDER_PATH = os.path.join( HC.BIN_DIR, 'swfrender_win32.exe' )
     
+
 # to all out there who write libraries:
 # hexagonit.swfheader is a perfect library. it is how you are supposed to do it.
 def GetFlashProperties( path ):
@@ -47,6 +48,7 @@ def GetFlashProperties( path ):
         return ( ( width, height ), duration, num_frames )
         
     
+
 def RenderPageToFile( path, temp_path, page_index ):
     
     cmd = [ SWFRENDER_PATH, path,  '-o', temp_path, '-p', str( page_index ) ]
@@ -54,6 +56,9 @@ def RenderPageToFile( path, temp_path, page_index ):
     timeout = HydrusTime.GetNow() + 60
     
     sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    
+    sbp_kwargs[ 'stdout' ] = subprocess.DEVNULL
+    sbp_kwargs[ 'stderr' ] = subprocess.DEVNULL
     
     HydrusData.CheckProgramIsNotShuttingDown()
     

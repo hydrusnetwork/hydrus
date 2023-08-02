@@ -27,7 +27,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         return {
             'main.last_shutdown_work_time' : ( 'CREATE TABLE IF NOT EXISTS {} ( last_shutdown_work_time INTEGER );', 400 ),
             'main.analyze_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, num_rows INTEGER, timestamp INTEGER );', 400 ),
-            'main.vacuum_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, timestamp INTEGER );', 400 )
+            'main.vacuum_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, timestamp INTEGER );', 400 ),
+            'main.deferred_delete_tables' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, num_rows INTEGER );', 567 )
         }
         
     
@@ -143,6 +144,50 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusTime.GetNow() ) )
         
     
+    def DeferredDropTable( self, table_name: str ):
+        
+        try:
+            
+            self._Execute( f'SELECT 1 FROM {table_name};' ).fetchone()
+            
+        except:
+            
+            # table doesn't exist I guess!
+            return
+            
+        
+        table_name_without_schema = table_name
+        
+        if '.' in table_name:
+            
+            table_name_without_schema = table_name.split( '.' )[-1]
+            
+        
+        new_table_name = 'deferred_delete_{}_{}'.format( table_name_without_schema, os.urandom( 16 ).hex() )
+        
+        self._Execute( f'ALTER TABLE {table_name} RENAME TO {new_table_name};' )
+        
+        result = self._Execute( 'SELECT num_rows FROM analyze_timestamps WHERE name = ?;', ( table_name_without_schema, ) ).fetchone()
+        
+        if result is None:
+            
+            num_rows = None
+            
+        else:
+            
+            ( num_rows, ) = result
+            
+        
+        self._Execute( 'INSERT INTO deferred_delete_tables ( name, num_rows ) VALUES ( ?, ? );', ( new_table_name, num_rows ) )
+        
+    
+    def GetDeferredDeleteTableData( self ):
+        
+        data = self._Execute( 'SELECT name, num_rows FROM deferred_delete_tables;' ).fetchall()
+        
+        return data
+        
+    
     def GetLastShutdownWorkTime( self ):
         
         result = self._Execute( 'SELECT last_shutdown_work_time FROM last_shutdown_work_time;' ).fetchone()
@@ -169,6 +214,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             
         
         all_names.discard( 'sqlite_stat1' )
+        
+        all_names = { name for name in all_names if not name.startswith( 'deferred_delete_' ) }
         
         if force_reanalyze:
             
