@@ -26,6 +26,12 @@ from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
 from PIL import ImageCms as PILImageCms
 
+from pillow_heif import register_heif_opener
+from pillow_heif import register_avif_opener
+
+register_heif_opener(thumbnails=False)
+register_avif_opener(thumbnails=False)
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -79,7 +85,7 @@ warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
 
-PIL_ONLY_MIMETYPES = { HC.IMAGE_GIF, HC.IMAGE_ICON }
+PIL_ONLY_MIMETYPES = { HC.IMAGE_GIF, HC.IMAGE_ICON }.union( HC.PIL_HEIF_MIMES )
 
 try:
     
@@ -817,8 +823,8 @@ def GetResolutionNumPy( numpy_image ):
     
 def GetResolutionAndNumFramesPIL( path, mime ):
     
-    pil_image = GeneratePILImage( path, dequantize = False )
-    
+    pil_image = GeneratePILImage( path, dequantize = False ) 
+
     ( x, y ) = pil_image.size
     
     if mime == HC.IMAGE_GIF: # some jpegs came up with 2 frames and 'duration' because of some embedded thumbnail in the metadata
@@ -1222,6 +1228,8 @@ def RawOpenPILImage( path ) -> PILImage.Image:
         pil_image = PILImage.open( path )
         
     except Exception as e:
+
+        print(e)
         
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load the image--it was likely malformed!' )
         
