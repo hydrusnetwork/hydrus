@@ -2,6 +2,7 @@ import hashlib
 import os
 
 from hydrus.core import HydrusAudioHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
