@@ -987,7 +987,7 @@ class GridLayout( QW.QGridLayout ):
         
         return self._col_count
         
-
+    
     def setMargin( self, val ):
         
         self.setContentsMargins( val, val, val, val )
@@ -2167,22 +2167,63 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
         
         QW.QTreeWidget.__init__( self, *args, **kwargs )
         
-        self.itemClicked.connect( self._HandleItemClickedForCheckStateUpdate )
+        self.itemChanged.connect( self._HandleItemCheckStateUpdate )
         
     
-    def _HandleItemClickedForCheckStateUpdate( self, item, column ):
+    def _GetChildren( self, item: QW.QTreeWidgetItem ) -> typing.List[ QW.QTreeWidgetItem ]:
         
-        self._UpdateCheckState( item, item.checkState( 0 ) )
+        children = [ item.child( i ) for i in range( item.childCount() ) ]
+        
+        return children
         
     
-    def _UpdateCheckState( self, item, check_state ):
+    def _HandleItemCheckStateUpdate( self, item, column ):
         
-        # this is an int, should be a checkstate
-        item.setCheckState( 0, check_state )
+        self.blockSignals( True )
         
-        for i in range( item.childCount() ):
+        self._UpdateChildrenCheckState( item, item.checkState( 0 ) )
+        self._UpdateParentCheckState( item )
+        
+        self.blockSignals( False )
+        
+    
+    def _UpdateChildrenCheckState( self, item, check_state ):
+        
+        for child in self._GetChildren( item ):
             
-            self._UpdateCheckState( item.child( i ), check_state )
+            child.setCheckState( 0, check_state )
+            
+            self._UpdateChildrenCheckState( child, check_state )
+            
+        
+    
+    def _UpdateParentCheckState( self, item: QW.QTreeWidgetItem ):
+        
+        parent = item.parent()
+        
+        if isinstance( parent, QW.QTreeWidgetItem ):
+            
+            all_values = { child.checkState( 0 ) for child in self._GetChildren( parent ) }
+            
+            if all_values == { QC.Qt.Checked }:
+                
+                end_state = QC.Qt.Checked
+                
+            elif all_values == { QC.Qt.Unchecked }:
+                
+                end_state = QC.Qt.Unchecked
+                
+            else:
+                
+                end_state = QC.Qt.PartiallyChecked
+                
+            
+            if end_state != parent.checkState( 0 ):
+                
+                parent.setCheckState( 0, end_state )
+                
+                self._UpdateParentCheckState( parent )
+                
             
         
     

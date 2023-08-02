@@ -13,6 +13,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientFiles
+from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
 from hydrus.client.db import ClientDBFilesMetadataBasic
@@ -36,18 +37,21 @@ def GenerateRepositoryDefinitionTableNames( service_id: int ):
     
     return ( hash_id_map_table_name, tag_id_map_table_name )
     
+
 def GenerateRepositoryFileDefinitionTableName( service_id: int ):
     
     ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
     
     return hash_id_map_table_name
     
+
 def GenerateRepositoryTagDefinitionTableName( service_id: int ):
     
     ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
     
     return tag_id_map_table_name
     
+
 def GenerateRepositoryUpdatesTableNames( service_id: int ):
     
     repository_updates_table_name = '{}{}'.format( REPOSITORY_UPDATES_PREFIX, service_id )
@@ -56,12 +60,14 @@ def GenerateRepositoryUpdatesTableNames( service_id: int ):
     
     return ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name )
     
+
 class ClientDBRepositories( ClientDBModule.ClientDBModule ):
     
     def __init__(
         self,
         cursor: sqlite3.Cursor,
         cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper,
+        modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance,
         modules_services: ClientDBServices.ClientDBMasterServices,
         modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
         modules_files_metadata_basic: ClientDBFilesMetadataBasic.ClientDBFilesMetadataBasic,
@@ -75,6 +81,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         ClientDBModule.ClientDBModule.__init__( self, 'client repositories', cursor )
         
         self._cursor_transaction_wrapper = cursor_transaction_wrapper
+        self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         self.modules_files_storage = modules_files_storage
         self.modules_files_metadata_basic = modules_files_metadata_basic
@@ -305,14 +312,14 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         ( repository_updates_table_name, repository_unregistered_updates_table_name, repository_updates_processed_table_name ) = GenerateRepositoryUpdatesTableNames( service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_unregistered_updates_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( repository_updates_processed_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( repository_updates_table_name )
+        self.modules_db_maintenance.DeferredDropTable( repository_unregistered_updates_table_name )
+        self.modules_db_maintenance.DeferredDropTable( repository_updates_processed_table_name )
         
         ( hash_id_map_table_name, tag_id_map_table_name ) = GenerateRepositoryDefinitionTableNames( service_id )
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( hash_id_map_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( tag_id_map_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( hash_id_map_table_name )
+        self.modules_db_maintenance.DeferredDropTable( tag_id_map_table_name )
         
         self._ClearOutstandingWorkCache( service_id )
         

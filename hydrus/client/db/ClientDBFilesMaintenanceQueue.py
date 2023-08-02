@@ -42,7 +42,18 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         
         self._ExecuteMany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
         
-        HG.client_controller.files_maintenance_manager.Wake()
+        if HG.client_controller.IsBooted():
+            
+            try:
+                
+                # if this happens during boot db update, this doesn't exist lol
+                HG.client_controller.files_maintenance_manager.Wake()
+                
+            except:
+                
+                pass
+                
+            
         
     
     def AddJobsHashes( self, hashes, job_type, time_can_start = 0 ):

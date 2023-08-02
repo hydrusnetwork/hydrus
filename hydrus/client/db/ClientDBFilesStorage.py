@@ -12,6 +12,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientTime
+from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
@@ -232,9 +233,10 @@ class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule 
     
 class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules_services: ClientDBServices.ClientDBMasterServices, modules_hashes: ClientDBMaster.ClientDBMasterHashes, modules_texts: ClientDBMaster.ClientDBMasterTexts ):
+    def __init__( self, cursor: sqlite3.Cursor, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance, modules_services: ClientDBServices.ClientDBMasterServices, modules_hashes: ClientDBMaster.ClientDBMasterHashes, modules_texts: ClientDBMaster.ClientDBMasterTexts ):
         
         self._cursor_transaction_wrapper = cursor_transaction_wrapper
+        self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         self.modules_hashes = modules_hashes
         self.modules_texts = modules_texts
@@ -330,6 +332,8 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( pending_files_table_name ), ( ( hash_id, ) for ( hash_id, timestamp ) in insert_rows ) )
         
+        pending_changed = self._GetRowCount() > 0
+        
         if service_id == self.modules_services.combined_local_file_service_id:
             
             for ( hash_id, timestamp ) in insert_rows:
@@ -337,13 +341,11 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                 self.ClearDeferredPhysicalDeleteIds( file_hash_id = hash_id, thumbnail_hash_id = hash_id )
                 
             
-        elif self.modules_services.GetService( service_id ).GetServiceType() == HC.FILE_REPOSITORY:
+        elif self.modules_services.GetService( service_id ).GetServiceType() in ( HC.FILE_REPOSITORY, HC.IPFS ):
             
             # it may be the case the files were just uploaded after being deleted
             self.DeferFilesDeleteIfNowOrphan( [ hash_id for ( hash_id, timestamp ) in insert_rows ] )
             
-        
-        pending_changed = self._GetRowCount() > 0
         
         return pending_changed
         
@@ -505,10 +507,10 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
                 
             
         
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( current_files_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( deleted_files_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( pending_files_table_name ) )
-        self._Execute( 'DROP TABLE IF EXISTS {};'.format( petitioned_files_table_name ) )
+        self.modules_db_maintenance.DeferredDropTable( current_files_table_name )
+        self.modules_db_maintenance.DeferredDropTable( deleted_files_table_name )
+        self.modules_db_maintenance.DeferredDropTable( pending_files_table_name )
+        self.modules_db_maintenance.DeferredDropTable( petitioned_files_table_name )
         
     
     def FilterAllCurrentHashIds( self, hash_ids, just_these_service_ids = None ):
@@ -661,7 +663,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         if len( orphan_hash_ids ) > 0:
             
-            just_these_service_ids = self.modules_services.GetServiceIds( ( HC.FILE_REPOSITORY, ) )
+            just_these_service_ids = self.modules_services.GetServiceIds( ( HC.FILE_REPOSITORY, HC.IPFS ) )
             
             if ignore_service_id is not None:
                 
@@ -1289,12 +1291,12 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         self._ExecuteMany( 'DELETE FROM {} WHERE hash_id = ?;'.format( petitioned_files_table_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
         
-        if self.modules_services.GetService( service_id ).GetServiceType() in ( HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
+        pending_changed = self._GetRowCount() > 0
+        
+        if self.modules_services.GetService( service_id ).GetServiceType() == HC.COMBINED_LOCAL_FILE:
             
             self.DeferFilesDeleteIfNowOrphan( hash_ids )
             
-        
-        pending_changed = self._GetRowCount() > 0
         
         return pending_changed
         
