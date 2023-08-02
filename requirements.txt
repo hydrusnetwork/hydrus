@@ -12,6 +12,7 @@ lz4>=3.0.0
 nose>=1.3.0
 numpy>=1.16.0
 Pillow>=6.0.0
+pillow-heif>=0.12.0
 psutil>=5.0.0
 pyOpenSSL>=19.1.0
 PySocks>=1.7.0
