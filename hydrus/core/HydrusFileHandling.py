@@ -93,7 +93,7 @@ headers_and_mime.extend( [
     ( ( ( 4, b'ftyphevm' ), ), HC.IMAGE_HEIC_SEQUENCE ),
     ( ( ( 4, b'ftyphevs' ), ), HC.IMAGE_HEIC_SEQUENCE ),
     ( ( ( 4, b'ftypmif1' ), ), HC.IMAGE_HEIF ),
-    ( ( ( 4, b'ftypsf1' ), ), HC.IMAGE_HEIF_SEQUENCE ),
+    ( ( ( 4, b'ftypmsf1' ), ), HC.IMAGE_HEIF_SEQUENCE ),
     ( ( ( 4, b'ftypmp4' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypisom' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypM4V' ), ), HC.UNDETERMINED_MP4 ),
@@ -117,7 +117,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         target_resolution = ( 128, 128 )
         
     
-    if mime in { HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON }.union( HC.PIL_HEIF_MIMES ): # not apng atm
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ): # not apng atm
         
         try:
             
@@ -368,7 +368,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         has_audio = False
         
     
-    if mime in { HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON }.union( HC.PIL_HEIF_MIMES ):
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
         
@@ -400,7 +400,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( width, height ) = HydrusImageHandling.GetPSDResolution( path )
         
-    elif mime in HC.VIDEO or mime == HC.IMAGE_AVIF_SEQUENCE:
+    elif mime in HC.VIDEO.union( { HC.IMAGE_HEIF_SEQUENCE, HC.IMAGE_HEIC_SEQUENCE, HC.IMAGE_AVIF_SEQUENCE }):
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
