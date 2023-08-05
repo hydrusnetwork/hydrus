@@ -26,11 +26,20 @@ from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
 from PIL import ImageCms as PILImageCms
 
-from pillow_heif import register_heif_opener
-from pillow_heif import register_avif_opener
-
-register_heif_opener(thumbnails=False)
-register_avif_opener(thumbnails=False)
+try:
+    
+    from pillow_heif import register_heif_opener
+    from pillow_heif import register_avif_opener
+    
+    register_heif_opener(thumbnails=False)
+    register_avif_opener(thumbnails=False)
+    
+    HEIF_OK = True
+    
+except:
+    
+    HEIF_OK = False
+    
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
