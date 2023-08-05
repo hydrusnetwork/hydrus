@@ -1205,6 +1205,29 @@ url_type_string_lookup = {
     URL_TYPE_SUB_GALLERY : 'sub-gallery url (is queued even if creator found no post/file urls)'
 }
 
+
+
+REMOTE_HELP = "https://hydrusnetwork.github.io/hydrus"
+    
+DOCUMENTATION_INDEX = "index.html"
+DOCUMENTATION_CHANGELOG = f"changelog.html#version_{SOFTWARE_VERSION}"
+DOCUMENTATION_DOWNLOADER_GUGS = "downloader_gugs.html"
+DOCUMENTATION_DOWNLOADER_LOGIN = 'downloader_login.html'
+DOCUMENTATION_ADDING_NEW_DOWNLOADERS = 'adding_new_downloaders.html'
+DOCUMENTATION_DOWNLOADER_URL_CLASSES = 'downloader_url_classes.html'
+DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS = 'getting_started_subscriptions.html'
+DOCUMENTATION_DATABASE_MIGRATION = 'database_migration.html'
+DOCUMENTATION_DUPLICATES = 'duplicates.html'
+DOCUMENTATION_DOWNLOADER_SHARING = 'downloader_sharing.html'
+DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS__PAGE_PARSERS = 'downloader_parsers_page_parsers.html#page_parsers'
+DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS__CONTENT_PARSERS = 'downloader_parsers_content_parsers.html#content_parsers'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__COMPOUND_FORMULA = 'downloader_parsers_formulae.html#compound_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__CONTEXT_VARIABLE_FORMULA = 'downloader_parsers_formulae.html#context_variable_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__HTML_FORMULA = 'downloader_parsers_formulae.html#html_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__JSON_FORMULA = 'downloader_parsers_formulae.html#json_formula'
+DOCUMENTATION_ABOUT_DOCS = "about_docs.html"
+
+
 # default options
 
 DEFAULT_SERVER_ADMIN_PORT = 45870
