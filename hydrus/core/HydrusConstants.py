@@ -720,6 +720,12 @@ APPLICATION_XCF = 57
 APPLICATION_GZIP = 58
 GENERAL_APPLICATION_ARCHIVE = 59
 GENERAL_IMAGE_PROJECT = 60
+IMAGE_HEIF = 61
+IMAGE_HEIF_SEQUENCE = 62
+IMAGE_HEIC = 63
+IMAGE_HEIC_SEQUENCE = 64
+IMAGE_AVIF = 65
+IMAGE_AVIF_SEQUENCE = 66
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -742,6 +748,12 @@ SEARCHABLE_MIMES = {
     IMAGE_TIFF,
     IMAGE_ICON,
     IMAGE_SVG,
+    IMAGE_HEIF,
+    IMAGE_HEIF_SEQUENCE,
+    IMAGE_HEIC,
+    IMAGE_HEIC_SEQUENCE,
+    IMAGE_AVIF,
+    IMAGE_AVIF_SEQUENCE,
     APPLICATION_FLASH,
     VIDEO_AVI,
     VIDEO_FLV,
@@ -792,12 +804,18 @@ IMAGES = [
     IMAGE_BMP,
     IMAGE_WEBP,
     IMAGE_TIFF,
-    IMAGE_ICON
+    IMAGE_ICON,
+    IMAGE_HEIF,
+    IMAGE_HEIC,
+    IMAGE_AVIF,
 ]
 
 ANIMATIONS = [
     IMAGE_GIF,
-    IMAGE_APNG
+    IMAGE_APNG,
+    IMAGE_HEIF_SEQUENCE,
+    IMAGE_HEIC_SEQUENCE,
+    IMAGE_AVIF_SEQUENCE,
 ]
 
 AUDIO = [
@@ -866,18 +884,24 @@ for ( general_mime_type, mimes_in_type ) in general_mimetypes_to_mime_groups.ite
         
         mimes_to_general_mimetypes[ mime ] = general_mime_type
         
-    
+PIL_HEIF_MIMES = {
+    IMAGE_HEIF,
+    IMAGE_HEIF_SEQUENCE,
+    IMAGE_HEIC,
+    IMAGE_HEIC_SEQUENCE,
+    IMAGE_AVIF,
+}
 
 MIMES_THAT_DEFINITELY_HAVE_AUDIO = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) )
 MIMES_THAT_MAY_HAVE_AUDIO = tuple( list( MIMES_THAT_DEFINITELY_HAVE_AUDIO ) + list( VIDEO ) )
 
 MIMES_WITH_THUMBNAILS = set( IMAGES ).union( ANIMATIONS ).union( VIDEO ).union( { IMAGE_SVG, APPLICATION_FLASH, APPLICATION_CLIP, APPLICATION_PSD, APPLICATION_KRITA } )
 
-FILES_THAT_CAN_HAVE_ICC_PROFILE = { IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_TIFF }
+FILES_THAT_CAN_HAVE_ICC_PROFILE = { IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_TIFF }.union( PIL_HEIF_MIMES )
 
-FILES_THAT_CAN_HAVE_EXIF = { IMAGE_JPEG, IMAGE_TIFF, IMAGE_PNG, IMAGE_WEBP }
+FILES_THAT_CAN_HAVE_EXIF = { IMAGE_JPEG, IMAGE_TIFF, IMAGE_PNG, IMAGE_WEBP }.union( PIL_HEIF_MIMES )
 # images and animations that PIL can handle
-FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA = { IMAGE_JPEG, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, IMAGE_GIF, IMAGE_APNG }
+FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA = { IMAGE_JPEG, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, IMAGE_GIF, IMAGE_APNG }.union( PIL_HEIF_MIMES )
 
 FILES_THAT_CAN_HAVE_PIXEL_HASH = set( IMAGES ).union( { IMAGE_GIF } )
 FILES_THAT_HAVE_PERCEPTUAL_HASH = set( IMAGES )
@@ -898,6 +922,12 @@ mime_enum_lookup = {
     'image/tiff' : IMAGE_TIFF,
     'image/x-icon' : IMAGE_ICON,
     'image/svg+xml': IMAGE_SVG,
+    'image/heif' : IMAGE_HEIF,
+    'image/heif-sequence' : IMAGE_HEIF_SEQUENCE,
+    'image/heic' : IMAGE_HEIC,
+    'image/heic-sequence' : IMAGE_HEIC_SEQUENCE,
+    'image/avif' : IMAGE_AVIF,
+    'image/avif-sequence' : IMAGE_AVIF_SEQUENCE,
     'image/vnd.microsoft.icon' : IMAGE_ICON,
     'image' : IMAGES,
     'application/x-shockwave-flash' : APPLICATION_FLASH,
@@ -961,6 +991,12 @@ mime_string_lookup = {
     IMAGE_TIFF : 'tiff',
     IMAGE_ICON : 'icon',
     IMAGE_SVG : 'svg',
+    IMAGE_HEIF: 'heif',
+    IMAGE_HEIF_SEQUENCE: 'heif sequence',
+    IMAGE_HEIC: 'heic',
+    IMAGE_HEIC_SEQUENCE: 'heic sequence',
+    IMAGE_AVIF: 'avif',
+    IMAGE_AVIF_SEQUENCE: 'avif sequence',
     APPLICATION_FLASH : 'flash',
     APPLICATION_OCTET_STREAM : 'application/octet-stream',
     APPLICATION_YAML : 'yaml',
@@ -1027,6 +1063,12 @@ mime_mimetype_string_lookup = {
     IMAGE_TIFF : 'image/tiff',
     IMAGE_ICON : 'image/x-icon',
     IMAGE_SVG : 'image/svg+xml',
+    IMAGE_HEIF: 'image/heif',
+    IMAGE_HEIF_SEQUENCE: 'image/heif-sequence',
+    IMAGE_HEIC: 'image/heic',
+    IMAGE_HEIC_SEQUENCE: 'image/heic-sequence',
+    IMAGE_AVIF: 'image/avif',
+    IMAGE_AVIF_SEQUENCE: 'image/avif-sequence',
     APPLICATION_FLASH : 'application/x-shockwave-flash',
     APPLICATION_OCTET_STREAM : 'application/octet-stream',
     APPLICATION_YAML : 'application/x-yaml',
@@ -1094,6 +1136,12 @@ mime_ext_lookup = {
     IMAGE_TIFF : '.tiff',
     IMAGE_ICON : '.ico',
     IMAGE_SVG : '.svg',
+    IMAGE_HEIF: '.heif',
+    IMAGE_HEIF_SEQUENCE: '.heifs',
+    IMAGE_HEIC: '.heic',
+    IMAGE_HEIC_SEQUENCE: '.heics',
+    IMAGE_AVIF: '.avif',
+    IMAGE_AVIF_SEQUENCE: '.avifs',
     APPLICATION_FLASH : '.swf',
     APPLICATION_OCTET_STREAM : '.bin',
     APPLICATION_YAML : '.yaml',

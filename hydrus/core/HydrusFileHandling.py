@@ -79,6 +79,21 @@ headers_and_mime.extend( [
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00' ), ), HC.APPLICATION_RAR ),
     ( ( ( 0, b'\x1f\x8b' ), ), HC.APPLICATION_GZIP ),
     ( ( ( 0, b'hydrus encrypted zip' ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( ( ( 4, b'ftypavif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypavis' ), ), HC.IMAGE_AVIF_SEQUENCE ),
+    ( ( ( 4, b'ftypmif1' ), ( 16, b'avif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypmif1' ), ( 20, b'avif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypmif1' ), ( 24, b'avif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypheic' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftypheix' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftypheim' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftypheis' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftyphevc' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftyphevx' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftyphevm' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftyphevs' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftypmif1' ), ), HC.IMAGE_HEIF ),
+    ( ( ( 4, b'ftypmsf1' ), ), HC.IMAGE_HEIF_SEQUENCE ),
     ( ( ( 4, b'ftypmp4' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypisom' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypM4V' ), ), HC.UNDETERMINED_MP4 ),
@@ -102,7 +117,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         target_resolution = ( 128, 128 )
         
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ): # not apng atm
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ): # not apng atm
         
         try:
             
@@ -353,7 +368,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         has_audio = False
         
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ):
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
         
@@ -385,7 +400,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( width, height ) = HydrusImageHandling.GetPSDResolution( path )
         
-    elif mime in HC.VIDEO:
+    elif mime in HC.VIDEO.union( { HC.IMAGE_HEIF_SEQUENCE, HC.IMAGE_HEIC_SEQUENCE, HC.IMAGE_AVIF_SEQUENCE }):
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
