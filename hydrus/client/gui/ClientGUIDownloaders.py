@@ -564,7 +564,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        call = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_DOWNLOADER_GUGS )
+        call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_GUGS )
         
         menu_items.append( ( 'normal', 'open the gugs help', 'Open the help page for gugs in your web browser.', call ) )
         
@@ -2002,7 +2002,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        call = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_DOWNLOADER_URL_CLASSES )
+        call = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_URL_CLASSES )
         
         menu_items.append( ( 'normal', 'open the url classes help', 'Open the help page for url classes in your web browser.', call ) )
         

@@ -1429,16 +1429,17 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             if mime in HC.ALLOWED_MIMES:
                                 
-                                it_was_a_real_file = True
-                                
                                 status_hook( 'page was actually a file, trying to import' )
                                 
                                 self.Import( temp_path, file_import_options, status_hook = status_hook )
                                 
+                                it_was_a_real_file = True
+                                
                             
                         except:
                             
-                            pass # in this special occasion, we will swallow the error
+                            # something crazy happened, like FFMPEG thinking JSON was an MP4 wew, so let's bail out
+                            raise HydrusExceptions.VetoException( 'The parser found nothing in the document, and while it initially seemed to actually be an importable file, it looks like that failed!' )
                             
                         finally:
                             

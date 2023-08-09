@@ -23,7 +23,7 @@ mkdocs build -d help
 ```
 In the base hydrus directory (same as the `mkdocs.yml` file), which will build it into the `help` directory. You will then be good!
 
-Repeat the command and MkDocs will clear out the old directory and update it, so you can fold this into any update script.
+Repeat the command and MkDocs will clear out the old directory and rebuild it, so you can fold this into any update script.
 
 ## Live Preview
 

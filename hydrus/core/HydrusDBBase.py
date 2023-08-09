@@ -248,7 +248,18 @@ class DBBase( object ):
             create_phrase = 'CREATE INDEX IF NOT EXISTS'
             
         
-        index_name = self._GenerateIndexName( table_name, columns )
+        ideal_index_name = self._GenerateIdealIndexName( table_name, columns )
+        
+        index_name = ideal_index_name
+        
+        i = 0
+        
+        while self._ActuaIndexExists( index_name ):
+            
+            index_name = f'{ideal_index_name}_{i}'
+            
+            i += 1
+            
         
         if '.' in table_name:
             
@@ -304,7 +315,7 @@ class DBBase( object ):
         self._c.executemany( query, args_iterator )
         
     
-    def _GenerateIndexName( self, table_name, columns ):
+    def _GenerateIdealIndexName( self, table_name, columns ):
         
         return '{}_{}_index'.format( table_name, '_'.join( columns ) )
         
@@ -344,11 +355,78 @@ class DBBase( object ):
             
         
     
-    def _IndexExists( self, table_name, columns ):
+    def _ActuaIndexExists( self, index_name ):
         
-        index_name = self._GenerateIndexName( table_name, columns )
+        if '.' in index_name:
+            
+            ( schema, index_name ) = index_name.split( '.', 1 )
+            
+            search_schemas = [ schema ]
+            
+        else:
+            
+            search_schemas = self._GetAttachedDatabaseNames()
+            
         
-        return self._TableOrIndexExists( index_name, 'index' )
+        for schema in search_schemas:
+            
+            result = self._Execute( f'SELECT 1 FROM {schema}.sqlite_master WHERE name = ? and type = ?;', ( index_name, 'index' ) ).fetchone()
+            
+            if result is not None:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
+    def _IdealIndexExists( self, table_name, columns ):
+        
+        # ok due to deferred delete gubbins, we have overlapping index names. therefore this has to be more flexible than a static name
+        # we'll search based on tbl_name in sqlite_master
+        
+        ideal_index_name = self._GenerateIdealIndexName( table_name, columns )
+        
+        if '.' in ideal_index_name:
+            
+            ( schema, ideal_index_name ) = ideal_index_name.split( '.', 1 )
+            
+            search_schemas = [ schema ]
+            
+        else:
+            
+            search_schemas = self._GetAttachedDatabaseNames()
+            
+        
+        if '.' in table_name:
+            
+            table_name = table_name.split( '.', 1 )[1]
+            
+        
+        for schema in search_schemas:
+            
+            table_result = self._Execute( f'SELECT 1 FROM {schema}.sqlite_master WHERE name = ?;', ( table_name, ) ).fetchone()
+            
+            if table_result is None:
+                
+                continue
+                
+            
+            # ok the table exists on this db, so let's see if it has our index, whatever its actual name
+            
+            all_indices_of_this_table = self._STL( self._Execute( f'SELECT name FROM {schema}.sqlite_master WHERE tbl_name = ? AND type = ?;', ( table_name, 'index' ) ) )
+            
+            for index_name in all_indices_of_this_table:
+                
+                if ideal_index_name in index_name:
+                    
+                    return True
+                    
+                
+            
+        
+        return False
         
     
     def _MakeTemporaryIntegerTable( self, integer_iterable, column_name ):
@@ -384,14 +462,9 @@ class DBBase( object ):
     
     def _TableExists( self, table_name ):
         
-        return self._TableOrIndexExists( table_name, 'table' )
-        
-    
-    def _TableOrIndexExists( self, name, item_type ):
-        
-        if '.' in name:
+        if '.' in table_name:
             
-            ( schema, name ) = name.split( '.', 1 )
+            ( schema, table_name ) = table_name.split( '.', 1 )
             
             search_schemas = [ schema ]
             
@@ -402,7 +475,7 @@ class DBBase( object ):
         
         for schema in search_schemas:
             
-            result = self._Execute( 'SELECT 1 FROM {}.sqlite_master WHERE name = ? AND type = ?;'.format( schema ), ( name, item_type ) ).fetchone()
+            result = self._Execute( f'SELECT 1 FROM {schema}.sqlite_master WHERE name = ? AND type = ?;', ( table_name, 'table' ) ).fetchone()
             
             if result is not None:
                 

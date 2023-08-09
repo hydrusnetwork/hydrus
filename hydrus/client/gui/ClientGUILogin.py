@@ -1305,7 +1305,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_DOWNLOADER_LOGIN )
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DOWNLOADER_LOGIN )
         
         menu_items.append( ( 'normal', 'open the login scripts help', 'Open the help page for login scripts in your web browser.', page_func ) )
         

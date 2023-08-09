@@ -8,6 +8,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
+from hydrus.client import ClientLocation
 
 pair_types_to_content_types = {}
 
@@ -436,14 +437,14 @@ class MigrationSource( object ):
     
 class MigrationSourceHTA( MigrationSource ):
     
-    def __init__( self, controller, path, file_service_key, desired_hash_type, hashes, tag_filter ):
+    def __init__( self, controller, path, location_context: ClientLocation.LocationContext, desired_hash_type, hashes, tag_filter ):
         
         name = os.path.basename( path )
         
         MigrationSource.__init__( self, controller, name )
         
         self._path = path
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         self._desired_hash_type = desired_hash_type
         self._hashes = hashes
         self._tag_filter = tag_filter
@@ -486,7 +487,7 @@ class MigrationSourceHTA( MigrationSource ):
             data = [ ( hash, tags ) for ( hash, tags ) in data if hash in self._hashes ]
             
         
-        if self._file_service_key != CC.COMBINED_FILE_SERVICE_KEY:
+        if not self._location_context.IsAllKnownFiles():
             
             filtered_data = []
             
@@ -500,7 +501,7 @@ class MigrationSourceHTA( MigrationSource ):
                     
                     media_result = hashes_to_media_results[ hash ]
                     
-                    if self._file_service_key not in media_result.GetLocationsManager().GetCurrent():
+                    if not media_result.GetLocationsManager().IsInLocationContext( self._location_context ):
                         
                         continue
                         
@@ -517,7 +518,7 @@ class MigrationSourceHTA( MigrationSource ):
     
     def _SHA256FilteringNeeded( self ):
         
-        return self._hashes is not None or self._file_service_key != CC.COMBINED_FILE_SERVICE_KEY
+        return self._hashes is not None or not self._location_context.IsAllKnownFiles()
         
     
     def CleanUp( self ):
@@ -685,13 +686,13 @@ class MigrationSourceList( MigrationSource ):
     
 class MigrationSourceTagServiceMappings( MigrationSource ):
     
-    def __init__( self, controller, tag_service_key, file_service_key, desired_hash_type, hashes, tag_filter, content_statuses ):
+    def __init__( self, controller, tag_service_key, location_context, desired_hash_type, hashes, tag_filter, content_statuses ):
         
         name = controller.services_manager.GetName( tag_service_key )
         
         MigrationSource.__init__( self, controller, name )
         
-        self._file_service_key = file_service_key
+        self._location_context = location_context
         self._tag_service_key = tag_service_key
         self._desired_hash_type = desired_hash_type
         self._hashes = hashes
@@ -708,7 +709,7 @@ class MigrationSourceTagServiceMappings( MigrationSource ):
     
     def GetSomeData( self ):
         
-        data = self._controller.Read( 'migration_get_mappings', self._database_temp_job_name, self._file_service_key, self._tag_service_key, self._desired_hash_type, self._tag_filter, self._content_statuses )
+        data = self._controller.Read( 'migration_get_mappings', self._database_temp_job_name, self._location_context, self._tag_service_key, self._desired_hash_type, self._tag_filter, self._content_statuses )
         
         if len( data ) == 0:
             
@@ -722,7 +723,7 @@ class MigrationSourceTagServiceMappings( MigrationSource ):
         
         # later can spread this out into bunch of small jobs, a start and a continue, based on tag filter subsets
         
-        self._controller.WriteSynchronous( 'migration_start_mappings_job', self._database_temp_job_name, self._file_service_key, self._tag_service_key, self._hashes, self._content_statuses )
+        self._controller.WriteSynchronous( 'migration_start_mappings_job', self._database_temp_job_name, self._location_context, self._tag_service_key, self._hashes, self._content_statuses )
         
     
 class MigrationSourceTagServicePairs( MigrationSource ):

@@ -748,6 +748,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'OpenCV: {}'.format( cv2.__version__ ) )
         library_version_lines.append( 'openssl: {}'.format( ssl.OPENSSL_VERSION ) )
         library_version_lines.append( 'Pillow: {}'.format( PIL.__version__ ) )
+        library_version_lines.append( 'Pillow-HEIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
         
         if QtInit.WE_ARE_QT5:
             
@@ -3036,6 +3037,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
+        #
+        
         file_maintenance_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'manage scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
@@ -3061,21 +3064,44 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendMenu( menu, file_maintenance_menu, 'file maintenance' )
         
-        maintenance_submenu = ClientGUIMenus.GenerateMenu( menu )
+        #
         
-        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
-        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'review deferred delete table data', 'See how many tables are being deleted in the background.', self._ReviewDeferredDeleteTableData )
-        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'review vacuum data', 'See whether it is worth rebuilding the database to reformat tables and recover disk space.', self._ReviewVacuumData )
+        db_maintenance_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendSeparator( maintenance_submenu )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'review deferred delete table data', 'See how many tables are being deleted in the background.', self._ReviewDeferredDeleteTableData )
         
-        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
+        ClientGUIMenus.AppendSeparator( db_maintenance_submenu )
         
-        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'database_deferred_delete_maintenance_during_idle' )
         
-        ClientGUIMenus.AppendMenuItem( maintenance_submenu, 'clear orphan hashed serialisables', 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
+        current_value = check_manager.GetCurrentValue()
+        func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenu( menu, maintenance_submenu, 'db maintenance' )
+        ClientGUIMenus.AppendMenuCheckItem( db_maintenance_submenu, 'work deferred delete jobs during idle time', 'Control whether database deferred delete maintenance can work during idle time.', current_value, func )
+        
+        check_manager = ClientGUICommon.CheckboxManagerOptions( 'database_deferred_delete_maintenance_during_active' )
+        
+        current_value = check_manager.GetCurrentValue()
+        func = check_manager.Invert
+        
+        ClientGUIMenus.AppendMenuCheckItem( db_maintenance_submenu, 'work deferred delete jobs during normal time', 'Control whether database deferred delete maintenance can work during normal time.', current_value, func )
+        
+        #
+        
+        ClientGUIMenus.AppendSeparator( db_maintenance_submenu )
+        
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'review vacuum data', 'See whether it is worth rebuilding the database to reformat tables and recover disk space.', self._ReviewVacuumData )
+        
+        ClientGUIMenus.AppendSeparator( db_maintenance_submenu )
+        
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
+        
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
+        
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan hashed serialisables', 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
+        
+        ClientGUIMenus.AppendMenu( menu, db_maintenance_submenu, 'db maintenance' )
         
         check_submenu = ClientGUIMenus.GenerateMenu( menu )
         
@@ -3226,7 +3252,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendMenu( menu, links, 'links' )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientPaths.OpenDocumentation, HC.DOCUMENTATION_CHANGELOG )
+        ClientGUIMenus.AppendMenuItem( menu, 'changelog', 'Open hydrus\'s local changelog in your web browser.', ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_CHANGELOG )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -4964,8 +4990,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
     
     def _OpenHelp( self ):
-
-        ClientPaths.OpenDocumentation( HC.DOCUMENTATION_INDEX )
+        
+        ClientGUIDialogsQuick.OpenDocumentation( self, HC.DOCUMENTATION_INDEX )
         
     
     def _OpenInstallFolder( self ):
@@ -5487,38 +5513,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _ReviewDeferredDeleteTableData( self ):
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review deferred delete data' )
         
-        def work_callable():
-            
-            deferred_delete_data = self._controller.Read( 'deferred_delete_data' )
-            
-            return deferred_delete_data
-            
+        panel = ClientGUIScrolledPanelsReview.ReviewDeferredDeleteTableData( frame, self._controller )
         
-        def publish_callable( deferred_delete_data ):
-            
-            if job_key.IsCancelled():
-                
-                return
-                
-            
-            frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review vacuum data' )
-            
-            panel = ClientGUIScrolledPanelsReview.ReviewDeferredDeleteTableData( frame, self._controller, deferred_delete_data )
-            
-            frame.SetPanel( panel )
-            
-            job_key.Delete()
-            
-        
-        job_key.SetStatusText( 'loading database data' )
-        
-        self._controller.pub( 'message', job_key )
-        
-        job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
-        
-        job.start()
+        frame.SetPanel( panel )
         
     
     def _ReviewFileMaintenance( self ):

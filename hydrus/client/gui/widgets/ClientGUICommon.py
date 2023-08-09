@@ -914,6 +914,7 @@ class CheckboxManagerOptions( CheckboxManager ):
         HG.client_controller.pub( 'notify_new_menu_option' )
         
     
+
 class AlphaColourControl( QW.QWidget ):
     
     def __init__( self, parent ):

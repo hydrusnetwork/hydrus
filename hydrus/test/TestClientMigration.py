@@ -14,6 +14,7 @@ from hydrus.core import HydrusTime
 from hydrus.test import TestController
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientLocation
 from hydrus.client import ClientMigration
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
@@ -330,25 +331,25 @@ class TestMigration( unittest.TestCase ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'md5', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'md5', None, tag_filter )
         
         expected_data = [ ( self._sha256_to_md5[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter )
         
         expected_data = list( self._hashes_to_current_tags.items() )
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.LOCAL_FILE_SERVICE_KEY, 'md5', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), 'md5', None, tag_filter )
         
         expected_data = [ ( self._sha256_to_md5[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, CC.LOCAL_FILE_SERVICE_KEY, 'sha256', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), 'sha256', None, tag_filter )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
@@ -357,13 +358,13 @@ class TestMigration( unittest.TestCase ):
         # not all hashes, since hash type lookup only available for imported files
         hashes = random.sample( list( self._my_files_sha256 ), 25 )
         
-        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'md5', hashes, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'md5', hashes, tag_filter )
         
         expected_data = [ ( self._sha256_to_md5[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in hashes ]
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', hashes, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', hashes, tag_filter )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in hashes ]
         
@@ -374,11 +375,11 @@ class TestMigration( unittest.TestCase ):
         # not all hashes, since hash type lookup only available for imported files
         expected_data = [ ( self._sha256_to_sha1[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
-        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'sha1', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha1', None, tag_filter )
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'sha1', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha1', None, tag_filter )
         
         run_test( source, expected_data )
         
@@ -388,7 +389,7 @@ class TestMigration( unittest.TestCase ):
         
         expected_data = [ ( self._sha256_to_sha1[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in hashes ]
         
-        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'sha1', hashes, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha1', hashes, tag_filter )
         
         run_test( source, expected_data )
         
@@ -399,14 +400,14 @@ class TestMigration( unittest.TestCase ):
         tag_filter.SetRule( '', HC.FILTER_WHITELIST )
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
-        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'md5', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, md5_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'md5', None, tag_filter )
         
         expected_data = [ ( self._sha256_to_md5[ hash ], tag_filter.Filter( tags ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         expected_data = [ ( hash, tags ) for ( hash, tags ) in expected_data if len( tags ) > 0 ]
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter )
+        source = ClientMigration.MigrationSourceHTA( self, sha256_hta_path, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter )
         
         expected_data = [ ( hash, tag_filter.Filter( tags ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         expected_data = [ ( hash, tags ) for ( hash, tags ) in expected_data if len( tags ) > 0 ]
@@ -477,25 +478,25 @@ class TestMigration( unittest.TestCase ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = list( self._hashes_to_current_tags.items() )
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = list( self._hashes_to_current_tags.items() )
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, CC.LOCAL_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
@@ -504,13 +505,13 @@ class TestMigration( unittest.TestCase ):
         # not all hashes, since hash type lookup only available for imported files
         hashes = random.sample( list( self._my_files_sha256 ), 25 )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', hashes, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', hashes, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in hashes ]
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', hashes, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', hashes, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in hashes ]
         
@@ -521,11 +522,11 @@ class TestMigration( unittest.TestCase ):
         # not all hashes, since hash type lookup only available for imported files
         expected_data = [ ( self._sha256_to_sha1[ hash ], tags ) for ( hash, tags ) in self._hashes_to_current_tags.items() if hash in self._my_files_sha256 ]
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha1', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha1', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, CC.COMBINED_FILE_SERVICE_KEY, 'sha1', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha1', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         run_test( source, expected_data )
         
@@ -536,14 +537,14 @@ class TestMigration( unittest.TestCase ):
         tag_filter.SetRule( '', HC.FILTER_WHITELIST )
         tag_filter.SetRule( ':', HC.FILTER_BLACKLIST )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tag_filter.Filter( tags ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         expected_data = [ ( hash, tags ) for ( hash, tags ) in expected_data if len( tags ) > 0 ]
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, ) )
         
         expected_data = [ ( hash, tag_filter.Filter( tags ) ) for ( hash, tags ) in self._hashes_to_current_tags.items() ]
         expected_data = [ ( hash, tags ) for ( hash, tags ) in expected_data if len( tags ) > 0 ]
@@ -554,19 +555,19 @@ class TestMigration( unittest.TestCase ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_DELETED, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_DELETED, ) )
         
         expected_data = list( self._hashes_to_deleted_tags.items() )
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_DELETED, ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_DELETED, ) )
         
         expected_data = list( self._hashes_to_deleted_tags.items() )
         
         run_test( source, expected_data )
         
-        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, CC.COMBINED_FILE_SERVICE_KEY, 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
+        source = ClientMigration.MigrationSourceTagServiceMappings( self, tag_repo_service_key, ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY ), 'sha256', None, tag_filter, ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING ) )
         
         expected_data = collections.defaultdict( set )
         

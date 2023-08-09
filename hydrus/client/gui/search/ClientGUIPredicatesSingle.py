@@ -1498,7 +1498,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
             
         except Exception as e:
             
-            raise Exception( 'Cannot compile that regex: {}'.format( e ) )
+            raise HydrusExceptions.VetoException( 'Cannot compile that regex: {}'.format( e ) )
             
         
     

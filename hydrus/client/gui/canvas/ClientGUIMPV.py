@@ -6,6 +6,7 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
@@ -675,7 +676,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             elif mime == HC.IMAGE_APNG:
                 
-                self._times_to_play_animation = HydrusVideoHandling.GetAPNGTimesToPlay( path )
+                self._times_to_play_animation = HydrusAnimationHandling.GetAPNGTimesToPlay( path )
                 
             
         

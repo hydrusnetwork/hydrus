@@ -41,6 +41,7 @@ except:
     HEIF_OK = False
     
 
+from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -96,6 +97,7 @@ warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )
 
 # PIL moaning about weirdo TIFFs
 warnings.filterwarnings( "ignore", "(Possibly )?corrupt EXIF data", UserWarning )
+warnings.filterwarnings( "ignore", "Metadata Warning", UserWarning )
 
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
@@ -134,6 +136,7 @@ except:
     
     OPENCV_OK = False
     
+
 def MakeClipRectFit( image_resolution, clip_rect ):
     
     ( im_width, im_height ) = image_resolution
@@ -662,6 +665,11 @@ def GetImageProperties( path, mime ):
             
         
     
+    if mime == HC.IMAGE_APNG:
+        
+        ( duration, num_frames ) = HydrusAnimationHandling.GetAPNGDurationAndNumFrames( path )
+        
+    
     width = max( width, 1 )
     height = max( height, 1 )
     
@@ -836,6 +844,7 @@ def GetResolutionNumPy( numpy_image ):
     
     return ( image_width, image_height )
     
+
 def GetResolutionAndNumFramesPIL( path, mime ):
     
     pil_image = GeneratePILImage( path, dequantize = False ) 

@@ -175,6 +175,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
         
+        self._dictionary[ 'booleans' ][ 'database_deferred_delete_maintenance_during_idle' ] = True
+        self._dictionary[ 'booleans' ][ 'database_deferred_delete_maintenance_during_active' ] = True
+        
         self._dictionary[ 'booleans' ][ 'file_maintenance_during_idle' ] = True
         self._dictionary[ 'booleans' ][ 'file_maintenance_during_active' ] = True
         

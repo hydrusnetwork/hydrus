@@ -53,6 +53,7 @@ from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
+from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import FileImportOptions
@@ -142,7 +143,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_DATABASE_MIGRATION )
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DATABASE_MIGRATION )
         
         menu_items.append( ( 'normal', 'open the html migration help', 'Open the help page for database migration in your web browser.', page_func ) )
         
@@ -1045,7 +1046,9 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     HTA_SERVICE_KEY = b'hydrus tag archive'
     HTPA_SERVICE_KEY = b'hydrus tag pair archive'
-    HASHES_SERVICE_KEY = b'hashes'
+    
+    LOCATION_CONTEXT_LOCATION = 0
+    HASHES_LOCATION = 1
     
     def __init__( self, parent, service_key, hashes = None ):
         
@@ -1087,7 +1090,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._migration_source = ClientGUICommon.BetterChoice( self._migration_panel )
         
-        self._migration_source_archive_path_button = ClientGUICommon.BetterButton( self._migration_panel, 'no path set', self._SetSourceArchivePath )
+        location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         self._migration_source_hash_type_st = ClientGUICommon.BetterStaticText( self._migration_panel, 'hash type: unknown' )
         
@@ -1097,30 +1100,23 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._migration_source_content_status_filter.setToolTip( 'This filters which status of tags will be migrated.' )
         
-        self._migration_source_file_filter = ClientGUICommon.BetterChoice( self._migration_panel )
+        self._migration_source_file_filtering_type = ClientGUICommon.BetterChoice( self._migration_panel )
         
-        source_file_service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
-        source_file_service_keys.extend( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
-        source_file_service_keys.extend( HG.client_controller.services_manager.GetServiceKeys( ( HC.IPFS, ) ) )
-        source_file_service_keys.append( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
-        source_file_service_keys.append( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-        source_file_service_keys.append( CC.COMBINED_FILE_SERVICE_KEY )
-        
-        for service_key in source_file_service_keys:
-            
-            service = HG.client_controller.services_manager.GetService( service_key )
-            
-            self._migration_source_file_filter.addItem( service.GetName(), service_key )
-            
+        self._migration_source_file_filtering_type.addItem( 'file domain', self.LOCATION_CONTEXT_LOCATION )
         
         if self._hashes is not None:
             
-            self._migration_source_file_filter.addItem( '{} files'.format( HydrusData.ToHumanInt( len( self._hashes ) ) ), self.HASHES_SERVICE_KEY )
+            self._migration_source_file_filtering_type.addItem( '{} files'.format( HydrusData.ToHumanInt( len( self._hashes ) ) ), self.HASHES_LOCATION )
             
-            self._migration_source_file_filter.SetValue( self.HASHES_SERVICE_KEY )
+            self._migration_source_file_filtering_type.SetValue( self.HASHES_LOCATION )
             
         
-        self._migration_source_file_filter.setToolTip( 'Tags that pass this filter will be applied to the destination with the chosen action.' )
+        self._migration_source_file_filtering_type.setToolTip( 'Choose whether to do this operation for the files you launched the dialog on, or a whole file domain.' )
+        
+        self._migration_source_location_context_button = ClientGUILocation.LocationSearchContextButton( self._migration_panel, location_context )
+        self._migration_source_location_context_button.setToolTip( 'Set which files should be eligible. This can get as complicated as you like!' )
+        
+        self._migration_source_archive_path_button = ClientGUICommon.BetterButton( self._migration_panel, 'no path set', self._SetSourceArchivePath )
         
         message = 'Tags that pass this filter will be applied to the destination with the chosen action.'
         message += os.linesep * 2
@@ -1169,7 +1165,8 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_left_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( file_left_vbox, self._migration_source_file_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( file_left_vbox, self._migration_source_file_filtering_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( file_left_vbox, self._migration_source_location_context_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( file_left_vbox, self._migration_source_left_tag_pair_filter, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         tag_right_vbox = QP.VBoxLayout()
@@ -1253,6 +1250,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source.activated.connect( self._UpdateMigrationControlsNewSource )
         self._migration_destination.activated.connect( self._UpdateMigrationControlsNewDestination )
         self._migration_source_content_status_filter.activated.connect( self._UpdateMigrationControlsActions )
+        self._migration_source_file_filtering_type.activated.connect( self._UpdateMigrationControlsFileFilter )
         
     
     def _MigrationGo( self ):
@@ -1306,28 +1304,27 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 destination = ClientMigration.MigrationDestinationTagServiceMappings( HG.client_controller, destination_service_key, content_action )
                 
             
-            file_service_key = self._migration_source_file_filter.GetValue()
+            file_filtering_type = self._migration_source_file_filtering_type.GetValue()
             
-            if file_service_key == self.HASHES_SERVICE_KEY:
+            if file_filtering_type == self.HASHES_LOCATION:
                 
-                file_service_key = CC.COMBINED_FILE_SERVICE_KEY
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
                 hashes = self._hashes
                 
                 extra_info = ' for {} files'.format( HydrusData.ToHumanInt( len( hashes ) ) )
                 
             else:
                 
+                location_context = self._migration_source_location_context_button.GetValue()
                 hashes = None
                 
-                if file_service_key == CC.COMBINED_FILE_SERVICE_KEY:
+                if location_context.IsAllKnownFiles():
                     
                     extra_info = ' for all known files'
                     
                 else:
                     
-                    file_service_name = HG.client_controller.services_manager.GetName( file_service_key )
-                    
-                    extra_info = ' for files in "{}"'.format( file_service_name )
+                    extra_info = ' for files in "{}"'.format( location_context.ToString( HG.client_controller.services_manager.GetName ) )
                     
                 
             
@@ -1344,11 +1341,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     return
                     
                 
-                source = ClientMigration.MigrationSourceHTA( HG.client_controller, self._source_archive_path, file_service_key, desired_hash_type, hashes, tag_filter )
+                source = ClientMigration.MigrationSourceHTA( HG.client_controller, self._source_archive_path, location_context, desired_hash_type, hashes, tag_filter )
                 
             else:
                 
-                source = ClientMigration.MigrationSourceTagServiceMappings( HG.client_controller, source_service_key, file_service_key, desired_hash_type, hashes, tag_filter, content_statuses )
+                source = ClientMigration.MigrationSourceTagServiceMappings( HG.client_controller, source_service_key, location_context, desired_hash_type, hashes, tag_filter, content_statuses )
                 
             
         else:
@@ -1677,6 +1674,12 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _UpdateMigrationControlsFileFilter( self ):
+        
+        self._migration_source_file_filtering_type.setVisible( self._migration_source_file_filtering_type.count() > 1 )
+        self._migration_source_location_context_button.setVisible( self._migration_source_file_filtering_type.GetValue() == self.LOCATION_CONTEXT_LOCATION )
+        
+    
     def _UpdateMigrationControlsNewDestination( self ):
         
         destination = self._migration_destination.GetValue()
@@ -1785,18 +1788,19 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._migration_source.addItem( 'Hydrus Tag Archive', self.HTA_SERVICE_KEY )
             self._migration_destination.addItem( 'Hydrus Tag Archive', self.HTA_SERVICE_KEY )
-            
-            self._migration_source_file_filter.show()
             self._migration_source_tag_filter.show()
             self._migration_source_left_tag_pair_filter.hide()
             self._migration_source_right_tag_pair_filter.hide()
+            
+            self._UpdateMigrationControlsFileFilter()
             
         elif content_type in ( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_TYPE_TAG_PARENTS ):
             
             self._migration_source.addItem( 'Hydrus Tag Pair Archive', self.HTPA_SERVICE_KEY )
             self._migration_destination.addItem( 'Hydrus Tag Pair Archive', self.HTPA_SERVICE_KEY )
             
-            self._migration_source_file_filter.hide()
+            self._migration_source_file_filtering_type.hide()
+            self._migration_source_location_context_button.hide()
             self._migration_source_tag_filter.hide()
             self._migration_source_left_tag_pair_filter.show()
             self._migration_source_right_tag_pair_filter.show()
@@ -1821,7 +1825,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_ADDING_NEW_DOWNLOADERS )
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_ADDING_NEW_DOWNLOADERS )
         
         menu_items.append( ( 'normal', 'open the easy downloader import help', 'Open the help page for easily importing downloaders in your web browser.', page_func ) )
         
@@ -3886,7 +3890,7 @@ class ThreadsPanel( QW.QWidget ):
 
 class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, controller, deferred_delete_data ):
+    def __init__( self, parent, controller ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
@@ -3894,7 +3898,7 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_message = '''When large database objects are no longer needed, they are not deleted immediately. This is an evolving, in-work system.'''
+        info_message = '''When large database objects are no longer needed, they are not deleted immediately, but incrementally shrunk in the background over time. This is the queue of pending deferred delete database tables and approximate sizes.'''
         
         st = ClientGUICommon.BetterStaticText( self, label = info_message )
         
@@ -3902,19 +3906,16 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         
         deferred_delete_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._vacuum_listctrl = ClientGUIListCtrl.BetterListCtrl( deferred_delete_listctrl_panel, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, 24, self._ConvertRowToListCtrlTuples )
+        self._names_to_num_rows = {}
         
-        deferred_delete_listctrl_panel.SetListCtrl( self._vacuum_listctrl )
+        self._deferred_delete_listctrl = ClientGUIListCtrl.BetterListCtrl( deferred_delete_listctrl_panel, CGLC.COLUMN_LIST_DEFERRED_DELETE_TABLE_DATA.ID, 24, self._ConvertRowToListCtrlTuples )
         
-        # TODO: refresh button?
+        deferred_delete_listctrl_panel.SetListCtrl( self._deferred_delete_listctrl )
         
-        deferred_delete_listctrl_panel.AddButton( 'work hard now', self._DoWorkNow, enabled_check_func = self._CanWork )
+        self._refresh_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().refresh, self._RefreshData )
+        self._work_hard_button = ClientGUICommon.BetterButton( self,'work hard now', self._FlipWorkingHard )
         
         #
-        
-        self._vacuum_listctrl.SetData( deferred_delete_data )
-        
-        self._vacuum_listctrl.Sort()
         
         #
         
@@ -3923,19 +3924,28 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, deferred_delete_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._refresh_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._work_hard_button, CC.FLAGS_CENTER )
+        
+        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
+        
         self.widget().setLayout( vbox )
         
+        self._updater = self._InitialiseUpdater()
+        
+        self._RefreshData()
+        self._UpdateButtonLabel()
+        
+        self._controller.sub( self, 'NotifyRefresh', 'notify_deferred_delete_database_maintenance_work_complete' )
+        self._controller.sub( self, 'NotifyStateChange', 'notify_deferred_delete_database_maintenance_state_change' )
+        self._controller.sub( self, 'NotifyRefresh', 'notify_deferred_delete_database_maintenance_new_work' )
+        
     
-    def _CanWork( self ):
+    def _ConvertRowToListCtrlTuples( self, name ):
         
-        # TODO: anything in the list?
-        
-        return False
-        
-    
-    def _ConvertRowToListCtrlTuples( self, row ):
-        
-        ( name, num_rows ) = row
+        num_rows = self._names_to_num_rows.get( name, None )
         
         sort_name = name
         pretty_name = name
@@ -3957,24 +3967,84 @@ class ReviewDeferredDeleteTableData( ClientGUIScrolledPanels.ReviewPanel ):
         return ( display_tuple, sort_tuple )
         
     
-    def _DoWorkNow( self ):
+    def _FlipWorkingHard( self ):
         
-        # TODO: wake up the maintenance lad and tell it to burn time
+        self._controller.database_maintenance_manager.FlipWorkingHard()
         
-        # switch button to 'slow down'
-        
-        pass
+        self._UpdateButtonLabel()
         
     
-    def _GetVacuumTimeEstimate( self, db_size ):
+    def _InitialiseUpdater( self ) -> ClientGUIAsync.AsyncQtUpdater:
         
-        from hydrus.core import HydrusDB
+        def loading_callable():
+            
+            self._refresh_button.setEnabled( False )
+            
         
-        vacuum_time_estimate = HydrusDB.GetApproxVacuumDuration( db_size )
+        def work_callable( args ):
+            
+            deferred_delete_data = self._controller.Read( 'deferred_delete_data' )
+            
+            return deferred_delete_data
+            
         
-        pretty_vacuum_time_estimate = '{} to {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate / 40 ), HydrusTime.TimeDeltaToPrettyTimeDelta( vacuum_time_estimate ) )
+        def publish_callable( deferred_delete_data ):
+            
+            self._names_to_num_rows = dict( deferred_delete_data )
+            
+            self._deferred_delete_listctrl.SetData( list( self._names_to_num_rows.keys() ) )
+            
+            self._deferred_delete_listctrl.Sort()
+            
+            self._refresh_button.setEnabled( True )
+            
+            self._UpdateButtonLabel()
+            
         
-        return ( vacuum_time_estimate, pretty_vacuum_time_estimate )
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
+    def _RefreshData( self ):
+        
+        self._updater.update()
+        
+    
+    def _UpdateButtonLabel( self ):
+        
+        if self._controller.database_maintenance_manager.IsWorkingHard():
+            
+            label = 'slow down'
+            enabled = True
+            
+        else:
+            
+            work_to_do = len( self._deferred_delete_listctrl.GetData() ) > 0
+            
+            if work_to_do:
+                
+                label = 'work hard'
+                
+            else:
+                
+                label = 'all work done!'
+                
+            
+            enabled = work_to_do
+            
+        
+        self._work_hard_button.setText( label )
+        
+        self._work_hard_button.setEnabled( enabled )
+        
+    
+    def NotifyRefresh( self ):
+        
+        self._RefreshData()
+        
+    
+    def NotifyStateChange( self ):
+        
+        self._UpdateButtonLabel()
         
     
 

@@ -479,7 +479,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         menu_items = []
         
-        page_func = HydrusData.Call( ClientPaths.OpenDocumentation, HC.DOCUMENTATION_DUPLICATES )
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_DUPLICATES )
         
         menu_items.append( ( 'normal', 'open the html duplicates help', 'Open the help page for duplicates processing in your web browser.', page_func ) )
         

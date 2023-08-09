@@ -29,6 +29,7 @@ from hydrus.core.networking import HydrusNetworking
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons
+from hydrus.client import ClientDBMaintenanceManager
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDownloading
 from hydrus.client import ClientFiles
@@ -353,6 +354,7 @@ class Controller( HydrusController.HydrusController ):
     
     def _ShutdownManagers( self ):
         
+        self.database_maintenance_manager.Shutdown()
         self.files_maintenance_manager.Shutdown()
         
         self.quick_download_manager.Shutdown()
@@ -1308,6 +1310,10 @@ class Controller( HydrusController.HydrusController ):
         # ShowText will now popup as a message, as popup message manager has overwritten the hooks
         
         HydrusController.HydrusController.InitView( self )
+        
+        self.database_maintenance_manager = ClientDBMaintenanceManager.DatabaseMaintenanceManager( self )
+        
+        self.database_maintenance_manager.Start()
         
         self._service_keys_to_connected_ports = {}
         

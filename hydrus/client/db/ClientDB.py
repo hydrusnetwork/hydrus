@@ -1284,7 +1284,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._Execute( 'CREATE TABLE IF NOT EXISTS recent_tags ( service_id INTEGER, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id ) );' )
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS remote_thumbnails ( service_id INTEGER, hash_id INTEGER, PRIMARY KEY( service_id, hash_id ) );' )
+        self._Execute( 'CREATE TABLE IF NOT EXISTS remote_thumbnails ( service_id INTEGER, hash_id INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
         
         self._Execute( 'CREATE TABLE IF NOT EXISTS service_info ( service_id INTEGER, info_type INTEGER, info INTEGER, PRIMARY KEY ( service_id, info_type ) );' )
         
@@ -4591,7 +4591,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _LoadModules( self ):
         
-        self.modules_db_maintenance = ClientDBMaintenance.ClientDBMaintenance( self._c, self._db_dir, self._db_filenames )
+        self.modules_db_maintenance = ClientDBMaintenance.ClientDBMaintenance( self._c, self._db_dir, self._db_filenames, self._cursor_transaction_wrapper )
         
         self._modules.append( self.modules_db_maintenance )
         
@@ -4832,16 +4832,15 @@ class DB( HydrusDB.HydrusDB ):
         self._Execute( 'DROP TABLE {};'.format( database_temp_job_name ) )
         
     
-    def _MigrationGetMappings( self, database_temp_job_name, file_service_key, tag_service_key, hash_type, tag_filter, content_statuses ):
+    def _MigrationGetMappings( self, database_temp_job_name, location_context: ClientLocation.LocationContext, tag_service_key, hash_type, tag_filter, content_statuses ):
         
         time_started_precise = HydrusTime.GetNowPrecise()
         
         data = []
         
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
         tag_service_id = self.modules_services.GetServiceId( tag_service_key )
         
-        statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNames( file_service_id, tag_service_id )
+        statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNamesFromLocationContext( location_context, tag_service_id )
         
         select_queries = []
         
@@ -4955,9 +4954,7 @@ class DB( HydrusDB.HydrusDB ):
         return data
         
     
-    def _MigrationStartMappingsJob( self, database_temp_job_name, file_service_key, tag_service_key, hashes, content_statuses ):
-        
-        file_service_id = self.modules_services.GetServiceId( file_service_key )
+    def _MigrationStartMappingsJob( self, database_temp_job_name, location_context: ClientLocation.LocationContext, tag_service_key, hashes, content_statuses ):
         
         self._Execute( 'CREATE TABLE IF NOT EXISTS durable_temp.{} ( hash_id INTEGER PRIMARY KEY );'.format( database_temp_job_name ) )
         
@@ -4971,11 +4968,9 @@ class DB( HydrusDB.HydrusDB ):
             
             tag_service_id = self.modules_services.GetServiceId( tag_service_key )
             
-            statuses_to_table_names = {}
-            
             use_hashes_table = False
             
-            if file_service_id == self.modules_services.combined_file_service_id:
+            if location_context.IsAllKnownFiles():
                 
                 # if our tag service is the biggest, and if it basically accounts for all the hashes we know about, it is much faster to just use the hashes table
                 
@@ -5031,18 +5026,36 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNames( file_service_id, tag_service_id )
-                
                 select_subqueries = []
                 
-                for content_status in content_statuses:
+                if location_context.IsOneDomain() and location_context.IncludesCurrent():
                     
-                    table_name = statuses_to_table_names[ content_status ]
+                    # we need this to be cross referenced
+                    # we want to use the mappings for quick hash fetch, but we have to be careful we only do it on simple 'includes current' since otherwise we get an umbrella domain
+                    statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNamesFromLocationContext( location_context, tag_service_id )
                     
-                    select_subquery = 'SELECT DISTINCT hash_id FROM {}'.format( table_name )
+                    for content_status in content_statuses:
+                        
+                        table_name = statuses_to_table_names[ content_status ]
+                        
+                        select_subquery = f'SELECT DISTINCT hash_id FROM {table_name}'
+                        
+                        select_subqueries.append( select_subquery )
+                        
                     
-                    select_subqueries.append( select_subquery )
+                else:
                     
+                    # ok this location context is more complicated, let's go through each actual file table and pull hashes, even if those files have no tags
+                    db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+                    
+                    for table_name in db_location_context.GetMultipleFilesTableNames():
+                        
+                        select_subquery = f'SELECT hash_id FROM {table_name}'
+                        
+                        select_subqueries.append( select_subquery )
+                        
+                    
+                
                 
             
             for select_subquery in select_subqueries:
@@ -9620,6 +9633,42 @@ class DB( HydrusDB.HydrusDB ):
             self._Execute( 'CREATE TABLE IF NOT EXISTS main.deferred_delete_tables ( name TEXT, num_rows INTEGER );' )
             
         
+        if version == 537:
+            
+            result = self._Execute( 'SELECT 1 FROM deferred_delete_tables;' ).fetchone()
+            
+            if result is not None:
+                
+                message = 'Hey, you may have seen a warning about missing caches when you updated. There is nothing to worry about, everything is fine--I am just cleaning up some of my own mess. Sorry if it took a while to work!'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            try:
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.VIDEO_MKV, ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.IMAGE_TIFF, ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some metadata scanning failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10114,6 +10163,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'dirty_services': self._SaveDirtyServices( *args, **kwargs )
         elif action == 'dissolve_alternates_group': self.modules_files_duplicates.DissolveAlternatesGroupIdFromHashes( *args, **kwargs )
         elif action == 'dissolve_duplicates_group': self.modules_files_duplicates.DissolveMediaIdFromHashes( *args, **kwargs )
+        elif action == 'do_deferred_table_delete_work': result = self.modules_db_maintenance.DoDeferredDeleteTablesWork( *args, **kwargs )
         elif action == 'duplicate_pair_status': self._DuplicatesSetDuplicatePairStatus( *args, **kwargs )
         elif action == 'duplicate_set_king': self.modules_files_duplicates.SetKingFromHash( *args, **kwargs )
         elif action == 'file_maintenance_add_jobs': self.modules_files_maintenance_queue.AddJobs( *args, **kwargs )

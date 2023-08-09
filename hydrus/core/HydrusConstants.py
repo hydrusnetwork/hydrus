@@ -100,7 +100,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 537
+SOFTWARE_VERSION = 538
 CLIENT_API_VERSION = 49
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -818,6 +818,12 @@ ANIMATIONS = [
     IMAGE_AVIF_SEQUENCE,
 ]
 
+HEIF_TYPE_SEQUENCES = [
+    IMAGE_HEIF_SEQUENCE,
+    IMAGE_HEIC_SEQUENCE,
+    IMAGE_AVIF_SEQUENCE
+]
+
 AUDIO = [
     AUDIO_MP3,
     AUDIO_OGG,
@@ -884,12 +890,15 @@ for ( general_mime_type, mimes_in_type ) in general_mimetypes_to_mime_groups.ite
         
         mimes_to_general_mimetypes[ mime ] = general_mime_type
         
+    
+
+# AVIF sequence is not here since it doesn't rely on PIL
 PIL_HEIF_MIMES = {
     IMAGE_HEIF,
     IMAGE_HEIF_SEQUENCE,
     IMAGE_HEIC,
     IMAGE_HEIC_SEQUENCE,
-    IMAGE_AVIF,
+    IMAGE_AVIF
 }
 
 MIMES_THAT_DEFINITELY_HAVE_AUDIO = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) )
@@ -1253,10 +1262,8 @@ url_type_string_lookup = {
     URL_TYPE_SUB_GALLERY : 'sub-gallery url (is queued even if creator found no post/file urls)'
 }
 
-
-
 REMOTE_HELP = "https://hydrusnetwork.github.io/hydrus"
-    
+
 DOCUMENTATION_INDEX = "index.html"
 DOCUMENTATION_CHANGELOG = f"changelog.html#version_{SOFTWARE_VERSION}"
 DOCUMENTATION_DOWNLOADER_GUGS = "downloader_gugs.html"
@@ -1267,14 +1274,13 @@ DOCUMENTATION_GETTING_STARTED_SUBSCRIPTIONS = 'getting_started_subscriptions.htm
 DOCUMENTATION_DATABASE_MIGRATION = 'database_migration.html'
 DOCUMENTATION_DUPLICATES = 'duplicates.html'
 DOCUMENTATION_DOWNLOADER_SHARING = 'downloader_sharing.html'
-DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS__PAGE_PARSERS = 'downloader_parsers_page_parsers.html#page_parsers'
-DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS__CONTENT_PARSERS = 'downloader_parsers_content_parsers.html#content_parsers'
-DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__COMPOUND_FORMULA = 'downloader_parsers_formulae.html#compound_formula'
-DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__CONTEXT_VARIABLE_FORMULA = 'downloader_parsers_formulae.html#context_variable_formula'
-DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__HTML_FORMULA = 'downloader_parsers_formulae.html#html_formula'
-DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE__JSON_FORMULA = 'downloader_parsers_formulae.html#json_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_PAGE_PARSERS_PAGE_PARSERS = 'downloader_parsers_page_parsers.html#page_parsers'
+DOCUMENTATION_DOWNLOADER_PARSERS_CONTENT_PARSERS_CONTENT_PARSERS = 'downloader_parsers_content_parsers.html#content_parsers'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_COMPOUND_FORMULA = 'downloader_parsers_formulae.html#compound_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_CONTEXT_VARIABLE_FORMULA = 'downloader_parsers_formulae.html#context_variable_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_HTML_FORMULA = 'downloader_parsers_formulae.html#html_formula'
+DOCUMENTATION_DOWNLOADER_PARSERS_FORMULAE_JSON_FORMULA = 'downloader_parsers_formulae.html#json_formula'
 DOCUMENTATION_ABOUT_DOCS = "about_docs.html"
-
 
 # default options
 
@@ -1287,6 +1293,7 @@ def construct_python_tuple( self, node ):
     
     return tuple( self.construct_sequence( node ) )
     
+
 def represent_python_tuple( self, data ):
     
     return self.represent_sequence( 'tag:yaml.org,2002:python/tuple', data )
