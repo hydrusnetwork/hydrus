@@ -70,6 +70,8 @@ def ConvertPixelsToTextWidth( window, pixels, round_down = False ) -> int:
     
 def ConvertQtImageToNumPy( qt_image: QG.QImage ):
     
+    #TODO: Support other QImage formats like QImage.Format_ARGB32
+    
     width = qt_image.width()
     height = qt_image.height()
     

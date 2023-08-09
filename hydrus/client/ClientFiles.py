@@ -22,6 +22,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSVGHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
+from hydrus.client import ClientPDFHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
 from hydrus.client import ClientThreading
 from hydrus.client.metadata import ClientTags
 
