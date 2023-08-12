@@ -3,6 +3,7 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 
+from hydrus.client import ClientLocation
 from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
@@ -378,6 +379,28 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
             
         
         return statuses_to_table_names
+        
+    
+    def GetFastestStorageMappingTableNamesFromLocationContext( self, location_context: ClientLocation.LocationContext, tag_service_id: int ):
+        
+        # TODO: this can probably work better, e.g. if we have multiple local domains we can return all local files or whatever
+        
+        if location_context.IncludesDeleted() and not location_context.IncludesCurrent():
+            
+            known_fast_covering_file_service_id = self.modules_services.combined_deleted_file_service_id
+            
+        elif location_context.IsOneDomain():
+            
+            file_service_key = list( location_context.current_service_keys )[0]
+            
+            known_fast_covering_file_service_id = self.modules_services.GetServiceId( file_service_key )
+            
+        else:
+            
+            known_fast_covering_file_service_id = self.modules_services.combined_file_service_id 
+            
+        
+        return self.GetFastestStorageMappingTableNames( known_fast_covering_file_service_id, tag_service_id )
         
     
     def GetPendingMappingsCount( self, service_id: int ) -> int:

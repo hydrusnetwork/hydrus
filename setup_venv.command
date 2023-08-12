@@ -33,11 +33,13 @@ if [ "$install_type" = "s" ]; then
 elif [ "$install_type" = "a" ]; then
 	echo
 	echo "If you are <= 10.13 (High Sierra), choose 5."
-	echo "Do you want Qt(5), Qt(6), or (t)est? "
+	echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, or (t)est? "
 	read -r qt
 	if [ "$qt" = "5" ]; then
 		:
 	elif [ "$qt" = "6" ]; then
+		:
+	elif [ "$qt" = "o" ]; then
 		:
 	elif [ "$qt" = "t" ]; then
 		:
@@ -106,6 +108,8 @@ elif [ "$install_type" = "a" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_qt5.txt
 	elif [ "$qt" = "6" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_qt6.txt
+	elif [ "$qt" = "o" ]; then
+		python -m pip install -r static/requirements/advanced/requirements_qt6_older.txt
 	elif [ "$qt" = "t" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_qt6_test.txt
 	fi

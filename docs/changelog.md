@@ -7,6 +7,56 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 538](https://github.com/hydrusnetwork/hydrus/releases/tag/v538)
+
+### important note on index regeneration
+
+* **if you get a note on update about missing indices that need to be regenerated, don't panic! everything is fine, nothing to worry about, let it do its work**
+
+### new libraries today
+
+* **if you run from source, I recommend you rebuild your venv today. the setup script points at new versions of Qt, OpenCV, and a HEIF module that adds new filetype support**
+
+### new Qt and OpenCV
+
+* all release builds and normal source installations move up to PySide6 (Qt) 6.5.2 today. we've done a good bit of testing in different situations, and it seems to be a good and reliable upgrade from 6.4.1, which has given us a mix of annoying trouble at times, like mismatched UI scaling and mpv-related flickering
+* let me know if you have any trouble with the overall feel of the program, particularly if you are running on an older or un-updated version of your OS
+* the last version of Qt that was generally without caveats was 6.3.1. if you do have trouble with today's release (I suspect old and un-updated OSes, or source users on older Python), one option is to move to running from source and using this older version, which I have updated my setup_venv scripts to offer as a stable 'Qt6 (o)lder' option
+* similarly, we are moving from OpenCV (an image library) 4.5.5.64 to 4.7.0.72. we've tested this in several rounds of future-builds and had no reports of trouble, and this also improves some build compatibility with FFMPEG 5.0 (issue #1419)
+* the 'test' version of Qt stays at 6.5.2 for now, since this is the latest version
+* the 'old' OpenCV compatability version remains at 4.5.3.56, the new 'test' version is now 4.8.0.74
+
+### deferred delete system
+
+* the first full version of the deferred delete system is complete. your no-longer-needed tables lying around after a big operation like a PTR delete/reset will now be shrunk in the background until they are small enough to delete in trivial time
+* the menu entry under _database->database maintenance_ has a new submenu for the job and 'work in idle/normal' time checkboxes just like file maintenance
+* the new review window UI is now fleshed out. it can refresh itself, and automitically does so on changes, and the 'work hard' button functions
+* I discovered a bug in last week's code that stopped some indices from being recreated in certain regeneration jobs. if you did a 'regenerate tag text search cache' or similar operation last week, you'll encounter the above 'need to regen some indices' note. no worries, it'll all fix itself, and, if you noticed any slowdown, the affected system should work at the proper speed again
+
+### user contributions
+
+* thanks to a user, we now have full support for HEIF, HEIC, and AVIF image files. they will import and render just like any other image. furthermore, we have support for HEIF, HEIC, and AVIF 'sequences', which are basically like an animated gif or apng and are under the 'animations' filetype category (and they seem to play in mpv great! although I don't have an example HEIC sequence to test with, lol). all users who use the normal build will get this on update--anyone running from source will want to rebuild their venv this week to get the functionality. you can double-check _help->about_ to see if you have the required 'pillow-heif' library
+* thanks to a user, the various help links in the program now redirect to the online help (and/or direct to a guide to build the local help) if the local help is missing (fixes #1360)
+* thanks to a user, an addititonal final network transfer size check is now in place. if a server says it will deliver x bytes and actually delivers y, the job now raises an error. this can happen with various twitter solutions, where vid downloads will sometimes stealth-stop-working, leaving a valid but truncated mp4. fingers crossed this will now catch that situation and trigger a re-attempt
+* thanks to a user, fixed TIFF files not showing EXIF correctly. just to be safe, all tiffs will be scheduled for a 'has EXIF?' rescan on update, and I silenced another bit of tiff-related PIL warning-logspam
+* mkv files with AV1 video (and no/worbis/opus audio) are now correctly identified as webms. all mkvs will be scheduled for a metadata rescan on update
+
+### misc
+
+* when transferring mappings, _tags->migrate tags_ now supports a full location context file filter (like the file domain button you see in an autocomplete). previously it was just a list of single locations to pick from, but now, if you want to grab tags for all files deleted from x, or all files in either y or z, it is simple to set up. relatedly, the 'multiple/deleted' dialog picker launched from that menu now sizes itself to try and fit all its stuff in, rather than always being scrolled
+* fixed a bug that meant you could ok the 'edit predicate' dialog despite the regex string being invalid when editing an existing 'system:known url=(regex)' predicate. the 'check valid' test is now caught correctly and cancels dialog ok, rather than escalating to the popup message catcher
+* fixed a bug in table analyze code that was causing empty tables to be unintentionally re-analysed over good existing data
+* a file_system_type-checking call that is used in file-export is now cached. previously it was hit for every pending file path to be calculated, and on systems with a 50ms response time to this call (I presume because of NAS/RAID-style gubbins), it meant opening the file export window could take minutes (issue #1413)
+* APNG metadata parsing no longer requires FFMPEG, greatly accelerating their import
+* I think I fixed the root cause of a weird bug we encountered and hacked around a couple weeks ago, where if a certain sort of downloaded page produced nothing via its parser, and it was detected initially as actually a valid file to import, but then that file import failed (e.g. ffmpeg went full bananas and thought a json file was an mp4), the import attempt would loop. the error handling now catches the unusual import failure gracefully, and the import object should be set to 'skipped' appropriately
+* fixed a harmless but annoying desync error popup that sometimes occurs when deleting a repository service
+
+### misc boring notes
+
+* to deal with the deferred delete system clashing with SQLite not allowing index renames, I moved the database index testing and creation system to a dynamic name format. it works but is a little hacky, so maybe we'll move to direct sqlite_master interrogation in future
+* unfortunately, the table shrink method I had planned to employ was not feasible (I wanted to do 'delete n rows', but it turns out that isn't compiled by default in all normal SQLite releases wew). I then experimented with several other strategies and settled on the KISS of 'select n, delete these n' in two queries, which worked out far better than my cleverer attempts anyway. the thing doesn't use much CPU time, and it cautiously autothrottles itself, and I've tested it in a bunch of situations, and I'm super happy with the performance, but if you do happen to get noticeable bumps of lag, most likely in PTR removal when the current_mappings giga-table is shrunk, turn off all database maintenance under the menu, for both idle and normal time, and let me know, and we'll figure it out
+* refactored APNG parsing code to the new 'HydrusAnimationHandling.py' and took out the ffmpeg code. now OpenCV/PIL figures out the resolution
+
 ## [Version 537](https://github.com/hydrusnetwork/hydrus/releases/tag/v537)
 
 ### new filetype selector
@@ -329,40 +379,3 @@ title: Changelog
 ### future build
 
 * to improve library update testing, I have set up a second, 'future' build that is the same as a normal release but uses newer library versions, for instance Python 3.10 from 3.9 and Qt 6.5.0 rather than 6.4.1. I am not sure how often I will be making this build--I don't want to spam, so I'm thinking once per month, but maybe we'll ultimately end up incorporating it into the main build and just kick it out every week--but please feel free to test them out as they do happen and let me know if you encounter any problems booting or with anything else. the idea here is to get more user situations, particularly older OSes, testing pending library updates so I can be more confident about pulling the trigger on moving up in the master build (the recent jump to Qt 6.4.1 caused several Win 10 users to have an annoying 2-second delay on opening any new search page, but 6.5.0 doesn't have this, so if you encountered this error, please try this build and let me know how it goes). the build is in the normal github releases stream, marked as a pre-release. v528-future is here: https://github.com/hydrusnetwork/hydrus/releases/tag/v528-future-1
-
-## [Version 528](https://github.com/hydrusnetwork/hydrus/releases/tag/v528)
-
-### faster file search cancelling
-
-* if you start a large file search and then update or otherwise cancel it, the existing ongoing search should stop a little faster now
-* all timestamp-based searches now cancel very quickly. if you do a bare 'all files imported in the last six months' search and then amend it with 'system:inbox', it should now update super fast
-* all note-based searches now cancel quickly, either num_notes or note_names
-* all rating-based searches now cancel quickly
-* all OR searches cancel faster
-* and, in all cases, the cancel tech works a little faster by skipping any remaining search more efficiently
-* relatedly, I upgraded how I do the query cancel tech here to be a bit easier to integrate, and I switched the 20-odd existing cancels over to it. I'd like to add more in future, so let me know what cancels slow!
-
-### system predicate parsing
-
-* the parser is more forgiving of colons after the basename, e.g. 'system:import time: since 2023-01-01' now parses ok
-* added 'since', 'before', 'around', and 'day'/month' variants to system datetime predicate parsing as more human analogues of the '>' etc... operators
-* you can now say 'imported', 'modified', 'last viewed', and 'archived' without the 'time' part ('system:modified before 2020-01-01')
-* also, 'system:archived' with a 'd' will now parse as 'system:archive'
-* you now can stick 'ago' ('system:imported 7 days ago') on the end of a timedelta time system pred and it should parse ok! this should fix the text that is copied to clipboard from timedelta system preds
-* the system predicate parser now handles 'file service' system preds when your given name doesn't match due to upper/lowercase, and more broadly when the service has upper case characters. some stages of parsing convert everything to lowercase, making this tricky, but in general it now does a sweep of what you entered and then a sweep that ignores case entirely. related pro-tip: do not give two services the same name but with different case
-
-### misc
-
-* you can now edit the default slideshow durations that show up in the media viewer right-click menu, under _options->media_. it is a bit hacky, but it works just like the custom zoom steps, with comma-separated floats
-* fixed 'system:num notes < x', which was not including noteless files (i.e. num_notes = 0) in the result
-* fixed a bug in _manage services_ when adding a local file service and then deleting it in the same dialog open. a test that checks if the thing is empty of files before the delete wasn't recognising it didn't exist yet
-* improved type checking when pasting timestamps in the datetime widget, I think it was breaking some (older?) versions of python
-
-### some more build stuff
-
-* fixed the macOS App, which was showing a 'no' symbol rather than launching due to one more thing that needed to be redirected from 'client' to 'hydrus_client' last week (issue #1367)
-* fixed a second problem with the macOS app (unlike PyInstaller, PyOxidizer needed the 'hydrus' source directory, so that change is reverted)
-* I believe I've also fixed the client launching for some versions of Python/PyQt6, which had trouble with the QMediaPlayer imports
-* cleaned up the PyInstall spec files a little more, removing some 'hidden-import' stuff from the pyinstaller spec files that was no longer used and pushing the server executables to the binaries section
-* added a short section to the Windows 'running from source' help regarding pinning a shortcut to a bat to Start--there's a neat way to do it, if Windows won't let you
-* updated a couple little more areas in the help for client->hydrus_client

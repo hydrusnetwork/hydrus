@@ -1032,6 +1032,32 @@ class LocationsManager( object ):
         return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._pending
         
     
+    def IsInLocationContext( self, location_context: ClientLocation.LocationContext ):
+        
+        if location_context.IsAllKnownFiles():
+            
+            return True
+            
+        
+        for current_service_key in location_context.current_service_keys:
+            
+            if current_service_key in self._current:
+                
+                return True
+                
+            
+        
+        for deleted_service_key in location_context.deleted_service_keys:
+            
+            if deleted_service_key in self._deleted:
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def IsLocal( self ):
         
         return CC.COMBINED_LOCAL_FILE_SERVICE_KEY in self._current

@@ -46,10 +46,11 @@ goto :parse_fail
 
 ECHO:
 ECHO If you are on Windows ^<=8.1, choose 5.
-SET /P qt=Do you want Qt(5), Qt(6), or (t)est? 
+SET /P qt=Do you want Qt(5), Qt(6), Qt6 (o)lder, or (t)est?
 
 IF "%qt%" == "5" goto :question_mpv
 IF "%qt%" == "6" goto :question_mpv
+IF "%qt%" == "o" goto :question_mpv
 IF "%qt%" == "t" goto :question_mpv
 goto :parse_fail
 
@@ -124,6 +125,7 @@ IF "%install_type%" == "a" (
 	
 	IF "%qt%" == "5" python -m pip install -r static\requirements\advanced\requirements_qt5.txt
 	IF "%qt%" == "6" python -m pip install -r static\requirements\advanced\requirements_qt6.txt
+	IF "%qt%" == "o" python -m pip install -r static\requirements\advanced\requirements_qt6_older.txt
 	IF "%qt%" == "t" python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
 	
 	IF "%mpv%" == "o" python -m pip install -r static\requirements\advanced\requirements_mpv_old.txt

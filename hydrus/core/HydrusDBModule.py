@@ -162,34 +162,6 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
             
         
     
-    def GetExpectedServiceIndexNames( self ) -> typing.Collection[ str ]:
-        
-        index_generation_dict = self._GetServicesIndexGenerationDict()
-        
-        expected_index_names = []
-        
-        for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ):
-            
-            expected_index_names.append( self._GenerateIndexName( table_name, columns ) )
-            
-        
-        return expected_index_names
-        
-    
-    def GetExpectedInitialIndexNames( self ) -> typing.Collection[ str ]:
-        
-        index_generation_dict = self._GetInitialIndexGenerationDict()
-        
-        expected_index_names = []
-        
-        for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ):
-            
-            expected_index_names.append( self._GenerateIndexName( table_name, columns ) )
-            
-        
-        return expected_index_names
-        
-    
     def GetExpectedServiceTableNames( self ) -> typing.Collection[ str ]:
         
         table_generation_dict = self._GetServicesTableGenerationDict()
@@ -270,7 +242,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         
         index_generation_dict = self._GetInitialIndexGenerationDict()
         
-        missing_index_rows = [ ( self._GenerateIndexName( table_name, columns ), table_name, columns, unique ) for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ) if version_added <= current_db_version and not self._IndexExists( table_name, columns ) ]
+        missing_index_rows = [ ( self._GenerateIdealIndexName( table_name, columns ), table_name, columns, unique ) for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ) if version_added <= current_db_version and not self._IdealIndexExists( table_name, columns ) ]
         
         if len( missing_index_rows ):
             
@@ -312,7 +284,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         
         index_generation_dict = self._GetServicesIndexGenerationDict()
         
-        missing_index_rows = [ ( self._GenerateIndexName( table_name, columns ), table_name, columns, unique ) for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ) if version_added <= current_db_version and not self._IndexExists( table_name, columns ) ]
+        missing_index_rows = [ ( self._GenerateIdealIndexName( table_name, columns ), table_name, columns, unique ) for ( table_name, columns, unique, version_added ) in self._FlattenIndexGenerationDict( index_generation_dict ) if version_added <= current_db_version and not self._IdealIndexExists( table_name, columns ) ]
         
         if len( missing_index_rows ):
             

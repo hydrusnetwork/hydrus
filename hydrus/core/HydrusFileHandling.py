@@ -1,6 +1,7 @@
 import hashlib
 import os
 
+from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusClipHandling
@@ -79,6 +80,21 @@ headers_and_mime.extend( [
     ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00' ), ), HC.APPLICATION_RAR ),
     ( ( ( 0, b'\x1f\x8b' ), ), HC.APPLICATION_GZIP ),
     ( ( ( 0, b'hydrus encrypted zip' ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( ( ( 4, b'ftypavif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypavis' ), ), HC.IMAGE_AVIF_SEQUENCE ),
+    ( ( ( 4, b'ftypmif1' ), ( 16, b'avif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypmif1' ), ( 20, b'avif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypmif1' ), ( 24, b'avif' ), ), HC.IMAGE_AVIF ),
+    ( ( ( 4, b'ftypheic' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftypheix' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftypheim' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftypheis' ), ), HC.IMAGE_HEIC ),
+    ( ( ( 4, b'ftyphevc' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftyphevx' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftyphevm' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftyphevs' ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( 4, b'ftypmif1' ), ), HC.IMAGE_HEIF ),
+    ( ( ( 4, b'ftypmsf1' ), ), HC.IMAGE_HEIF_SEQUENCE ),
     ( ( ( 4, b'ftypmp4' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypisom' ), ), HC.UNDETERMINED_MP4 ),
     ( ( ( 4, b'ftypM4V' ), ), HC.UNDETERMINED_MP4 ),
@@ -102,7 +118,7 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         target_resolution = ( 128, 128 )
         
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ): # not apng atm
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ): # not apng atm
         
         try:
             
@@ -340,6 +356,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             
         
     
+    if mime in HC.PIL_HEIF_MIMES and not HydrusImageHandling.HEIF_OK:
+        
+        raise HydrusExceptions.UnsupportedFileException( 'Sorry, you need the pillow-heif library to support this filetype ({})! Please rebuild your venv.'.format( HC.mime_string_lookup[ mime ] ) )
+        
+    
     width = None
     height = None
     duration = None
@@ -355,7 +376,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         has_audio = False
         
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON ):
+    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_APNG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ):
         
         ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
         
@@ -375,10 +396,6 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
-    elif mime == HC.IMAGE_APNG:
-        
-        ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGAPNGProperties( path )
-        
     elif mime == HC.APPLICATION_PDF:
         
         num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
@@ -387,7 +404,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( width, height ) = HydrusPSDHandling.GetPSDResolution( path )
         
-    elif mime in HC.VIDEO:
+    elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
@@ -427,10 +444,12 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     return ( size, mime, width, height, duration, num_frames, has_audio, num_words )
     
+
 def GetFileModifiedTimestamp( path ) -> int:
     
     return int( os.path.getmtime( path ) )
     
+
 def GetHashFromPath( path ):
     
     h = hashlib.sha256()
@@ -445,6 +464,7 @@ def GetHashFromPath( path ):
     
     return h.digest()
     
+
 def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     size = os.path.getsize( path )
@@ -482,12 +502,12 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     with open( path, 'rb' ) as f:
         
-        bit_to_check = f.read( 256 )
+        first_bytes_of_file = f.read( 256 )
         
     
     for ( offsets_and_headers, mime ) in headers_and_mime:
         
-        it_passes = False not in ( bit_to_check[ offset: ].startswith( header ) for ( offset, header ) in offsets_and_headers )
+        it_passes = False not in ( first_bytes_of_file[ offset: ].startswith( header ) for ( offset, header ) in offsets_and_headers )
         
         if it_passes:
             
@@ -509,7 +529,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 
             elif mime == HC.UNDETERMINED_PNG:
                 
-                if IsPNGAnimated( bit_to_check ):
+                if HydrusAnimationHandling.IsPNGAnimated( first_bytes_of_file ):
                     
                     return HC.IMAGE_APNG
                     
@@ -527,23 +547,25 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     # If the file starts with '{' it is probably JSON
     # but we can't know for sure so we send it over to be checked
-    if bit_to_check.startswith( b'{' ) or bit_to_check.startswith( b'[' ):
+    if first_bytes_of_file.startswith( b'{' ) or first_bytes_of_file.startswith( b'[' ):
         
         with open( path, 'rb' ) as f:
             
-            if HydrusText.LooksLikeJSON( f.read() ):
+            potential_json_document_bytes = f.read()
+            
+            if HydrusText.LooksLikeJSON( potential_json_document_bytes ):
                 
                 return HC.APPLICATION_JSON
                 
             
         
     
-    if HydrusText.LooksLikeHTML( bit_to_check ):
+    if HydrusText.LooksLikeHTML( first_bytes_of_file ):
         
         return HC.TEXT_HTML
         
     
-    if HydrusText.LooksLikeSVG( bit_to_check ): 
+    if HydrusText.LooksLikeSVG( first_bytes_of_file ): 
         
         return HC.IMAGE_SVG
         
@@ -589,25 +611,4 @@ def GetThumbnailMime( path ):
         
     
     return HC.APPLICATION_OCTET_STREAM
-    
-def IsPNGAnimated( file_header_bytes ):
-    
-    apng_actl_bytes = HydrusVideoHandling.GetAPNGACTLChunkData( file_header_bytes )
-    
-    if apng_actl_bytes is not None:
-        
-        # this is an animated png
-        
-        # acTL chunk in an animated png is 4 bytes of num frames, then 4 bytes of num times to loop
-        # https://wiki.mozilla.org/APNG_Specification#.60acTL.60:_The_Animation_Control_Chunk
-        
-        num_frames = HydrusVideoHandling.GetAPNGNumFrames( apng_actl_bytes )
-        
-        if num_frames > 1:
-            
-            return True
-            
-        
-    
-    return False
     

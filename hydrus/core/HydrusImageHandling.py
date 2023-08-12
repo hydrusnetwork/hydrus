@@ -25,6 +25,22 @@ from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
 from PIL import ImageCms as PILImageCms
 
+try:
+    
+    from pillow_heif import register_heif_opener
+    from pillow_heif import register_avif_opener
+    
+    register_heif_opener(thumbnails=False)
+    register_avif_opener(thumbnails=False)
+    
+    HEIF_OK = True
+    
+except:
+    
+    HEIF_OK = False
+    
+
+from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
@@ -81,11 +97,12 @@ warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )
 
 # PIL moaning about weirdo TIFFs
 warnings.filterwarnings( "ignore", "(Possibly )?corrupt EXIF data", UserWarning )
+warnings.filterwarnings( "ignore", "Metadata Warning", UserWarning )
 
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
 
-PIL_ONLY_MIMETYPES = { HC.IMAGE_GIF, HC.IMAGE_ICON }
+PIL_ONLY_MIMETYPES = { HC.IMAGE_GIF, HC.IMAGE_ICON }.union( HC.PIL_HEIF_MIMES )
 
 try:
     
@@ -119,6 +136,7 @@ except:
     
     OPENCV_OK = False
     
+
 def MakeClipRectFit( image_resolution, clip_rect ):
     
     ( im_width, im_height ) = image_resolution
@@ -546,11 +564,11 @@ def GenerateThumbnailBytesPIL( pil_image: PILImage.Image ) -> bytes:
 
 def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
     
-    if pil_image.format in ( 'JPEG', 'TIFF', 'PNG', 'WEBP' ) and hasattr( pil_image, '_getexif' ):
+    if pil_image.format in ( 'JPEG', 'TIFF', 'PNG', 'WEBP', 'HEIF', 'AVIF' ):
         
         try:
             
-            exif_dict = pil_image._getexif()
+            exif_dict = pil_image.getexif()._get_merged_dict()
             
             if len( exif_dict ) > 0:
                 
@@ -656,6 +674,11 @@ def GetImageProperties( path, mime ):
             duration = None
             num_frames = None
             
+        
+    
+    if mime == HC.IMAGE_APNG:
+        
+        ( duration, num_frames ) = HydrusAnimationHandling.GetAPNGDurationAndNumFrames( path )
         
     
     width = max( width, 1 )
@@ -817,10 +840,11 @@ def GetResolutionNumPy( numpy_image ):
     
     return ( image_width, image_height )
     
+
 def GetResolutionAndNumFramesPIL( path, mime ):
     
-    pil_image = GeneratePILImage( path, dequantize = False )
-    
+    pil_image = GeneratePILImage( path, dequantize = False ) 
+
     ( x, y ) = pil_image.size
     
     if mime == HC.IMAGE_GIF: # some jpegs came up with 2 frames and 'duration' because of some embedded thumbnail in the metadata

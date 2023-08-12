@@ -1,9 +1,12 @@
+import os
+
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -254,5 +257,52 @@ def SelectServiceKey( service_types = None, service_keys = None, unallowed = Non
             
             return None
             
+        
+    
+
+def OpenDocumentation( win: QW.QWidget, documentation_path: str ):
+    
+    local_path = os.path.join( HC.HELP_DIR, documentation_path )
+    remote_url = "/".join( ( HC.REMOTE_HELP.rstrip( '/' ), documentation_path.lstrip( '/' ) ) ) 
+    
+    local_launch_path = local_path
+    
+    if "#" in local_path:
+        
+        local_path = local_path[ : local_path.find( '#' ) ]
+        
+    
+    if os.path.isfile( local_path ):
+        
+        ClientPaths.LaunchPathInWebBrowser( local_launch_path )
+        
+    else:
+        
+        message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
+        
+        yes_tuples = []
+        
+        yes_tuples.append( ( 'open online help', 0 ) )
+        yes_tuples.append( ( 'open how to build guide', 1 ) )
+        
+        try:
+            
+            result = GetYesYesNo( win, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if result == 0:
+            
+            url = remote_url
+            
+        else:
+            
+            url = '/'.join( ( HC.REMOTE_HELP.rstrip( '/' ), HC.DOCUMENTATION_ABOUT_DOCS.lstrip( '/' ) ) )
+            
+        
+        ClientPaths.LaunchURLInWebBrowser( url )
         
     

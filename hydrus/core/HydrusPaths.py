@@ -1,4 +1,5 @@
 import collections
+import functools
 import os
 import typing
 
@@ -298,6 +299,8 @@ def GetDefaultLaunchPath():
         return 'open "%path%"'
         
     
+
+@functools.lru_cache( maxsize = 128 )
 def GetPartitionInfo( path ) -> typing.Optional[ typing.NamedTuple ]:
     
     path = path.lower()
@@ -346,7 +349,7 @@ def GetDevice( path ) -> typing.Optional[ str ]:
         
     
 
-def GetFileSystemType( path ) -> typing.Optional[ str ]:
+def GetFileSystemType( path: str ) -> typing.Optional[ str ]:
     
     partition_info = GetPartitionInfo( path )
     
@@ -366,12 +369,14 @@ def GetFreeSpace( path ):
     
     return disk_usage.free
     
+
 def GetTotalSpace( path ):
     
     disk_usage = psutil.disk_usage( path )
     
     return disk_usage.total
     
+
 def LaunchDirectory( path ):
     
     def do_it():

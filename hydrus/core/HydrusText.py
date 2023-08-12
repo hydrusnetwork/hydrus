@@ -1,3 +1,5 @@
+import typing
+
 try:
     
     import chardet
@@ -91,7 +93,7 @@ def ElideText( text, max_length, elide_center = False ):
     
     return text
     
-def LooksLikeHTML( file_data ):
+def LooksLikeHTML( file_data: typing.Union[ str, bytes ] ):
     # this will false-positive if it is json that contains html, ha ha
     
     if isinstance( file_data, bytes ):
@@ -135,7 +137,7 @@ def LooksLikeSVG( file_data ):
     return False
     
 
-def LooksLikeJSON( file_data ):
+def LooksLikeJSON( file_data: typing.Union[ str, bytes ] ) -> bool:
     
     try:
         

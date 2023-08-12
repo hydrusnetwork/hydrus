@@ -7,6 +7,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -56,6 +57,12 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._location_list.Append( 'deleted from {}'.format( name ), ( HC.CONTENT_STATUS_DELETED, service_key ), starts_checked = starts_checked )
                 
             
+        
+        height_rows = min( 24, self._location_list.count() )
+        
+        ( gumpf, min_height ) = ClientGUIFunctions.ConvertTextToPixels( self._location_list, ( 24, height_rows + 2 ) )
+        
+        self._location_list.setMinimumHeight( min_height )
         
         vbox = QP.VBoxLayout()
         
@@ -164,7 +171,14 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
                 name = service.GetName()
                 
             
-            ClientGUIMenus.AppendMenuItem( menu, name, 'Change the current file domain to {}.'.format( service.GetName() ), self.SetValue, location_context )
+            desc = 'Change the current file domain to {}.'.format( service.GetName() )
+            
+            if service.GetServiceKey() == CC.COMBINED_DELETED_FILE_SERVICE_KEY:
+                
+                desc += ' Note this includes files deleted from any domain at all, including those removed from one local file service but still in another local file service.'
+                
+            
+            ClientGUIMenus.AppendMenuItem( menu, name, desc, self.SetValue, location_context )
             
             last_seen_service_type = service.GetServiceType()
             
@@ -174,7 +188,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
                 
                 location_context = ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ), deleted_service_keys = ( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, ) )
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'all files ever imported/deleted', 'Change the current file domain to all current and deleted files your client has seen.', self.SetValue, location_context )
+                ClientGUIMenus.AppendMenuItem( menu, 'all files ever imported or deleted', 'Change the current file domain to all current and deleted files your client has seen.', self.SetValue, location_context )
                 
             
         

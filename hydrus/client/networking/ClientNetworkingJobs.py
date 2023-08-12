@@ -2134,7 +2134,14 @@ class NetworkJobHydrus( NetworkJob ):
     
     def _SendRequestAndGetResponse( self ) -> requests.Response:
         
-        service = self.engine.controller.services_manager.GetService( self._service_key )
+        try:
+            
+            service = self.engine.controller.services_manager.GetService( self._service_key )
+            
+        except HydrusExceptions.DataMissing:
+            
+            raise HydrusExceptions.CancelledException( 'Service no longer exists!' )
+            
         
         service_type = service.GetServiceType()
         

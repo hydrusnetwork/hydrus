@@ -8,6 +8,7 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
+from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -586,7 +587,7 @@ class RasterContainerVideo( RasterContainer ):
         
         if self._media.GetMime() == HC.IMAGE_APNG:
             
-            self._times_to_play_animation = HydrusVideoHandling.GetAPNGTimesToPlay( self._path )
+            self._times_to_play_animation = HydrusAnimationHandling.GetAPNGTimesToPlay( self._path )
             
         
         if self._media.GetMime() == HC.IMAGE_GIF:

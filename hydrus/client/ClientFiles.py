@@ -23,8 +23,6 @@ from hydrus.client import ClientImageHandling
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSVGHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
 from hydrus.client import ClientThreading
-from hydrus.client import ClientTime
-from hydrus.client.gui import QtPorting as QP
 from hydrus.client.metadata import ClientTags
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
@@ -1591,6 +1589,7 @@ class ClientFilesManager( object ):
         self._physical_file_delete_wait.set()
         
     
+
 class FilesMaintenanceManager( object ):
     
     def __init__( self, controller ):
@@ -1617,6 +1616,7 @@ class FilesMaintenanceManager( object ):
         self._shutdown = False
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        self._controller.sub( self, 'Wake', 'checkbox_manager_inverted' )
         self._controller.sub( self, 'Shutdown', 'shutdown' )
         
     
@@ -1849,15 +1849,12 @@ class FilesMaintenanceManager( object ):
                 
                 def qt_add_url( url ):
                     
-                    if QP.isValid( HG.client_controller.gui ):
-                        
-                        HG.client_controller.gui.ImportURL( url, 'missing files redownloader' )
-                        
+                    HG.client_controller.gui.ImportURL( url, 'missing files redownloader' )
                     
                 
                 for url in useful_urls:
                     
-                    QP.CallAfter( qt_add_url, url )
+                    HG.client_controller.CallBlockingToQt( HG.client_controller.gui, qt_add_url, url )
                     
                 
             
@@ -2697,7 +2694,7 @@ class FilesMaintenanceManager( object ):
                     self._wake_background_event.clear()
                     
                 
-                time.sleep( 2 )
+                time.sleep( 1 )
                 
             
         except HydrusExceptions.ShutdownException:

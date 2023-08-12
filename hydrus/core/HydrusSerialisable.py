@@ -577,11 +577,11 @@ class SerialisableDictionary( SerialisableBase, dict ):
     
     def GetSerialisableTuple( self ):
         
-        # TODO: delete this around version 537
+        # TODO: delete this around version 563
         # this is a patch to deal with me foolishly updating SerialisableDictionary without thinking that it is used in network comms
         # the server suddenly starts giving version 2 Dicts, and old clients can't handle it!
         # therefore, we are patching this to give a version 1 result if we are the server. we don't transport bytes stuff over network yet, nor store bytes in server services dict, so it is ok
-        # we are doing this for version 511, so let's give lads ~26 weeks to update
+        # we are doing this for version 511, so let's give lads ~52 weeks to update
         
         if HC.RUNNING_SERVER:
             
