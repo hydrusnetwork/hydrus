@@ -17,11 +17,12 @@ except:
     pass
     
 
-from hydrus.core import HydrusConstants as HC, HydrusPSDHandling
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 
