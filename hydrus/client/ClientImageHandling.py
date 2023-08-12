@@ -40,9 +40,15 @@ def GenerateShapePerceptualHashes( path, mime ):
         HydrusData.ShowText( 'phash generation: loading image' )
         
     
-    numpy_image = GenerateNumPyImage( path, mime )
+    try:
+
+        numpy_image = GenerateNumPyImage( path, mime )
+        
+        return GenerateShapePerceptualHashesNumPy( numpy_image )
     
-    return GenerateShapePerceptualHashesNumPy( numpy_image )
+    except:
+
+        return set()
     
 
 def GenerateShapePerceptualHashesNumPy( numpy_image ):

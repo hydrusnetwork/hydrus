@@ -22,6 +22,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 
@@ -303,16 +304,21 @@ def GetShowAction( media: ClientMedia.MediaSingleton, canvas_type: int ):
     if mime not in HC.ALLOWED_MIMES: # stopgap to catch a collection or application_unknown due to unusual import order/media moving
         
         return bad_result
-        
     
     if canvas_type == CC.CANVAS_PREVIEW:
         
-        return HG.client_controller.new_options.GetPreviewShowAction( mime )
+        action =  HG.client_controller.new_options.GetPreviewShowAction( mime )
         
     else:
         
-        return HG.client_controller.new_options.GetMediaShowAction( mime )
+        action = HG.client_controller.new_options.GetMediaShowAction( mime )
         
+    if mime == HC.APPLICATION_PSD and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and not HydrusPSDHandling.PSD_TOOLS_OK :
+
+        # fallback to open externally button when psd_tools not available 
+        action = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, start_paused, start_with_embed )
+
+    return action
     
 
 def ShouldHaveAnimationBar( media, show_action ):

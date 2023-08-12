@@ -5,7 +5,6 @@ import typing
 
 import numpy
 import numpy.core.multiarray # important this comes before cv!
-import struct
 import warnings
 
 try:
@@ -49,6 +48,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
+from hydrus.core import HydrusPSDHandling
 
 PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
 
@@ -273,7 +273,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
         
         HydrusData.ShowText( 'Loading media: ' + path )
         
-    
+
     if not OPENCV_OK:
         
         force_pil = True
@@ -319,8 +319,19 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             pass
             
         
-    
-    if mime in PIL_ONLY_MIMETYPES or force_pil:
+    if mime == HC.APPLICATION_PSD:
+         
+        if HG.media_load_report_mode:
+        
+            HydrusData.ShowText( 'Loading PSD' )
+            
+        pil_image = HydrusPSDHandling.MergedPILImageFromPSD( path )
+ 
+        pil_image = DequantizePILImage( pil_image )
+        
+        numpy_image = GenerateNumPyImageFromPILImage( pil_image )
+
+    elif mime in PIL_ONLY_MIMETYPES or force_pil:
         
         if HG.media_load_report_mode:
             
@@ -478,7 +489,7 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, cl
         pil_image = ClipPILImage( pil_image, clip_rect )
         
     
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.ANTIALIAS )
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
     thumbnail_bytes = GenerateThumbnailBytesPIL( thumbnail_pil_image )
     
@@ -822,21 +833,6 @@ def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
     
     return None
     
-
-def GetPSDResolution( path ):
-    
-    with open( path, 'rb' ) as f:
-        
-        f.seek( 14 )
-        
-        height_bytes = f.read( 4 )
-        width_bytes = f.read( 4 )
-        
-    
-    height = struct.unpack( '>L', height_bytes )[0]
-    width = struct.unpack( '>L', width_bytes )[0]
-    
-    return ( width, height )
     
 def GetResolutionNumPy( numpy_image ):
     

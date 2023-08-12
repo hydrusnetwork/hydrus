@@ -2015,7 +2015,7 @@ class MediaSingleton( Media ):
     
     def IsImage( self ):
         
-        return self._media_result.GetMime() in HC.IMAGES
+        return self._media_result.GetMime() in HC.IMAGES or self._media_result.GetMime() in HC.VIEWABLE_APPLICATIONS
         
     
     def IsSizeDefinite( self ): return self._media_result.GetSize() is not None

@@ -38,6 +38,7 @@ from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
@@ -824,6 +825,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
         library_version_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         library_version_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
+        library_version_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )
         library_version_lines.append( 'speedcopy (experimental test) present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
         library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
         library_version_lines.append( 'db dir: {}'.format( HG.client_controller.db_dir ) )

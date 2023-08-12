@@ -1,6 +1,7 @@
 import typing
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
@@ -435,9 +436,15 @@ class FileImportJob( object ):
             
             try:
                 
-                pil_image = HydrusImageHandling.RawOpenPILImage( self._temp_path )
+                if mime == HC.APPLICATION_PSD:
+
+                    has_icc_profile = HydrusPSDHandling.PSDHasICCProfile( self._temp_path )
+
+                else:
                 
-                has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
+                    pil_image = HydrusImageHandling.RawOpenPILImage( self._temp_path )
+                    
+                    has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
                 
             except:
                 

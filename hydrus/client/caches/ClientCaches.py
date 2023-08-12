@@ -633,6 +633,13 @@ class ThumbnailCache( object ):
         # override because these are a bit more
         self._magic_mime_thumbnail_ease_score_lookup[ HC.IMAGE_APNG ] = 2
         self._magic_mime_thumbnail_ease_score_lookup[ HC.IMAGE_GIF ] = 2
+
+
+        # could get more specific here because some applications will probably be even worse than videos
+        for mime in HC.APPLICATIONS_WITH_THUMBNAILS:
+
+            self._magic_mime_thumbnail_ease_score_lookup[ mime ] = 2
+
         
         # ffmpeg hellzone
         

@@ -178,7 +178,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 media = self._GetFocusSingleton()
                 
-                if media.GetMime() in HC.IMAGES:
+                if media.IsImage():
                     
                     HG.client_controller.pub( 'clipboard', 'bmp', ( media, resolution ) )
                     
@@ -4329,7 +4329,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if focused_is_local:
                 
-                if self._focused_media.GetMime() in HC.IMAGES:
+                if self._focused_media.IsImage():
                     
                     ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
                     
