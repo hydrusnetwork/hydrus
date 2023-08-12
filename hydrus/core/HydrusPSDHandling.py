@@ -3,7 +3,7 @@ import typing
 
 from PIL import Image as PILImage
 
-from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusExceptions, HydrusImageHandling
 
 try:
     
@@ -20,7 +20,7 @@ def PSDHasICCProfile(path: str):
 
     if not PSD_TOOLS_OK:
         
-        raise Exception( 'psd_tools unavailable' )
+        raise HydrusExceptions.UnsupportedFileException( 'psd_tools unavailable' )
 
     psd = PSDImage.open(path)
 
@@ -31,7 +31,7 @@ def MergedPILImageFromPSD(path: str) -> PILImage:
 
     if not PSD_TOOLS_OK:
         
-        raise Exception( 'psd_tools unavailable' )
+        raise HydrusExceptions.UnsupportedFileException( 'psd_tools unavailable' )
     
     psd = PSDImage.open(path)
 
@@ -68,7 +68,7 @@ def GenerateThumbnailBytesFromPSDPath(path: str, target_resolution: typing.Tuple
         pil_image = HydrusImageHandling.ClipPILImage( pil_image, clip_rect )
         
     
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.ANTIALIAS )
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
     thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesPIL( thumbnail_pil_image )
     

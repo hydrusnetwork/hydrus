@@ -489,7 +489,7 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, cl
         pil_image = ClipPILImage( pil_image, clip_rect )
         
     
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.ANTIALIAS )
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
     thumbnail_bytes = GenerateThumbnailBytesPIL( thumbnail_pil_image )
     
