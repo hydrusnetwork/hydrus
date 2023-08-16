@@ -176,14 +176,11 @@ class MediaResult( object ):
         if self._file_info_manager.mime in HC.IMAGES:
             
             return True
-        
-        if self._file_info_manager.mime in HC.ANIMATIONS and self._file_info_manager.duration in ( 0, None ):
-
-            return True
-        
-        if self._file_info_manager.mime in HC.VIEWABLE_APPLICATIONS:
+            
+        elif self._file_info_manager.mime in HC.VIEWABLE_IMAGE_PROJECT_FILES:
             
             return True
+            
         
         return False
         

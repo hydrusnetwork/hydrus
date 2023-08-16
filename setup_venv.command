@@ -19,7 +19,7 @@ else
 	read -r
 fi
 
-echo "The precise version limits for macOS are not yet fully known. Please try the advanced install and let hydev know what works for you."
+echo "If your macOS is slightly old, do the advanced install. Let hydev know what works for you."
 echo
 echo "Your Python version is:"
 $py_command --version
@@ -32,7 +32,8 @@ if [ "$install_type" = "s" ]; then
 	:
 elif [ "$install_type" = "a" ]; then
 	echo
-	echo "If you are <= 10.13 (High Sierra), choose 5."
+	echo "Qt is the User Interface library. We are now on Qt6."
+	echo "If you are <= 10.13 (High Sierra), choose 5. If you are <=10.15 (Catalina), choose o."
 	echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, or (t)est? "
 	read -r qt
 	if [ "$qt" = "5" ]; then
@@ -64,8 +65,9 @@ elif [ "$install_type" = "a" ]; then
 	fi
 	
 	echo
-	echo "If you are Python 3.10, choose n. >=3.11 should try the test"
-    echo "Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
+	echo "OpenCV is the main image processing library."
+	echo "Try the n first. If it doesn't work, fall back to o. Very new python versions might need t."
+	echo "Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
 	read -r opencv
 	if [ "$opencv" = "o" ]; then
 		:

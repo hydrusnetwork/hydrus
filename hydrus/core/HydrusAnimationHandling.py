@@ -2,7 +2,35 @@ import typing
 
 import struct
 
+from PIL import Image as PILImage
+
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusImageHandling
+
+def GetAnimationProperties( path, mime ):
+    
+    pil_image = HydrusImageHandling.GeneratePILImage( path )
+    
+    ( width, height ) = pil_image.size
+    
+    width = max( width, 1 )
+    height = max( height, 1 )
+    
+    if mime == HC.ANIMATION_APNG:
+        
+        ( duration, num_frames ) = GetAPNGDurationAndNumFrames( path )
+        
+    else:
+        
+        ( durations, times_to_play ) = GetFrameDurationsPILAnimation( path )
+        
+        duration = sum( durations )
+        num_frames = len( durations )
+        
+    
+    return ( ( width, height ), duration, num_frames )
+    
 
 def GetAPNGChunks( file_header_bytes: bytes ) ->list:
     
@@ -131,7 +159,51 @@ def GetAPNGDurationAndNumFrames( path ):
     return ( duration_in_ms, num_frames )
     
 
-def GetAPNGTimesToPlay( path: str ) -> int:
+def GetFrameDurationsPILAnimation( path ):
+    
+    pil_image = HydrusImageHandling.RawOpenPILImage( path )
+    
+    times_to_play = GetTimesToPlayPILAnimationFromPIL( pil_image )
+    
+    frame_durations = []
+    
+    i = 0
+    
+    while True:
+        
+        try:
+            
+            pil_image.seek( i )
+            
+        except:
+            
+            break
+            
+        
+        if 'duration' not in pil_image.info:
+            
+            duration = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+            
+        else:
+            
+            duration = pil_image.info[ 'duration' ]
+            
+            # In the gif frame header, 10 is stored as 1ms. This 1 is commonly as utterly wrong as 0.
+            if duration in ( 0, 10 ):
+                
+                duration = 83
+                
+            
+        
+        frame_durations.append( duration )
+        
+        i += 1
+        
+    
+    return ( frame_durations, times_to_play )
+    
+
+def GetTimesToPlayAPNG( path: str ) -> int:
     
     with open( path, 'rb' ) as f:
         
@@ -148,6 +220,51 @@ def GetAPNGTimesToPlay( path: str ) -> int:
     ( num_plays, ) = struct.unpack( '>I', apng_actl_bytes[ 4 : 8 ] )
     
     return num_plays
+    
+
+def GetTimesToPlayPILAnimation( path ) -> int:
+    
+    try:
+        
+        pil_image = HydrusImageHandling.RawOpenPILImage( path )
+        
+    except HydrusExceptions.UnsupportedFileException:
+        
+        return 1
+        
+    
+    return GetTimesToPlayPILAnimationFromPIL( pil_image )
+    
+
+def GetTimesToPlayPILAnimationFromPIL( pil_image: PILImage.Image ) -> int:
+    
+    if 'loop' in pil_image.info:
+        
+        times_to_play = pil_image.info[ 'loop' ]
+        
+    else:
+        
+        times_to_play = 1
+        
+    
+    return times_to_play
+    
+
+def PILAnimationHasDuration( path ):
+    
+    pil_image = HydrusImageHandling.GeneratePILImage( path, dequantize = False )
+    
+    try:
+        
+        pil_image.seek( 1 )
+        pil_image.seek( 0 )
+        
+        return True
+        
+    except:
+        
+        return False
+        
     
 
 def IsPNGAnimated( file_header_bytes ):

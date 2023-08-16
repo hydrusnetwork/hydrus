@@ -1334,8 +1334,6 @@ class DB( HydrusDB.HydrusDB ):
             self._AddService( service_key, service_type, name, dictionary )
             
         
-        self._ExecuteMany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( ClientDBSerialisable.YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
-        
         new_options = ClientOptions.ClientOptions()
         
         new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
@@ -4388,6 +4386,21 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
+            pixel_hash = file_import_job.GetPixelHash()
+            
+            if pixel_hash is None:
+                
+                self.modules_similar_files.ClearPixelHash( hash_id )
+                
+            else:
+                
+                pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
+                
+                self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
+                
+            
+            #
+            
             perceptual_hashes = file_import_job.GetPerceptualHashes()
             
             if perceptual_hashes is not None:
@@ -4416,21 +4429,6 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_files_metadata_basic.SetHasEXIF( hash_id, file_import_job.HasEXIF() )
             self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, file_import_job.HasHumanReadableEmbeddedMetadata() )
             self.modules_files_metadata_basic.SetHasICCProfile( hash_id, file_import_job.HasICCProfile() )
-            
-            #
-            
-            pixel_hash = file_import_job.GetPixelHash()
-            
-            if pixel_hash is None:
-                
-                self.modules_similar_files.ClearPixelHash( hash_id )
-                
-            else:
-                
-                pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
-                
-                self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
-                
             
             #
             
@@ -8045,7 +8043,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 with self._MakeTemporaryIntegerTable( dupe_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
                     
-                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( ( HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_TIFF ) ) ), ) )
+                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( ( HC.ANIMATION_GIF, HC.IMAGE_PNG, HC.IMAGE_TIFF ) ) ), ) )
                     
                     self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
                     
@@ -8177,7 +8175,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
                 
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.IMAGE_APNG, ) ) )
+                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.ANIMATION_APNG, ) ) )
                 
                 self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                 
@@ -8252,7 +8250,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     show_message = False
                     
-                    for mime in ( HC.IMAGE_GIF, HC.VIDEO_MP4, HC.AUDIO_MP3 ):
+                    for mime in ( HC.ANIMATION_GIF, HC.VIDEO_MP4, HC.AUDIO_MP3 ):
                         
                         ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( mime )
                         
@@ -9669,6 +9667,37 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 538:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.APPLICATION_PSD, ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN ( ?, ?, ? );', ( HC.VIDEO_WEBM, HC.VIDEO_MKV, HC.ANIMATION_APNG ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES )
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ? AND ( duration IS NULL OR duration = 0 );', ( HC.ANIMATION_GIF, ) ) )
+                    
+                    self._ExecuteMany( 'UPDATE files_info SET mime = ? WHERE hash_id = ?;', ( ( HC.IMAGE_GIF, hash_id ) for hash_id in hash_ids ) )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some file updates failed! You might have some borked static gifs and may need to run metadata regeneration jobs for them. This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10154,7 +10183,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'content_updates': self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'cull_file_viewing_statistics': self.modules_files_viewing_stats.CullFileViewingStatistics( *args, **kwargs )
         elif action == 'db_integrity': self._CheckDBIntegrity( *args, **kwargs )
-        elif action == 'delete_imageboard': self.modules_serialisable.DeleteYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'delete_local_booru_share': self.modules_serialisable.DeleteYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
         elif action == 'delete_serialisable_named': self.modules_serialisable.DeleteJSONDumpNamed( *args, **kwargs )

@@ -268,7 +268,7 @@ class Media( object ):
         raise NotImplementedError()
         
     
-    def HasImages( self ) -> bool:
+    def HasStaticImages( self ) -> bool:
         
         raise NotImplementedError()
         
@@ -1581,9 +1581,9 @@ class MediaCollection( MediaList, Media ):
         return self._duration is not None
         
     
-    def HasImages( self ):
+    def HasStaticImages( self ):
         
-        return True in ( media.HasImages() for media in self._sorted_media )
+        return True in ( media.HasStaticImages() for media in self._sorted_media )
         
     
     def HasInbox( self ):
@@ -1601,7 +1601,7 @@ class MediaCollection( MediaList, Media ):
         return True
         
     
-    def IsImage( self ):
+    def IsStaticImage( self ):
         
         return False
         
@@ -2002,23 +2002,30 @@ class MediaSingleton( Media ):
         return duration is not None and duration > 0
         
     
-    def HasImages( self ): return self.IsImage()
+    def HasStaticImages( self ):
+        
+        return self.IsStaticImage()
+        
     
-    def HasInbox( self ): return self._media_result.GetInbox()
+    def HasInbox( self ):
+        
+        return self._media_result.GetInbox()
+        
     
     def HasNotes( self ):
         
         return self._media_result.HasNotes()
         
     
-    def IsCollection( self ): return False
-    
-    def IsImage( self ):
+    def IsCollection( self ):
         
-        return self._media_result.GetMime() in HC.IMAGES or self._media_result.GetMime() in HC.VIEWABLE_APPLICATIONS
+        return False
         
     
-    def IsSizeDefinite( self ): return self._media_result.GetSize() is not None
+    def IsSizeDefinite( self ):
+        
+        return self._media_result.GetSize() is not None
+        
     
     def IsStaticImage( self ):
         

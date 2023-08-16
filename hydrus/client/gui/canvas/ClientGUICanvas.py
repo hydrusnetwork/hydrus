@@ -384,7 +384,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_media is not None:
             
-            if self._current_media.IsImage():
+            if self._current_media.IsStaticImage():
                 
                 HG.client_controller.pub( 'clipboard', 'bmp', ( self._current_media, resolution ) )
                 
@@ -906,7 +906,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 copied = False
                 
-                if self._current_media.IsImage():
+                if self._current_media.IsStaticImage():
                     
                     ( width, height ) = self._current_media.GetResolution()
                     
@@ -1566,7 +1566,7 @@ class CanvasPanel( Canvas ):
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
             
-            if self._current_media.IsImage():
+            if self._current_media.IsStaticImage():
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
 
@@ -2370,18 +2370,20 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         CanvasWithHovers.__init__( self, parent, location_context )
         
-        hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._right_notes_hover, self._canvas_key )
+        self._duplicates_right_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameRightDuplicates( self, self, self._canvas_key )
         
-        hover.showPairInPage.connect( self._ShowPairInPage )
-        hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        self._right_notes_hover.AddHoverThatCanBeOnTop( self._duplicates_right_hover )
         
-        self._hovers.append( hover )
+        self._duplicates_right_hover.showPairInPage.connect( self._ShowPairInPage )
+        self._duplicates_right_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
+        
+        self._hovers.append( self._duplicates_right_hover )
         
         self._background_colour_generator = CanvasBackgroundColourGeneratorDuplicates( self )
         
         self._media_container.SetBackgroundColourGenerator( self._background_colour_generator )
         
-        self._my_shortcuts_handler.AddWindowToFilter( hover )
+        self._my_shortcuts_handler.AddWindowToFilter( self._duplicates_right_hover )
         
         self._file_search_context_1 = file_search_context_1
         self._file_search_context_2 = file_search_context_2
@@ -4570,7 +4572,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
             
-            if self._current_media.IsImage():
+            if self._current_media.IsStaticImage():
                 
                 ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
                 

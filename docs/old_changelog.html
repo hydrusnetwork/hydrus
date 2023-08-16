@@ -35,6 +35,44 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_539"><a href="#version_539">version 539</a></h2>
+                    <ul>
+                        <li><h3>another new library today</h3></li>
+                        <li>**if you run from source, I recommend you rebuild your venv today. we've got another library to add full PSD support**</li>
+                        <li><h3>viewable PSD files</h3></li>
+                        <li>thanks to a user, hydrus can now view PSD files in the main viewer, just like any other file. it can be a bit slow to load, and you can't show/hide away layers or anything, but for simply showing the image as-is, it works great</li>
+                        <li>because this needs more CPU than for normal images, we're starting out with conservative view settings. while PSD files will show as normal in the media viewer, they'll only show the 'open externally' button in the preview viewer. see how it works for you, and remember you can change it under _options->media_. if there isn't any real problem IRL with showing even big PSDs everywhere, I'll change the defaults, so let's see how it goes</li>
+                        <li>and of course if you have a borked PSD--say one that shows up in all the wrong colours, or has bad transparency--please send it in and I'll have a look. there is apparently a rare class of PSD files that simply won't render at all with our new system, and hydrus is pretty bad at handling that situation, so that'd also be useful if at the very least to get me to write some better error handling code</li>
+                        <li>just like last week, if you run from source, please rebuild your venv again today--there's a PSD-handling library that supports all this</li>
+                        <li>all PSD files will be scheduled for a thumbnail regen on update</li>
+                        <li><h3>static vs animated gif</h3></li>
+                        <li>the program now treats still and animated gifs as separate file types for the purpose of searching and selecting display options (previously, static gifs were just animated gifs with no duration). most people won't have many static gifs, so this doesn't matter too much, but it cleans up our image/animation filetype group distinction and makes a bunch of behind the scenes stuff simpler. all your gifs will be set to either camp on update</li>
+                        <li>if you have an existing file import options or system:filetype that looked for gifs specifically, it will now search for 'animated gifs' only, so watch out if you need 'static gif' too/instead</li>
+                        <li><h3>parseable rating predicates</h3></li>
+                        <li>the system predicate parser (including the Client API) now accepts system:rating predicates. type 'system:has rating (service name)' or 'system:rating for (service name) > 4/5' or other reasonable variants and it should pre-fill</li>
+                        <li>in the UI, the system 'has/no rating' predicate strings are now in the format 'has a rating for (service name)' and 'does not have a rating for (service name)'. (previously it was 'has/no (service name) rating', which is out of step with our usual syntax and generally unhelpfully parsing-ambiguous)</li>
+                        <li>added a bunch of unit tests for this</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed the 'network timeout' setting under _options->connection_, which was not saving changes</li>
+                        <li>the media viewer top hover window now enables/disables the 'show file metadata' button--rather than shows/hides--in order to stop the buttons on the left jumping around so much when you scroll through media</li>
+                        <li>the duplicate filter's always-on-top right-hand window is fixed in place again. the buttons won't jump around any more. if the notes hover grows to overlap it, it won't show over it as long as your mouse is over the duplicate hover. this should make clicking those duplicate buttons on note-heavy files far less frustrating. sorry for the late fix here!</li>
+                        <li>the duplicate filter now always presents a statement on the pair's filetypes, even if they are the same (it'll say like 'both are pngs'). this is to help catch the upcoming PSD matches (where you probably do not want to delete either) and other weirdness as we add new filetypes</li>
+                        <li>just a small thing, but the 'management panel' labels are renamed broadly to 'sidebar' under the _pages_ menu. the panel on the left of pages is now called 'sidebar', and the wx-era 'sash' wording is gone</li>
+                        <li>there's an issue with the file metadata reparse system right now where, on a filetype change, it will often fail to cleanly rename bigger files (e.g. from x.mkv to x.webm). the result is the file copies and the old one is never deleted, leaving a duplicate that is not properly cleared up later. on update this week, I am scheduling a fresh cleanup for these dupes. if, like me, you have a lot of large AV1-encoded vidya capture mkvs, you may have noticed your hydrus folders suddenly bloated in size this past week--this should be 99% fixed soon. I will fix the underlying issue here next week</li>
+                        <li>touched up the 'running from source' help and 'setup_venv' texts in general and specifically regarding some new version info stuff. it looks like macOS <= 10.15 can't handle last week's new Qt6 version, and some versions of Linux need `libicu-dev` and `libxcb-cursor-dev` installed via apt or otherwise</li>
+                        <li>fixed the file query sort-and-clip method when you are set to sort by file hash and also have system:limit, and fixed it for asc/desc too</li>
+                        <li>for the second time, fixed the 'import QtSVG' error on hydrus server install when the client requirements.txt had not been run. turns out I messed up the 'proper' fix I did for the first time</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>refactored a bunch of HydrusImageHandling code to HydrusAnimationHandling</li>
+                        <li>cleaned up several of our enums and enum testing, and cleared out several hardcoded hooks to deal with different kinds of gif</li>
+                        <li>did some similar enum cleaning and `gif`->`PILAnimation` renaming to encompass the new HEIF sequences</li>
+                        <li>streamlined the image and animation metadata parsing methods significantly</li>
+                        <li>a bunch of simple `image`->`animation` renames, like IMAGE_APNG is now ANIMATION_APNG</li>
+                        <li>cleaned up some other confusing code handles for 'image' vs 'static image', to handle whether we are talking about strictly images or viewable raster image-likes (for now including PSD files) but I think it'll need more work</li>
+                        <li>deleted some ancient and no longer used imageboard profile code</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_538"><a href="#version_538">version 538</a></h2>
                     <ul>
                         <li><h3>important note on index regeneration</h3></li>

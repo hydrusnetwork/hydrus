@@ -19,7 +19,7 @@ else
     read -r
 fi
 
-echo "Users on Ubuntu <=20.04 equivalents or python >=3.10 need the advanced install."
+echo "Users on older OSes need the advanced install."
 echo
 echo "Your Python version is:"
 $py_command --version
@@ -32,7 +32,8 @@ if [ "$install_type" = "s" ]; then
     :
 elif [ "$install_type" = "a" ]; then
     echo
-    echo "If you are <=Ubuntu 18.04 or equivalent, choose 5."
+    echo "Qt is the User Interface library. We are now on Qt6."
+    echo "If you are <=Ubuntu 18.04 or equivalent, choose 5. If 6 gives you trouble, fall back to o."
     echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, or (t)est? "
     read -r qt
     if [ "$qt" = "5" ]; then
@@ -49,7 +50,8 @@ elif [ "$install_type" = "a" ]; then
     fi
 
     echo
-    echo "If you are <=Ubuntu 20.04 or equivalent, you probably do not have libmpv1 0.34.1, so choose o."
+    echo "mpv is the main way to play audio and video. We need to tell hydrus how to talk to your existing mpv install."
+    echo "Try the n first. If it doesn't work, fall back to o."
     echo "Do you want (o)ld mpv or (n)ew mpv? "
     read -r mpv
     if [ "$mpv" = "o" ]; then
@@ -63,7 +65,8 @@ elif [ "$install_type" = "a" ]; then
     fi
 
     echo
-    echo "If you are Python 3.10, choose n. >=3.11 should try the test"
+    echo "OpenCV is the main image processing library."
+    echo "Try the n first. If it doesn't work, fall back to o. Very new python versions might need t."
     echo "Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
     read -r opencv
     if [ "$opencv" = "o" ]; then

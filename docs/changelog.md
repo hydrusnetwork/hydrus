@@ -7,6 +7,53 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 539](https://github.com/hydrusnetwork/hydrus/releases/tag/v539)
+
+### another new library today
+
+* **if you run from source, I recommend you rebuild your venv today. we've got another library to add full PSD support**
+
+### viewable PSD files
+
+* thanks to a user, hydrus can now view PSD files in the main viewer, just like any other file. it can be a bit slow to load, and you can't show/hide away layers or anything, but for simply showing the image as-is, it works great
+* because this needs more CPU than for normal images, we're starting out with conservative view settings. while PSD files will show as normal in the media viewer, they'll only show the 'open externally' button in the preview viewer. see how it works for you, and remember you can change it under _options->media_. if there isn't any real problem IRL with showing even big PSDs everywhere, I'll change the defaults, so let's see how it goes
+* and of course if you have a borked PSD--say one that shows up in all the wrong colours, or has bad transparency--please send it in and I'll have a look. there is apparently a rare class of PSD files that simply won't render at all with our new system, and hydrus is pretty bad at handling that situation, so that'd also be useful if at the very least to get me to write some better error handling code
+* just like last week, if you run from source, please rebuild your venv again today--there's a PSD-handling library that supports all this
+* all PSD files will be scheduled for a thumbnail regen on update
+
+### static vs animated gif
+
+* the program now treats still and animated gifs as separate file types for the purpose of searching and selecting display options (previously, static gifs were just animated gifs with no duration). most people won't have many static gifs, so this doesn't matter too much, but it cleans up our image/animation filetype group distinction and makes a bunch of behind the scenes stuff simpler. all your gifs will be set to either camp on update
+* if you have an existing file import options or system:filetype that looked for gifs specifically, it will now search for 'animated gifs' only, so watch out if you need 'static gif' too/instead
+
+### parseable rating predicates
+
+* the system predicate parser (including the Client API) now accepts system:rating predicates. type 'system:has rating (service name)' or 'system:rating for (service name) > 4/5' or other reasonable variants and it should pre-fill
+* in the UI, the system 'has/no rating' predicate strings are now in the format 'has a rating for (service name)' and 'does not have a rating for (service name)'. (previously it was 'has/no (service name) rating', which is out of step with our usual syntax and generally unhelpfully parsing-ambiguous)
+* added a bunch of unit tests for this
+
+### misc
+
+* fixed the 'network timeout' setting under _options->connection_, which was not saving changes
+* the media viewer top hover window now enables/disables the 'show file metadata' button--rather than shows/hides--in order to stop the buttons on the left jumping around so much when you scroll through media
+* the duplicate filter's always-on-top right-hand window is fixed in place again. the buttons won't jump around any more. if the notes hover grows to overlap it, it won't show over it as long as your mouse is over the duplicate hover. this should make clicking those duplicate buttons on note-heavy files far less frustrating. sorry for the late fix here!
+* the duplicate filter now always presents a statement on the pair's filetypes, even if they are the same (it'll say like 'both are pngs'). this is to help catch the upcoming PSD matches (where you probably do not want to delete either) and other weirdness as we add new filetypes
+* just a small thing, but the 'management panel' labels are renamed broadly to 'sidebar' under the _pages_ menu. the panel on the left of pages is now called 'sidebar', and the wx-era 'sash' wording is gone
+* there's an issue with the file metadata reparse system right now where, on a filetype change, it will often fail to cleanly rename bigger files (e.g. from x.mkv to x.webm). the result is the file copies and the old one is never deleted, leaving a duplicate that is not properly cleared up later. on update this week, I am scheduling a fresh cleanup for these dupes. if, like me, you have a lot of large AV1-encoded vidya capture mkvs, you may have noticed your hydrus folders suddenly bloated in size this past week--this should be 99% fixed soon. I will fix the underlying issue here next week
+* touched up the 'running from source' help and 'setup_venv' texts in general and specifically regarding some new version info stuff. it looks like macOS <= 10.15 can't handle last week's new Qt6 version, and some versions of Linux need `libicu-dev` and `libxcb-cursor-dev` installed via apt or otherwise
+* fixed the file query sort-and-clip method when you are set to sort by file hash and also have system:limit, and fixed it for asc/desc too
+* for the second time, fixed the 'import QtSVG' error on hydrus server install when the client requirements.txt had not been run. turns out I messed up the 'proper' fix I did for the first time
+
+### boring cleanup
+
+* refactored a bunch of HydrusImageHandling code to HydrusAnimationHandling
+* cleaned up several of our enums and enum testing, and cleared out several hardcoded hooks to deal with different kinds of gif
+* did some similar enum cleaning and `gif`->`PILAnimation` renaming to encompass the new HEIF sequences
+* streamlined the image and animation metadata parsing methods significantly
+* a bunch of simple `image`->`animation` renames, like IMAGE_APNG is now ANIMATION_APNG
+* cleaned up some other confusing code handles for 'image' vs 'static image', to handle whether we are talking about strictly images or viewable raster image-likes (for now including PSD files) but I think it'll need more work
+* deleted some ancient and no longer used imageboard profile code
+
 ## [Version 538](https://github.com/hydrusnetwork/hydrus/releases/tag/v538)
 
 ### important note on index regeneration
@@ -351,31 +398,3 @@ title: Changelog
 * spun off the autocomplete parsing and result caching code into a new ClientSearchAutocomplete
 * added a heap of note system predicates to the system pred parsing unit tests, and some for the new 'similar to data' too
 * updated the `requests` in the requirements.txts up from 2.28.1 to 2.31.0 due to some security vulnerability related to `Proxy-Authorization` headers and in-url user/pass authentication when redirecting to an https destination. I don't think we used that stuff (unless the proxy settings cause it to happen under the hood), but let's update anyway. if you run from source, you might like to run setup_venv again
-
-## [Version 529](https://github.com/hydrusnetwork/hydrus/releases/tag/v529)
-
-### similar files search
-
-* hydrus now supports a 'SauceNAO'-style workflow on its own files, quickly looking up if you have something that looks like the given file, without having to import it, using a new variant of the 'system:similar to' search predicate. just open up the new 'system:similar files' entry, which now has two tabs, and on the first just paste image data or a file path from your clipboard and it'll calculate the data for you
-* similar files also gets a search cache this week. this makes all repeat searches massively faster, helps out successive searches (e.g. the same file at 0, 4, then 8 distance), and should accelerate all maintenance search by a good bit depending on the size and shape of your database (on my test database of only ~10k files, it sped things up 3-4x)
-* 'system:similar to' search predicates are no longer mutually exclusive in the same search--you can now have multiple
-* cleaned up a bunch of the similar files code generally. the main search function is split into pieces and common calls are spun off into their own thing
-
-### misc
-
-* added a new shortcut action, 'open file in file explorer', which opens the file in your file Explorer. if you haven't used this before, it only works on Windows and macOS and can be buggy. on Windows, if the explorer takes too long to open, it won't select the file correctly, so hit it again
-* thanks to a user, the html parsing formula can now search in a sideways direction, either finding the previous or following sibling html tags (as opposed to just search descendants/ancestors)
-* if an export folder is set to 'synchronise' and also needs to delete some symlinks (either it regularly makes symlinks, or it is clearing symlinks from an old run), _and_ those symlinks now point to since-deleted files, the dead symlinks should now delete correctly! thanks for an interesting report here
-* the docker build now has pympler support for memory profiling. note that this does not work very well--it is unfathomably laggy atm for any client of real size, so bear with me
-* the new Qt Media Player experiment is now more careful about how it deletes old windows. old players are handed off to the main gui, which takes ownership and explicitly waits for them to finish current work, then asks them to unload their media, and then, only when they are all clear sends the window delete signal. this should stop some READY/NULL errors people were seeing on unload, and hopefully without causing new stability problems (I've had crash trouble with explicitly unloading media before destroy before, but I'm doing it super safe here, so we'll see)
-* I added some more error reporting to the related area in the mpv player--if it fails to unload a media, it now prints the details to log--let's see if we can improve this too
-* when files fail to import for reasons other than veto or unsupported file, they now say the actual exception type in their first line summary
-
-### client api
-
-* when the api sends a file to be imported and it fails, the response 'note' now just has this human-readable top level line (it used to have the full error trace), and a new entry 'traceback' has the trace
-* the client api version is now 45
-
-### future build
-
-* to improve library update testing, I have set up a second, 'future' build that is the same as a normal release but uses newer library versions, for instance Python 3.10 from 3.9 and Qt 6.5.0 rather than 6.4.1. I am not sure how often I will be making this build--I don't want to spam, so I'm thinking once per month, but maybe we'll ultimately end up incorporating it into the main build and just kick it out every week--but please feel free to test them out as they do happen and let me know if you encounter any problems booting or with anything else. the idea here is to get more user situations, particularly older OSes, testing pending library updates so I can be more confident about pulling the trigger on moving up in the master build (the recent jump to Qt 6.4.1 caused several Win 10 users to have an annoying 2-second delay on opening any new search page, but 6.5.0 doesn't have this, so if you encountered this error, please try this build and let me know how it goes). the build is in the normal github releases stream, marked as a pre-release. v528-future is here: https://github.com/hydrusnetwork/hydrus/releases/tag/v528-future-1

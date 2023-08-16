@@ -2932,11 +2932,6 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             s = CC.media_viewer_action_string_lookup[ action ]
             
-            if action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ) and self._mime in ( HC.IMAGE_GIF, HC.GENERAL_ANIMATION ):
-                
-                s += ' (will show unanimated gifs with native viewer)'
-                
-            
             if action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and self._mime in [ HC.GENERAL_VIDEO ] + list( HC.VIDEO ):
                 
                 s += ' (no audio support)'

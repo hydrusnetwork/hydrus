@@ -20,7 +20,6 @@ except:
     pass # old version of numpy, screw it
     
 
-from PIL import _imaging
 from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
 from PIL import ImageCms as PILImageCms
@@ -40,14 +39,12 @@ except:
     HEIF_OK = False
     
 
-from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
-from hydrus.core import HydrusTime
 from hydrus.core import HydrusPSDHandling
 
 PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
@@ -102,7 +99,7 @@ warnings.filterwarnings( "ignore", "Metadata Warning", UserWarning )
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
 
-PIL_ONLY_MIMETYPES = { HC.IMAGE_GIF, HC.IMAGE_ICON }.union( HC.PIL_HEIF_MIMES )
+PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP }.union( HC.PIL_HEIF_MIMES )
 
 try:
     
@@ -584,49 +581,7 @@ def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
     return None
     
 
-def GetGIFFrameDurations( path ):
-    
-    pil_image = RawOpenPILImage( path )
-    
-    times_to_play_gif = GetTimesToPlayGIFFromPIL( pil_image )
-    
-    frame_durations = []
-    
-    i = 0
-    
-    while True:
-        
-        try:
-            
-            pil_image.seek( i )
-            
-        except:
-            
-            break
-            
-        
-        if 'duration' not in pil_image.info:
-            
-            duration = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
-            
-        else:
-            
-            duration = pil_image.info[ 'duration' ]
-            
-            # In the gif frame header, 10 is stored as 1ms. This 1 is commonly as utterly wrong as 0.
-            if duration in ( 0, 10 ):
-                
-                duration = 83
-                
-            
-        
-        frame_durations.append( duration )
-        
-        i += 1
-        
-    
-    return ( frame_durations, times_to_play_gif )
-    
+
 def GetICCProfileBytes( pil_image: PILImage.Image ) -> bytes:
     
     if HasICCProfile( pil_image ):
@@ -648,44 +603,18 @@ def GetImagePixelHashNumPy( numpy_image ):
     return hashlib.sha256( numpy_image.data.tobytes() ).digest()
     
 
-def GetImageProperties( path, mime ):
+def GetImageResolution( path ):
     
-    if OPENCV_OK and mime not in PIL_ONLY_MIMETYPES: # webp here too maybe eventually, or offload it all to ffmpeg
-        
-        numpy_image = GenerateNumPyImage( path, mime )
-        
-        ( width, height ) = GetResolutionNumPy( numpy_image )
-        
-        duration = None
-        num_frames = None
-        
-    else:
-        
-        ( ( width, height ), num_frames ) = GetResolutionAndNumFramesPIL( path, mime )
-        
-        if num_frames > 1:
-            
-            ( durations, times_to_play_gif ) = GetGIFFrameDurations( path )
-            
-            duration = sum( durations )
-            
-        else:
-            
-            duration = None
-            num_frames = None
-            
-        
+    pil_image = GeneratePILImage( path, dequantize = False )
     
-    if mime == HC.IMAGE_APNG:
-        
-        ( duration, num_frames ) = HydrusAnimationHandling.GetAPNGDurationAndNumFrames( path )
-        
+    ( width, height ) = pil_image.size
     
     width = max( width, 1 )
     height = max( height, 1 )
     
-    return ( ( width, height ), duration, num_frames )
+    return ( width, height )
     
+
 # bigger number is worse quality
 # this is very rough and misses some finesse
 def GetJPEGQuantizationQualityEstimate( path ):
@@ -841,46 +770,6 @@ def GetResolutionNumPy( numpy_image ):
     return ( image_width, image_height )
     
 
-def GetResolutionAndNumFramesPIL( path, mime ):
-    
-    pil_image = GeneratePILImage( path, dequantize = False ) 
-
-    ( x, y ) = pil_image.size
-    
-    if mime == HC.IMAGE_GIF: # some jpegs came up with 2 frames and 'duration' because of some embedded thumbnail in the metadata
-        
-        try:
-            
-            pil_image.seek( 1 )
-            pil_image.seek( 0 )
-            
-            num_frames = 1
-            
-            while True:
-                
-                try:
-                    
-                    pil_image.seek( pil_image.tell() + 1 )
-                    num_frames += 1
-                    
-                except:
-                    
-                    break
-                    
-                
-            
-        except:
-            
-            num_frames = 1
-            
-        
-    else:
-        
-        num_frames = 1
-        
-    
-    return ( ( x, y ), num_frames )
-    
 THUMBNAIL_SCALE_DOWN_ONLY = 0
 THUMBNAIL_SCALE_TO_FIT = 1
 THUMBNAIL_SCALE_TO_FILL = 2
@@ -966,32 +855,6 @@ def GetThumbnailResolutionAndClipRegion( image_resolution: typing.Tuple[ int, in
     thumbnail_height = max( int( thumbnail_height ), 1 )
     
     return ( clip_rect, ( thumbnail_width, thumbnail_height ) )
-    
-def GetTimesToPlayGIF( path ) -> int:
-    
-    try:
-        
-        pil_image = RawOpenPILImage( path )
-        
-    except HydrusExceptions.UnsupportedFileException:
-        
-        return 1
-        
-    
-    return GetTimesToPlayGIFFromPIL( pil_image )
-    
-def GetTimesToPlayGIFFromPIL( pil_image: PILImage.Image ) -> int:
-    
-    if 'loop' in pil_image.info:
-        
-        times_to_play_gif = pil_image.info[ 'loop' ]
-        
-    else:
-        
-        times_to_play_gif = 1
-        
-    
-    return times_to_play_gif
     
 
 def HasEXIF( path: str ) -> bool:

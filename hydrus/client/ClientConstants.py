@@ -239,9 +239,9 @@ for mime in HC.SEARCHABLE_MIMES:
     elif mime in HC.AUDIO:
         
         media_viewer_capabilities[ mime ] = audio_full_support
-
-    elif mime in HC.VIEWABLE_APPLICATIONS:
-
+        
+    elif mime in HC.VIEWABLE_IMAGE_PROJECT_FILES:
+        
         media_viewer_capabilities[ mime ] = static_full_support
         
     else:

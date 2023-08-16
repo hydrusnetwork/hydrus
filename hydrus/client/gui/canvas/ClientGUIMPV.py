@@ -670,13 +670,13 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
-            if mime == HC.IMAGE_GIF:
+            if mime == HC.ANIMATION_GIF:
                 
-                self._times_to_play_animation = HydrusImageHandling.GetTimesToPlayGIF( path )
+                self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayPILAnimation( path )
                 
-            elif mime == HC.IMAGE_APNG:
+            elif mime == HC.ANIMATION_APNG:
                 
-                self._times_to_play_animation = HydrusAnimationHandling.GetAPNGTimesToPlay( path )
+                self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( path )
                 
             
         

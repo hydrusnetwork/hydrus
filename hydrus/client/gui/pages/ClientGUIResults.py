@@ -178,7 +178,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 media = self._GetFocusSingleton()
                 
-                if media.IsImage():
+                if media.IsStaticImage():
                     
                     HG.client_controller.pub( 'clipboard', 'bmp', ( media, resolution ) )
                     
@@ -2093,7 +2093,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 copied = False
                 
-                if self._focused_media.IsImage():
+                if self._focused_media.IsStaticImage():
                     
                     ( width, height ) = self._focused_media.GetResolution()
                     
@@ -4226,7 +4226,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Copy your current selection into a simple new page.', self._ShowSelectionInNewPage )
             
-            if self._focused_media.HasImages():
+            if self._focused_media.HasStaticImages():
                 
                 similar_menu = ClientGUIMenus.GenerateMenu( open_menu )
                 
@@ -4329,7 +4329,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if focused_is_local:
                 
-                if self._focused_media.IsImage():
+                if self._focused_media.IsStaticImage():
                     
                     ClientGUIMenus.AppendMenuItem( copy_menu, 'bitmap', 'Copy this file to your clipboard as a bitmap.', self._CopyBMPToClipboard )
                     

@@ -12,6 +12,65 @@ from hydrus.client.search import ClientSearch
 
 from hydrus.external import SystemPredicateParser
 
+def convert_timetuple_to_seconds( v ):
+    
+    ( days, hours, minutes, seconds ) = v
+    
+    return days * 86400 + hours * 3600 + minutes * 60 + seconds
+    
+
+def convert_double_hex_hashlist_and_other_to_double_bytes_and_other( hex_hashlist_and_other ):
+    
+    try:
+        
+        bytes_hashlist_1 = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[0] ) )
+        bytes_hashlist_2 = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[1] ) )
+        
+    except HydrusExceptions.DataMissing as e:
+        
+        raise ValueError( str( e ) )
+        
+    
+    return ( bytes_hashlist_1, bytes_hashlist_2, hex_hashlist_and_other[2] )
+    
+
+def convert_hex_hashlist_and_other_to_bytes_and_other( hex_hashlist_and_other ):
+    
+    try:
+        
+        bytes_hashlist = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[0] ) )
+        
+    except HydrusExceptions.DataMissing as e:
+        
+        raise ValueError( str( e ) )
+        
+    
+    return ( bytes_hashlist, hex_hashlist_and_other[1] )
+    
+
+def date_pred_generator( pred_type, o, v ):
+    
+    #Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
+    #a datetime.date object. For the latter, only the YYYY-MM-DD format is accepted.
+    
+    if isinstance( v, datetime.datetime ):
+        
+        date_type = 'date'
+        v = ( v.year, v.month, v.day, v.hour, v.minute )
+        
+    else:
+        
+        date_type = 'delta'
+        
+        if o == '=':
+            
+            o = CC.UNICODE_ALMOST_EQUAL_TO
+            
+        
+    
+    return ClientSearch.Predicate( pred_type, ( o, date_type, tuple( v ) ) )
+    
+
 def file_service_pred_generator( o, v, u ):
     
     if o.startswith( 'is not' ):
@@ -60,6 +119,7 @@ def file_service_pred_generator( o, v, u ):
     
     return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE, ( is_in, status, service_key ) )
     
+
 def filetype_pred_generator( v ):
     
     # v is a list of non-hydrus-standard filetype strings
@@ -67,28 +127,6 @@ def filetype_pred_generator( v ):
     mimes = ( 1, )
     
     return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, mimes )
-    
-def date_pred_generator( pred_type, o, v ):
-    
-    #Either a tuple of 4 non-negative integers: (years, months, days, hours) where the latter is < 24 OR
-    #a datetime.date object. For the latter, only the YYYY-MM-DD format is accepted.
-    
-    if isinstance( v, datetime.datetime ):
-        
-        date_type = 'date'
-        v = ( v.year, v.month, v.day, v.hour, v.minute )
-        
-    else:
-        
-        date_type = 'delta'
-        
-        if o == '=':
-            
-            o = CC.UNICODE_ALMOST_EQUAL_TO
-            
-        
-    
-    return ClientSearch.Predicate( pred_type, ( o, date_type, tuple( v ) ) )
     
 
 def num_file_relationships_pred_generator( o, v, u ):
@@ -103,6 +141,31 @@ def num_file_relationships_pred_generator( o, v, u ):
     dupe_type = u_dict[ u ]
     
     return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( o, v, dupe_type ) )
+    
+
+def rating_service_pred_generator( operator, value_and_service_name ):
+    
+    try:
+        
+        ( value, service_name ) = value_and_service_name
+        
+        service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.RATINGS_SERVICES, service_name )
+        
+        service = HG.client_controller.services_manager.GetService( service_key )
+        
+    except:
+        
+        raise HydrusExceptions.BadRequestException( 'Could not find the service "{}"!'.format( service_name ) )
+        
+    
+    if service.GetServiceType() == HC.LOCAL_RATING_NUMERICAL and isinstance( value, int ):
+        
+        value = service.ConvertStarsToRating( value )
+        
+    
+    predicate_value = ( operator, value, service_key )
+    
+    return ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, value = predicate_value )
     
 
 def strip_quotes( s: str ) -> str:
@@ -135,41 +198,6 @@ def url_class_pred_generator( include, url_class_name ):
         
     
     return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( include, 'url_class', url_class, description ) )
-    
-def convert_timetuple_to_seconds( v ):
-    
-    ( days, hours, minutes, seconds ) = v
-    
-    return days * 86400 + hours * 3600 + minutes * 60 + seconds
-    
-
-def convert_double_hex_hashlist_and_other_to_double_bytes_and_other( hex_hashlist_and_other ):
-    
-    try:
-        
-        bytes_hashlist_1 = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[0] ) )
-        bytes_hashlist_2 = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[1] ) )
-        
-    except HydrusExceptions.DataMissing as e:
-        
-        raise ValueError( str( e ) )
-        
-    
-    return ( bytes_hashlist_1, bytes_hashlist_2, hex_hashlist_and_other[2] )
-    
-
-def convert_hex_hashlist_and_other_to_bytes_and_other( hex_hashlist_and_other ):
-    
-    try:
-        
-        bytes_hashlist = tuple( ( bytes.fromhex( hex_hash ) for hex_hash in hex_hashlist_and_other[0] ) )
-        
-    except HydrusExceptions.DataMissing as e:
-        
-        raise ValueError( str( e ) )
-        
-    
-    return ( bytes_hashlist, hex_hashlist_and_other[1] )
     
 
 SystemPredicateParser.InitialiseFiletypes( HC.mime_enum_lookup )
@@ -233,7 +261,12 @@ pred_generators = {
     SystemPredicateParser.Predicate.NO_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( '=', 0 ) ),
     SystemPredicateParser.Predicate.NUM_NOTES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( o, v ) ),
     SystemPredicateParser.Predicate.HAS_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( True, strip_quotes( v ) ) ),
-    SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, strip_quotes( v ) ) )
+    SystemPredicateParser.Predicate.NO_NOTE_NAME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME, ( False, strip_quotes( v ) ) ),
+    SystemPredicateParser.Predicate.HAS_RATING : lambda o, v, u: rating_service_pred_generator( '=', ( 'rated', v ) ),
+    SystemPredicateParser.Predicate.NO_RATING : lambda o, v, u: rating_service_pred_generator( '=', ( 'not rated', v ) ),
+    SystemPredicateParser.Predicate.RATING_SPECIFIC_NUMERICAL : lambda o, v, u: rating_service_pred_generator( o, v ),
+    SystemPredicateParser.Predicate.RATING_SPECIFIC_LIKE_DISLIKE : lambda o, v, u: rating_service_pred_generator( '=', v ),
+    SystemPredicateParser.Predicate.RATING_SPECIFIC_INCDEC : lambda o, v, u: rating_service_pred_generator( o, v )
 }
 
 def ParseSystemPredicateStringsToPredicates( system_predicate_strings: typing.Collection[ str ], discard_failures = False ) -> typing.List[ ClientSearch.Predicate ]:

@@ -70,7 +70,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     is_a_pixel_dupe = False
     
-    if shown_media.IsStaticImage() and comparison_media.IsStaticImage() and shown_media.GetResolution() == comparison_media.GetResolution():
+    if s_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and c_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and shown_media.GetResolution() == comparison_media.GetResolution():
         
         global hashes_to_pixel_hashes
         
@@ -317,19 +317,26 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # same/diff mime
     
-    if s_mime != c_mime:
+    if s_mime == c_mime:
+        
+        statement = 'both are {}s'.format( HC.mime_string_lookup[ s_mime ] )
+        score = 0
+        
+        statements_and_scores[ 'mime' ] = ( statement, score )
+        
+    else:
         
         statement = '{} vs {}'.format( HC.mime_string_lookup[ s_mime ], HC.mime_string_lookup[ c_mime ] )
         score = 0
         
         statements_and_scores[ 'mime' ] = ( statement, score )
-
-
+        
+    
     # audio/no audio
-
+    
     s_has_audio = shown_media.GetMediaResult().HasAudio()
     c_has_audio = comparison_media.GetMediaResult().HasAudio()
-
+    
     if s_has_audio != c_has_audio:
         
         if s_has_audio:

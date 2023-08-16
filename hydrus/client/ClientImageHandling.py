@@ -41,14 +41,15 @@ def GenerateShapePerceptualHashes( path, mime ):
         
     
     try:
-
+        
         numpy_image = GenerateNumPyImage( path, mime )
         
         return GenerateShapePerceptualHashesNumPy( numpy_image )
-    
+        
     except:
-
+        
         return set()
+        
     
 
 def GenerateShapePerceptualHashesNumPy( numpy_image ):

@@ -30,7 +30,7 @@ IF EXIST "venv\" (
 :questions
 
 ECHO:
-ECHO Users on Windows ^<=8.1 or python ^>=3.10 need the advanced install.
+ECHO Users on older Windows need the advanced install.
 ECHO:
 ECHO Your Python version is:
 python --version
@@ -45,7 +45,8 @@ goto :parse_fail
 :question_qt
 
 ECHO:
-ECHO If you are on Windows ^<=8.1, choose 5.
+ECHO Qt is the User Interface library. We are now on Qt6.
+ECHO If you are on Windows ^<=8.1, choose 5. If 6 gives you trouble, fall back to o.
 SET /P qt=Do you want Qt(5), Qt(6), Qt6 (o)lder, or (t)est?
 
 IF "%qt%" == "5" goto :question_mpv
@@ -57,7 +58,8 @@ goto :parse_fail
 :question_mpv
 
 ECHO:
-ECHO If you have mpv-2.dll, choose n.
+ECHO mpv is the main way to play audio and video. We need to tell hydrus how to talk to your mpv dll.
+ECHO Try the n first. If it doesn't work, fall back to o.
 SET /P mpv=Do you want (o)ld mpv or (n)ew mpv? 
 
 IF "%mpv%" == "o" goto :question_opencv
@@ -67,7 +69,8 @@ goto :parse_fail
 :question_opencv
 
 ECHO:
-ECHO If you are Python 3.10, choose n. ^>=3.11 should try the test
+ECHO OpenCV is the main image processing library.
+ECHO Try the n first. If it doesn't work, fall back to o. Very new python versions might need t.
 SET /P opencv=Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV?
 
 IF "%opencv%" == "o" goto :create

@@ -25,17 +25,17 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 === "Windows"
 
-    First of all, you will need to install Python. Get 3.8.x or 3.9.x [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available to your Windows.  
-    
-    If you are on 3.10.x, that's ok--run the 'advanced' setup later on and choose the newer OpenCV.
+    First of all, you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available to your Windows.  
 
 === "Linux"
 
-    You should already have a fairly new python. Ideally, you want 3.8.x or 3.9.x. If you are on 3.10.x, run the 'advanced' setup later on and choose the newer OpenCV.
+    You should already have a fairly new python. Ideally, you want at last 3.9.
 
 === "macOS"
 
     You should already have python of about the correct version.
+
+If you are already on a very new version of python, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on a much older version of python, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
 
 Then, get the hydrus source. The github repo is [https://github.com/hydrusnetwork/hydrus](https://github.com/hydrusnetwork/hydrus). If you are familiar with git, you can just clone the repo to the location you want with `git clone https://github.com/hydrusnetwork/hydrus`, but if not, then just go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere. Make sure the directory has write permissions (e.g. don't put it in "Program Files"). Extracting straight to a spare drive, something like "D:\Hydrus Network", is ideal.
 
@@ -44,11 +44,11 @@ We will call the base extract directory, the one with 'hydrus_client.py' in it, 
 !!! info "Mixed Builds"
     Don't mix and match build extracts and source extracts. The process that runs the code gets confused if there are unexpected extra .dlls in the directory. **If you need to convert between built and source releases, perform a [clean install](getting_started_installing.md#clean_installs).**  
     
-    If you are converting from one install type to another, make a backup before you start. Then, if it all goes wrong, you'll have a safe backup to rollback to.
+    If you are converting from one install type to another, make a backup before you start. Then, if it all goes wrong, you'll always have a safe backup to rollback to.
 
 #### Built Programs
 
-There are three external libraries. You just have to get them and put them in the correct place:
+There are three special external libraries. You just have to get them and put them in the correct place:
 
 === "Windows"
 
@@ -56,7 +56,7 @@ There are three external libraries. You just have to get them and put them in th
         
         1. If you are on Windows 8.1 or older, [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z) is known safe.
         2. If you are on Windows 10 or newer and want the simple answer, try [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z).
-        3. If you want something newer, then go for [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z), but you have to rename the dll to `mpv-2.dll`.
+        3. Ideally, go for [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z), but you have to rename the dll to `mpv-2.dll`.
         
         Then open that archive and place the 'mpv-1.dll' or 'mpv-2.dll' into `install_dir`.
         
@@ -90,6 +90,13 @@ There are three external libraries. You just have to get them and put them in th
     3. FFMPEG  
         
         You should already have ffmpeg. Just type `ffmpeg` into a new terminal, and it should give a basic version response. If you somehow don't have ffmpeg, check your package manager.
+        
+    ??? "Qt compatibility note"
+        
+        If you run into trouble running newer versions of Qt6, which you will be setting up later, some users have fixed it by installing the packages `libicu-dev` and `libxcb-cursor-dev`. With `apt` that will be:
+        
+        * `sudo apt-get install libicu-dev`
+        * `sudo apt-get install libxcb-cursor-dev`
         
 
 === "macOS"
@@ -144,14 +151,12 @@ There are three external libraries. You just have to get them and put them in th
     
     You will likely have to do the same on the other .command files.
     
-    I do not know which versions of macOS are unable to run Qt6, so you may need to experiment with the advanced options. Try Qt5 and the other older libraries first, then test the newer ones later.
-    
-    Let me know what you discover.
+    You may need to experiment with the advanced choices, especially if your macOS is a litle old.
     
 
-The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual, you may need the (a)dvanced. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.
+The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual, try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.
 
-If something messes up, or you want to switch between Qt5/Qt6, or you need to try a different version of a library, just run the setup script again and it will reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall'. It should _just work_ on most normal computers, but let me know if you have any trouble.
+If something messes up, or you want to make a different decision, just run the setup script again and it will reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should _just work_ on most normal computers, but let me know if you have any trouble.
 
 Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to rebuild the current help.
 
@@ -169,12 +174,12 @@ Then run the 'setup_help' script to build the help. This isn't necessary, but it
 
     Run 'hydrus_client.command' to start the client. Don't forget to set `chmod +x hydrus_client.command` if you need it.
 
-The first start will take a little longer. It will operate just like a normal build, putting your database in the 'db' directory.
+The first start will take a little longer (it has to compile all the code into something your computer understands). Once up, it will operate just like a normal build with the same folder structure and so on.
 
 !!! warning "Missing a Library"
     If the client fails to boot, it should place a 'hydrus_crash.log' in your 'db' directory or your desktop, or, if it got far enough, it may write the error straight to the 'client - date.log' file in your db directory.  
 
-    If that error talks about a missing library, then try reinstalling your venv. Are you sure it finished correctly? Are you sure you have the correct Qt version?
+    If that error talks about a missing library, try reinstalling your venv. Are you sure it finished correctly? Do you need to run the advanced setup and select a different version of Qt?
 
 === "Windows"
 

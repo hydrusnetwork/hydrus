@@ -25,6 +25,27 @@ from enum import Enum, auto
 # TODO: This needs to be updated with all types that Hydrus supports.
 FILETYPES = { }
 
+# sort according to longest thing first to rid ourselves of ambiguity
+operator_strings_and_results = sorted(
+    [
+        ( '=', '=' ),
+        ( '==', '=' ),
+        ( 'is', '=' ),
+        ( '\u2260', '\u2260' ),
+        ( '!=', '\u2260' ),
+        ( 'is not', '\u2260' ),
+        ( 'isn\'t', '\u2260' ),
+        ( '<', '<' ),
+        ( 'less than', '<' ),
+        ( '>', '>' ),
+        ( 'more than', '>' ),
+        ( '\u2248', '\u2248' ),
+        ( '~=', '\u2248' ),
+        ( 'about', '\u2248' ),
+        ( 'is about', '\u2248' ),
+    ],
+    key = lambda a: -len( a[0] )
+)
 
 def InitialiseFiletypes( str_to_enum ):
     for ( filetype_string, enum ) in str_to_enum.items():
@@ -111,6 +132,11 @@ class Predicate( Enum ):
     NUM_NOTES = auto()
     HAS_NOTE_NAME = auto()
     NO_NOTE_NAME = auto()
+    RATING_SPECIFIC_NUMERICAL = auto()
+    RATING_SPECIFIC_LIKE_DISLIKE = auto()
+    RATING_SPECIFIC_INCDEC = auto()
+    HAS_RATING = auto()
+    NO_RATING = auto()
 
 
 # This enum lists the possible value formats a predicate can have (if it has a value).
@@ -131,6 +157,9 @@ class Value( Enum ):
     INTEGER = auto()  # An integer
     RATIO = auto()  # A tuple of 2 ints, both non-negative
     RATIO_SPECIAL = auto() # 1:1
+    RATING_SERVICE_NAME_AND_NUMERICAL_VALUE = auto() # my favourites 3/5
+    RATING_SERVICE_NAME_AND_LIKE_DISLIKE = auto() # my favourites like
+    RATING_SERVICE_NAME_AND_INCDEC = auto() # my favourites 3/5
 
 
 # Possible operator formats
@@ -139,6 +168,7 @@ class Operators( Enum ):
     RELATIONAL = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too)
     RELATIONAL_EXACT = auto() # Like RELATIONAL but without the approximately equal operator
     RELATIONAL_TIME = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too), and the various 'since', 'before', 'the day of', 'the month of' time-based analogues
+    RELATIONAL_FOR_RATING_SERVICE = auto()  # RELATIONAL, but in the middle of a 'service_name = 4/5' kind of thing
     EQUAL = auto()  # One of '=' or '!='
     FILESERVICE_STATUS = auto()  # One of 'is not currently in', 'is currently in', 'is not pending to', 'is pending to'
     TAG_RELATIONAL = auto()  # A tuple of a string (a potential tag name) and a relational operator (as a string)
@@ -220,7 +250,12 @@ SYSTEM_PREDICATES = {
     '((has )?no|does not have( a)?|doesn\'t have) notes?$': (Predicate.NO_NOTES, None, None, None),
     'num(ber of)? notes?': (Predicate.NUM_NOTES, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
     '(has (a )?)?note (with name|named)': (Predicate.HAS_NOTE_NAME, None, Value.ANY_STRING, None),
-    '((has )?no|does not have|doesn\'t have)( a)? note (with name|named)': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
+    '((has )?no|does not have( a)?|doesn\'t have( a)?) note (with name|named)': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
+    'has( a)? rating( for)?': (Predicate.HAS_RATING, None, Value.ANY_STRING, None ),
+    '((has )?no|does not have( a)?|doesn\'t have( a)?) rating( for)?': (Predicate.NO_RATING, None, Value.ANY_STRING, None ),
+    'rating( for)?(?=.+?\d+/\d+$)': (Predicate.RATING_SPECIFIC_NUMERICAL, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_NUMERICAL_VALUE, None ),
+    'rating( for)?(?=.+?(like|dislike)$)': (Predicate.RATING_SPECIFIC_LIKE_DISLIKE, None, Value.RATING_SERVICE_NAME_AND_LIKE_DISLIKE, None ),
+    'rating( for)?(?=.+?[^/]\d+$)': (Predicate.RATING_SPECIFIC_INCDEC, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_INCDEC, None ),
 }
 
 
@@ -401,8 +436,86 @@ def parse_value( string: str, spec ):
         if string == 'landscape': return ( '', ( 1, 1 ) )
         if string == 'portrait': return ( '', ( 1, 1 ) )
         
+    elif spec == Value.RATING_SERVICE_NAME_AND_NUMERICAL_VALUE:
+        
+        # 'my favourites 3/5' (no operator here)
+        
+        match = re.match( '(?P<name>.+?)\s+(?P<num>\d+)/(?P<den>\d+)$', string )
+        
+        if match:
+            
+            service_name = match[ 'name' ]
+            numerator = int( match[ 'num' ] )
+            denominator = int( match[ 'den' ] )
+            
+            if numerator < 0 or numerator > denominator:
+                
+                raise ValueError( 'Invalid value, rating value was out of bounds')
+                
+            
+            return ( '', ( numerator, service_name ) )
+            
+        
+        raise ValueError( "Invalid value, expected a numerical rating" )
+        
+    elif spec == Value.RATING_SERVICE_NAME_AND_LIKE_DISLIKE:
+        
+        # 'tag this later = like' (maybe operator here)
+        # 'tag this later like'
+        
+        # check dislike first lol
+        if string.endswith( 'dislike' ):
+            
+            value = 0.0
+            
+            string = string[ : -len( 'dislike' ) ]
+            
+        elif string.endswith( 'like' ):
+            
+            value = 1.0
+            
+            string = string[ : -len( 'like' ) ]
+            
+        else:
+            
+            raise ValueError( 'Invalid value, expected like/dislike' )
+            
+        
+        string = string.strip()
+        
+        for ( operator_string, result ) in operator_strings_and_results:
+            
+            if string.endswith( operator_string ):
+                
+                string = string[ : -len( operator_string ) ]
+                
+                string = string.strip()
+                
+                break
+                
+            
+        
+        service_name = string
+        
+        return ( '', ( value, service_name ) )
+        
+    elif spec == Value.RATING_SERVICE_NAME_AND_INCDEC:
+        
+        # 'I'm cooooollecting counter 123' (no operator here)
+        
+        match = re.match( '(?P<name>.+?)\s+(?P<num>\d+)$', string )
+        
+        if match:
+            
+            service_name = match[ 'name' ]
+            value = int( match[ 'num' ] )
+            
+            return ( '', ( value, service_name ) )
+            
+        
+        raise ValueError( "Invalid value, expected an inc/dec rating" )
+        
     raise ValueError( "Invalid value specification" )
-
 
 def parse_operator( string: str, spec ):
     
@@ -469,6 +582,38 @@ def parse_operator( string: str, spec ):
             if string.startswith( op ): return string[ len( op ): ], op
         if string.startswith( 'is' ): return string[ 2: ], '='
         raise ValueError( "Invalid relational operator" )
+    elif spec == Operators.RELATIONAL_FOR_RATING_SERVICE:
+        
+        # "favourites service name > 3/5"
+        # since service name can be all sorts of gubbins, we'll work backwards and KISS
+        match = re.match( '(?P<first>.*?)(?P<second>(dislike|like|\d+/\d+|\d+))$', string )
+        
+        if match:
+            
+            without_value_string_raw = match[ 'first' ]
+            
+            without_value_string = without_value_string_raw.strip()
+            
+            for ( operator_string, possible_operator ) in operator_strings_and_results:
+                
+                if without_value_string.endswith( operator_string ):
+                    
+                    if possible_operator == '\u2260':
+                        
+                        raise ValueError( 'Invalid rating operator--cannot select "is not"' )
+                        
+                    
+                    service_name = without_value_string[ : -len( operator_string) ]
+                    
+                    value = match[ 'second' ]
+                    
+                    parsing_string = f'{service_name} {value}'
+                    
+                    return ( parsing_string, possible_operator )
+                    
+                
+            
+        raise ValueError( "Invalid rating operator" )
     elif spec == Operators.EQUAL:
         if string.startswith( '==' ): return string[ 2: ], '='
         if string.startswith( '=' ): return string[ 1: ], '='

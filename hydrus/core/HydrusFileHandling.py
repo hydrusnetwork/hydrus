@@ -49,8 +49,8 @@ headers_and_mime_thumbnails = [
 headers_and_mime = list( headers_and_mime_thumbnails )
 
 headers_and_mime.extend( [
-    ( ( ( 0, b'GIF87a' ), ), HC.IMAGE_GIF ),
-    ( ( ( 0, b'GIF89a' ), ), HC.IMAGE_GIF ),
+    ( ( ( 0, b'GIF87a' ), ), HC.UNDETERMINED_GIF ),
+    ( ( ( 0, b'GIF89a' ), ), HC.UNDETERMINED_GIF ),
     ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG ),
     ( ( ( 8, b'WEBP' ), ), HC.IMAGE_WEBP ),
     ( ( ( 0, b'II*\x00' ), ), HC.IMAGE_TIFF ),
@@ -118,43 +118,28 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         target_resolution = ( 128, 128 )
         
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ): # not apng atm
+    if mime == HC.APPLICATION_PSD:
         
-        try:
-            
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, clip_rect = clip_rect )
-            
-        except Exception as e:
-            
-            HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
-            HydrusData.PrintException( e )
-            
-            thumb_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
-            
-            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
-            
-        
-    elif mime == HC.APPLICATION_PSD:
-                
         try:
             
             thumbnail_bytes = HydrusPSDHandling.GenerateThumbnailBytesFromPSDPath( path, target_resolution, clip_rect = clip_rect )
             
         except:
-
+            
             try:
-
+                
                 ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
-
+                
                 HydrusVideoHandling.RenderImageToImagePath( path, temp_path )
-            
+                
                 thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
-            
+                
             except: 
-
+                
                 thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
                 
                 thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+                
             
         
     elif mime == HC.APPLICATION_CLIP:
@@ -237,6 +222,24 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
         finally:
             
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
+    elif mime in HC.IMAGES or mime == HC.ANIMATION_GIF: # not apng atm
+        
+        # TODO: it would be nice to have gif and apng generating their thumb x frames in, like with videos. maybe we should add animation thumb fetcher to hydrusanimationhandling
+        
+        try:
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, clip_rect = clip_rect )
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
+            HydrusData.PrintException( e )
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
             
         
     else:
@@ -376,11 +379,8 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         has_audio = False
         
     
-    if mime in ( HC.IMAGE_JPEG, HC.IMAGE_APNG, HC.IMAGE_PNG, HC.IMAGE_GIF, HC.IMAGE_WEBP, HC.IMAGE_TIFF, HC.IMAGE_ICON, HC.IMAGE_HEIF, HC.IMAGE_HEIC, HC.IMAGE_AVIF ):
-        
-        ( ( width, height ), duration, num_frames ) = HydrusImageHandling.GetImageProperties( path, mime )
-        
-    elif mime == HC.APPLICATION_CLIP:
+    # keep this in the specific-first, general-last test order
+    if mime == HC.APPLICATION_CLIP:
         
         ( ( width, height ), duration, num_frames ) = HydrusClipHandling.GetClipProperties( path )
         
@@ -407,6 +407,14 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
+        
+    elif mime in HC.ANIMATIONS:
+        
+        ( ( width, height ), duration, num_frames ) = HydrusAnimationHandling.GetAnimationProperties( path, mime )
+        
+    elif mime in HC.IMAGES:
+        
+        ( width, height ) = HydrusImageHandling.GetImageResolution( path )
         
     elif mime in HC.AUDIO:
         
@@ -531,11 +539,22 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 
                 if HydrusAnimationHandling.IsPNGAnimated( first_bytes_of_file ):
                     
-                    return HC.IMAGE_APNG
+                    return HC.ANIMATION_APNG
                     
                 else:
                     
                     return HC.IMAGE_PNG
+                    
+                
+            elif mime == HC.UNDETERMINED_GIF:
+                
+                if HydrusAnimationHandling.PILAnimationHasDuration( path ):
+                    
+                    return HC.ANIMATION_GIF
+                    
+                else:
+                    
+                    return HC.IMAGE_GIF
                     
                 
             else:

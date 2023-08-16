@@ -100,7 +100,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 538
+SOFTWARE_VERSION = 539
 CLIENT_API_VERSION = 49
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -662,7 +662,7 @@ query_type_string_lookup = {
 APPLICATION_HYDRUS_CLIENT_COLLECTION = 0
 IMAGE_JPEG = 1
 IMAGE_PNG = 2
-IMAGE_GIF = 3
+ANIMATION_GIF = 3
 IMAGE_BMP = 4
 APPLICATION_FLASH = 5
 APPLICATION_YAML = 6
@@ -682,7 +682,7 @@ UNDETERMINED_WM = 19
 VIDEO_MKV = 20
 VIDEO_WEBM = 21
 APPLICATION_JSON = 22
-IMAGE_APNG = 23
+ANIMATION_APNG = 23
 UNDETERMINED_PNG = 24
 VIDEO_MPEG = 25
 VIDEO_MOV = 26
@@ -726,6 +726,8 @@ IMAGE_HEIC = 63
 IMAGE_HEIC_SEQUENCE = 64
 IMAGE_AVIF = 65
 IMAGE_AVIF_SEQUENCE = 66
+UNDETERMINED_GIF = 67
+IMAGE_GIF = 68
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -742,8 +744,9 @@ GENERAL_FILETYPES = {
 SEARCHABLE_MIMES = {
     IMAGE_JPEG,
     IMAGE_PNG,
-    IMAGE_APNG,
+    ANIMATION_APNG,
     IMAGE_GIF,
+    ANIMATION_GIF,
     IMAGE_WEBP,
     IMAGE_TIFF,
     IMAGE_ICON,
@@ -801,6 +804,7 @@ DECOMPRESSION_BOMB_IMAGES = {
 IMAGES = [
     IMAGE_JPEG,
     IMAGE_PNG,
+    IMAGE_GIF,
     IMAGE_BMP,
     IMAGE_WEBP,
     IMAGE_TIFF,
@@ -811,8 +815,8 @@ IMAGES = [
 ]
 
 ANIMATIONS = [
-    IMAGE_GIF,
-    IMAGE_APNG,
+    ANIMATION_GIF,
+    ANIMATION_APNG,
     IMAGE_HEIF_SEQUENCE,
     IMAGE_HEIC_SEQUENCE,
     IMAGE_AVIF_SEQUENCE,
@@ -872,7 +876,7 @@ ARCHIVES = [
     APPLICATION_ZIP
 ]
 
-VIEWABLE_APPLICATIONS = { APPLICATION_PSD }
+VIEWABLE_IMAGE_PROJECT_FILES = { APPLICATION_PSD }
 
 general_mimetypes_to_mime_groups = {
     GENERAL_APPLICATION : APPLICATIONS,
@@ -906,7 +910,7 @@ PIL_HEIF_MIMES = {
 MIMES_THAT_DEFINITELY_HAVE_AUDIO = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) )
 MIMES_THAT_MAY_HAVE_AUDIO = tuple( list( MIMES_THAT_DEFINITELY_HAVE_AUDIO ) + list( VIDEO ) )
 
-APPLICATIONS_WITH_THUMBNAILS = set({ IMAGE_SVG, APPLICATION_FLASH, APPLICATION_CLIP, APPLICATION_KRITA }).union( VIEWABLE_APPLICATIONS )
+APPLICATIONS_WITH_THUMBNAILS = set( { IMAGE_SVG, APPLICATION_FLASH, APPLICATION_CLIP, APPLICATION_KRITA } ).union( VIEWABLE_IMAGE_PROJECT_FILES )
 
 MIMES_WITH_THUMBNAILS = set( IMAGES ).union( ANIMATIONS ).union( VIDEO ).union( APPLICATIONS_WITH_THUMBNAILS )
 
@@ -914,11 +918,10 @@ FILES_THAT_CAN_HAVE_ICC_PROFILE = { IMAGE_JPEG, IMAGE_PNG, IMAGE_GIF, IMAGE_TIFF
 
 FILES_THAT_CAN_HAVE_EXIF = { IMAGE_JPEG, IMAGE_TIFF, IMAGE_PNG, IMAGE_WEBP }.union( PIL_HEIF_MIMES )
 # images and animations that PIL can handle
-FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA = { IMAGE_JPEG, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, IMAGE_GIF, IMAGE_APNG }.union( PIL_HEIF_MIMES )
+FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA = { IMAGE_JPEG, IMAGE_PNG, IMAGE_BMP, IMAGE_WEBP, IMAGE_TIFF, IMAGE_ICON, IMAGE_GIF, ANIMATION_GIF, ANIMATION_APNG }.union( PIL_HEIF_MIMES )
 
-FILES_THAT_CAN_HAVE_PIXEL_HASH = set( IMAGES ).union( VIEWABLE_APPLICATIONS ).union( { IMAGE_GIF } )
-FILES_THAT_HAVE_PERCEPTUAL_HASH = set( IMAGES ).union( VIEWABLE_APPLICATIONS )
-
+FILES_THAT_CAN_HAVE_PIXEL_HASH = set( IMAGES ).union( VIEWABLE_IMAGE_PROJECT_FILES )
+FILES_THAT_HAVE_PERCEPTUAL_HASH = set( IMAGES ).union( VIEWABLE_IMAGE_PROJECT_FILES )
 
 HYDRUS_UPDATE_FILES = ( APPLICATION_HYDRUS_UPDATE_DEFINITIONS, APPLICATION_HYDRUS_UPDATE_CONTENT )
 
@@ -929,8 +932,8 @@ mime_enum_lookup = {
     'image/jpg' : IMAGE_JPEG,
     'image/x-png' : IMAGE_PNG,
     'image/png' : IMAGE_PNG,
-    'image/apng' : IMAGE_APNG,
-    'image/gif' : IMAGE_GIF,
+    'image/apng' : ANIMATION_APNG,
+    'image/gif' : ANIMATION_GIF, # no lookup goes to static gif
     'image/bmp' : IMAGE_BMP,
     'image/webp' : IMAGE_WEBP,
     'image/tiff' : IMAGE_TIFF,
@@ -998,8 +1001,9 @@ mime_string_lookup = {
     APPLICATION_HYDRUS_CLIENT_COLLECTION : 'collection',
     IMAGE_JPEG : 'jpeg',
     IMAGE_PNG : 'png',
-    IMAGE_APNG : 'apng',
-    IMAGE_GIF : 'gif',
+    ANIMATION_APNG : 'apng',
+    IMAGE_GIF : 'static gif',
+    ANIMATION_GIF : 'animated gif',
     IMAGE_BMP : 'bmp',
     IMAGE_WEBP : 'webp',
     IMAGE_TIFF : 'tiff',
@@ -1070,8 +1074,9 @@ mime_mimetype_string_lookup = {
     APPLICATION_HYDRUS_CLIENT_COLLECTION : 'collection',
     IMAGE_JPEG : 'image/jpeg',
     IMAGE_PNG : 'image/png',
-    IMAGE_APNG : 'image/apng',
+    ANIMATION_APNG : 'image/apng',
     IMAGE_GIF : 'image/gif',
+    ANIMATION_GIF : 'image/gif',
     IMAGE_BMP : 'image/bmp',
     IMAGE_WEBP : 'image/webp',
     IMAGE_TIFF : 'image/tiff',
@@ -1137,14 +1142,15 @@ mime_mimetype_string_lookup = {
 
 mime_mimetype_string_lookup[ UNDETERMINED_WM ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_WMA ], mime_mimetype_string_lookup[ VIDEO_WMV ] )
 mime_mimetype_string_lookup[ UNDETERMINED_MP4 ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_MP4 ], mime_mimetype_string_lookup[ VIDEO_MP4 ] )
-mime_mimetype_string_lookup[ UNDETERMINED_PNG ] = '{} or {}'.format( mime_mimetype_string_lookup[ IMAGE_PNG ], mime_mimetype_string_lookup[ IMAGE_APNG ] )
+mime_mimetype_string_lookup[ UNDETERMINED_PNG ] = '{} or {}'.format( mime_mimetype_string_lookup[ IMAGE_PNG ], mime_mimetype_string_lookup[ ANIMATION_APNG ] )
 
 mime_ext_lookup = {
     APPLICATION_HYDRUS_CLIENT_COLLECTION : '.collection',
     IMAGE_JPEG : '.jpg',
     IMAGE_PNG : '.png',
-    IMAGE_APNG : '.png',
+    ANIMATION_APNG : '.png',
     IMAGE_GIF : '.gif',
+    ANIMATION_GIF : '.gif',
     IMAGE_BMP : '.bmp',
     IMAGE_WEBP : '.webp',
     IMAGE_TIFF : '.tiff',
