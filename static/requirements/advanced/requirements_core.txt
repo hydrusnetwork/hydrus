@@ -12,6 +12,7 @@ lz4>=3.0.0
 numpy>=1.16.0
 Pillow>=9.1.1
 pillow-heif>=0.12.0
+psd-tools>=1.9.28
 psutil>=5.0.0
 pyOpenSSL>=19.1.0
 PySocks>=1.7.0
@@ -22,5 +23,3 @@ Twisted>=20.3.0
 
 requests==2.31.0
 setuptools==65.5.1
-
-psd-tools>=1.9.28
