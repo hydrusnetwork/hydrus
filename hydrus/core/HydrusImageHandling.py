@@ -270,7 +270,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
         
         HydrusData.ShowText( 'Loading media: ' + path )
         
-
+    
     if not OPENCV_OK:
         
         force_pil = True
@@ -317,17 +317,17 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
         
     if mime == HC.APPLICATION_PSD:
-         
-        if HG.media_load_report_mode:
         
+        if HG.media_load_report_mode:
+            
             HydrusData.ShowText( 'Loading PSD' )
             
         pil_image = HydrusPSDHandling.MergedPILImageFromPSD( path )
- 
+        
         pil_image = DequantizePILImage( pil_image )
         
         numpy_image = GenerateNumPyImageFromPILImage( pil_image )
-
+        
     elif mime in PIL_ONLY_MIMETYPES or force_pil:
         
         if HG.media_load_report_mode:

@@ -70,6 +70,40 @@ def ConvertPixelsToTextWidth( window, pixels, round_down = False ) -> int:
     
 def ConvertQtImageToNumPy( qt_image: QG.QImage ):
     
+    #        _     _                          _        _                           
+    #    _  | |   (_)          _             | |      | |                          
+    #  _| |_| |__  _  ___    _| |_ ___   ___ | |  _   | |__   ___  _   _  ____ ___ 
+    # (_   _)  _ \| |/___)  (_   _) _ \ / _ \| |_/ )  |  _ \ / _ \| | | |/ ___)___)
+    #   | |_| | | | |___ |    | || |_| | |_| |  _ (   | | | | |_| | |_| | |  |___ |
+    #    \__)_| |_|_(___/      \__)___/ \___/|_| \_)  |_| |_|\___/|____/|_|  (___/ 
+    #
+    # Ok so I don't know what is going on, but QImage 'ARGB32' bitmaps seem to actually be stored BGRA!!!
+    # if you tell them to convert to RGB888, they switch their bytes around to RGB, so this is probably some internal Qt gubbins
+    # The spec says they are 0xAARRGGBB, so I'm guessing it is swapped for some X-endian reason???
+    # unfortunately this messes with us a little, since we rip these bits and assume we are getting RGBA
+    # Ok, I figured it out, just convert to RGBA8888 (which supposedly _is_ endian ordered) and it sorts itself out
+    # I guess someone on different endian-ness won't get the right answer? I'd believe it if ARGB32 wasn't reversed
+    # if that is the case, we can inspect the 'PixelFormat' of the bmp and it'll say our endianness, and then I guess I reverse or something
+    # probably easier, whatever the case, to do that sort of clever channel swapping once we are in numpy
+    # another ultimate answer is probably to convert to rgb888 and rip the alpha too and recombine, or just ditch the alpha who cares
+    
+    qt_image = qt_image.copy()
+    
+    if qt_image.hasAlphaChannel():
+        
+        if qt_image.format() != QG.QImage.Format_RGBA8888:
+            
+            qt_image.convertTo( QG.QImage.Format_RGBA8888 )
+            
+        
+    else:
+        
+        if qt_image.format() != QG.QImage.Format_RGB888:
+            
+            qt_image.convertTo( QG.QImage.Format_RGB888 )
+            
+        
+    
     width = qt_image.width()
     height = qt_image.height()
     

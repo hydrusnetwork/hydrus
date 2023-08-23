@@ -2042,6 +2042,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:limit is 100', "system:limit = 100" ),
             ( 'system:filetype is jpeg', "system:filetype is jpeg" ),
             ( 'system:filetype is apng, jpeg, png', "system:filetype =   image/jpg, image/png, apng" ),
+            ( 'system:filetype is image', "system:filetype is image" ),
+            ( 'system:filetype is animated gif, static gif, jpeg', "system:filetype =   static gif, animated gif, jpeg" ),
             ( 'system:sha256 hash is in 3 hashes', "system:hash = abcdef01 abcdef02 abcdef03" ),
             ( 'system:md5 hash is in 3 hashes', "system:hash = abcdef01 abcdef, abcdef04 md5" ),
             ( 'system:md5 hash is abcdef01', "system:hash = abcdef01 md5" ),

@@ -201,6 +201,7 @@ def url_class_pred_generator( include, url_class_name ):
     
 
 SystemPredicateParser.InitialiseFiletypes( HC.mime_enum_lookup )
+SystemPredicateParser.InitialiseFiletypes( HC.string_enum_lookup )
 
 pred_generators = {
     SystemPredicateParser.Predicate.EVERYTHING : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ),

@@ -53,15 +53,11 @@ def InitialiseFiletypes( str_to_enum ):
         if isinstance( enum, int ):
             
             enum_tuple = (enum,)
-        
+            
         else:
             
             enum_tuple = tuple( enum )
-        
-        if '/' in filetype_string:
-            (filetype_class, specific_filetype) = filetype_string.split( '/', 1 )
             
-            FILETYPES[ specific_filetype ] = enum_tuple
         
         FILETYPES[ filetype_string ] = enum_tuple
 
@@ -280,8 +276,11 @@ def parse_system_predicate( string: str ):
             string, unit = parse_unit( string, pred[ 3 ] )
             if string: raise ValueError( "Unrecognized characters at the end of the predicate: " + string )
             return pred[ 0 ], operator, value, unit
+            
+        
+    
     raise ValueError( "Unknown system predicate!" )
-
+    
 
 def parse_unit( string: str, spec ):
     string = string.strip()
@@ -329,8 +328,10 @@ def parse_unit( string: str, spec ):
             match = re.match( 'fps', string )
             if match: return string[ len( match[ 0 ] ): ], None
         raise ValueError( "Invalid unit, expected no unit or fps" )
+        
+    
     raise ValueError( "Invalid unit specification" )
-
+    
 
 def parse_value( string: str, spec ):
     string = string.strip()
@@ -368,9 +369,10 @@ def parse_value( string: str, spec ):
         ftype_regex = '(' + '|'.join( [ '(' + val + ')' for val in valid_values ] ) + ')'
         match = re.match( '(' + ftype_regex + '(\s|,)+)*' + ftype_regex, string )
         if match:
-            found_ftypes_all = re.sub( '\s', ' ', match[ 0 ].replace( ',', ' ' ) ).split( ' ' )
+            found_ftypes_all = re.sub( '\s', ' ', match[ 0 ].replace( ',', '|' ) ).split( '|' )
             found_ftypes_good = [ ]
             for ftype in found_ftypes_all:
+                ftype = ftype.strip()
                 if len( ftype ) > 0 and ftype in FILETYPES:
                     found_ftypes_good.extend( FILETYPES[ ftype ] )
             return string[ len( match[ 0 ] ): ], set( found_ftypes_good )
@@ -515,7 +517,9 @@ def parse_value( string: str, spec ):
         
         raise ValueError( "Invalid value, expected an inc/dec rating" )
         
+    
     raise ValueError( "Invalid value specification" )
+    
 
 def parse_operator( string: str, spec ):
     
@@ -664,110 +668,6 @@ def parse_operator( string: str, spec ):
         if 'portrait' in string: return 'portrait', 'taller than'
         if 'landscape' in string: return 'landscape', 'wider than'
         
+    
     raise ValueError( "Invalid operator specification" )
-
-
-examples = [
-    "system:everything",
-    "system:inbox  ",
-    "system:archive ",
-    "system:has duration",
-    "system:has_duration",
-    "   system:no_duration",
-    "system:no duration",
-    "system:is the best quality file  of its group",
-    "system:isn't the best quality file of its duplicate group",
-    "system:has_audio",
-    "system:no audio",
-    "system:has icc profile",
-    "system:no icc profile",
-    "system:has tags",
-    "system:no tags",
-    "system:untagged",
-    "system:number of tags > 5",
-    "system:number of tags ~= 10",
-    "system:number of tags > 0  ",
-    "system:number of words < 2",
-    "system:height = 600px",
-    "system:height is 800",
-    "system:height > 900",
-    "system:width < 200",
-    "system:width > 1000 pixels",
-    "system:filesize ~= 50 kilobytes",
-    "system:filesize > 10megabytes",
-    "system:file size    < 1 GB",
-    "system:file size > 0 B",
-    "system:similar to abcdef1 abcdef2 abcdef3, abcdef4 with distance 3",
-    "system:similar to abcdef distance 5",
-    "system:limit is 5000",
-    "system:limit = 100",
-    #"system:filetype is jpeg",
-    #"system:filetype =   image/jpg, image/png, apng",
-    "system:hash = abcdef1 abcdef2 abcdef3",
-    "system:hash = abcdef1 abcdef, abcdef4 md5",
-    "system:archived date < 7  years 45 days 70h",
-    "system:modified date < 7  years 45 days 70h",
-    "system:modified date > 2011-06-04",
-    "system:date modified > 7 years 2    months",
-    "system:date modified < 1 day",
-    "system:date modified < 0 years 1 month 1 day 1 hour",
-    "system:time_imported < 7 years 45 days 70h",
-    "system:time imported > 2011-06-04",
-    "system:time imported > 7 years 2 months",
-    "system:time imported < 1 day",
-    "system:time imported < 0 years 1 month 1 day 1 hour",
-    " system:time imported ~= 2011-1-3 ",
-    "system:import time < 7 years 45 days 70h",
-    "system:import time > 2011-06-04",
-    "system:import time > 7 years 2 months",
-    "system:import time < 1 day",
-    "system:import time = 1 day",
-    "system:import time < 0 years 1 month 1 day 1 hour",
-    " system:import time ~= 2011-1-3 ",
-    "system:import time ~= 1996-05-2",
-    "system:duration < 5 seconds",
-    "system:duration ~= 5 sec 6000 msecs",
-    "system:duration > 3 milliseconds",
-    "system:framerate > 60fps",
-    "system:number of frames > 6000",
-    "system:file service is pending to my files",
-    "   system:file service currently in my files",
-    "system:file service isn't currently in my files",
-    "system:file service is not pending to my files",
-    "system:num file relationships < 3 alternates",
-    "system:number of file relationships > 3 false positives",
-    "system:ratio is wider than 16:9        ",
-    "system:ratio is 16:9",
-    "system:ratio taller than 1:1",
-    "system:num pixels > 50 px",
-    "system:num pixels < 1 megapixels ",
-    "system:num pixels ~= 5 kilopixel",
-    "system:media views ~= 10",
-    "system:all views > 0",
-    "system:preview views < 10  ",
-    "system:media viewtime < 1 days 1 hour 0 minutes",
-    "system:all viewtime > 1 hours 100 seconds",
-    "system:preview viewtime ~= 1 day 30 hours 100 minutes 90s",
-    " system:has url matching regex reg.*ex ",
-    "system:does not have a url matching regex test",
-    "system:has_url https://test.test/",
-    " system:doesn't have url test url here  ",
-    "system:has domain test.com",
-    "system:doesn't have domain test.com",
-    "system:has a url with class safebooru file page",
-    "system:doesn't have a url with url class safebooru file page ",
-    "system:tag as number page < 5",
-    "system:has notes",
-    "system:no notes",
-    "system:does not have notes",
-    "system:num notes is 5",
-    "system:num notes > 1",
-    "system:has note with name note name",
-    "system:no note with name note name",
-    "system:does not have note with name note name"
-]
-
-if __name__ == "__main__":
-    for ex in examples:
-        print( ex )
-        print( parse_system_predicate( ex ) )
+    

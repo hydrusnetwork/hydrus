@@ -1206,6 +1206,17 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         self._duplicate_action = duplicate_action
         
+        note = 'Editing for "{}".'.format( HC.duplicate_type_string_lookup[ self._duplicate_action ] )
+        
+        if self._duplicate_action != HC.DUPLICATE_BETTER:
+            
+            note += '\n' * 2
+            note += 'Note that this has fewer actions than the "this is better" decision. You can mostly just copy in both directions.'
+            
+        
+        self._not_better_note_st = ClientGUICommon.BetterStaticText( self, label = note )
+        self._not_better_note_st.setWordWrap( True )
+        
         #
         
         tag_services_panel = ClientGUICommon.StaticBox( self, 'tag services' )
@@ -1231,10 +1242,12 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         rating_services_listctrl_panel.SetListCtrl( self._rating_service_actions )
         
         rating_services_listctrl_panel.AddButton( 'add', self._AddRating )
+        
         if self._duplicate_action == HC.DUPLICATE_BETTER: # because there is only one valid action otherwise
             
             rating_services_listctrl_panel.AddButton( 'edit', self._EditRating, enabled_only_on_selection = True )
             
+        
         rating_services_listctrl_panel.AddButton( 'delete', self._DeleteRating, enabled_only_on_selection = True )
         
         #
@@ -1324,6 +1337,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( vbox, self._not_better_note_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, tag_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, rating_services_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         

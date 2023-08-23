@@ -329,6 +329,7 @@ def GetExtraHashesFromPath( path ):
     
     return ( md5, sha1, sha512 )
     
+
 def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     
     size = os.path.getsize( path )

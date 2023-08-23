@@ -100,8 +100,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 539
-CLIENT_API_VERSION = 49
+SOFTWARE_VERSION = 540  
+CLIENT_API_VERSION = 50
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -1069,6 +1069,8 @@ mime_string_lookup = {
     GENERAL_VIDEO : 'video',
     GENERAL_ANIMATION : 'animation',
 }
+
+string_enum_lookup = { s : enum for ( enum, s ) in mime_string_lookup.items() }
 
 mime_mimetype_string_lookup = {
     APPLICATION_HYDRUS_CLIENT_COLLECTION : 'collection',
