@@ -32,7 +32,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         self._service_ids_to_content_types_to_outstanding_local_processing = collections.defaultdict( dict )
         
     
-    def _GetFileHashIdsByDuplicateType( self, db_location_context: ClientDBFilesStorage.DBLocationContext, hash_id: int, duplicate_type: int, allowed_hash_ids = None, preferred_hash_ids = None ) -> typing.List[ int ]:
+    def _GetFileHashIdsByDuplicateType( self, db_location_context: ClientDBFilesStorage.DBLocationContext, hash_id: int, duplicate_type: int ) -> typing.List[ int ]:
         
         dupe_hash_ids = set()
         
@@ -59,7 +59,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                     
                     for false_positive_media_id in false_positive_media_ids:
                         
-                        best_king_hash_id = self.GetBestKingId( false_positive_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                        best_king_hash_id = self.GetBestKingId( false_positive_media_id, db_location_context )
                         
                         if best_king_hash_id is not None:
                             
@@ -85,7 +85,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                     
                     for alternates_media_id in alternates_media_ids:
                         
-                        best_king_hash_id = self.GetBestKingId( alternates_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                        best_king_hash_id = self.GetBestKingId( alternates_media_id, db_location_context )
                         
                         if best_king_hash_id is not None:
                             
@@ -103,11 +103,6 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 
                 media_hash_ids = self.GetDuplicateHashIds( media_id, db_location_context = db_location_context )
                 
-                if allowed_hash_ids is not None:
-                    
-                    media_hash_ids.intersection_update( allowed_hash_ids )
-                    
-                
                 dupe_hash_ids.update( media_hash_ids )
                 
             
@@ -117,7 +112,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             if media_id is not None:
                 
-                best_king_hash_id = self.GetBestKingId( media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                best_king_hash_id = self.GetBestKingId( media_id, db_location_context )
                 
                 if best_king_hash_id is not None:
                     
@@ -144,7 +139,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                         potential_media_id = larger_media_id
                         
                     
-                    best_king_hash_id = self.GetBestKingId( potential_media_id, db_location_context, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+                    best_king_hash_id = self.GetBestKingId( potential_media_id, db_location_context )
                     
                     if best_king_hash_id is not None:
                         
@@ -789,13 +784,13 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return hashes_to_file_relationships
         
     
-    def GetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash: bytes, duplicate_type: int, allowed_hash_ids = None, preferred_hash_ids = None ) -> typing.List[ bytes ]:
+    def GetFileHashesByDuplicateType( self, location_context: ClientLocation.LocationContext, hash: bytes, duplicate_type: int ) -> typing.List[ bytes ]:
         
         hash_id = self.modules_hashes_local_cache.GetHashId( hash )
         
         db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
         
-        dupe_hash_ids = self._GetFileHashIdsByDuplicateType( db_location_context, hash_id, duplicate_type, allowed_hash_ids = allowed_hash_ids, preferred_hash_ids = preferred_hash_ids )
+        dupe_hash_ids = self._GetFileHashIdsByDuplicateType( db_location_context, hash_id, duplicate_type )
         
         dupe_hashes = self.modules_hashes_local_cache.GetHashes( dupe_hash_ids )
         
@@ -1209,6 +1204,18 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         return table_join
         
     
+    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
+        
+        tables_and_columns = []
+        
+        if content_type == HC.CONTENT_TYPE_HASH:
+            
+            tables_and_columns.append( ( 'file_maintenance_jobs', 'hash_id' ) )
+            
+        
+        return tables_and_columns
+        
+    
     def MediasAreAlternates( self, media_id_a, media_id_b ):
         
         alternates_group_id_a = self.GetAlternatesGroupId( media_id_a, do_not_create = True )
@@ -1536,17 +1543,5 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         media_id = self.GetMediaId( hash_id )
         
         self.SetKing( hash_id, media_id )
-        
-    
-    def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
-        
-        tables_and_columns = []
-        
-        if content_type == HC.CONTENT_TYPE_HASH:
-            
-            tables_and_columns.append( ( 'file_maintenance_jobs', 'hash_id' ) )
-            
-        
-        return tables_and_columns
         
     

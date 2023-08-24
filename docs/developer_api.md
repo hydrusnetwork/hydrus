@@ -1271,6 +1271,11 @@ Wildcards and namespace searches are supported, so if you search for 'character:
     *   system:has note with name note name
     *   system:no note with name note name
     *   system:does not have note with name note name
+    *   system:has a rating for `service_name`
+    *   system:does not have a rating for `service_name`
+    *   system:rating for `service_name` > 3/5 (numerical services)
+    *   system:rating for `service_name` is like (like/dislike services)
+    *   system:rating for `service_name` = 13 (inc/dec services)
 
 Please test out the system predicates you want to send. If you are in _help-&gt;advanced mode_, you can test this parser in the advanced text input dialog when you click the OR\* button on a tag autocomplete dropdown. More system predicate types and input formats will be available in future. Reverse engineering system predicate data from text is obviously tricky. If a system predicate does not parse, you'll get 400.
 
@@ -1417,6 +1422,8 @@ Response:
       "hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
       "size" : 63405,
       "mime" : "image/jpeg",
+      "filetype_human" : "jpeg",
+      "filetype_enum" : 1,
       "ext" : ".jpg",
       "width" : 640,
       "height" : 480,
@@ -1466,6 +1473,8 @@ Response:
       "hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
       "size" : 199713,
       "mime" : "video/webm",
+      "filetype_human" : "webm",
+      "filetype_enum" : 21,
       "ext" : ".webm",
       "width" : 1920,
       "height" : 1080,
@@ -1579,6 +1588,8 @@ Response:
       "hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
       "size" : 63405,
       "mime" : "image/jpeg",
+      "filetype_human" : "jpeg",
+      "filetype_enum" : 1,
       "ext" : ".jpg",
       "width" : 640,
       "height" : 480,
@@ -1592,6 +1603,8 @@ Response:
       "hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
       "size" : 199713,
       "mime" : "video/webm",
+      "filetype_human" : "webm",
+      "filetype_enum" : 21,
       "ext" : ".webm",
       "width" : 1920,
       "height" : 1080,

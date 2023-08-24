@@ -1334,8 +1334,6 @@ class DB( HydrusDB.HydrusDB ):
             self._AddService( service_key, service_type, name, dictionary )
             
         
-        self._ExecuteMany( 'INSERT INTO yaml_dumps VALUES ( ?, ?, ? );', ( ( ClientDBSerialisable.YAML_DUMP_ID_IMAGEBOARD, name, imageboards ) for ( name, imageboards ) in ClientDefaults.GetDefaultImageboards() ) )
-        
         new_options = ClientOptions.ClientOptions()
         
         new_options.SetSimpleDownloaderFormulae( ClientDefaults.GetDefaultSimpleDownloaderFormulae() )
@@ -2030,8 +2028,8 @@ class DB( HydrusDB.HydrusDB ):
                             
                         else:
                             
-                            # the chosen must be in the search, but we don't care about the comparison as long as it is viewable
-                            chosen_preferred_hash_ids = query_hash_ids
+                            # one file matches the search
+                            chosen_allowed_hash_ids = query_hash_ids
                             
                             table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
                             
@@ -4388,6 +4386,21 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
+            pixel_hash = file_import_job.GetPixelHash()
+            
+            if pixel_hash is None:
+                
+                self.modules_similar_files.ClearPixelHash( hash_id )
+                
+            else:
+                
+                pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
+                
+                self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
+                
+            
+            #
+            
             perceptual_hashes = file_import_job.GetPerceptualHashes()
             
             if perceptual_hashes is not None:
@@ -4416,21 +4429,6 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_files_metadata_basic.SetHasEXIF( hash_id, file_import_job.HasEXIF() )
             self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, file_import_job.HasHumanReadableEmbeddedMetadata() )
             self.modules_files_metadata_basic.SetHasICCProfile( hash_id, file_import_job.HasICCProfile() )
-            
-            #
-            
-            pixel_hash = file_import_job.GetPixelHash()
-            
-            if pixel_hash is None:
-                
-                self.modules_similar_files.ClearPixelHash( hash_id )
-                
-            else:
-                
-                pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
-                
-                self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
-                
             
             #
             
@@ -6300,8 +6298,8 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_history': result = self.modules_files_metadata_rich.GetFileHistory( *args, **kwargs )
         elif action == 'file_info_managers': result = self._GetFileInfoManagersFromHashes( *args, **kwargs )
         elif action == 'file_info_managers_from_ids': result = self._GetFileInfoManagers( *args, **kwargs )
-        elif action == 'file_maintenance_get_job': result = self.modules_files_maintenance_queue.GetJob( *args, **kwargs )
         elif action == 'file_maintenance_get_job_counts': result = self.modules_files_maintenance_queue.GetJobCounts( *args, **kwargs )
+        elif action == 'file_maintenance_get_jobs': result = self.modules_files_maintenance_queue.GetJobs( *args, **kwargs )
         elif action == 'file_query_ids': result = self.modules_files_query.GetHashIdsFromQuery( *args, **kwargs )
         elif action == 'file_relationships_for_api': result = self.modules_files_duplicates.GetFileRelationshipsForAPI( *args, **kwargs )
         elif action == 'file_system_predicates': result = self._GetFileSystemPredicates( *args, **kwargs )
@@ -7967,279 +7965,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
         
-        if version == 470:
-            
-            ( result, ) = self._Execute( 'SELECT sql FROM sqlite_master WHERE name = ?;', ( 'file_viewing_stats', ) ).fetchone()
-            
-            if 'preview_views' in result:
-                
-                self._controller.frame_splash_status.SetSubtext( 'reworking file viewing stats' )
-                
-                self._Execute( 'ALTER TABLE file_viewing_stats RENAME TO file_viewing_stats_old;' )
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS file_viewing_stats ( hash_id INTEGER, canvas_type INTEGER, last_viewed_timestamp INTEGER, views INTEGER, viewtime INTEGER, PRIMARY KEY ( hash_id, canvas_type ) );' )
-                self._CreateIndex( 'file_viewing_stats', [ 'last_viewed_timestamp' ] )
-                self._CreateIndex( 'file_viewing_stats', [ 'views' ] )
-                self._CreateIndex( 'file_viewing_stats', [ 'viewtime' ] )
-                
-                self._Execute( 'INSERT INTO file_viewing_stats SELECT hash_id, ?, ?, preview_views, preview_viewtime FROM file_viewing_stats_old;', ( CC.CANVAS_PREVIEW, None ) )
-                self._Execute( 'INSERT INTO file_viewing_stats SELECT hash_id, ?, ?, media_views, media_viewtime FROM file_viewing_stats_old;', ( CC.CANVAS_MEDIA_VIEWER, None ) )
-                
-                self.modules_db_maintenance.AnalyzeTable( 'file_viewing_stats' )
-                
-                self._Execute( 'DROP TABLE file_viewing_stats_old;' )
-                
-            
-        
-        if version == 472:
-            
-            try:
-                
-                from hydrus.client.gui import ClientGUIShortcuts
-                
-                main_gui = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, dump_name = 'main_gui' )
-                
-                palette_shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'P' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] )
-                palette_command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_COMMAND_PALETTE )
-                
-                result = main_gui.GetCommand( palette_shortcut )
-                
-                if result is None:
-                    
-                    main_gui.SetCommand( palette_shortcut, palette_command )
-                    
-                    self.modules_serialisable.SetJSONDump( main_gui )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'The new palette shortcut failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 473:
-            
-            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'archive_timestamps', ) ).fetchone()
-            
-            if result is None:
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS archive_timestamps ( hash_id INTEGER PRIMARY KEY, archived_timestamp INTEGER );' )
-                self._CreateIndex( 'archive_timestamps', [ 'archived_timestamp' ] )
-                
-            
-            try:
-                
-                location_context = ClientLocation.LocationContext( current_service_keys = ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ) )
-                
-                db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
-                
-                operator = '>'
-                num_relationships = 0
-                dupe_type = HC.DUPLICATE_POTENTIAL
-                
-                dupe_hash_ids = self.modules_files_duplicates.GetHashIdsFromDuplicateCountPredicate( db_location_context, operator, num_relationships, dupe_type )
-                
-                with self._MakeTemporaryIntegerTable( dupe_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
-                    
-                    hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {};'.format( temp_hash_ids_table_name, HydrusData.SplayListForDB( ( HC.IMAGE_GIF, HC.IMAGE_PNG, HC.IMAGE_TIFF ) ) ), ) )
-                    
-                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Some pixel hash regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 474:
-            
-            try:
-                
-                # ok we have improved apng detection now, so let's efficiently guess which of our pngs could be apngs for rescan
-                # IRL data of some 2-frame (i.e. minimal inaccuracy) apngs: 1.16MB @ 908x1,214 and 397KB @ 500x636, which for a single frame calculation is bitrates of 1.08 bits/pixel and 1.28 bits/pixel
-                # most apngs are going to be above this fake 1-frame bitrate
-                # as an aside, IRL data of some chunky pngs give about 2.5 bits/pixel, efficient screenshots and monochome tend to be around 0.2
-                # real apngs divided by number of frames tend to be around 0.05 to 0.2 to 1.0
-                # so, let's pull all the pngs with bitrate over 0.85 and schedule them for rescan
-                
-                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
-                
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ? AND size / ( width * height ) > ?;'.format( table_join ), ( HC.IMAGE_PNG, 0.85 ) ) )
-                
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Some apng regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
-                
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.AUDIO_M4A, ) ) )
-                
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Some mp4 regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'deviant art file extended_fetch parser', ) )
-                
-                #
-                
-                from hydrus.client.networking import ClientNetworkingContexts
-                
-                sank_network_context = ClientNetworkingContexts.NetworkContext( CC.NETWORK_CONTEXT_DOMAIN, 'sankakucomplex.com' )
-                
-                network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
-                
-                if sank_network_context in network_contexts_to_custom_header_dicts:
-                    
-                    custom_header_dict = network_contexts_to_custom_header_dicts[ sank_network_context ]
-                    
-                    if 'User-Agent' in custom_header_dict:
-                        
-                        ( header, verified, reason ) = custom_header_dict[ 'User-Agent' ]
-                        
-                        if header == 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0':
-                            
-                            header = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:97.0) Gecko/20100101 Firefox/97.0'
-                            
-                            custom_header_dict[ 'User-Agent' ] = ( header, verified, reason )
-                            
-                            domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
-                            
-                        
-                    
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 475:
-            
-            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'file_domain_modified_timestamps', ) ).fetchone()
-            
-            if result is None:
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS file_domain_modified_timestamps ( hash_id INTEGER, domain_id INTEGER, file_modified_timestamp INTEGER, PRIMARY KEY ( hash_id, domain_id ) );' )
-                self._CreateIndex( 'file_domain_modified_timestamps', [ 'file_modified_timestamp' ] )
-                
-            
-        
-        if version == 476:
-            
-            try:
-                
-                # fixed apng duration calculation
-                
-                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
-                
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.IMAGE_APNG, ) ) )
-                
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Some apng regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'nitter tweet parser', 'nitter tweet parser (video from koto.reisen)' ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 478:
-            
-            try:
-                
-                # transparent webp regen
-                
-                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
-                
-                hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime = ?;'.format( table_join ), ( HC.IMAGE_WEBP, ) ) )
-                
-                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Some webp regen scheduling failed to set! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
         if version == 480:
             
             try:
@@ -8252,7 +7977,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     show_message = False
                     
-                    for mime in ( HC.IMAGE_GIF, HC.VIDEO_MP4, HC.AUDIO_MP3 ):
+                    for mime in ( HC.ANIMATION_GIF, HC.VIDEO_MP4, HC.AUDIO_MP3 ):
                         
                         ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( mime )
                         
@@ -9669,6 +9394,66 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 538:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.APPLICATION_PSD, ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN ( ?, ?, ? );', ( HC.VIDEO_WEBM, HC.VIDEO_MKV, HC.ANIMATION_APNG ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES )
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ? AND ( duration IS NULL OR duration = 0 );', ( HC.ANIMATION_GIF, ) ) )
+                    
+                    self._ExecuteMany( 'UPDATE files_info SET mime = ? WHERE hash_id = ?;', ( ( HC.IMAGE_GIF, hash_id ) for hash_id in hash_ids ) )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some file updates failed! You might have some borked static gifs and may need to run metadata regeneration jobs for them. This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 539:
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN ( ?, ? );', ( HC.APPLICATION_PSD, HC.IMAGE_GIF ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.IMAGE_PNG, ) ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some file updates failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10154,7 +9939,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'content_updates': self._ProcessContentUpdates( *args, **kwargs )
         elif action == 'cull_file_viewing_statistics': self.modules_files_viewing_stats.CullFileViewingStatistics( *args, **kwargs )
         elif action == 'db_integrity': self._CheckDBIntegrity( *args, **kwargs )
-        elif action == 'delete_imageboard': self.modules_serialisable.DeleteYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_IMAGEBOARD, *args, **kwargs )
         elif action == 'delete_local_booru_share': self.modules_serialisable.DeleteYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
         elif action == 'delete_serialisable_named': self.modules_serialisable.DeleteJSONDumpNamed( *args, **kwargs )

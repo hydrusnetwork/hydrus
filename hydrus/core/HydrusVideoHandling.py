@@ -1051,7 +1051,7 @@ class VideoRendererFFMPEG( object ):
         
         self.close()
         
-        if self._mime in ( HC.IMAGE_APNG, HC.IMAGE_GIF ):
+        if self._mime in HC.ANIMATIONS: # ffmpeg is pretty bad at scanning these, and they tend to be short, so we'll skip frames instead
             
             do_ss = False
             ss = 0

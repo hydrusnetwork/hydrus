@@ -311,11 +311,11 @@ class TestFileImportOptions( unittest.TestCase ):
         file_import_options.CheckFileIsValid( 1800, HC.IMAGE_JPEG, 640, 480 )
         file_import_options.CheckFileIsValid( 2200, HC.IMAGE_JPEG, 640, 480 )
         
-        file_import_options.CheckFileIsValid( 1800, HC.IMAGE_GIF, 640, 480 )
+        file_import_options.CheckFileIsValid( 1800, HC.ANIMATION_GIF, 640, 480 )
         
         with self.assertRaises( HydrusExceptions.FileImportRulesException ):
             
-            file_import_options.CheckFileIsValid( 2200, HC.IMAGE_GIF, 640, 480 )
+            file_import_options.CheckFileIsValid( 2200, HC.ANIMATION_GIF, 640, 480 )
             
         
         #

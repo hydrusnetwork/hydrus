@@ -335,7 +335,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit is ' + HydrusData.ToHumanBytes( self._max_size ) + '.' )
             
         
-        if mime == HC.IMAGE_GIF and self._max_gif_size is not None and size > self._max_gif_size:
+        if mime == HC.ANIMATION_GIF and self._max_gif_size is not None and size > self._max_gif_size:
             
             raise HydrusExceptions.FileImportRulesException( 'File was ' + HydrusData.ToHumanBytes( size ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
             
@@ -388,7 +388,8 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if possible_mime is not None:
             
-            if possible_mime == HC.IMAGE_GIF and self._max_gif_size is not None and num_bytes > self._max_gif_size:
+            # this should always be animation_gif, but let's allow for future confusion
+            if possible_mime in ( HC.ANIMATION_GIF, HC.IMAGE_GIF, HC.UNDETERMINED_GIF ) and self._max_gif_size is not None and num_bytes > self._max_gif_size:
                 
                 raise HydrusExceptions.FileImportRulesException( error_prefix + HydrusData.ToHumanBytes( num_bytes ) + ' but the upper limit for gifs is ' + HydrusData.ToHumanBytes( self._max_gif_size ) + '.' )
                 

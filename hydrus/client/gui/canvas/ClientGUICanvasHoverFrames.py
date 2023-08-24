@@ -378,6 +378,8 @@ class CanvasHoverFrame( QW.QFrame ):
         self._canvas_key = canvas_key
         self._current_media = None
         
+        self._hover_panels_that_can_be_on_top_of_us = []
+        
         self._always_on_top = False
         
         self._last_ideal_position = None
@@ -504,17 +506,9 @@ class CanvasHoverFrame( QW.QFrame ):
         event.accept()
         
     
-    def PositionIsInitialised( self ):
+    def AddHoverThatCanBeOnTop( self, win: "CanvasHoverFrame" ):
         
-        return self._position_initialised
-        
-    
-    def SetDisplayMedia( self, canvas_key, media ):
-        
-        if canvas_key == self._canvas_key:
-            
-            self._current_media = media
-            
+        self._hover_panels_that_can_be_on_top_of_us.append( win )
         
     
     def DoRegularHideShow( self ):
@@ -597,10 +591,20 @@ class CanvasHoverFrame( QW.QFrame ):
         # this used to have the flash media window test to ensure mouse over flash window hid hovers going over it
         mouse_is_over_something_else_important = mouse_is_near_animation_bar
         
+        mouse_is_over_a_dominant_hover = False
+        
+        for win in self._hover_panels_that_can_be_on_top_of_us:
+            
+            if win.geometry().contains( mouse_pos ):
+                
+                mouse_is_over_a_dominant_hover = True
+                
+            
+        
         hide_focus_is_good = focus_is_good or current_focus_tlw is None # don't hide if focus is either gone to another problem or temporarily sperging-out due to a click-transition or similar
         
-        ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open
-        ready_to_hide = not menu_open and ( not in_position or dialog_is_open or not hide_focus_is_good )
+        ready_to_show = in_position and not mouse_is_over_something_else_important and focus_is_good and not dialog_is_open and not menu_open and not mouse_is_over_a_dominant_hover
+        ready_to_hide = not menu_open and ( not in_position or dialog_is_open or not hide_focus_is_good or mouse_is_over_a_dominant_hover )
         
         def get_logic_report_string():
             
@@ -632,6 +636,19 @@ class CanvasHoverFrame( QW.QFrame ):
         elif ready_to_hide:
             
             self._LowerHover()
+            
+        
+    
+    def PositionIsInitialised( self ):
+        
+        return self._position_initialised
+        
+    
+    def SetDisplayMedia( self, canvas_key, media ):
+        
+        if canvas_key == self._canvas_key:
+            
+            self._current_media = media
             
         
     
@@ -881,7 +898,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 self._show_embedded_metadata_button.setToolTip( tt )
                 
             
-            self._show_embedded_metadata_button.setVisible( stuff_to_show )
+            # enabled, not visible, so it doesn't bounce the others around on scroll
+            self._show_embedded_metadata_button.setEnabled( stuff_to_show )
             
         
     
@@ -1769,11 +1787,9 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     showPairInPage = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, my_canvas: QW.QWidget, right_notes_hover: CanvasHoverFrameRightNotes, canvas_key: bytes ):
+    def __init__( self, parent: QW.QWidget, my_canvas: QW.QWidget, canvas_key: bytes ):
         
         CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
-        
-        self._right_notes_hover = right_notes_hover
         
         self._always_on_top = True
         
@@ -1923,8 +1939,6 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
         HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
         
-        self._right_notes_hover.hoverResizedOrMoved.connect( self._SizeAndPosition )
-        
     
     def _EditBackgroundSwitchIntensity( self ):
         
@@ -2010,30 +2024,6 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
         ideal_position = QC.QPoint( int( parent_width - my_ideal_width ), int( parent_height * 0.3 ) )
-        
-        ideal_rect = QC.QRect( ideal_position, ideal_size )
-        
-        right_notes_hover_geometry = self._right_notes_hover.geometry()
-        
-        if ideal_rect.intersects( right_notes_hover_geometry ):
-            
-            # the notes are tall enough to overlap us
-            
-            right_notes_correct_bottom = right_notes_hover_geometry.y() + right_notes_hover_geometry.height()
-            
-            if self._my_canvas.height() - right_notes_correct_bottom > my_ideal_height:
-                
-                # if we can slide down and still fit in the gap, do that
-                
-                ideal_position.setY( right_notes_correct_bottom )
-                
-            else:
-                
-                # slide it right
-                
-                ideal_position.setX( right_notes_hover_geometry.x() - my_ideal_width )
-                
-            
         
         return ( should_resize, ideal_size, ideal_position )
         

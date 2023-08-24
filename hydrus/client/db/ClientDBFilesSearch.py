@@ -2598,9 +2598,11 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 hash_ids_to_hex_hashes = { hash_id : hash.hex() for ( hash_id, hash ) in hash_ids_to_hashes.items() }
                 
-                hash_ids = sorted( hash_ids, key = lambda hash_id: hash_ids_to_hex_hashes[ hash_id ] )
-                
                 reverse = sort_order == CC.SORT_DESC
+                
+                hash_ids = sorted( hash_ids, key = lambda hash_id: hash_ids_to_hex_hashes[ hash_id ], reverse = reverse )
+                
+                did_sort = True
                 
             
         

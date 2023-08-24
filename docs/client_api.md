@@ -20,18 +20,34 @@ The Client API is still experimental and sometimes not user friendly. If you wan
 
 Once the API is running, go to its entry in _services->review services_. Each external program trying to access the API will need its own access key, which is the familiar 64-character hexadecimal used in many places in hydrus. You can enter the details manually from the review services panel and then copy/paste the key to your external program, or the program may have the ability to request its own access while a mini-dialog launched from the review services panel waits to catch the request.
 
-## Browsers and tools created by hydrus users
+## Tools created by hydrus users
+
+### Browser Add-on
 
 * [Hydrus Companion](https://gitgud.io/prkc/hydrus-companion): a Chrome/Firefox extension for hydrus that allows easy download queueing as you browse and advanced login support
+
+### Client Browsing
+
 * [Hydrus Web](https://github.com/floogulinc/hydrus-web): a web client for hydrus (allows phone browsing of hydrus)
 * [Hyshare](https://github.com/floogulinc/hyshare): a way to share small galleries with friends--a replacement for the old 'local booru' system
-* [hydownloader](https://gitgud.io/thatfuckingbird/hydownloader): Hydrus-like download system based on gallery-dl.
 * [LoliSnatcher](https://github.com/NO-ob/LoliSnatcher_Droid): a booru client for Android that can talk to hydrus
 * [Anime Boxes](https://www.animebox.es/): a booru browser, now supports adding your client as a Hydrus Server
 * [FlipFlip](https://ififfy.github.io/flipflip/#/): an advanced slideshow interface, now supports hydrus as a source
-* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru neural network tagging for Hydrus
-* [Hydrus Video Deduplicator](https://github.com/appleappleapplenanner/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter 
 * [Hydrus Archive Delete](https://gitgud.io/koto/hydrus-archive-delete): Archive/Delete filter in your web browser
+
+### Advanced Downloading
+
+* [hydownloader](https://gitgud.io/thatfuckingbird/hydownloader): Hydrus-like download system based on gallery-dl
+
+### Auto-taggers
+
+* [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru tagging for Hydrus
+* [wd-hydrus-tagger](https://github.com/abtalerico/wd-hydrus-tagger): Danbooru-trained model tagging for Hydrus
+* [wd-e621-hydrus-tagger](https://github.com/Garbevoir/wd-e621-hydrus-tagger): An extension of the above, with more models
+
+### Misc
+
+* [Hydrus Video Deduplicator](https://github.com/appleappleapplenanner/hydrus-video-deduplicator): Discovers duplicate videos in your client and queues them for the duplicate filter 
 * [tagrank](https://github.com/matjojo/tagrank): Shows you comparison images and cleverly ranks your favourite tag.
 * [hyextract](https://github.com/floogulinc/hyextract): Extract archives from Hydrus and reimport with tags and URL associations
 * [Send to Hydrus](https://github.com/Wyrrrd/send-to-hydrus): send URLs from your Android device to your client

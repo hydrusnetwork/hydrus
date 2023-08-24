@@ -178,7 +178,7 @@ def CopyFileLikeToFileLike( f_source, f_dest ):
     for block in ReadFileLikeAsBlocks( f_source ): f_dest.write( block )
     
 
-def DeletePath( path ):
+def DeletePath( path ) -> bool:
     
     if HG.file_report_mode:
         
@@ -216,7 +216,11 @@ def DeletePath( path ):
                 HydrusData.ShowException( e )
                 
             
+            return False
+            
         
+    
+    return True
     
 def DirectoryIsWriteable( path ):
     

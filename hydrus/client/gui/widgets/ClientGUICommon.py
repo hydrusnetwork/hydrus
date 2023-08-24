@@ -1776,7 +1776,7 @@ class RegexButton( BetterButton ):
         
         ClientGUIMenus.AppendMenuItem( submenu, r'whitespace character - \s', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\s' )
         ClientGUIMenus.AppendMenuItem( submenu, r'number character - \d', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\d' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'alphanumeric or backspace character - \w', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\w' )
+        ClientGUIMenus.AppendMenuItem( submenu, r'alphanumeric or underscore character - \w', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\w' )
         ClientGUIMenus.AppendMenuItem( submenu, r'any character - .', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'.' )
         ClientGUIMenus.AppendMenuItem( submenu, r'backslash character - \\', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'\\' )
         ClientGUIMenus.AppendMenuItem( submenu, r'beginning of line - ^', 'copy this phrase to the clipboard', HG.client_controller.pub, 'clipboard', 'text', r'^' )

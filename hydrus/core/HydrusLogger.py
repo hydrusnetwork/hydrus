@@ -16,6 +16,11 @@ class HydrusLogger( object ):
         
         self._log_closed = False
         
+        self._problem_with_previous_stdout = False
+        
+        self._previous_sys_stdout = None
+        self._previous_sys_stderr = None
+        
     
     def __enter__( self ):
         
@@ -34,10 +39,13 @@ class HydrusLogger( object ):
     
     def __exit__( self, exc_type, exc_val, exc_tb ):
         
+        self._CloseLog()
+        
         sys.stdout = self._previous_sys_stdout
         sys.stderr = self._previous_sys_stderr
         
-        self._CloseLog()
+        self._previous_sys_stdout = None
+        self._previous_sys_stderr = None
         
         self._log_closed = True
         

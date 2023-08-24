@@ -2805,11 +2805,11 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         if value == 'rated':
                             
-                            base = 'has {} rating'.format( name )
+                            base = 'has a rating for {}'.format( name )
                             
                         elif value == 'not rated':
                             
-                            base = 'no {} rating'.format( name )
+                            base = 'does not have a rating for {}'.format( name )
                             
                         else:
                             

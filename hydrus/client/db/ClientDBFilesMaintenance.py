@@ -170,6 +170,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         if not self.modules_similar_files.FileIsInSystem( hash_id ):
                             
                             self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
+                            self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
                             
                         
                     else:

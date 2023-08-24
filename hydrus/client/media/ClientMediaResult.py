@@ -173,10 +173,16 @@ class MediaResult( object ):
     
     def IsStaticImage( self ):
         
-        image = self._file_info_manager.mime in HC.IMAGES
-        static_animation = self._file_info_manager.mime in HC.ANIMATIONS and self._file_info_manager.duration in ( 0, None )
+        if self._file_info_manager.mime in HC.IMAGES:
+            
+            return True
+            
+        elif self._file_info_manager.mime in HC.VIEWABLE_IMAGE_PROJECT_FILES:
+            
+            return True
+            
         
-        return image or static_animation
+        return False
         
     
     def ProcessContentUpdate( self, service_key, content_update ):

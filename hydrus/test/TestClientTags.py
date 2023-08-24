@@ -1859,9 +1859,9 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.IMAGE_GIF ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.VIDEO_WEBM, HC.ANIMATION_GIF ) )
         
-        self.assertEqual( p.ToString(), 'system:filetype is gif, webm' )
+        self.assertEqual( p.ToString(), 'system:filetype is animated gif, webm' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
@@ -2042,6 +2042,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:limit is 100', "system:limit = 100" ),
             ( 'system:filetype is jpeg', "system:filetype is jpeg" ),
             ( 'system:filetype is apng, jpeg, png', "system:filetype =   image/jpg, image/png, apng" ),
+            ( 'system:filetype is image', "system:filetype is image" ),
+            ( 'system:filetype is animated gif, static gif, jpeg', "system:filetype =   static gif, animated gif, jpeg" ),
             ( 'system:sha256 hash is in 3 hashes', "system:hash = abcdef01 abcdef02 abcdef03" ),
             ( 'system:md5 hash is in 3 hashes', "system:hash = abcdef01 abcdef, abcdef04 md5" ),
             ( 'system:md5 hash is abcdef01', "system:hash = abcdef01 md5" ),
@@ -2146,7 +2148,28 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:does not have note with name "test"', 'system:does not have note with name test' ),
             ( 'system:does not have note with name "test"', 'system:doesn\'t have note with name test' ),
             ( 'system:does not have note with name "test"', 'system:does not have a note with name test' ),
-            ( 'system:does not have note with name "test"', 'system:does not have a note with name "test"' )
+            ( 'system:does not have note with name "test"', 'system:does not have a note with name "test"' ),
+            ( 'system:has a rating for example local rating numerical service', 'system:has rating example local rating numerical service' ),
+            ( 'system:has a rating for example local rating numerical service', 'system:has a rating for example local rating numerical service' ),
+            ( 'system:does not have a rating for example local rating numerical service', 'system:no rating example local rating numerical service' ),
+            ( 'system:does not have a rating for example local rating numerical service', 'system:does not have a rating for example local rating numerical service' ),
+            ( 'system:rating for example local rating numerical service = 3/5', 'system:rating for example local rating numerical service = 3/5' ),
+            ( 'system:rating for example local rating numerical service = 3/5', 'system:rating for example local rating numerical service is 3/5' ),
+            ( 'system:rating for example local rating numerical service \u2248 3/5', 'system:rating for example local rating numerical service \u2248 3/5' ),
+            ( 'system:rating for example local rating numerical service \u2248 3/5', 'system:rating for example local rating numerical service about 3/5' ),
+            ( 'system:rating for example local rating numerical service < 3/5', 'system:rating for example local rating numerical service < 3/5' ),
+            ( 'system:rating for example local rating numerical service < 3/5', 'system:rating for example local rating numerical service less than 3/5' ),
+            ( 'system:rating for example local rating numerical service > 3/5', 'system:rating for example local rating numerical service > 3/5' ),
+            ( 'system:rating for example local rating numerical service > 3/5', 'system:rating for example local rating numerical service more than 3/5' ),
+            ( 'system:rating for example local rating like service = like', 'system:rating for example local rating like service = like' ),
+            ( 'system:rating for example local rating like service = dislike', 'system:rating for example local rating like service = dislike' ),
+            ( 'system:rating for example local rating inc/dec service = 123', 'system:rating for example local rating inc/dec service = 123' ),
+            ( 'system:rating for example local rating inc/dec service > 123', 'system:rating for example local rating inc/dec service > 123' ),
+            ( 'system:rating for example local rating inc/dec service > 123', 'system:rating example local rating inc/dec service more than 123' ),
+            ( 'system:rating for example local rating inc/dec service < 123', 'system:rating for example local rating inc/dec service < 123' ),
+            ( 'system:rating for example local rating inc/dec service < 123', 'system:rating for example local rating inc/dec service less than 123' ),
+            ( 'system:rating for example local rating inc/dec service \u2248 123', 'system:rating for example local rating inc/dec service \u2248 123' ),
+            ( 'system:rating for example local rating inc/dec service \u2248 123', 'system:rating for example local rating inc/dec service about 123' ),
         ]:
             
             ( sys_pred, ) = ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( ( sys_pred_text, ) )

@@ -4635,6 +4635,8 @@ class TestClientAPI( unittest.TestCase ):
                 'hash' : file_info_manager.hash.hex(),
                 'size' : file_info_manager.size,
                 'mime' : HC.mime_mimetype_string_lookup[ file_info_manager.mime ],
+                'filetype_human' : HC.mime_string_lookup[ file_info_manager.mime ],
+                'filetype_enum' : file_info_manager.mime,
                 'ext' : HC.mime_ext_lookup[ file_info_manager.mime ],
                 'width' : file_info_manager.width,
                 'height' : file_info_manager.height,

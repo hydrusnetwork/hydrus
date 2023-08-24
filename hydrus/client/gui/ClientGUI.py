@@ -38,6 +38,7 @@ from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
@@ -824,6 +825,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
         library_version_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         library_version_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
+        library_version_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )
         library_version_lines.append( 'speedcopy (experimental test) present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
         library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
         library_version_lines.append( 'db dir: {}'.format( HG.client_controller.db_dir ) )
@@ -3550,21 +3552,21 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         splitter_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( splitter_menu, 'show/hide', 'Show or hide the panels on the left.', self._ShowHideSplitters )
+        ClientGUIMenus.AppendMenuItem( splitter_menu, 'show/hide sidebar and preview panel', 'Show or hide the panels on the left.', self._ShowHideSplitters )
         
         ClientGUIMenus.AppendSeparator( splitter_menu )
         
-        ClientGUIMenus.AppendMenuCheckItem( splitter_menu, 'save current page\'s sash positions on client exit', 'Set whether sash position should be saved over on client exit.', self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ), self._new_options.FlipBoolean, 'saving_sash_positions_on_exit' )
+        ClientGUIMenus.AppendMenuCheckItem( splitter_menu, 'save current page\'s sidebar/preview size on client exit', 'Set whether the current width and height of the sidebar and preview panels should be saved on client exit.', self._new_options.GetBoolean( 'saving_sash_positions_on_exit' ), self._new_options.FlipBoolean, 'saving_sash_positions_on_exit' )
         
         ClientGUIMenus.AppendSeparator( splitter_menu )
         
-        ClientGUIMenus.AppendMenuItem( splitter_menu, 'save current page\'s sash positions now', 'Save the current page\'s sash positions.', self._SaveSplitterPositions )
+        ClientGUIMenus.AppendMenuItem( splitter_menu, 'save current page\'s sidebar/preview size now', 'Overwrite the saved value with the current page\'s sizes.', self._SaveSplitterPositions )
         
         ClientGUIMenus.AppendSeparator( splitter_menu )
         
-        ClientGUIMenus.AppendMenuItem( splitter_menu, 'restore all pages\' sash positions to saved value', 'Restore the current sash positions for all pages to the values that are saved.', self._RestoreSplitterPositions )
+        ClientGUIMenus.AppendMenuItem( splitter_menu, 'restore all pages\' sidebar/preview sizes to saved value', 'Restore all pages\' sizes to the saved value.', self._RestoreSplitterPositions )
         
-        ClientGUIMenus.AppendMenu( menu, splitter_menu, 'management and preview panels' )
+        ClientGUIMenus.AppendMenu( menu, splitter_menu, 'sidebar and preview panels' )
         
         ClientGUIMenus.AppendSeparator( menu )
         

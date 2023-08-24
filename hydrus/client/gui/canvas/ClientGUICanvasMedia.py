@@ -22,6 +22,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 
@@ -304,15 +305,21 @@ def GetShowAction( media: ClientMedia.MediaSingleton, canvas_type: int ):
         
         return bad_result
         
-    
     if canvas_type == CC.CANVAS_PREVIEW:
         
-        return HG.client_controller.new_options.GetPreviewShowAction( mime )
+        action =  HG.client_controller.new_options.GetPreviewShowAction( mime )
         
     else:
         
-        return HG.client_controller.new_options.GetMediaShowAction( mime )
+        action = HG.client_controller.new_options.GetMediaShowAction( mime )
         
+    if mime == HC.APPLICATION_PSD and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and not HydrusPSDHandling.PSD_TOOLS_OK:
+        
+        # fallback to open externally button when psd_tools not available 
+        action = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, start_paused, start_with_embed )
+        
+    
+    return action
     
 
 def ShouldHaveAnimationBar( media, show_action ):
@@ -327,24 +334,25 @@ def ShouldHaveAnimationBar( media, show_action ):
         return False
         
     
-    is_animated_image = media.GetMime() in HC.ANIMATIONS
+    if not media.HasDuration():
+        
+        return False
+        
+    
+    is_animation = media.GetMime() in HC.ANIMATIONS
     is_audio = media.GetMime() in HC.AUDIO
     is_video = media.GetMime() in HC.VIDEO
     
     if show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ):
         
-        if ( is_animated_image or is_audio or is_video ) and media.HasDuration():
+        if is_animation or is_audio or is_video:
             
             return True
             
         
     elif show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE:
         
-        num_frames = media.GetNumFrames()
-        
-        has_some_frames = num_frames is not None and num_frames > 1
-        
-        if ( is_animated_image or is_video ) and has_some_frames:
+        if is_animation or is_video:
             
             return True
             
@@ -1554,11 +1562,6 @@ class MediaContainer( QW.QWidget ):
             self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON
             
             HydrusData.ShowText( 'Qt Media Player is only available on Qt6!' )
-            
-        
-        if self._show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ) and self._media.GetMime() == HC.IMAGE_GIF and not self._media.HasDuration():
-            
-            self._show_action = CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE
             
         
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):

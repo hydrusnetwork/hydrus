@@ -2529,7 +2529,8 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._hash_ids = None
-        self._job_types_to_counts = {}
+        self._job_types_to_due_counts = {}
+        self._job_types_to_not_due_counts = {}
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -2544,7 +2545,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         jobs_listctrl_panel.SetListCtrl( self._jobs_listctrl )
         
         jobs_listctrl_panel.AddButton( 'clear', self._DeleteWork, enabled_only_on_selection = True )
-        jobs_listctrl_panel.AddButton( 'do work', self._DoWork, enabled_only_on_selection = True )
+        jobs_listctrl_panel.AddButton( 'do work', self._DoWork, enabled_check_func = self._WorkToDoOnSelection )
         jobs_listctrl_panel.AddButton( 'do all work', self._DoAllWork, enabled_check_func = self._WorkToDo )
         jobs_listctrl_panel.AddButton( 'refresh', self._RefreshWorkDue )
         
@@ -2700,9 +2701,9 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_job_type = ClientFiles.regen_file_enum_to_str_lookup[ job_type ]
         sort_job_type = pretty_job_type
         
-        if job_type in self._job_types_to_counts:
+        if job_type in self._job_types_to_due_counts:
             
-            num_to_do = self._job_types_to_counts[ job_type ]
+            num_to_do = self._job_types_to_due_counts[ job_type ]
             
         else:
             
@@ -2710,6 +2711,13 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         pretty_num_to_do = HydrusData.ToHumanInt( num_to_do )
+        
+        not_due_num_to_do = self._job_types_to_not_due_counts[ job_type ]
+        
+        if not_due_num_to_do > 0:
+            
+            pretty_num_to_do = '{} ({} is not yet due)'.format( pretty_num_to_do, HydrusData.ToHumanInt( not_due_num_to_do ) )
+            
         
         display_tuple = ( pretty_job_type, pretty_num_to_do )
         sort_tuple = ( sort_job_type, num_to_do )
@@ -2778,9 +2786,16 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( job_types_to_counts ):
             
-            self._job_types_to_counts = job_types_to_counts
+            job_types = set()
+            self._job_types_to_due_counts = collections.Counter()
+            self._job_types_to_not_due_counts = collections.Counter()
             
-            job_types = list( job_types_to_counts.keys() )
+            for ( job_type, ( due_count, not_due_count ) ) in job_types_to_counts.items():
+                
+                job_types.add( job_type )
+                self._job_types_to_due_counts[ job_type ] = due_count
+                self._job_types_to_not_due_counts[ job_type ] = not_due_count
+                
             
             self._jobs_listctrl.SetData( job_types )
             
@@ -2907,7 +2922,22 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _WorkToDo( self ):
         
-        return len( self._job_types_to_counts ) > 0
+        return sum( self._job_types_to_due_counts.values() ) > 0
+        
+    
+    def _WorkToDoOnSelection( self ):
+        
+        job_types = self._jobs_listctrl.GetData( only_selected = True )
+        
+        for job_type in job_types:
+            
+            if self._job_types_to_due_counts[ job_type ] > 0:
+                
+                return True
+                
+            
+        
+        return False
         
     
 

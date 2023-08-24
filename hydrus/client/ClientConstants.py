@@ -240,6 +240,10 @@ for mime in HC.SEARCHABLE_MIMES:
         
         media_viewer_capabilities[ mime ] = audio_full_support
         
+    elif mime in HC.VIEWABLE_IMAGE_PROJECT_FILES:
+        
+        media_viewer_capabilities[ mime ] = static_full_support
+        
     else:
         
         media_viewer_capabilities[ mime ] = no_support

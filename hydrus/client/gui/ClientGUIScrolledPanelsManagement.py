@@ -442,15 +442,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'max_connection_attempts_allowed', self._max_connection_attempts_allowed.value() )
             self._new_options.SetInteger( 'max_request_attempts_allowed_get', self._max_request_attempts_allowed_get.value() )
+            self._new_options.SetInteger( 'network_timeout', self._network_timeout.value() )
             self._new_options.SetInteger( 'connection_error_wait_time', self._connection_error_wait_time.value() )
             self._new_options.SetInteger( 'serverside_bandwidth_wait_time', self._serverside_bandwidth_wait_time.value() )
-            self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.value() )
-            self._new_options.SetInteger( 'max_network_jobs_per_domain', self._max_network_jobs_per_domain.value() )
             
             ( number, time_delta ) = self._domain_network_infrastructure_error_velocity.GetValue()
             
             self._new_options.SetInteger( 'domain_network_infrastructure_error_number', number )
             self._new_options.SetInteger( 'domain_network_infrastructure_error_time_delta', time_delta )
+            
+            self._new_options.SetInteger( 'max_network_jobs', self._max_network_jobs.value() )
+            self._new_options.SetInteger( 'max_network_jobs_per_domain', self._max_network_jobs_per_domain.value() )
             
         
     

@@ -585,18 +585,18 @@ class RasterContainerVideo( RasterContainer ):
         
         time.sleep( 0.00001 )
         
-        if self._media.GetMime() == HC.IMAGE_APNG:
+        if self._media.GetMime() == HC.ANIMATION_GIF:
             
-            self._times_to_play_animation = HydrusAnimationHandling.GetAPNGTimesToPlay( self._path )
-            
-        
-        if self._media.GetMime() == HC.IMAGE_GIF:
-            
-            ( self._durations, self._times_to_play_animation ) = HydrusImageHandling.GetGIFFrameDurations( self._path )
+            ( self._durations, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsPILAnimation( self._path )
             
             self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames_in_video, self._target_resolution )
             
         else:
+            
+            if self._media.GetMime() == HC.ANIMATION_APNG:
+                
+                self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
+                
             
             self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames_in_video, self._target_resolution )
             
@@ -758,7 +758,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetDurationMS( self, index ):
         
-        if self._media.GetMime() == HC.IMAGE_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF:
             
             if index in self._durations:
                 
@@ -890,7 +890,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetFrameIndex( self, timestamp_ms ):
         
-        if self._media.GetMime() == HC.IMAGE_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF:
             
             so_far = 0
             
@@ -923,7 +923,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTimestampMS( self, frame_index ):
         
-        if self._media.GetMime() == HC.IMAGE_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF:
             
             return sum( self._durations[ : frame_index ] )
             
@@ -935,7 +935,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def GetTotalDuration( self ):
         
-        if self._media.GetMime() == HC.IMAGE_GIF:
+        if self._media.GetMime() == HC.ANIMATION_GIF:
             
             return sum( self._durations )
             
@@ -957,7 +957,7 @@ class RasterContainerVideo( RasterContainer ):
         
         with self._lock:
             
-            return self._media.GetMime() == HC.IMAGE_GIF
+            return self._media.GetMime() == HC.ANIMATION_GIF
             
         
     
