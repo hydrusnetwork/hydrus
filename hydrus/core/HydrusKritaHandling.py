@@ -34,8 +34,6 @@ def ExtractZippedImageToPath( path_to_zip, temp_path_file ):
 # TODO: animation and frame stuff which is also in the maindoc.xml
 def GetKraProperties( path ):
     
-    ( os_file_handle, maindoc_xml ) = HydrusTemp.GetTempPath()
-    
     DOCUMENT_INFO_FILE = "maindoc.xml"
     
     # TODO: probably actually parse the xml instead of using regex
@@ -46,9 +44,7 @@ def GetKraProperties( path ):
     
     try:
         
-        HydrusArchiveHandling.ExtractSingleFileFromZip( path, DOCUMENT_INFO_FILE, maindoc_xml )
-        
-        with open(maindoc_xml, "r") as reader:
+        with HydrusArchiveHandling.GetZipAsPath( path, DOCUMENT_INFO_FILE ).open('r') as reader:
             
             for line in reader:
                 
@@ -75,11 +71,7 @@ def GetKraProperties( path ):
     except KeyError:
         
         raise HydrusExceptions.DamagedOrUnusualFileException( f'This krita file had no {DOCUMENT_INFO_FILE}, so no information could be extracted!' )
-        
-    finally:
-        
-        HydrusTemp.CleanUpTempPath( os_file_handle, maindoc_xml ) 
-        
+
     
     return width, height
     
