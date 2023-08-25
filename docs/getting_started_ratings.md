@@ -8,7 +8,7 @@ The hydrus client supports two kinds of ratings: _like/dislike_ and _numerical_.
 
 ## like/dislike { id="like_dislike" }
 
-A new client starts with one of these, called 'favourites'. It can set one of two values to a file. It does not have to represent like or dislike--it can be anything you want, like 'send to export folder' or 'explicit/safe' or 'cool babes'. Go to _services->manage services->local->like/dislike ratings_:
+A new client starts with one of these, called 'favourites'. It can set one of two values to a file. It does not have to represent like or dislike--it can be anything you want, like 'send to export folder' or 'explicit/safe' or 'cool babes'. Go to _services->manage services->add->local like/dislike ratings_:
 
 ![](images/ratings_like.png)
 
