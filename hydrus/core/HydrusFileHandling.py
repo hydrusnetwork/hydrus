@@ -58,6 +58,7 @@ headers_and_mime.extend( [
     ( ( ( 0, b'BM' ), ), HC.IMAGE_BMP ),
     ( ( ( 0, b'\x00\x00\x01\x00' ), ), HC.IMAGE_ICON ),
     ( ( ( 0, b'\x00\x00\x02\x00' ), ), HC.IMAGE_ICON ),
+    ( ( ( 0, b'qoif' ), ), HC.IMAGE_QOI ),
     ( ( ( 0, b'CWS' ), ), HC.APPLICATION_FLASH ),
     ( ( ( 0, b'FWS' ), ), HC.APPLICATION_FLASH ),
     ( ( ( 0, b'ZWS' ), ), HC.APPLICATION_FLASH ),
