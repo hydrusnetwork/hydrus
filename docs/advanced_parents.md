@@ -44,7 +44,7 @@ graph TB
 
 Some franchises are bananas:
 
-![](images/azur_hell.png)
+![](images/poke_hell.png)
 
 Also, unlike siblings, which as we previously saw are `n->1`, some tags have more than one implication (`n->n`):
 
@@ -89,7 +89,7 @@ Tags can have multiple parents, and multiple tags have the same parent. Loops ar
 
 ## how you do it { id="how_to_do_it" }
 
-Go to _services->manage tag parents_:
+Go to _tags->manage tag parents_:
 
 ![](images/tag_parents_dialog.png)
 
@@ -101,9 +101,6 @@ Once you have some relationships added, the parents and grandparents will show i
 
 ![](images/tag_parents_ac_1.png)
 
-Hitting enter on cersei will try to add _house lannister_ and _series:game of thrones_ as well.
-
-![](images/tag_parents_ac_2.png)
 
 ## remote parents { id="remote_parents" }
 
