@@ -12,6 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFlashHandling
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusKritaHandling
+from hydrus.core import HydrusProcreateHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusSVGHandling
@@ -183,6 +184,25 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
+    elif mime == HC.APPLICATION_PROCREATE:
+
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        
+        try:
+            
+            HydrusProcreateHandling.ExtractZippedThumbnailToPath( path, temp_path )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            
+        except Exception as e:
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'procreate.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
         
     elif mime == HC.IMAGE_SVG: 
         
@@ -388,6 +408,10 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     elif mime == HC.APPLICATION_KRITA:
         
         ( width, height ) = HydrusKritaHandling.GetKraProperties( path )
+
+    elif mime == HC.APPLICATION_PROCREATE:
+
+        ( width, height ) = HydrusProcreateHandling.GetProcreateResolution( path )
         
     elif mime == HC.IMAGE_SVG:
         
@@ -526,6 +550,10 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 if HydrusKritaHandling.ZipLooksLikeAKrita( path ):
                     
                     return HC.APPLICATION_KRITA
+                
+                elif HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
+
+                    return HC.APPLICATION_PROCREATE
                     
                 else:
                     
