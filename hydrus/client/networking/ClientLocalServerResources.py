@@ -2216,8 +2216,6 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( HydrusResou
 
         tags_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', tags )
         
-        print(tags_to_service_keys_to_siblings_and_parents)
-
         body_dict = { }
 
         for tag, service_keys_to_siblings_parents in tags_to_service_keys_to_siblings_and_parents.items():
@@ -2232,8 +2230,6 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( HydrusResou
                     'descendants': list(siblings_parents[2]),
                     'ancestors': list(siblings_parents[3])
                 }
-
-        print(body_dict)
         
         body = Dumps( body_dict, request.preferred_mime )
         
