@@ -1,0 +1,459 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg8"
+   inkscape:version="1.0.2 (e86c870879, 2021-01-15)"
+   sodipodi:docname="mlfs_venn.svg">
+  <defs
+     id="defs2" />
+  <sodipodi:namedview
+     id="base"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageopacity="0.0"
+     inkscape:pageshadow="2"
+     inkscape:zoom="1.4"
+     inkscape:cx="252.44377"
+     inkscape:cy="522.30594"
+     inkscape:document-units="mm"
+     inkscape:current-layer="layer1"
+     inkscape:document-rotation="0"
+     showgrid="false"
+     inkscape:window-width="1756"
+     inkscape:window-height="1671"
+     inkscape:window-x="485"
+     inkscape:window-y="364"
+     inkscape:window-maximized="0" />
+  <metadata
+     id="metadata5">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title></dc:title>
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="font-variation-settings:normal;vector-effect:none;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.27519;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;opacity:1;stop-opacity:1"
+       id="rect996-1"
+       width="114.10457"
+       height="104.71542"
+       x="2.100986"
+       y="116.78664" />
+    <rect
+       style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#ffffff;fill-opacity:1;stroke:#000000;stroke-width:0.27519;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1"
+       id="rect996"
+       width="114.43064"
+       height="100.75224"
+       x="1.34943"
+       y="3.7356431"
+       inkscape:export-xdpi="115.14893"
+       inkscape:export-ydpi="115.14893" />
+    <circle
+       style="font-variation-settings:normal;opacity:1;vector-effect:none;fill:#e3302c;fill-opacity:0.502008;stroke:#000000;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000;stop-opacity:1"
+       id="path12"
+       cx="40.254459"
+       cy="44.601192"
+       r="27.025299" />
+    <circle
+       style="fill:#4e4ee0;fill-opacity:0.502008;stroke:#000000;stroke-width:0.264583;stroke-opacity:1"
+       id="path12-7"
+       cx="70.492577"
+       cy="44.601192"
+       r="27.025299" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.175px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="6.2366042"
+       y="9.4494057"
+       id="text878"><tspan
+         sodipodi:role="line"
+         x="6.2366042"
+         y="9.4494057"
+         style="font-size:3.175px;stroke-width:0.264583"
+         id="tspan880">searching for files on 'my files' with tag 'pretty dress' on 'my tags'</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.175px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="28.159222"
+       y="79.375"
+       id="text886"><tspan
+         sodipodi:role="line"
+         id="tspan884"
+         x="28.159222"
+         y="79.375"
+         style="font-size:3.175px;stroke-width:0.264583">files in 'my files'</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.175px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="42.456989"
+       y="84.975616"
+       id="text886-3"><tspan
+         sodipodi:role="line"
+         id="tspan884-8"
+         x="42.456989"
+         y="84.975616"
+         style="font-size:3.175px;stroke-width:0.264583">files on 'my tags' with tag 'pretty dress'</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.175px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="18.898813"
+       y="38.175598"
+       id="text914"><tspan
+         id="tspan912"
+         x="18.898813"
+         y="38.175598"
+         style="font-size:3.175px;stroke-width:0.264583"
+         sodipodi:role="line">in 'my files',</tspan><tspan
+         x="18.898813"
+         y="42.144348"
+         style="font-size:3.175px;stroke-width:0.264583"
+         id="tspan916"
+         sodipodi:role="line">but do</tspan><tspan
+         x="18.898813"
+         y="46.113098"
+         style="font-size:3.175px;stroke-width:0.264583"
+         id="tspan918"
+         sodipodi:role="line">not have</tspan><tspan
+         x="18.898813"
+         y="50.081848"
+         style="font-size:3.175px;stroke-width:0.264583"
+         id="tspan920"
+         sodipodi:role="line">the tag</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:end;text-anchor:end;stroke-width:0.264583"
+       x="93.396362"
+       y="38.175594"
+       id="text956"><tspan
+         sodipodi:role="line"
+         id="tspan954"
+         x="93.396362"
+         y="38.175594"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583">have the</tspan><tspan
+         sodipodi:role="line"
+         x="93.396362"
+         y="42.144344"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583"
+         id="tspan958">tag, but</tspan><tspan
+         sodipodi:role="line"
+         x="93.396362"
+         y="46.113094"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583"
+         id="tspan980">not in</tspan><tspan
+         sodipodi:role="line"
+         x="93.396362"
+         y="50.081844"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583"
+         id="tspan960">'my files'</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="55.265026"
+       y="38.175598"
+       id="text964"><tspan
+         sodipodi:role="line"
+         id="tspan962"
+         x="55.265026"
+         y="38.175598"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583">in 'my</tspan><tspan
+         sodipodi:role="line"
+         x="55.265026"
+         y="42.144348"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan966">files' and</tspan><tspan
+         sodipodi:role="line"
+         x="55.265026"
+         y="46.113098"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan974">have the</tspan><tspan
+         sodipodi:role="line"
+         x="55.265026"
+         y="50.081848"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan968">tag</tspan></text>
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 39.593004,71.531994 v 4.630208"
+       id="path984" />
+    <path
+       style="fill:none;stroke:#000000;stroke-width:0.264583px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+       d="m 70.209081,71.531994 v 9.827379"
+       id="path986" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="95.816124"
+       y="44.366741"
+       id="text990"><tspan
+         sodipodi:role="line"
+         id="tspan988"
+         x="95.816124"
+         y="44.366741"
+         style="stroke-width:0.264583"></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="58.659206"
+       y="93.556129"
+       id="text994"><tspan
+         sodipodi:role="line"
+         id="tspan992"
+         x="58.659206"
+         y="93.556129"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583">by intersecting the two domains, you get your search results</tspan><tspan
+         sodipodi:role="line"
+         x="58.659206"
+         y="97.524879"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1298" /><tspan
+         sodipodi:role="line"
+         x="58.659206"
+         y="101.49363"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1302">changing one domain does not affect the other--only the intersection</tspan></text>
+    <circle
+       style="font-variation-settings:normal;vector-effect:none;fill:#e3302c;fill-opacity:0.502008;stroke:#000000;stroke-width:0.264583;stroke-linecap:butt;stroke-linejoin:miter;stroke-miterlimit:4;stroke-dasharray:none;stroke-dashoffset:0;stroke-opacity:1;stop-color:#000000"
+       id="path12-0"
+       cx="39.737789"
+       cy="157.6494"
+       r="27.025299" />
+    <circle
+       style="fill:#4e4ee0;fill-opacity:0.502008;stroke:#000000;stroke-width:0.264583;stroke-opacity:1"
+       id="path12-7-4"
+       cx="69.975906"
+       cy="157.6494"
+       r="27.025299" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-weight:normal;font-size:3.175px;line-height:1.25;font-family:sans-serif;fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.264583"
+       x="38.0369"
+       y="122.11964"
+       id="text878-0"><tspan
+         sodipodi:role="line"
+         x="38.0369"
+         y="122.11964"
+         style="font-size:3.175px;stroke-width:0.264583"
+         id="tspan880-1">searching for two tags</tspan></text>
+    <circle
+       style="fill:#4e4ee0;fill-opacity:0.502008;stroke:#000000;stroke-width:0.264583;stroke-opacity:1"
+       id="path12-7-4-8"
+       cx="54.995537"
+       cy="185.96429"
+       r="27.025299" />
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="92.604164"
+       y="138.52826"
+       id="text1148"><tspan
+         sodipodi:role="line"
+         id="tspan1146"
+         x="92.604164"
+         y="138.52826"
+         style="stroke-width:0.264583">pretty dress</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="48.569939"
+       y="218.09225"
+       id="text1152"><tspan
+         sodipodi:role="line"
+         id="tspan1150"
+         x="48.569939"
+         y="218.09225"
+         style="stroke-width:0.264583">freckles</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="7.9375"
+       y="134.55952"
+       id="text1156"><tspan
+         sodipodi:role="line"
+         id="tspan1154"
+         x="7.9375"
+         y="134.55952"
+         style="stroke-width:0.264583">my files</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="54.480618"
+       y="166.49852"
+       id="text1160"><tspan
+         sodipodi:role="line"
+         id="tspan1158"
+         x="54.480618"
+         y="166.49852"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583">search</tspan><tspan
+         sodipodi:role="line"
+         x="54.480618"
+         y="170.46727"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1162">results</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:end;text-anchor:end;stroke-width:0.264583"
+       x="88.085289"
+       y="147.5997"
+       id="text1166"><tspan
+         sodipodi:role="line"
+         id="tspan1164"
+         x="88.085289"
+         y="147.5997"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583">'pretty dress',</tspan><tspan
+         sodipodi:role="line"
+         x="88.085289"
+         y="151.56845"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583"
+         id="tspan1168">but not in</tspan><tspan
+         sodipodi:role="line"
+         x="88.085289"
+         y="155.5372"
+         style="text-align:end;text-anchor:end;stroke-width:0.264583"
+         id="tspan1170">'my files'</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="54.69833"
+       y="193.97292"
+       id="text1166-8"><tspan
+         sodipodi:role="line"
+         id="tspan1164-0"
+         x="54.69833"
+         y="193.97292"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583">'freckles',</tspan><tspan
+         sodipodi:role="line"
+         x="54.69833"
+         y="197.94167"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1168-1">but not in</tspan><tspan
+         sodipodi:role="line"
+         x="54.69833"
+         y="201.91042"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1170-2">'my files'</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="119.25149"
+       y="144.00893"
+       id="text1206"><tspan
+         sodipodi:role="line"
+         id="tspan1204"
+         x="119.25149"
+         y="144.00893"
+         style="stroke-width:0.264583"></tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="70.195351"
+       y="174.50716"
+       id="text1166-6"><tspan
+         sodipodi:role="line"
+         id="tspan1164-6"
+         x="70.195351"
+         y="174.50716"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583">both tags,</tspan><tspan
+         sodipodi:role="line"
+         x="70.195351"
+         y="178.47591"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1168-4">but not in</tspan><tspan
+         sodipodi:role="line"
+         x="70.195351"
+         y="182.44466"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1170-24">'my files'</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;stroke-width:0.264583"
+       x="18.331839"
+       y="147.97768"
+       id="text1228"><tspan
+         sodipodi:role="line"
+         id="tspan1226"
+         x="18.331839"
+         y="147.97768"
+         style="stroke-width:0.264583">in 'my files',</tspan><tspan
+         sodipodi:role="line"
+         x="18.331839"
+         y="151.94643"
+         style="stroke-width:0.264583"
+         id="tspan1230">but have</tspan><tspan
+         sodipodi:role="line"
+         x="18.331839"
+         y="155.91518"
+         style="stroke-width:0.264583"
+         id="tspan1232">neither tag</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="55.267281"
+       y="148.42679"
+       id="text1166-7"><tspan
+         sodipodi:role="line"
+         x="55.267281"
+         y="148.42679"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1168-15">in 'my files',</tspan><tspan
+         sodipodi:role="line"
+         x="55.267281"
+         y="152.39554"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1254">but only</tspan><tspan
+         sodipodi:role="line"
+         x="55.267281"
+         y="156.36429"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1260">'pretty dress'</tspan><tspan
+         sodipodi:role="line"
+         x="55.267281"
+         y="160.33304"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1170-1" /></text>
+    <text
+       xml:space="preserve"
+       style="font-size:3.175px;line-height:1.25;font-family:sans-serif;text-align:center;text-anchor:middle;stroke-width:0.264583"
+       x="40.064701"
+       y="175.87889"
+       id="text1166-7-9"><tspan
+         sodipodi:role="line"
+         x="40.064701"
+         y="175.87889"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1168-15-6">in 'my files',</tspan><tspan
+         sodipodi:role="line"
+         x="40.064701"
+         y="179.84764"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1254-9">but only</tspan><tspan
+         sodipodi:role="line"
+         x="40.064701"
+         y="183.81639"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1260-6">'freckles'</tspan><tspan
+         sodipodi:role="line"
+         x="40.064701"
+         y="187.78514"
+         style="text-align:center;text-anchor:middle;stroke-width:0.264583"
+         id="tspan1170-1-0" /></text>
+  </g>
+</svg>

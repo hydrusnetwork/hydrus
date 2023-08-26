@@ -1,0 +1,2482 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A personal booru-style media tagger that can import files and tags from your hard drive and popular websites. Content can be shared with other users via user-run servers.">
+      
+      
+      
+        <link rel="canonical" href="https://hydrusnetwork.github.io/hydrus/getting_started_installing.html">
+      
+      
+        <link rel="prev" href="gettingStartedOverview.html">
+      
+      
+        <link rel="next" href="getting_started_files.html">
+      
+      
+      <link rel="icon" href="assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.4">
+    
+    
+      
+        <title>Installing and Updating - hydrus network</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.0e669242.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.85d0ee34.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#installing_and_updating" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="hydrus network" class="md-header__button md-logo" aria-label="hydrus network" data-md-component="logo">
+      
+  <img src="assets/hydrus-white.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            hydrus network
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Installing and Updating
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6zm0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4zM7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hydrusnetwork/hydrus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hydrusnetwork/hydrus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="index.html" class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="introduction.html" class="md-tabs__link">
+          
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="advanced_siblings.html" class="md-tabs__link">
+          
+  
+  Advanced
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="client_api.html" class="md-tabs__link">
+          
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="faq.html" class="md-tabs__link">
+          
+  
+  Misc
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="hydrus network" class="md-nav__button md-logo" aria-label="hydrus network" data-md-component="logo">
+      
+  <img src="assets/hydrus-white.svg" alt="logo">
+
+    </a>
+    hydrus network
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hydrusnetwork/hydrus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hydrusnetwork/hydrus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="introduction.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction and Statement of Principles
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="gettingStartedOverview.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview For Getting Started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Installing and Updating
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="getting_started_installing.html" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Installing and Updating
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#downloading" class="md-nav__link">
+    Downloading
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installing" class="md-nav__link">
+    Installing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anti_virus" class="md-nav__link">
+    Anti-virus
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running" class="md-nav__link">
+    Running
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updating" class="md-nav__link">
+    Updating
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clean_installs" class="md-nav__link">
+    Clean installs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#big_updates" class="md-nav__link">
+    Big updates
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backing_up" class="md-nav__link">
+    Backing up
+  </a>
+  
+    <nav class="md-nav" aria-label="Backing up">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the_simple_way_-_inside_the_client" class="md-nav__link">
+    The simple way - inside the client
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the_powerful_and_best_way_-_using_an_external_program" class="md-nav__link">
+    The powerful (and best) way - using an external program
+  </a>
+  
+    <nav class="md-nav" aria-label="The powerful (and best) way - using an external program">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a_few_options" class="md-nav__link">
+    A few options
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backing_up_small" class="md-nav__link">
+    Backing up with not much space
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_files.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Files
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_importing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Importing and Exporting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_tags.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tags
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_searching.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Searching and Sorting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_more_tags.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    More Tags
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_downloading.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Downloading
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_ratings.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Ratings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_11" >
+        
+          <label class="md-nav__link" for="__nav_2_11" id="__nav_2_11_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    PTR
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_11">
+            <span class="md-nav__icon md-icon"></span>
+            PTR
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="access_keys.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PTR Access Keys
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="PTR.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PTR Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="petitionPractices.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Petition Practices
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        
+          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Next Steps
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_12">
+            <span class="md-nav__icon md-icon"></span>
+            Next Steps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="adding_new_downloaders.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adding New Downloaders
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_subscriptions.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Subscriptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="duplicates.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Filtering Duplicates
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Advanced
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Advanced
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_siblings.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tag Siblings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_parents.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tag Parents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_sidecars.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Sidecars
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_multiple_local_file_services.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Multiple Local File Services
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Clever Tricks
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reducing_lag.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reducing Lag
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="database_migration.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Database Migration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="launch_arguments.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Launch Arguments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ipfs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    IPFS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="local_booru.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Local Booru
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="server.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running Your Own Server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_12" >
+        
+          <label class="md-nav__link" for="__nav_3_12" id="__nav_3_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Alternate Installations
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_12">
+            <span class="md-nav__icon md-icon"></span>
+            Alternate Installations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="docker.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Docker
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="wine.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running In Wine
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="running_from_source.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running From Source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13" >
+        
+          <label class="md-nav__link" for="__nav_3_13" id="__nav_3_13_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Downloader Creation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13">
+            <span class="md-nav__icon md-icon"></span>
+            Downloader Creation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_intro.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_gugs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Gallery URL Generators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_url_classes.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    URL Classes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4" id="__nav_3_13_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Parsers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_13_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4">
+            <span class="md-nav__icon md-icon"></span>
+            Parsers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4_2" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4_2" id="__nav_3_13_4_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Components
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_13_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Components
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_formulae.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Formulae
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_content_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Content Parsers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_page_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Page Parsers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4_3" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4_3" id="__nav_3_13_4_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Walkthroughs
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_13_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            Walkthroughs
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_gallery_page.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Gallery Page Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_file_page.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    File Page Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_completion.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Putting It All Together
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_sharing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Sharing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_login.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Login Manager
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    API
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="client_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Client API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="developer_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Misc
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Misc
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="faq.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="privacy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Privacy
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contact.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contact and Links
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="support.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Financial Support
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="changelog.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="about_docs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    About These Docs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#downloading" class="md-nav__link">
+    Downloading
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#installing" class="md-nav__link">
+    Installing
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#anti_virus" class="md-nav__link">
+    Anti-virus
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#running" class="md-nav__link">
+    Running
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#updating" class="md-nav__link">
+    Updating
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#clean_installs" class="md-nav__link">
+    Clean installs
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#big_updates" class="md-nav__link">
+    Big updates
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backing_up" class="md-nav__link">
+    Backing up
+  </a>
+  
+    <nav class="md-nav" aria-label="Backing up">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the_simple_way_-_inside_the_client" class="md-nav__link">
+    The simple way - inside the client
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#the_powerful_and_best_way_-_using_an_external_program" class="md-nav__link">
+    The powerful (and best) way - using an external program
+  </a>
+  
+    <nav class="md-nav" aria-label="The powerful (and best) way - using an external program">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a_few_options" class="md-nav__link">
+    A few options
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backing_up_small" class="md-nav__link">
+    Backing up with not much space
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="installing_and_updating">Installing and Updating<a class="headerlink" href="#installing_and_updating" title="Permanent link">&para;</a></h1>
+<p>If any of this is confusing, a simpler guide is <a href="https://github.com/Zweibach/text/blob/master/Hydrus/Hydrus%20Help%20Docs/00_tableOfContents.md">here</a>, and some video guides are <a href="https://github.com/CuddleBear92/Hydrus-guides">here</a>!</p>
+<h2 id="downloading">Downloading<a class="headerlink" href="#downloading" title="Permanent link">&para;</a></h2>
+<p>You can get the latest release at <a href="https://github.com/hydrusnetwork/hydrus/releases">the github releases page</a>.</p>
+<p>I try to release a new version every Wednesday by 8pm EST and write an accompanying post on <a href="http://hydrus.tumblr.com/">my tumblr</a> and a Hydrus Network General thread on <a href="https://8chan.moe/t/catalog.html">8chan.moe /t/</a>.</p>
+<h2 id="installing">Installing<a class="headerlink" href="#installing" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p>The hydrus releases are 64-bit only. If you are a python expert, there is the slimmest chance you'll be able to get it running from source on a 32-bit machine, but it would be easier just to find a newer computer to run it on.</p>
+</div>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:5"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><input id="__tabbed_1_4" name="__tabbed_1" type="radio" /><input id="__tabbed_1_5" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Windows</label><label for="__tabbed_1_2">macOS</label><label for="__tabbed_1_3">Linux</label><label for="__tabbed_1_4">Docker</label><label for="__tabbed_1_5">From Source</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<ul>
+<li>If you want the easy solution, download the .exe installer. Run it, hit ok several times.</li>
+<li>If you know what you are doing and want a little more control, get the .zip. Don't extract it to Program Files unless you are willing to run it as administrator every time (it stores all its user data inside its own folder). You probably want something like D:\hydrus.</li>
+<li><em>If you run &lt;Win10, you need <a href="https://www.microsoft.com/en-us/download/details.aspx?id=48145">Visual C++ Redistributable for Visual Studio 2015</a> if you don't already have it for vidya.</em></li>
+<li><em>If you use Windows 10 N (a version of Windows without some media playback features), you will likely need the 'Media Feature Pack'. There have been several versions of this, so it may best found by searching for the latest version or hitting Windows Update, but otherwise check <a href="https://support.microsoft.com/en-us/help/3145500/media-feature-pack-list-for-windows-n-editions">here</a>.</em>  </li>
+<li><em>If you run Win7, you cannot run Qt6 programs, so you cannot run the official executable release. You have options by <a href="running_from_source.html">running from source</a>.</em></li>
+<li><strong>Third parties (not maintained by Hydrus Developer)</strong>:  <ul>
+<li><a href="https://community.chocolatey.org/packages/hydrus-network">Chocolatey</a></li>
+<li><a href="https://github.com/ScoopInstaller/Scoop">Scoop</a> (<code>hydrus-network</code> in the 'Extras' bucket)    </li>
+<li>Winget. The command is <code>winget install --id=HydrusNetwork.HydrusNetwork  -e --location "\PATH\TO\INSTALL\HERE"</code>, which can, if you know what you are doing, be <code>winget install --id=HydrusNetwork.HydrusNetwork  -e --location ".\"</code>, maybe rolled into a batch file.</li>
+<li><a href="https://gist.github.com/jufogu/b78509695c6c65cdb2866a56fb14a820">User guide for Anaconda</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="tabbed-block">
+<ul>
+<li>Get the .dmg App. Open it, drag it to Applications, and check the readme inside.</li>
+<li>macOS users have no mpv support for now, so no audio, and video may be laggy.</li>
+<li><em>This release has always been a little buggy. Many macOS users are having better success <a href="running_from_source.html">running from source</a>.</em></li>
+</ul>
+</div>
+<div class="tabbed-block">
+<ul>
+<li>Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.</li>
+<li>If you have problems running the Ubuntu build, users with some python experience generally find running from source works well.</li>
+<li>You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv <em>library</em>, not the necessarily the player. Check <em>help-&gt;about</em> to see if it is available--if not, see if you can get it like so:<ul>
+<li><code>apt-get install libmpv1</code></li>
+<li>Use <em>options-&gt;media</em> to set your audio/video/animations to 'show using mpv' once you have it installed.</li>
+<li>If the about window provides you an mpv error popup like this:<br />
+<div class="highlight"><pre><span></span><code>OSError: /lib/x86_64-linux-gnu/libgio-2.0.so.0: undefined symbol: g_module_open_full
+(traceback)
+pyimod04_ctypes.install.&lt;locals&gt;.PyInstallerImportError: Failed to load dynlib/dll &#39;libmpv.so.1&#39;. Most likely this dynlib/dll was not found when the application was frozen.
+</code></pre></div>
+Then please do this:  <ol>
+<li>Search your /usr/ dir for <code>libgmodule*</code>. You are looking for something like <code>libgmodule-2.0.so</code>. Users report finding it in <code>/usr/lib64/</code> and <code>/usr/lib/x86_64-linux-gnu</code>.</li>
+<li>Copy that .so file to the hydrus install base directory.</li>
+<li>Boot the client and hit <em>help-&gt;about</em> to see if it reports a version.</li>
+<li>If it all seems good, hit <em>options-&gt;media</em> to set up mpv as your player for video/audio and try to view some things.</li>
+<li>If it still doesn't work, see if you can do the same for libmpv.so and libcdio.so--or consider <a href="running_from_source.html">running from source</a></li>
+</ol>
+</li>
+</ul>
+</li>
+<li>You can also try <a href="wine.html">running the Windows version in wine</a>.</li>
+<li><strong>Third parties (not maintained by Hydrus Developer)</strong>:  <ul>
+<li>(These both run from source, so if you have trouble with the built release, they may work better for you!)</li>
+<li><a href="https://aur.archlinux.org/packages/hydrus/">AUR package</a></li>
+<li><a href="https://flathub.org/apps/details/io.github.hydrusnetwork.hydrus">flatpak</a> </li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="tabbed-block">
+<ul>
+<li>A rudimentary documentation for the <a href="https://github.com/hydrusnetwork/hydrus/pkgs/container/hydrus">container</a> setup can be found <a href="docker.html">here</a>.</li>
+</ul>
+</div>
+<div class="tabbed-block">
+<ul>
+<li>You can also <a href="running_from_source.html">run from source</a>. This is often the best way to fix compatibility problems.</li>
+</ul>
+</div>
+</div>
+</div>
+<p>By default, hydrus stores all its data—options, files, subscriptions, <em>everything</em>—entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.</p>
+<div class="admonition warning">
+<p class="admonition-title">Network Install</p>
+<p>Unless you are an expert, do not install your client to a network location (i.e. on a different computer's hard drive)! The database is sensitive to interruption and requires good file locking, which network storage often fakes. There are <a href="database_migration.html">ways of splitting your client up</a> so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.</p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">For macOS users</p>
+<p>The Hydrus App is <strong>non-portable</strong> and puts your database in <code>~/Library/Hydrus</code> (i.e. <code>/Users/[You]/Library/Hydrus</code>). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at <code>~/Library/Hydrus</code>, not the App itself.</p>
+</div>
+<h2 id="anti_virus">Anti-virus<a class="headerlink" href="#anti_virus" title="Permanent link">&para;</a></h2>
+<p>Hydrus is made by an Anon out of duct tape and string. It combines file parsing tech with lots of network and database code in unusual and powerful ways, and all through a hacked-together executable that isn't signed by any big official company.</p>
+<p>Unfortunately, we have been hit by anti-virus false positives throughout development. Every few months, one or more of the larger anti-virus programs sees some code that looks like something bad, or they run the program in a testbed and don't like something it does, and then they quarantine it. Every single instance of this so far has been a false positive. They usually go away the next week or two when the next set of definitions roll out. Some hydrus users are kind enough to report the program as a false positive to the anti-virus companies themselves, which also helps here.</p>
+<p>Some users have never had the problem, some get hit regularly. The situation is obviously worse on Windows. If you try to extract the zip and hydrus_client.exe or the whole folder suddenly disappears, please check your anti-virus software.</p>
+<p>I am interested in reports about these false-positives, just so I know what is going on. Sometimes I have been able to reduce problems by changing something in the build (one of these was, no shit, an anti-virus testbed running the installer and then opening the help html at the end, which launched Edge browser, which then triggered Windows Update, which hit UAC and was considered suspicious. I took out the 'open help' checkbox from the installer as a result).</p>
+<p>You should be careful about random software online. For my part, the program is completely open source, and I have a long track record of designing it with privacy foremost. There is no intentional spyware of any sort--the program never connects to another computer unless you tell it to. Furthermore, the exe you download is now built on github's cloud, so there are very few worries about a trojan-infected build environment putting something I did not intend into the program (as there once were when I built the release on my home machine). That doesn't stop Windows Defender from sometimes calling it an ugly name like "Tedy.4675" and definitively declaring "This program is dangerous and executes commands from an attacker" but that's the modern anti-virus ecosystem.</p>
+<p>There aren't excellent solutions to this problem. I don't like to say 'just exclude the program directory from your anti-virus settings', but some users are comfortable with this and say it works fine. One thing I do know that helps (with other things too), if you are using the default Windows Defender, is going into the Windows Security shield icon on your taskbar, and 'virus and threat protection' and then 'virus and threat protection settings', and turning off 'Cloud-delivered protection' and 'Automatic sample submission'. It seems with these on, Windows will talk with a central server about executables you run and download early updates, and this gives a lot of false positives.</p>
+<p>If you are still concerned, please feel free to run from source, as above. You are controlling everything, then, and can change anything about the program you like. Or you can only run releases from four weeks ago, since you know the community would notice by then if there ever were a true positive. Or just run it in a sandbox and watch its network traffic.</p>
+<p>In 2022 I am going to explore a different build process to see if that reduces the false positives. We currently make the executable with PyInstaller, which has some odd environment set-up the anti-virus testbeds don't seem to like, and perhaps PyOxidizer will be better. We'll see.</p>
+<h2 id="running">Running<a class="headerlink" href="#running" title="Permanent link">&para;</a></h2>
+<p>To run the client:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Windows</label><label for="__tabbed_2_2">macOS</label><label for="__tabbed_2_3">Linux</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<ul>
+<li>For the installer, run the Start menu shortcut it added.</li>
+<li>For the extract, run 'hydrus_client.exe' in the base directory, or make a shortcut to it.</li>
+</ul>
+</div>
+<div class="tabbed-block">
+<ul>
+<li>Run the App you installed.</li>
+</ul>
+</div>
+<div class="tabbed-block">
+<ul>
+<li>Run the 'client' executable in the base directory. You may be able to double-click it, otherwise you are running <code>./client</code> from the terminal.</li>
+<li>If you experience virtual memory crashes, please review <a href="Fixing_Hydrus_Random_Crashes_Under_Linux.html">this thorough guide</a> by a user.</li>
+</ul>
+</div>
+</div>
+</div>
+<h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!</p>
+</div>
+<p><strong>Hydrus does not auto-update. It will stay the same version unless you download and install a new one.</strong></p>
+<p>Although I put out a new version every week, you can update far less often if you prefer. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.</p>
+<p>A user has written a longer and more formal guide to updating, and information on the 334-&gt;335 step (python2 to python3) <a href="update_guide.rtf">here</a>.</p>
+<details class="note">
+<summary>The 526-&gt;527 step was also important.</summary>
+<p>527 changed the program executable name from 'client' to 'hydrus_client'. There was also a library update that caused a dll conflict with previous installs.</p>
+<p>If you need to update from 526 or before, then:</p>
+<ul>
+<li>If you use the Windows installer, install as normal. Your start menu 'hydrus client' shortcut should be overwritten with one to the new executable, but if you use a custom shortcut, you will need to update that too.</li>
+<li>If you use one of the normal extract builds, you will have to do a 'clean install', as below. You also need to update your program shortcuts.</li>
+<li>If you use the macOS app, there are no special instructions. Update as normal.</li>
+<li>If you run from source, <code>git pull</code> as normal. If you haven't already, feel free to run setup_venv again to get the new OpenCV. Update your launch scripts to point at the new <code>hydrus_client.py</code> boot scripts.</li>
+</ul>
+</details>
+<p>The update process:</p>
+<ul>
+<li>If the client is running, close it!</li>
+<li>If you maintain a backup, run it now!</li>
+<li>If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.</li>
+<li>If you extract, then just extract the new version right on top of your current install and overwrite manually.</li>
+<li>Start your client or server. It may take a few minutes to update its database. I will say in the release post if it is likely to take longer.</li>
+</ul>
+<p>Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.</p>
+<p>Releases typically need to update your database to their version. New releases can retroactively perform older database updates, so if the new version is v255 but your database is on v250, you generally only need to get the v255 release, and it'll do all the intervening v250-&gt;v251, v251-&gt;v252, etc... update steps in order as soon as you boot it. If you need to update from a release more than, say, ten versions older than current, see below. You might also like to skim the release posts or <a href="changelog.html">changelog</a> to see what is new.</p>
+<p>Clients and servers of different versions can usually connect to one another, but from time to time, I make a change to the network protocol, and you will get polite error messages if you try to connect to a newer server with an older client or <em>vice versa</em>. There is still no <em>need</em> to update the client--it'll still do local stuff like searching for files completely fine. Read my release posts and judge for yourself what you want to do.</p>
+<h2 id="clean_installs">Clean installs<a class="headerlink" href="#clean_installs" title="Permanent link">&para;</a></h2>
+<p><strong>This is usually only relevant if you know you have a dll conflict or otherwise update and cannot boot at all.</strong></p>
+<p>Very rarely, hydrus needs a clean install. This can be due to a special update like when we moved from 32-bit to 64-bit or needing to otherwise 'reset' a custom install situation. The problem is usually that a library file has been renamed in a new version and hydrus has trouble figuring out whether to use the older one (from a previous version) or the newer.</p>
+<p>In any case, if you cannot boot hydrus and it either fails silently or you get a crash log or system-level error popup complaining in a technical way about not being able to load a dll/pyd/so file, you may need a clean install, which essentially means clearing any old files out and reinstalling.</p>
+<p>However, you need to be careful not to delete your database! It sounds silly, but at least one user has made a mistake here. The process is simple, do not deviate:</p>
+<ul>
+<li>Make a backup if you can!</li>
+<li>Go to your install directory.</li>
+<li>Delete all the files and folders except the 'db' dir (and all of its contents, obviously).</li>
+<li>Reinstall/extract hydrus as you normally do.</li>
+</ul>
+<p>After that, you'll have a 'clean' version of hydrus that only has the latest version's dlls. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.</p>
+<h2 id="big_updates">Big updates<a class="headerlink" href="#big_updates" title="Permanent link">&para;</a></h2>
+<p>If you have not updated in some time--say twenty versions or more--doing it all in one jump, like v250-&gt;v290, is likely not going to work. I am doing a lot of unusual stuff with hydrus, change my code at a fast pace, and do not have a ton of testing in place. Hydrus update code often falls to <a href="https://en.wikipedia.org/wiki/Software_rot">bitrot</a>, and so some underlying truth I assumed for the v255-&gt;v256 code may not still apply six months later. If you try to update more than 50 versions at once (i.e. trying to perform more than a year of updates in one go), the client will give you a polite error rather than even try.</p>
+<p>As a result, if you get a failure on trying to do a big update, try cutting the distance in half--try v270 first, and then if that works, try v270-&gt;v290. If it doesn't, try v260, and so on.</p>
+<p>If you narrow the gap down to just one version and still get an error, please let me know. I am very interested in these sorts of problems and will be happy to help figure out a fix with you (and everyone else who might be affected).</p>
+<p><em>All that said, and while updating is complex and every client is different, various user reports over the years suggest this route works and is efficient: 204 &gt; 238 &gt; 246 &gt; 291 &gt; 328 &gt; 335 &gt; 376 &gt; 421 &gt; 466 &gt; 474 ? 480 &gt; 521</em> </p>
+<h2 id="backing_up">Backing up<a class="headerlink" href="#backing_up" title="Permanent link">&para;</a></h2>
+<div class="admonition danger">
+<p class="admonition-title">I am not joking around: if you end up liking hydrus, you should back up your database</p>
+</div>
+<p><strong>Maintaining a regular backup is important for hydrus.</strong> The program stores a lot of complicated data that you will put hours and hours of work into, and if you only have one copy and your hard drive breaks, you could lose everything. This has happened before--to people who thought it would never happen to them--and it sucks big time to go through. <strong>Don't let it be you.</strong></p>
+<p>Hydrus's database engine, SQLite, is excellent at keeping data safe, but it cannot work in a faulty environment. Ways in which users of hydrus have damaged/lost their database:</p>
+<ul>
+<li>Hard drive hardware failure (age, bad ventilation, bad cables, etc...)</li>
+<li>Lightning strike on non-protected socket or rough power cut on non-UPS'd power supply</li>
+<li>RAM failure</li>
+<li>Motherboard/PSU power problems</li>
+<li>Accidental deletion</li>
+<li>Accidental overwrite (usually during a borked update)</li>
+<li>Encrypted partition auto-dismount/other borked settings</li>
+<li>Cloud backup interfering with ongoing writes</li>
+<li>An automatic OS backup routine misfiring and causing a rollback, wiping out more than a year of progress</li>
+<li>A laptop that incorrectly and roughly disconnected an external USB drive on every sleep</li>
+<li>Network drive location not guaranteeing accurate file locks</li>
+<li>Windows NVMe driver bugs necessitating a different SQLite journalling method</li>
+</ul>
+<p>Some of those you can mitigate (don't run the database over a network!) and some will always be a problem, but if you have a backup, none of them can kill you.</p>
+<div class="admonition note">
+<p class="admonition-title">This mostly means your database, not your files</p>
+<p>Note that nearly all the serious and difficult-to-fix problems occur to the <em>database</em>, which is four large .db files, not your media. All your images and movies are read-only in hydrus, and there's less worry if they are on a network share with bad locks or a machine that suddenly loses power. The database, however, maintains a live connection, with regular complex writes, and here a hardware failure can lead to corruption (basically the failure scrambles the data that is written, so when you try to boot back up, a small section of the database is incomprehensible garbage).</p>
+</div>
+<p>If you do not already have a backup routine for your files, this is a great time to start. I now run a backup every week of all my data so that if my computer blows up or anything else awful happens, I'll at worst have lost a few days' work. Before I did this, I once lost an entire drive with tens of thousands of files, and it felt awful. If you are new to saving a lot of media, I hope you can avoid what I felt. ;_;</p>
+<p>I use <a href="http://abstractspoon.com/">ToDoList</a> to remind me of my jobs for the day, including backup tasks, and <a href="http://sourceforge.net/projects/freefilesync/">FreeFileSync</a> to actually mirror over to an external usb drive. I recommend both highly (and for ToDoList, I recommend hiding the complicated columns, stripping it down to a simple interface). It isn't a huge expense to get a couple-TB usb drive either--it is <strong>absolutely</strong> worth it for the peace of mind.</p>
+<p>By default, hydrus stores all your user data in one location, so backing up is simple:</p>
+<h4 id="the_simple_way_-_inside_the_client">The simple way - inside the client<a class="headerlink" href="#the_simple_way_-_inside_the_client" title="Permanent link">&para;</a></h4>
+<dl>
+<dd>
+<p>Go <em>database-&gt;set up a database backup location</em> in the client. This will tell the client where you want your backup to be stored. A fresh, empty directory on a different drive is ideal.</p>
+<p>Once you have your location set up, you can thereafter hit <em>database-&gt;update database backup</em>. It will lock everything and mirror your files, showing its progress in a popup message. The first time you make this backup, it may take a little while (as it will have to fully copy your database and all its files), but after that, it will only have to copy new or altered files and should only ever take a couple of minutes.</p>
+<p>Advanced users who have migrated their database and files across multiple locations will not have this option--use an external program in this case.</p>
+</dd>
+</dl>
+<h4 id="the_powerful_and_best_way_-_using_an_external_program">The powerful (and best) way - using an external program<a class="headerlink" href="#the_powerful_and_best_way_-_using_an_external_program" title="Permanent link">&para;</a></h4>
+<dl>
+<dd>
+<p>Doing it yourself is best. If you are an advanced user with a complicated hydrus install migrated across multiple drives, then you will have to do it this way--the simple backup will be disabled.</p>
+<p>You need to backup two things, which are both, by default, beneath install_dir/db: the four client*.db files and your client_files directory(ies). The .db files contain absolutely everything about your client and files--your settings and file lists and metadata like inbox/archive and tags--while the client_files subdirs store your actual media and its thumbnails.</p>
+<p>If everything is still under install_dir/db, then it is usually easiest to just backup the whole install dir, keeping a functional 'portable' copy of your install that you can restore no prob. Make sure you keep the .db files together--they are not interchangeable and mostly useless on their own!</p>
+<p>An example FreeFileSync profile for backing up a database will look like this:</p>
+<p><img alt="" src="images/freefilesync_example_backup.png" /></p>
+<p>Note it has 'file time and size' and 'mirror' as the main settings. This quickly ensures that changes to the left-hand side are copied to the right-hand side, adding new files and removing since-deleted files and overwriting modified files. You can save a backup profile like that and it should only take a few minutes every week to stay safely backed up, even if you have hundreds of thousands of files.</p>
+<p><strong>Shut the client down while you run the backup, obviously.</strong></p>
+</dd>
+</dl>
+<h5 id="a_few_options">A few options<a class="headerlink" href="#a_few_options" title="Permanent link">&para;</a></h5>
+<p>There are a host of other great alternatives out there, probably far too many to count. These are a couple that are often recommended and used by Hydrus users and are, in the spirit of Hydrus Network itself, free and open source.</p>
+<p><a href="https://freefilesync.org/">FreeFileSync</a><br />
+Linux, MacOS, Windows.<br />
+Recommended and used by dev. Somewhat basic but does the job well enough.</p>
+<p><a href="https://www.borgbackup.org/">Borg Backup</a><br />
+FreeBSD, Linux, MacOS.<br />
+More advanced and featureful backup tool.</p>
+<p><a href="https://restic.net/">Restic</a><br />
+Almost every OS you can name.</p>
+<div class="admonition danger">
+<p class="admonition-title">Danger</p>
+<p>Do not put your live database in a folder that continuously syncs to a cloud backup. Many of these services will interfere with a running client and can cause database corruption. If you still want to use a system like this, either turn the sync off while the client is running, or use the above backup workflows to safely backup your client to a separate folder that syncs to the cloud.</p>
+</div>
+<p>There is significantly more information about the database structure <a href="database_migration.html">here</a>.</p>
+<p>I recommend you always backup before you update, just in case there is a problem with my update code that breaks your database. If that happens, please <a href="contact.html">contact me</a>, describing the problem, and revert to the functioning older version. I'll get on any problems like that immediately.</p>
+<h2 id="backing_up_small">Backing up with not much space<a class="headerlink" href="#backing_up_small" title="Permanent link">&para;</a></h2>
+<p>If you decide not to maintain a backup because you cannot afford drive space for all your files, please please at least back up your actual database files. Use FreeFileSync or a similar program to back up the four 'client*.db' files in install_dir/db when the client is not running. Just make sure you have a copy of those files, and then if your main install becomes damaged, we will have a reference to either roll back to or manually restore data from. Even if you lose a bunch of media files in this case, with an intact database we'll be able to schedule recovery of anything with a URL.</p>
+<p>If you are really short on space, note also that the database files are very compressible. A very large database where the four files add up to 70GB can compress down to 17GB zip with 7zip on default settings. Better compression ratios are possible if you make sure to put all four files in the same archive and turn up the quality. This obviously takes some additional time to do, but if you are really short on space it may be the only way it fits, and if your only backup drive is a slow USB stick, then you might actually save time from not having to transfer the other 53GB! Media files (jpegs, webms, etc...) are generally not very compressible, usually 5% at best, so it is usually not worth trying.</p>
+<p>It is best to have all four database files. It is generally easy and quick to fix problems if you have a backup of all four. If client.caches.db is missing, you can recover but it might take ten or more hours of CPU work to regenerate. If client.mappings.db is missing, you might be able to recover tags for your local files from a mirror in an intact client.caches.db. However, client.master.db and client.db are the most important. If you lose either of those, or they become too damaged to read and you have no backup, then your database is essentially dead and likely every single archive and view and tag and note and url record you made is lost. This has happened before, do not let it be you.</p>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var tab,labels=set.querySelector(".tabbed-labels");for(tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+            Back to top
+          </button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/hydrusnetwork/hydrus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/hydrusnetwork" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://hydrus.tumblr.com/" target="_blank" rel="noopener" title="hydrus.tumblr.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M309.8 480.3c-13.6 14.5-50 31.7-97.4 31.7-120.8 0-147-88.8-147-140.6v-144H17.9c-5.5 0-10-4.5-10-10v-68c0-7.2 4.5-13.6 11.3-16 62-21.8 81.5-76 84.3-117.1.8-11 6.5-16.3 16.1-16.3h70.9c5.5 0 10 4.5 10 10v115.2h83c5.5 0 10 4.4 10 9.9v81.7c0 5.5-4.5 10-10 10h-83.4V360c0 34.2 23.7 53.6 68 35.8 4.8-1.9 9-3.2 12.7-2.2 3.5.9 5.8 3.4 7.4 7.9l22 64.3c1.8 5 3.3 10.6-.4 14.5z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:hydrus.admin@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48H48zM0 176v208c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V176L294.4 339.2a63.9 63.9 0 0 1-76.8 0L0 176z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/wPHPCUZ" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.patreon.com/hydrus_dev" target="_blank" rel="noopener" title="www.patreon.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M512 194.8c0 101.3-82.4 183.8-183.8 183.8-101.7 0-184.4-82.4-184.4-183.8 0-101.6 82.7-184.3 184.4-184.3C429.6 10.5 512 93.2 512 194.8zM0 501.5h90v-491H0v491z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.78eede0e.min.js"></script>
+      
+    
+  </body>
+</html>

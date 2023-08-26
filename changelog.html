@@ -1,0 +1,3336 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A personal booru-style media tagger that can import files and tags from your hard drive and popular websites. Content can be shared with other users via user-run servers.">
+      
+      
+      
+        <link rel="canonical" href="https://hydrusnetwork.github.io/hydrus/changelog.html">
+      
+      
+        <link rel="prev" href="support.html">
+      
+      
+        <link rel="next" href="about_docs.html">
+      
+      
+      <link rel="icon" href="assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.4">
+    
+    
+      
+        <title>Changelog - hydrus network</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.0e669242.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.85d0ee34.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#changelog" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="hydrus network" class="md-header__button md-logo" aria-label="hydrus network" data-md-component="logo">
+      
+  <img src="assets/hydrus-white.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            hydrus network
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Changelog
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6zm0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4zM7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hydrusnetwork/hydrus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hydrusnetwork/hydrus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="index.html" class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="introduction.html" class="md-tabs__link">
+          
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="advanced_siblings.html" class="md-tabs__link">
+          
+  
+  Advanced
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="client_api.html" class="md-tabs__link">
+          
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="faq.html" class="md-tabs__link">
+          
+  
+  Misc
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="hydrus network" class="md-nav__button md-logo" aria-label="hydrus network" data-md-component="logo">
+      
+  <img src="assets/hydrus-white.svg" alt="logo">
+
+    </a>
+    hydrus network
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hydrusnetwork/hydrus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hydrusnetwork/hydrus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="introduction.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction and Statement of Principles
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="gettingStartedOverview.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview For Getting Started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_installing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installing and Updating
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_files.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Files
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_importing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Importing and Exporting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_tags.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tags
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_searching.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Searching and Sorting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_more_tags.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    More Tags
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_downloading.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Downloading
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_ratings.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Ratings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_11" >
+        
+          <label class="md-nav__link" for="__nav_2_11" id="__nav_2_11_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    PTR
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_11">
+            <span class="md-nav__icon md-icon"></span>
+            PTR
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="access_keys.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PTR Access Keys
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="PTR.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PTR Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="petitionPractices.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Petition Practices
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        
+          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Next Steps
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_12">
+            <span class="md-nav__icon md-icon"></span>
+            Next Steps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="adding_new_downloaders.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adding New Downloaders
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_subscriptions.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Subscriptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="duplicates.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Filtering Duplicates
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Advanced
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Advanced
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_siblings.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tag Siblings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_parents.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tag Parents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_sidecars.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Sidecars
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_multiple_local_file_services.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Multiple Local File Services
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Clever Tricks
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reducing_lag.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reducing Lag
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="database_migration.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Database Migration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="launch_arguments.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Launch Arguments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ipfs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    IPFS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="local_booru.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Local Booru
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="server.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running Your Own Server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_12" >
+        
+          <label class="md-nav__link" for="__nav_3_12" id="__nav_3_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Alternate Installations
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_12">
+            <span class="md-nav__icon md-icon"></span>
+            Alternate Installations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="docker.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Docker
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="wine.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running In Wine
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="running_from_source.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running From Source
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13" >
+        
+          <label class="md-nav__link" for="__nav_3_13" id="__nav_3_13_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Downloader Creation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13">
+            <span class="md-nav__icon md-icon"></span>
+            Downloader Creation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_intro.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_gugs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Gallery URL Generators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_url_classes.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    URL Classes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4" id="__nav_3_13_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Parsers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_13_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4">
+            <span class="md-nav__icon md-icon"></span>
+            Parsers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4_2" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4_2" id="__nav_3_13_4_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Components
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_13_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Components
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_formulae.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Formulae
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_content_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Content Parsers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_page_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Page Parsers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4_3" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4_3" id="__nav_3_13_4_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Walkthroughs
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_13_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            Walkthroughs
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_gallery_page.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Gallery Page Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_file_page.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    File Page Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_completion.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Putting It All Together
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_sharing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Sharing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_login.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Login Manager
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    API
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="client_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Client API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="developer_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Misc
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Misc
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="faq.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="privacy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Privacy
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contact.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contact and Links
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="support.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Financial Support
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="changelog.html" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#version_540" class="md-nav__link">
+    Version 540
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 540">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file_maintenance" class="md-nav__link">
+    file maintenance
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_stuff" class="md-nav__link">
+    boring stuff
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_539" class="md-nav__link">
+    Version 539
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 539">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#another_new_library_today" class="md-nav__link">
+    another new library today
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewable_psd_files" class="md-nav__link">
+    viewable PSD files
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static_vs_animated_gif" class="md-nav__link">
+    static vs animated gif
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parseable_rating_predicates" class="md-nav__link">
+    parseable rating predicates
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_1" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_cleanup" class="md-nav__link">
+    boring cleanup
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_538" class="md-nav__link">
+    Version 538
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 538">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#important_note_on_index_regeneration" class="md-nav__link">
+    important note on index regeneration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new_libraries_today" class="md-nav__link">
+    new libraries today
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new_qt_and_opencv" class="md-nav__link">
+    new Qt and OpenCV
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred_delete_system" class="md-nav__link">
+    deferred delete system
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user_contributions" class="md-nav__link">
+    user contributions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_2" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_boring_notes" class="md-nav__link">
+    misc boring notes
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_537" class="md-nav__link">
+    Version 537
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 537">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new_filetype_selector" class="md-nav__link">
+    new filetype selector
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast_database_delete" class="md-nav__link">
+    fast database delete
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_3" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_536" class="md-nav__link">
+    Version 536
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 536">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#more_new_filetypes" class="md-nav__link">
+    more new filetypes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_4" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_stuff_1" class="md-nav__link">
+    boring stuff
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api_1" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_535" class="md-nav__link">
+    Version 535
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 535">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc_5" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#petitions_overview" class="md-nav__link">
+    petitions overview
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#petitions_details" class="md-nav__link">
+    petitions details
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_code_cleanup" class="md-nav__link">
+    boring code cleanup
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_534" class="md-nav__link">
+    Version 534
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 534">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user_submissions" class="md-nav__link">
+    user submissions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quality_of_lifenew_stuff" class="md-nav__link">
+    quality of life/new stuff
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixes" class="md-nav__link">
+    fixes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#weird_bitmap_pastes" class="md-nav__link">
+    weird bitmap pastes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_6" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ratings_on_the_client_api" class="md-nav__link">
+    ratings on the client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_533" class="md-nav__link">
+    Version 533
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 533">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#macos_app_crashes" class="md-nav__link">
+    macOS App crashes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_7" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sub-gallery_url_network_parsing_gubbins" class="md-nav__link">
+    sub-gallery url network parsing gubbins
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_stuff_2" class="md-nav__link">
+    boring stuff
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_532" class="md-nav__link">
+    Version 532
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 532">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc_8" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixiv_downloader" class="md-nav__link">
+    pixiv downloader
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mpv_logging_and_emergency_halt" class="md-nav__link">
+    mpv logging and emergency halt
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api_2" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_531" class="md-nav__link">
+    Version 531
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 531">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc_9" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api_3" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update_woes" class="md-nav__link">
+    update woes
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="about_docs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    About These Docs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#version_540" class="md-nav__link">
+    Version 540
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 540">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#file_maintenance" class="md-nav__link">
+    file maintenance
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_stuff" class="md-nav__link">
+    boring stuff
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_539" class="md-nav__link">
+    Version 539
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 539">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#another_new_library_today" class="md-nav__link">
+    another new library today
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#viewable_psd_files" class="md-nav__link">
+    viewable PSD files
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#static_vs_animated_gif" class="md-nav__link">
+    static vs animated gif
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parseable_rating_predicates" class="md-nav__link">
+    parseable rating predicates
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_1" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_cleanup" class="md-nav__link">
+    boring cleanup
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_538" class="md-nav__link">
+    Version 538
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 538">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#important_note_on_index_regeneration" class="md-nav__link">
+    important note on index regeneration
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new_libraries_today" class="md-nav__link">
+    new libraries today
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new_qt_and_opencv" class="md-nav__link">
+    new Qt and OpenCV
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#deferred_delete_system" class="md-nav__link">
+    deferred delete system
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#user_contributions" class="md-nav__link">
+    user contributions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_2" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_boring_notes" class="md-nav__link">
+    misc boring notes
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_537" class="md-nav__link">
+    Version 537
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 537">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new_filetype_selector" class="md-nav__link">
+    new filetype selector
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fast_database_delete" class="md-nav__link">
+    fast database delete
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_3" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_536" class="md-nav__link">
+    Version 536
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 536">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#more_new_filetypes" class="md-nav__link">
+    more new filetypes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_4" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_stuff_1" class="md-nav__link">
+    boring stuff
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api_1" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_535" class="md-nav__link">
+    Version 535
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 535">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc_5" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#petitions_overview" class="md-nav__link">
+    petitions overview
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#petitions_details" class="md-nav__link">
+    petitions details
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_code_cleanup" class="md-nav__link">
+    boring code cleanup
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_534" class="md-nav__link">
+    Version 534
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 534">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#user_submissions" class="md-nav__link">
+    user submissions
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#quality_of_lifenew_stuff" class="md-nav__link">
+    quality of life/new stuff
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#fixes" class="md-nav__link">
+    fixes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#weird_bitmap_pastes" class="md-nav__link">
+    weird bitmap pastes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_6" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ratings_on_the_client_api" class="md-nav__link">
+    ratings on the client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_533" class="md-nav__link">
+    Version 533
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 533">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#macos_app_crashes" class="md-nav__link">
+    macOS App crashes
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#misc_7" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sub-gallery_url_network_parsing_gubbins" class="md-nav__link">
+    sub-gallery url network parsing gubbins
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#boring_stuff_2" class="md-nav__link">
+    boring stuff
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_532" class="md-nav__link">
+    Version 532
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 532">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc_8" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pixiv_downloader" class="md-nav__link">
+    pixiv downloader
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mpv_logging_and_emergency_halt" class="md-nav__link">
+    mpv logging and emergency halt
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api_2" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version_531" class="md-nav__link">
+    Version 531
+  </a>
+  
+    <nav class="md-nav" aria-label="Version 531">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#misc_9" class="md-nav__link">
+    misc
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#client_api_3" class="md-nav__link">
+    client api
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#update_woes" class="md-nav__link">
+    update woes
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="changelog">changelog<a class="headerlink" href="#changelog" title="Permanent link">&para;</a></h1>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>This is the new changelog, only the most recent builds. For all versions, see the <a href="old_changelog.html">old changelog</a>.</p>
+</div>
+<h2 id="version_540"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v540">Version 540</a><a class="headerlink" href="#version_540" title="Permanent link">&para;</a></h2>
+<h3 id="misc">misc<a class="headerlink" href="#misc" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the system predicate parser can now handle 'system:filetype is xxx' for more of the general human-friendly filetype strings like 'video' and 'mkv'. it can also handle 'static gif' and any other types with spaces but now enforces commas between each filetype. I think all system:filetype predicate strings the client produces now parse correctly if you paste them back</li>
+<li>fixed many bitmap imports, most typically in the 'system:similar files' system, which was not generating pixel hashes correctly. most/all bitmaps coming in with alpha channels, or, I also believe, with a null channel (RGB32), were being handled wrong and coming out BGR. perceptual hashes are greyscale and were not affected, but pixel hashes were wrong. this was a real pain to figure out, and it may be that it is still broken for users on big-endian systems or something, so let me know how you get on</li>
+<li>added links to https://github.com/abtalerico/wd-hydrus-tagger (danbooru-trained model tagging) and https://github.com/Garbevoir/wd-e621-hydrus-tagger (which adds more models) to the client api help. reports are that they work well, even on 'normal' pictures</li>
+<li>the bad darkmode tooltip text colour in the new Qt 6.5.2 on Windows appears to be a bug, here: https://bugreports.qt.io/browse/QTBUG-116021 . there's not a great answer here, so let me know your thoughts. if you like, you can edit a custom stylesheet with a different <code>QToolTip</code> <code>background-color</code>, or I can spam some alternate fixed QSS files for everyone, or we can wait for a fix on Qt's end</li>
+<li>on update, all existing PSD and static gif files will be scheduled for pixel hash regen, perceptual hash regen, and entry into the similar files system (I forgot to do this last week)</li>
+<li>on update, all existing PNGs will be scheduled for pixel duplicate data regen. we have a legacy alpha channel issue here that has reared its head several times (searchting for 'must not be pixel dupes', but getting pixel dupes), so I am just going to bosh it on the head for everyone</li>
+</ul>
+<h3 id="file_maintenance">file maintenance<a class="headerlink" href="#file_maintenance" title="Permanent link">&para;</a></h3>
+<ul>
+<li>if a file has multiple jobs pending, the file maintenance manager now processes all those jobs at once, saving significant disk I/O. also, a couple things like the 'do all work' button's popup now shows the total number of jobs to do, rather than that of each job type in turn</li>
+<li>the 'manage scheduled jobs' file maintenance panel now shows the count for jobs that exist but are not yet due. previously, these were hidden, which was part of the mkv/webm duplicate difficulties last week.</li>
+<li>when the program needs to rename a file because it has a new mime, it now first tests if the file is still in use (normally this means some file parsing component like ffmpeg or opencv is still cleaning up OS file handles or whatever), and, if so, waits just a little bit before trying</li>
+<li>relatedly, the 'try and delete the rename-dupe again' job now tries again in one hour, rather than one week in the future, and if that after-one-hour job fails again (this would usually be because you were actually viewing the original file in the media viewer at the time of its reparse), then that job will retry again in a week, and the week after if that fails, and again after that, etc... for about a year</li>
+<li>fixed an issue with the thumbnail resizing maintenance job on PSD files and probably some other weird types too</li>
+<li>fixed some scheduling issues in how the mainloop of the file maintenance system tests its current rate of work and when it should cancel a current batch of work</li>
+</ul>
+<h3 id="boring_stuff">boring stuff<a class="headerlink" href="#boring_stuff" title="Permanent link">&para;</a></h3>
+<ul>
+<li>simplified and cleaned up some of the duplicate system king-fetching code. I <em>may</em> have also fixed one instance of pair representatives being fetched wrong for the filter when 'at least one file has to match the one search'</li>
+<li>when editing the duplicate action merge options, a new label at the top says which dupe action you are editing for, and if it isn't "this is better", it notes that the available merge actions are limited</li>
+<li>improved four things with the recovery code that handles missing master hash definitions--first, the substitute hashes are now the correct length; second, they are now saved back to the database, which should stop issues like the "trying to delete a thing that doesn't exist and has an ever-changing name in a loop forever" bug; third, the popup tells the user what to do next, and more information is written to the log; and fourth, the client checks the local hash cache so see if it can automatically recover the missing data</li>
+</ul>
+<h3 id="client_api">client api<a class="headerlink" href="#client_api" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the <code>file_metadata</code> call now has two new fields, <code>filetype_human</code>, which looks like 'jpeg' or 'webm', and <code>filetype_enum</code>, which uses internal hydrus filetype numbers</li>
+<li>the help and unit tests are updated for this</li>
+<li>client api version is now 50</li>
+</ul>
+<h2 id="version_539"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v539">Version 539</a><a class="headerlink" href="#version_539" title="Permanent link">&para;</a></h2>
+<h3 id="another_new_library_today">another new library today<a class="headerlink" href="#another_new_library_today" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>if you run from source, I recommend you rebuild your venv today. we've got another library to add full PSD support</strong></li>
+</ul>
+<h3 id="viewable_psd_files">viewable PSD files<a class="headerlink" href="#viewable_psd_files" title="Permanent link">&para;</a></h3>
+<ul>
+<li>thanks to a user, hydrus can now view PSD files in the main viewer, just like any other file. it can be a bit slow to load, and you can't show/hide away layers or anything, but for simply showing the image as-is, it works great</li>
+<li>because this needs more CPU than for normal images, we're starting out with conservative view settings. while PSD files will show as normal in the media viewer, they'll only show the 'open externally' button in the preview viewer. see how it works for you, and remember you can change it under <em>options-&gt;media</em>. if there isn't any real problem IRL with showing even big PSDs everywhere, I'll change the defaults, so let's see how it goes</li>
+<li>and of course if you have a borked PSD--say one that shows up in all the wrong colours, or has bad transparency--please send it in and I'll have a look. there is apparently a rare class of PSD files that simply won't render at all with our new system, and hydrus is pretty bad at handling that situation, so that'd also be useful if at the very least to get me to write some better error handling code</li>
+<li>just like last week, if you run from source, please rebuild your venv again today--there's a PSD-handling library that supports all this</li>
+<li>all PSD files will be scheduled for a thumbnail regen on update</li>
+</ul>
+<h3 id="static_vs_animated_gif">static vs animated gif<a class="headerlink" href="#static_vs_animated_gif" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the program now treats still and animated gifs as separate file types for the purpose of searching and selecting display options (previously, static gifs were just animated gifs with no duration). most people won't have many static gifs, so this doesn't matter too much, but it cleans up our image/animation filetype group distinction and makes a bunch of behind the scenes stuff simpler. all your gifs will be set to either camp on update</li>
+<li>if you have an existing file import options or system:filetype that looked for gifs specifically, it will now search for 'animated gifs' only, so watch out if you need 'static gif' too/instead</li>
+</ul>
+<h3 id="parseable_rating_predicates">parseable rating predicates<a class="headerlink" href="#parseable_rating_predicates" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the system predicate parser (including the Client API) now accepts system:rating predicates. type 'system:has rating (service name)' or 'system:rating for (service name) &gt; &#8536;' or other reasonable variants and it should pre-fill</li>
+<li>in the UI, the system 'has/no rating' predicate strings are now in the format 'has a rating for (service name)' and 'does not have a rating for (service name)'. (previously it was 'has/no (service name) rating', which is out of step with our usual syntax and generally unhelpfully parsing-ambiguous)</li>
+<li>added a bunch of unit tests for this</li>
+</ul>
+<h3 id="misc_1">misc<a class="headerlink" href="#misc_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>fixed the 'network timeout' setting under <em>options-&gt;connection</em>, which was not saving changes</li>
+<li>the media viewer top hover window now enables/disables the 'show file metadata' button--rather than shows/hides--in order to stop the buttons on the left jumping around so much when you scroll through media</li>
+<li>the duplicate filter's always-on-top right-hand window is fixed in place again. the buttons won't jump around any more. if the notes hover grows to overlap it, it won't show over it as long as your mouse is over the duplicate hover. this should make clicking those duplicate buttons on note-heavy files far less frustrating. sorry for the late fix here!</li>
+<li>the duplicate filter now always presents a statement on the pair's filetypes, even if they are the same (it'll say like 'both are pngs'). this is to help catch the upcoming PSD matches (where you probably do not want to delete either) and other weirdness as we add new filetypes</li>
+<li>just a small thing, but the 'management panel' labels are renamed broadly to 'sidebar' under the <em>pages</em> menu. the panel on the left of pages is now called 'sidebar', and the wx-era 'sash' wording is gone</li>
+<li>there's an issue with the file metadata reparse system right now where, on a filetype change, it will often fail to cleanly rename bigger files (e.g. from x.mkv to x.webm). the result is the file copies and the old one is never deleted, leaving a duplicate that is not properly cleared up later. on update this week, I am scheduling a fresh cleanup for these dupes. if, like me, you have a lot of large AV1-encoded vidya capture mkvs, you may have noticed your hydrus folders suddenly bloated in size this past week--this should be 99% fixed soon. I will fix the underlying issue here next week</li>
+<li>touched up the 'running from source' help and 'setup_venv' texts in general and specifically regarding some new version info stuff. it looks like macOS &lt;= 10.15 can't handle last week's new Qt6 version, and some versions of Linux need <code>libicu-dev</code> and <code>libxcb-cursor-dev</code> installed via apt or otherwise</li>
+<li>fixed the file query sort-and-clip method when you are set to sort by file hash and also have system:limit, and fixed it for asc/desc too</li>
+<li>for the second time, fixed the 'import QtSVG' error on hydrus server install when the client requirements.txt had not been run. turns out I messed up the 'proper' fix I did for the first time</li>
+</ul>
+<h3 id="boring_cleanup">boring cleanup<a class="headerlink" href="#boring_cleanup" title="Permanent link">&para;</a></h3>
+<ul>
+<li>refactored a bunch of HydrusImageHandling code to HydrusAnimationHandling</li>
+<li>cleaned up several of our enums and enum testing, and cleared out several hardcoded hooks to deal with different kinds of gif</li>
+<li>did some similar enum cleaning and <code>gif</code>-&gt;<code>PILAnimation</code> renaming to encompass the new HEIF sequences</li>
+<li>streamlined the image and animation metadata parsing methods significantly</li>
+<li>a bunch of simple <code>image</code>-&gt;<code>animation</code> renames, like IMAGE_APNG is now ANIMATION_APNG</li>
+<li>cleaned up some other confusing code handles for 'image' vs 'static image', to handle whether we are talking about strictly images or viewable raster image-likes (for now including PSD files) but I think it'll need more work</li>
+<li>deleted some ancient and no longer used imageboard profile code</li>
+</ul>
+<h2 id="version_538"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v538">Version 538</a><a class="headerlink" href="#version_538" title="Permanent link">&para;</a></h2>
+<h3 id="important_note_on_index_regeneration">important note on index regeneration<a class="headerlink" href="#important_note_on_index_regeneration" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>if you get a note on update about missing indices that need to be regenerated, don't panic! everything is fine, nothing to worry about, let it do its work</strong></li>
+</ul>
+<h3 id="new_libraries_today">new libraries today<a class="headerlink" href="#new_libraries_today" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>if you run from source, I recommend you rebuild your venv today. the setup script points at new versions of Qt, OpenCV, and a HEIF module that adds new filetype support</strong></li>
+</ul>
+<h3 id="new_qt_and_opencv">new Qt and OpenCV<a class="headerlink" href="#new_qt_and_opencv" title="Permanent link">&para;</a></h3>
+<ul>
+<li>all release builds and normal source installations move up to PySide6 (Qt) 6.5.2 today. we've done a good bit of testing in different situations, and it seems to be a good and reliable upgrade from 6.4.1, which has given us a mix of annoying trouble at times, like mismatched UI scaling and mpv-related flickering</li>
+<li>let me know if you have any trouble with the overall feel of the program, particularly if you are running on an older or un-updated version of your OS</li>
+<li>the last version of Qt that was generally without caveats was 6.3.1. if you do have trouble with today's release (I suspect old and un-updated OSes, or source users on older Python), one option is to move to running from source and using this older version, which I have updated my setup_venv scripts to offer as a stable 'Qt6 (o)lder' option</li>
+<li>similarly, we are moving from OpenCV (an image library) 4.5.5.64 to 4.7.0.72. we've tested this in several rounds of future-builds and had no reports of trouble, and this also improves some build compatibility with FFMPEG 5.0 (issue #1419)</li>
+<li>the 'test' version of Qt stays at 6.5.2 for now, since this is the latest version</li>
+<li>the 'old' OpenCV compatability version remains at 4.5.3.56, the new 'test' version is now 4.8.0.74</li>
+</ul>
+<h3 id="deferred_delete_system">deferred delete system<a class="headerlink" href="#deferred_delete_system" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the first full version of the deferred delete system is complete. your no-longer-needed tables lying around after a big operation like a PTR delete/reset will now be shrunk in the background until they are small enough to delete in trivial time</li>
+<li>the menu entry under <em>database-&gt;database maintenance</em> has a new submenu for the job and 'work in idle/normal' time checkboxes just like file maintenance</li>
+<li>the new review window UI is now fleshed out. it can refresh itself, and automitically does so on changes, and the 'work hard' button functions</li>
+<li>I discovered a bug in last week's code that stopped some indices from being recreated in certain regeneration jobs. if you did a 'regenerate tag text search cache' or similar operation last week, you'll encounter the above 'need to regen some indices' note. no worries, it'll all fix itself, and, if you noticed any slowdown, the affected system should work at the proper speed again</li>
+</ul>
+<h3 id="user_contributions">user contributions<a class="headerlink" href="#user_contributions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>thanks to a user, we now have full support for HEIF, HEIC, and AVIF image files. they will import and render just like any other image. furthermore, we have support for HEIF, HEIC, and AVIF 'sequences', which are basically like an animated gif or apng and are under the 'animations' filetype category (and they seem to play in mpv great! although I don't have an example HEIC sequence to test with, lol). all users who use the normal build will get this on update--anyone running from source will want to rebuild their venv this week to get the functionality. you can double-check <em>help-&gt;about</em> to see if you have the required 'pillow-heif' library</li>
+<li>thanks to a user, the various help links in the program now redirect to the online help (and/or direct to a guide to build the local help) if the local help is missing (fixes #1360)</li>
+<li>thanks to a user, an addititonal final network transfer size check is now in place. if a server says it will deliver x bytes and actually delivers y, the job now raises an error. this can happen with various twitter solutions, where vid downloads will sometimes stealth-stop-working, leaving a valid but truncated mp4. fingers crossed this will now catch that situation and trigger a re-attempt</li>
+<li>thanks to a user, fixed TIFF files not showing EXIF correctly. just to be safe, all tiffs will be scheduled for a 'has EXIF?' rescan on update, and I silenced another bit of tiff-related PIL warning-logspam</li>
+<li>mkv files with AV1 video (and no/worbis/opus audio) are now correctly identified as webms. all mkvs will be scheduled for a metadata rescan on update</li>
+</ul>
+<h3 id="misc_2">misc<a class="headerlink" href="#misc_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>when transferring mappings, <em>tags-&gt;migrate tags</em> now supports a full location context file filter (like the file domain button you see in an autocomplete). previously it was just a list of single locations to pick from, but now, if you want to grab tags for all files deleted from x, or all files in either y or z, it is simple to set up. relatedly, the 'multiple/deleted' dialog picker launched from that menu now sizes itself to try and fit all its stuff in, rather than always being scrolled</li>
+<li>fixed a bug that meant you could ok the 'edit predicate' dialog despite the regex string being invalid when editing an existing 'system:known url=(regex)' predicate. the 'check valid' test is now caught correctly and cancels dialog ok, rather than escalating to the popup message catcher</li>
+<li>fixed a bug in table analyze code that was causing empty tables to be unintentionally re-analysed over good existing data</li>
+<li>a file_system_type-checking call that is used in file-export is now cached. previously it was hit for every pending file path to be calculated, and on systems with a 50ms response time to this call (I presume because of NAS/RAID-style gubbins), it meant opening the file export window could take minutes (issue #1413)</li>
+<li>APNG metadata parsing no longer requires FFMPEG, greatly accelerating their import</li>
+<li>I think I fixed the root cause of a weird bug we encountered and hacked around a couple weeks ago, where if a certain sort of downloaded page produced nothing via its parser, and it was detected initially as actually a valid file to import, but then that file import failed (e.g. ffmpeg went full bananas and thought a json file was an mp4), the import attempt would loop. the error handling now catches the unusual import failure gracefully, and the import object should be set to 'skipped' appropriately</li>
+<li>fixed a harmless but annoying desync error popup that sometimes occurs when deleting a repository service</li>
+</ul>
+<h3 id="misc_boring_notes">misc boring notes<a class="headerlink" href="#misc_boring_notes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>to deal with the deferred delete system clashing with SQLite not allowing index renames, I moved the database index testing and creation system to a dynamic name format. it works but is a little hacky, so maybe we'll move to direct sqlite_master interrogation in future</li>
+<li>unfortunately, the table shrink method I had planned to employ was not feasible (I wanted to do 'delete n rows', but it turns out that isn't compiled by default in all normal SQLite releases wew). I then experimented with several other strategies and settled on the KISS of 'select n, delete these n' in two queries, which worked out far better than my cleverer attempts anyway. the thing doesn't use much CPU time, and it cautiously autothrottles itself, and I've tested it in a bunch of situations, and I'm super happy with the performance, but if you do happen to get noticeable bumps of lag, most likely in PTR removal when the current_mappings giga-table is shrunk, turn off all database maintenance under the menu, for both idle and normal time, and let me know, and we'll figure it out</li>
+<li>refactored APNG parsing code to the new 'HydrusAnimationHandling.py' and took out the ffmpeg code. now OpenCV/PIL figures out the resolution</li>
+</ul>
+<h2 id="version_537"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v537">Version 537</a><a class="headerlink" href="#version_537" title="Permanent link">&para;</a></h2>
+<h3 id="new_filetype_selector">new filetype selector<a class="headerlink" href="#new_filetype_selector" title="Permanent link">&para;</a></h3>
+<ul>
+<li>I rewrote the expanding checkbox list that selects filetypes in 'system:filetype' and File Import Options into a more normal tree view with checkboxes. it is more compact and scrolls neatly, letting us stack it with all these new filetypes we've been adding and more in future. the 'clicking a category selects all children' logic is preserved</li>
+<li>I re-ordered the actual filetypes in each sublist here. I tried to put the most common filetypes at the top and listed the rest in alphabetical order below, going for the best of both worlds. you don't want to scroll down to find webm, but you don't want to hunt through a giant hydev-written 'popularity' list to find realmedia either. let's see how it works out</li>
+<li>I split all the archive types away from 'applications' into a new 'archives' group</li>
+<li>and I did the same for the 'image project files' like krita and xcf. svg and psd may be significantly more renderable soon, so this category may get further shake-up</li>
+<li>this leaves 'applications' as just flash and pdf for now</li>
+<li>it isn't a big deal, but these new groups are reflected in <em>options-&gt;media</em> too</li>
+<li>all file import options and filetype system predicates that previously said 'all applications' <em>should</em> now say 'all applications, image project files, or archives'</li>
+</ul>
+<h3 id="fast_database_delete">fast database delete<a class="headerlink" href="#fast_database_delete" title="Permanent link">&para;</a></h3>
+<ul>
+<li>I have long planned a fix for 'the PTR takes ages to delete' problem. today marks the first step in this</li>
+<li>deleting a huge service like the PTR and deleting/resetting/regeneratting a variety of other large data stores are now essentially instant. the old tables are not deleted instantly, but renamed and moved to a deferred delete zone</li>
+<li>the maintenance task that actually does the deferred background delete is not yet ready, so for now these jobs sit in the landing zone taking up their original hard disk space. I expect to have it done for next week, so bear with me if you need to delete a lot this week</li>
+<li>as this system gets fleshed out, the new UI under <em>database&gt;db maintenance-&gt;review deferred delete table data</em> will finish up too</li>
+</ul>
+<h3 id="misc_3">misc<a class="headerlink" href="#misc_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>fixed a bitrot issue in the v534 update code related to the file maintenance manager not existing at the time of db update. if you got the 'some exif scanning failed to schedule!' popup on update, don't worry about it. everything actually worked ok, it was just a final unimportant reporting step that failed (issue #1414)</li>
+<li>fixed the grid layout on 'migrate tags', which at some point in the recent past went completely bananas</li>
+<li>tightened up some of the code that calculates and schedules deferred physical file delete. it now catches a couple of cases it wasn't and skips some work it should've</li>
+<li>reduced some overhead in the hover window show/hide logic. in very-heavy-session clients, this was causing significant (7ms multiple times a second) lag</li>
+<li>when you ok the 'manage login scripts' dialog, it no longer re-links new entries for all those scripts into the 'manage logins' system. this now only happens once on database initialisation</li>
+<li>the manage login scripts test routine no longer spams test errors to popup dialogs. they are still written to log if you need more data</li>
+<li>silenced a bit of PIL warning logspam when a file with unusual or broken EXIF data is loaded</li>
+<li>silenced the long time logspam that oftens happens when generating flash thumbnails</li>
+<li>fixed a stupid typo error in the routine that schedules downloading files from file repositories</li>
+<li><code>nose</code>, <code>six</code>, and <code>zope</code> are no longer in any of the requirements.txts. I think these were needed a million years ago as PyInstaller hacks, but the situation is much better these days</li>
+</ul>
+<h2 id="version_536"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v536">Version 536</a><a class="headerlink" href="#version_536" title="Permanent link">&para;</a></h2>
+<h3 id="more_new_filetypes">more new filetypes<a class="headerlink" href="#more_new_filetypes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>thanks to a user, we have XCF and gzip filetype support!</li>
+<li>I rejiggered the new SVG support so there is a firmer server/client split. the new tech needs Qt, which broke the headless Docker server last week at the last minute--now the server has some sensible stubs that safely revert to the default svg thumb and give unknown resolution, and the client patches in full support dynamically</li>
+<li>the new SVG code now supports the 'scale to fill' thumbnail option</li>
+</ul>
+<h3 id="misc_4">misc<a class="headerlink" href="#misc_4" title="Permanent link">&para;</a></h3>
+<ul>
+<li>I fixed the issue that was causing tags to stay in the tag autocomplete lookup despite going to 0 count. it should not happen for new cases, and <strong>on update, a database routine will run to remove all your existing orphans. if you have ever synced with the PTR, it will take several minutes to run!</strong></li>
+<li>sending the command to set a file as the best in its duplicate group now presents a yes/no dialog to confirm</li>
+<li>hitting the shortcut for 'set the focused file as better than the other(s)' when you only have one file now asks if you just want to set that file as the best of its group</li>
+<li>fixed an erroneous 'cannot show the best quality file of this file's group here' label in the file relationships menu--a count was off</li>
+<li>fixed the 'set up a hydrus.desktop file' setup script to point to the new hydrus_client.sh startup script name</li>
+<li>thanks to a user, a situation where certain unhandled URLs that deliver JSON were parsing as mpegs by ffmpeg and causing a weird loop is now caught and stopped. more investigation is needed to fix it properly</li>
+</ul>
+<h3 id="boring_stuff_1">boring stuff<a class="headerlink" href="#boring_stuff_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>when a problem or file maintenance job causes a new file maintenance job to be queued (e.g. if the client in a metadata scan discovers the resolution of a file was not as expected, let's say it now recognises EXIF rotation, and starts a secondary thumbnail regen job), it now wakes the file maintenance manager immediately, which should help clear out and update for these jobs quickly when you are looking at the problem thumbnails</li>
+<li>if you have an image type set to show as an 'open externally' button in the media viewer, then it is now no longer prefetched in the rendering system!</li>
+<li>I added a very simple .editorconfig file for the project. since we have a variety of weird files in the directory tree, I've made it cautious and python-specific to start with. we'll expand as needed</li>
+<li>I moved the similar files search tree and maintenance tracker from client.caches.db to client.db. while the former table is regeneratable, it isn't a cache or precomputation store, <em>per se</em>, so I finally agreed to move it to the main db. if you have a giganto database, it may take an extra minute to update</li>
+<li>added a 'requirements_server.txt' to the advanced requirements.txts directory, just for future reference, and trimmed the Server Dockerfile down to reflect it</li>
+</ul>
+<h3 id="client_api_1">client api<a class="headerlink" href="#client_api_1" title="Permanent link">&para;</a></h3>
+<ul>
+<li>thanks to a user, fixed a really stupid typo in the Client API when sending the 'file_id' parameter to set the file</li>
+<li>wrote unit tests for file_id and file_ids parameters to stop this sort mistake in future</li>
+<li>if you attempt to delete a file over the Client API when one of the given files is delete-locked (this is an advanced option that stops deletion of any archived file), the request now returns a 409 Conflict response, saying which hashes were bad, and does not delete anything</li>
+<li>wrote a unit test to catch the new delete lock test</li>
+<li>deleted the old-and-deprecated-in-one-week 'pair_rows' parameter-handling code in the set_file_relationships command</li>
+<li>the client api version is now 49</li>
+</ul>
+<h2 id="version_535"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v535">Version 535</a><a class="headerlink" href="#version_535" title="Permanent link">&para;</a></h2>
+<h3 id="misc_5">misc<a class="headerlink" href="#misc_5" title="Permanent link">&para;</a></h3>
+<ul>
+<li>thanks to a user, we now have Krita (.kra, .krz) support! it even pulls thumbnails!</li>
+<li>thanks to another user, we now have SVG (.svg) support! it even generates thumbnails!</li>
+<li>I think I fixed a comparison statement calculator divide-by-zero error in the duplicate filter when you compare a file with a resolution with a file without one</li>
+</ul>
+<h3 id="petitions_overview">petitions overview<a class="headerlink" href="#petitions_overview" title="Permanent link">&para;</a></h3>
+<ul>
+<li><em>this is a workflow/usability update only for server janitors</em></li>
+<li>tl;dr: the petitions page now fetches many petitions at once. update your servers and clients for it all to work right</li>
+<li>so, the petitions page now fetches lots of petitions with each 'fetch' button click. you can set how many it will fetch with a new number control</li>
+<li>the petitions are shown in a new multi-column list that shows action, account id, reason, and total weight. the actual data for the petitions will load in quickly, reflected in the list. as soon as the first is loaded, it is highlighted, but double-click any to highlight it in the old petition UI as normal</li>
+<li>when you process petitions, the client moves instantly to the next, all fitting into the existing workflow, without having to wait for the server to fetch a new one after you commit</li>
+<li>you can also mass approve/deny from here! if one account is doing great or terrible stuff, you can now blang it all in one go</li>
+</ul>
+<h3 id="petitions_details">petitions details<a class="headerlink" href="#petitions_details" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the 'fetch x petition' buttons now show <code>(*)</code> in their label if they are the active petition type being worked on</li>
+<li>petition pages now remember: the last petition type they were looking at; the number of petitions to fetch; and the number of files to show</li>
+<li>the petition page will pause any ongoing petition fetches if you close it, and resume if you unclose it</li>
+<li>a system where multi-mapping petitions would be broken up and delivered in tags with weight-similar chunks (e.g. if would say 'aaa for 11 files' and 'bbb in 15 files' in the same fetch, but not 'ccc in 542,154 files') is abandoned. this was not well explained and was causing confusion and code complexity. these petitions now appear clientside in full</li>
+<li>another system, where multi-mapping petitions would be delivered in same-namespace chunks, is also abandoned, for similar reasons. it was causing more confusion, especially when compared to the newer petition counting tech I've added. perhaps it will come back in as a clientside filter option</li>
+<li>the list of petitions you are given <em>should</em> also be neatly grouped by account id, so rather than randomly sampling from all petitions, you'll get batches by user x, y, or z, and in most cases you'll be looking at everything by user x, and y, and then z up to the limit of num petitions you chose to fetch</li>
+<li>drawback: since petitions' content can overlap in complicated ways, and janitors can work on the same list at the same time, in edge cases the list you see can be slightly out of sync with what the server actually has. this isn't a big deal, and the worst case is wasted work as you approve the same thing twice. I tried to implement 'refresh list if count drops more than expected' tech, but the situation is complicated and it was spamming too much. I will let you refresh the list with a button click yourself for now, as you like, and please let me know where it works and fails</li>
+<li>drawback: I added some new objects, so you have to update both server and client for this to work. older/newer combinations will give you some harmless errors</li>
+<li>also, if your list starts running low, but there are plenty more petitions to work on, it will auto-refresh. again, it won't interrupt your current work, but it will fetch more. let me know how it works out</li>
+<li>drawback: while the new petition summary list is intentionally lightweight, I do spend some extra CPU figuring it out. with a high 'num petitions to fetch', it may take several seconds for a very busy server like the PTR just to fetch the initial list, so please play around with different fetch sizes and let me know what works well and what is way too slow</li>
+<li>there are still some things I want to do to this page, which I want to slip in the near future. I want to hide/show the sort and 'num files to show' widgets as appropriate, figure out a right-click menu for the new list to retry failures, and get some shortcut support going</li>
+</ul>
+<h3 id="boring_code_cleanup">boring code cleanup<a class="headerlink" href="#boring_code_cleanup" title="Permanent link">&para;</a></h3>
+<ul>
+<li>wrote a new petition header object to hold content type, petition status, account id, and reason for petitions</li>
+<li>serverside petition fetching is now split into 'get petition headers' and 'get petition data'. the 'headers' section supports filtering by account id and in future reason</li>
+<li>the clientside petition management UI code pretty much got a full pass</li>
+<li>cleaned a bunch of ancient server db code</li>
+<li>cleaned a bunch of the clientside petition code. it was a real tangle</li>
+<li>improved the resilience of the hydrus server when it is given unacceptable tags in a content update</li>
+<li>all fetches of multiple rows of data from multi-column lists now happen sorted. this is just a little thing, but it'll probably dejank a few operations where you edit several things at once or get some errors and are trying to figure out which of five things caused it</li>
+<li>the hydrus official mimetype for psd files is now 'image/vnd.adobe.photoshop' (instead of 'application/x-photoshop')</li>
+<li>with krita file (which are actually just zip files) support, we now have the very barebones of archive tech started. I'll expand it a bit more and we should be able to improve support for other archive-like formats in the future</li>
+</ul>
+<h2 id="version_534"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v534">Version 534</a><a class="headerlink" href="#version_534" title="Permanent link">&para;</a></h2>
+<h3 id="user_submissions">user submissions<a class="headerlink" href="#user_submissions" title="Permanent link">&para;</a></h3>
+<ul>
+<li>thanks to a user, we now have SAI2 (.sai2) file support!</li>
+<li>thanks to a user, the duplicate filter now says if one file has audio. this complements the recent Hydrus Video Deduplicator (https://github.com/appleappleapplenanner/hydrus-video-deduplicator), which can queue videos up in your dupe filter</li>
+<li>thanks to a user, we now have some nice svg images in the help-&gt;links(?) menu instead of gritty bitmaps</li>
+<li>thanks to a user, some help documentation for recent client vs hydrus_client changes got fixed</li>
+</ul>
+<h3 id="quality_of_lifenew_stuff">quality of life/new stuff<a class="headerlink" href="#quality_of_lifenew_stuff" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the media viewer's top-area 'removed from x' lines for files deleted from a local file service no longer appear--unless that file is currently in the trash. on clients with busy multiple local file services, they were mostly just annoying and spammy. if you need this data, hit up the right-click menu of the file--it is still listed there</li>
+<li>the 'loading' media page now draws a background in the same colour as the thumbnail grid, so new searches or refreshes will no longer flash to a default grey colour--it should just be a smooth thumbs gone/thumbs back now</li>
+<li>added a new shortcut action, 'copy small bmp of image for quick source lookups', for last week's new bitmap copy action</li>
+<li>it turns out PNG and WEBP files can have EXIF data, and our existing scanner works with them, so the EXIF scanner now looks at PNGs and WEBPs too. PNGs appear to be rare, about 1-in-200. I will retroactively scan your existing WEBPs, since they have EXIF more commonly, maybe as high as 1-in-5, and are less common as a filetype anyway so the scan will be less work, but when you update you will get a yes/no dialog asking if you want to do PNGs too. it isn't a big deal and you can always queue it up later if you want</li>
+</ul>
+<h3 id="fixes">fixes<a class="headerlink" href="#fixes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>I banged my head against the notes layout code and actually had great success--a variety of borked note-spilling-over-into-nothing and note-stretching-itself-crazy and note-has-fifty-pixels-of-margin issues are fixed. let me know if you still have crazy notes anywhere</li>
+<li>the duplicate filter right-hand hover is now more aggressive about getting out of the way of the notes hover, especially when the notes hover jitter-resizes itself a few extra pixels of height. the notes hover should no longer ever overlap the duplicate filter hover's top buttons--very sorry this took so long</li>
+<li>when you drag and drop thumbnails out of the program while using an automatic pattern to rename them (<em>options-&gt;gui</em>), all the filenames are now unique, adding '(x)' after their name as needed for dedupe. previously, on duplicates, it was basically doing a weird spam-merge</li>
+<li>fixed an issue when sanitizing export filenames when the destination directory's file system type cannot be determined</li>
+<li>fixed a bug when doing a search in a deleted file domain with 'file import time' as the file sort</li>
+<li>fixed a bug when hitting the shortcut for 'open file in media viewer' on a non-local file</li>
+<li>fixed a bug when the client wants to figure out view options for a file that has mime 'application/unknown'</li>
+<li>I may have improved the 'woah the db caches are unsynced' error handling in the 'what siblings and parents does this have?' check when you right-click tags</li>
+</ul>
+<h3 id="weird_bitmap_pastes">weird bitmap pastes<a class="headerlink" href="#weird_bitmap_pastes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>fixed the new 'paste image' button under <code>system:similar files</code> for a certain category of unusual clipboard bitmaps, including several that hydrus itself generates, where it turns out the QImage storage system stores extra padding bytes on each line of pixels</li>
+<li>fixed the new 'paste image' button when the incoming bitmap has a useless alpha channel (e.g. 100% transparent). this was not being stripped like it is for imported images, and so some similar files data was not lining up</li>
+<li>many bitmaps copied from other programs like Firefox remain slightly different to what hydrus generates (even though both are at 100% scale). my best guess here is that there is some differing ICC-profile-like colour adjustment happening somewhere, probably either a global browser setting, the browser obeying a global GPU setting, a simply better application of such image metadata on the browser's side, or maybe a stripping of such data, since it seems a 'copy image' event in Firefox also generates and attaches to your clipboard a temporary png file in your temp folder, so maybe the bitmap that we pull from the clipboard is actually generated during some conversion process amidst all that, and it loses some jpeg colour data. whatever the case here, it changes the pixel hash and subtly alters the perceptual hash in many cases. I'm bumping the default distance on this search predicate up to 8 now, to catch the weirder instances</li>
+</ul>
+<h3 id="misc_6">misc<a class="headerlink" href="#misc_6" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the 'does the db partition have 500MB free?' check that runs on database boot now occurs after some initial database cleanup, and it will use half the total database size instead, if that is smaller than 500MB, down to 64MB (issue #1373)</li>
+<li>added a note to the 'running from source' help that the newer mpv dll seems to work on Qt5 and Windows 7 (issue #1338)</li>
+<li>the twitter parsers and gugs are removed from the defaults for new users. a shame, but we'll see what happens in future</li>
+<li>more misc linting cleanup</li>
+</ul>
+<h3 id="ratings_on_the_client_api">ratings on the client api<a class="headerlink" href="#ratings_on_the_client_api" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the services object now shows <code>star_shape</code> and <code>min_stars</code> and <code>max_stars</code> for like/dislike and numerical rating services</li>
+<li>the file metadata object now has a 'ratings' key, which lists <code>rating_service_key-&gt;rating</code> for all the client's rating services. this thing is simple and uses human-friendly values, but it can hold several different data types, so check the help for details and examples</li>
+<li>a new permission, 'edit ratings', is added.</li>
+<li>a new command, <code>/edit_ratings/set_rating</code>, is added. Guess what it does! (issue #343)</li>
+<li>the help is updated for these</li>
+<li>the unit tests are updated for these</li>
+<li>the client api version is now 48</li>
+</ul>
+<h2 id="version_533"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v533">Version 533</a><a class="headerlink" href="#version_533" title="Permanent link">&para;</a></h2>
+<h3 id="macos_app_crashes">macOS App crashes<a class="headerlink" href="#macos_app_crashes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>unfortunately, last week's eventFilter work did not fix the macOS build's crashing--however, thanks to user help, we figured out that it was some half-hidden auxiliary Qt library that updated in the background starting v530 (the excellently named <code>PyQt6-Qt6</code> package). the build script is updated to roll back this version and it seems like things are fixed. this particular issue shouldn't happen again. sorry for the trouble, and let me know if there are any new issues! (issue #1379)</li>
+</ul>
+<h3 id="misc_7">misc<a class="headerlink" href="#misc_7" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the download panels in subscription popup windows are now significantly more responsive. ever since the popup manager was embedded into the gui, popup messages were not doing the 'should I update myself?' test correctly, and their network UI was not being updated without other events like surrounding widgets resizing. I was wondering what was going on here for ages--turns out it was regular stupidity</li>
+<li>if an image has width or height &gt; 1024, the 'share-&gt;copy' menu now shows a second, 'source lookup' bitmap, with the resolution clipped to 1024x1024</li>
+<li>'sort files by hash' can now be sorted asc or desc. this also fixes a bug where it was secretly either sorting asc or desc based on the previous selection. well done to the user who noticed and tested this</li>
+<li>if system:limit=0 is in a search, the search is no longer run--it comes back immediately empty. also, the system:limit edit panel now has a minimum value of 1 to dissuade this state</li>
+<li>the experimental QtMediaPlayer now initialises with the correct volume/mute and updates on volume/mute events. the scanbar and volume control UI are still hidden behind the OpenGL frame for now, but one step forward</li>
+<li>the system that caches media results now hangs on to the most recent 2048 files aggressively for two minutes after initial load. previously, if you refreshed a page of unique files, or did some repeated client api work on files that were not loaded somewhere as thumbs, in the interim periods those media objects were not strictly in non-weak memory anywhere in the client and could have been eligible for clearing out of the cache. now they are a bit more sticky</li>
+<li>added some info on editing predicates and the various undocumented click shortcuts the taglist supports (e.g. ctrl+double-left-click) to the 'getting started with searching and sorting' help page</li>
+<li>added a link to the Client API help for 'Hydrus Video Deduplicator' (https://github.com/appleappleapplenanner/hydrus-video-deduplicator), which neatly discovers duplicate videos in your client and queues them up in the duplicate filter by marking them as 'potential dupes'</li>
+</ul>
+<h3 id="sub-gallery_url_network_parsing_gubbins">sub-gallery url network parsing gubbins<a class="headerlink" href="#sub-gallery_url_network_parsing_gubbins" title="Permanent link">&para;</a></h3>
+<ul>
+<li>sub-gallery import objects now get the tags and custom headers that are parsed with them. if the sub-gallery urls are parsed in 'posts' using a subsidiary parser, they only inherit the metadata within their post</li>
+<li>sub-gallery import objects now use their parent gallery urls as referral header</li>
+<li>sub-gallery import objects now inherit the 'can generate more pages' state of their parents (previously it was always 'yes')</li>
+<li>'next page' gallery urls do not get the tags they are parsed with. this behaviour makes a little less sense, and I suspect it <em>could</em> cause various troubles, so I'll wait for more input, bug reports, and a larger cleanup and overhaul of how metadata is managed and passed down from one item to the next in the downloader system</li>
+<li>generally speaking, when file and gallery import objects have the opportunity to acquire tags or headers, they'll now add to the existing store rather than replace it. this should mean if they both inherit and parse stuff, it won't all overwrite each other. this is all a giant mess so I have a cleanup overhaul planned</li>
+</ul>
+<h3 id="boring_stuff_2">boring stuff<a class="headerlink" href="#boring_stuff_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>if a critical drive error occurs (e.g. running out of space on a storage drive), the popup message saying 'hey everything just got mega-paused' is now a little clearer about what has happened and how to fix it</li>
+<li>similarly, the specific 'all watchers are paused'-style messages now specifically state 'network-&gt;pause to resume!' to point users to this menu to fix this tricky issue. this has frustrated a couple of newer users before</li>
+<li>to reduce confusion, the 'clear orphan files' pre-job now only presents the user one combined dialog</li>
+<li>improved how pages test and recognise that they have changes and thus should be saved--it works faster, and a bunch of false negatives should be removed</li>
+<li>improved the safety routine that ensures multiple-column list data is read-only</li>
+<li>fixed .txt sidecar importers' description labels, which were missing extra text munging</li>
+<li>to relieve some latency stress on session load, pages that are loading their initial files in the background now do so in batches of 64 rather than 256</li>
+<li>fixed some bad error handling in the master client db update routine</li>
+<li>fixed a scatter of linting problems a user found</li>
+<li>last week's pixiv parser hotfix is reinforced this week for anyone who got the early 532 release</li>
+<li>made some primitive interfaces for the main controller and schedulable job classes and ensured the main hydrusglobals has type hinting for these--now everything that talks to the controller has a <em>bit</em> of an idea what it is actually doing, and as I continue to work on this, we'll get better linting</li>
+<li>moved the client DataCache object and its friends to a new 'caches' module and cleaned some of the code</li>
+</ul>
+<h2 id="version_532"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v532">Version 532</a><a class="headerlink" href="#version_532" title="Permanent link">&para;</a></h2>
+<h3 id="misc_8">misc<a class="headerlink" href="#misc_8" title="Permanent link">&para;</a></h3>
+<ul>
+<li>whenever you say 'show these files in a new page', the new page now has a search interface. it starts with a 'system:hash' pre-populated with the files' hashes, so you can now easily narrow down or return to the stuff you are playing with! original file sort order is preserved until you alter or refresh the search</li>
+<li>tags' <code>right-click-&gt;search</code> menu now has a 'open in a new duplicate filter' for quick spawning of duplicate filters for specific searches</li>
+<li>the duplicate filter no longer flicks to the 'preparation' tab if there is work to do on the first numbers fetch. this thing has been driving me nuts, I don't know why I wrote it that way to begin with</li>
+<li>improved the reliability of certain session object saving--I believe some situations where the 'searching immediately' and 'this search was completed' status where not being saved for some page queries. this <em>may</em> solve a long time bug where some pages would refresh on load</li>
+<li>all search pages that load with files now explicitly reaffirm internally that they are starting with a completed search, which should reduce some related edge case buggy behaviour here</li>
+<li>the 'string to string' edit control now tries to compensate if it is incorrectly given non-string data. somewhere in the html parsing formula UI this happened, an integer sneaking in the key/value of the tag rule, maybe by manual human JSON editing, but I'm not really sure. should be handled correctly now though. let me know if you are into this and discover anything</li>
+<li>every 'eventFilter' in the program now catches Exceptions ruthlessly. it turns out Qt can't handle an Exception escaping one of these, and this <em>may</em> be the cause of some &gt;=v530 crashing on macOS related to multi-column list interaction under issue #1379. it is probably the cause of some other crashes that I haven't been able to figure out--these will now give normal popup errors, so let me know if you see anything. if you have had crazy crashes in macOS recently and these changes don't fix you, reverting back to v529 is apparently ok! there have been no big database updates in that time, so you should be able to just install v529 on your existing install and be off</li>
+<li>the routine that purges files from the trash now uses fewer database queries to find eligable files. some Linux guys have been working with me on memory explosions possibly in this area--let me know if you notice any difference</li>
+<li>the 'clear trash' command in review services is politer to your database, breaking up a large amount of trash into smaller groups</li>
+<li>the program no longer moans to the log when it physically deletes a file and files no accompanying thumbnail to delete--this is true for several situations, and not worth the logspam</li>
+<li>fixed a typo error in the <code>url class links</code> 'try to fill in the gaps' command</li>
+</ul>
+<h3 id="pixiv_downloader">pixiv downloader<a class="headerlink" href="#pixiv_downloader" title="Permanent link">&para;</a></h3>
+<ul>
+<li>I reworked the pixiv parser changes from a couple weeks ago. as background, what happened is pixiv said if you aren't logged in, you can't get the 'original' quality of the file any more. my first fix was to say 'ok, if the user is not logged in, get the lower quality', but this was the wrong decision. the parser now vetoes, causing an 'ignored' result and telling you the problem in the import note. if you <em>do</em> want to get the lower quality image and not log in, this is now selectable as an alternate parser under <em>network-&gt;downloader components-&gt;manage url class links</em></li>
+<li>also, a variety of old pixiv objects and other experiments are deleted and merged today. the parsers that worked on the old html format, <code>pixiv manga page parser</code>, <code>pixiv manga_big page parser</code>, <code>pixiv single file page parser - new layout</code>, and <code>pixiv tag search gallery page parser</code> will be deleted from your client, and the old gallery url class, <code>pixiv tag search gallery page</code> meets a similar fate. <code>pixiv manga_big page</code> and <code>pixiv manga page</code> are removed and their urls merged into a more accomodating <code>pixiv file page</code>, which stays to hold all the legacy pixiv URLs, which on the site are automatically redirected to the new format. thanks to a user for helping me with what here was cruft (issue #947)</li>
+</ul>
+<h3 id="mpv_logging_and_emergency_halt">mpv logging and emergency halt<a class="headerlink" href="#mpv_logging_and_emergency_halt" title="Permanent link">&para;</a></h3>
+<ul>
+<li>a user sent me a cool truncated twitter video download that, when loaded into mpv, would crash the program after a click or two around the player. this sent me on an odyssey into the mpv logging system and event loop and some really bizarre behaviour under the hood, and, long story short, mpv will notice this particular problem class in future and immediately unload the file and present the user with a dialog explaining the issue. it also won't let you load that file again that boot</li>
+<li>to recognise this error class, I broaden what is logged and scan the lines as they come in. I've been careful in how I filter, but it may produce some false positives. let me know if this thing triggers for any files that seem fine in an external player</li>
+<li>errors of unknown severity are now printed silently to the log with a little intro text saying which file it was and so on. there are a bunch of these with the sorts of files we deal with, stuff like missing chapter marks or borked header data. I expect I'll work on silencing the ones we confirm are no big deal, but if you encounter a ton of them, particularly if you know some cause crashes, please now check your log and let me know what you see</li>
+<li>if you have two mpv players playing media at the same time, this reporting system will report the info for both files--sorry, I had to hack this gubbins! future versions of mpv or python-mpv may open some doors here</li>
+</ul>
+<h3 id="client_api_2">client api<a class="headerlink" href="#client_api_2" title="Permanent link">&para;</a></h3>
+<ul>
+<li>the <code>/get_files/file</code> command now has a <code>download=true</code> parameter which converts the <code>Content-Disposition</code> from <code>inline</code> (show the file) to <code>attachment</code> (auto-download or open save-as dialog) (issue #1375)</li>
+<li>added help and a unit test for the above</li>
+<li>client api version is now 47</li>
+</ul>
+<h2 id="version_531"><a href="https://github.com/hydrusnetwork/hydrus/releases/tag/v531">Version 531</a><a class="headerlink" href="#version_531" title="Permanent link">&para;</a></h2>
+<h3 id="misc_9">misc<a class="headerlink" href="#misc_9" title="Permanent link">&para;</a></h3>
+<ul>
+<li>fixed editing favourite searches, which I accidentally broke last week with the collect-by updates</li>
+<li>when you right-click a tag and get the siblings/parents menus, the list of copyable siblings, parents, and children is now truncated to 10 items each per service. stuff like pokemon has hundreds of children and for a very long time has been spamming giganto 11-column menus that cover the entire screen</li>
+<li>same menu truncation for the open/copy URLs menu. if there's a file that has 600 URLs for interesting technical reasons, it won't nuke you any more (issue #1037)</li>
+<li>updated the default pixiv file page parser, which recently broke for users who were not logged in. they seem to hide original size behind the login now, so if you do a lot of pixiv work, get Hydrus Companion or figure out a cookies.txt solution and get yourself logged in</li>
+<li>the downloader progress panels have a couple of status text improvements: first, they will stop saying 'waiting for a work slot' when the actual error is something unusual such as the gallery search hitting the file limit. second, when there is an unusual status and the downloader is in the paused state, it can now properly differentiate between 'paused' and 'pausing'</li>
+<li>some invalid URL strings now raise the correct error in the downloader system, causing them to be properly filtered away instead of sticking around and being unhelpful</li>
+<li>if there is a connection error because of an SSL issue, the network job is now retried like any other connection error. I originally thought these were all non-retryable like cert validation errors, but it seems some of them are just write timeouts etc.. during the negotiation, so let's see how it goes</li>
+<li>I believe I have fixed an error when selecting a tag in a list when that list had been previously shift-selected and then cleared and repopulated</li>
+<li>manage siblings and parents should be better about focusing the correct text input after they boot and load</li>
+<li>in future, if a taglist tries to deselect something it no longer has, it'll do an emergency 'deselect all' to exorcise the ghosts fully</li>
+<li>reworded the text around 'reset potential duplicates' action in the duplicates page to be more clear on what it does</li>
+<li>I tinkered with some of the shutdown code hoping to catch an odd issue of the exit 'last session' not saving correctly, but I don't think I figured the issue out. if you have noticed you boot up and get a session that missed up to the last 15 minutes of changes before you last shut down, please let me know you your details</li>
+<li>added a link to <code>tagrank</code>, a new Client API project at https://github.com/matjojo/tagrank, to the Client API help. it shows you pairs of comparison images over and over and uses <code>trueskill</code> ranking algorithm to figure out which tags are your favourite</li>
+<li>added a link to 'Send to Hydrus', a Client API project at https://github.com/Wyrrrd/send-to-hydrus, to the Client API help. it sends URLs from an Android device to your client</li>
+</ul>
+<h3 id="client_api_3">client api<a class="headerlink" href="#client_api_3" title="Permanent link">&para;</a></h3>
+<ul>
+<li>as part of a plan to migrate to service_key indexing everywhere and reduce file_metadata bloat, the client api has a new <code>services</code> structure, a service information Object where <code>service_key</code> is the key. this is now in the <code>/get_services</code> call and <code>/get_files/file_metadata</code>, under <code>services</code> under the root. the old type-based structure in <code>/get_services</code> and the in-file embedding of service info in <code>/get_files/file_metadata</code> are still in place, so nothing breaks today, but I am officially declaring them deprecated, to be deleted in 2024, and recommend all Client API devs move to the new system before the new year</li>
+<li>the new service object also includes info on the local rating services. I'd like to add ratings to file_metadata fairly soon</li>
+<li>if you don't want the services object in <code>/get_files/file_metadata</code>, there's a new <code>include_services_object</code> param you can set to false to hide it</li>
+<li>updated the unit tests and client api help to reflect all this. main new section: https://hydrusnetwork.github.io/hydrus/developer_api.html#services_object</li>
+<li>the client api version is now 46</li>
+</ul>
+<h3 id="update_woes">update woes<a class="headerlink" href="#update_woes" title="Permanent link">&para;</a></h3>
+<ul>
+<li>I somewhat successfully pounded my head against an issue where the first tab (usually 'my tags') was disappearing in the <em>manage tags/siblings/parents</em> dialogs for some users. this bug, for real, seems to be the combination of (Python 3.11 + PyQt6 6.5.x + two tabs + total tab text characters &gt; ~12 + tab selection is set to 1 during init event). Change any of those things and it doesn't happen. This is so weird a problem to otherwise normal code that I won't pivot all my 50-odd instances of tab selection to handle it and instead have hacked an answer for the three tag dialogs and filename tagging. Sorry for the trouble if you got this! Let me know if you see any more</li>
+<li>in a similar-but-different thing, PySide6 6.5.1 has a bug related to certain Signal connections. don't use it with hydrus, it messes up all my menus! their dev notes suggest they are going to have a fix/revert for 6.5.1.1</li>
+</ul>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var tab,labels=set.querySelector(".tabbed-labels");for(tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+            Back to top
+          </button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/hydrusnetwork/hydrus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/hydrusnetwork" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://hydrus.tumblr.com/" target="_blank" rel="noopener" title="hydrus.tumblr.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M309.8 480.3c-13.6 14.5-50 31.7-97.4 31.7-120.8 0-147-88.8-147-140.6v-144H17.9c-5.5 0-10-4.5-10-10v-68c0-7.2 4.5-13.6 11.3-16 62-21.8 81.5-76 84.3-117.1.8-11 6.5-16.3 16.1-16.3h70.9c5.5 0 10 4.5 10 10v115.2h83c5.5 0 10 4.4 10 9.9v81.7c0 5.5-4.5 10-10 10h-83.4V360c0 34.2 23.7 53.6 68 35.8 4.8-1.9 9-3.2 12.7-2.2 3.5.9 5.8 3.4 7.4 7.9l22 64.3c1.8 5 3.3 10.6-.4 14.5z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:hydrus.admin@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48H48zM0 176v208c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V176L294.4 339.2a63.9 63.9 0 0 1-76.8 0L0 176z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/wPHPCUZ" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.patreon.com/hydrus_dev" target="_blank" rel="noopener" title="www.patreon.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M512 194.8c0 101.3-82.4 183.8-183.8 183.8-101.7 0-184.4-82.4-184.4-183.8 0-101.6 82.7-184.3 184.4-184.3C429.6 10.5 512 93.2 512 194.8zM0 501.5h90v-491H0v491z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.78eede0e.min.js"></script>
+      
+    
+  </body>
+</html>

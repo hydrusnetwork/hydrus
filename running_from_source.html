@@ -1,0 +1,2655 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A personal booru-style media tagger that can import files and tags from your hard drive and popular websites. Content can be shared with other users via user-run servers.">
+      
+      
+      
+        <link rel="canonical" href="https://hydrusnetwork.github.io/hydrus/running_from_source.html">
+      
+      
+        <link rel="prev" href="wine.html">
+      
+      
+        <link rel="next" href="downloader_intro.html">
+      
+      
+      <link rel="icon" href="assets/favicon.svg">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.4">
+    
+    
+      
+        <title>Running From Source - hydrus network</title>
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/main.0e669242.min.css">
+      
+        
+        <link rel="stylesheet" href="assets/stylesheets/palette.85d0ee34.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+    
+    
+      <link rel="stylesheet" href="assets/stylesheets/extra.css">
+    
+    <script>__md_scope=new URL(".",location),__md_hash=e=>[...e].reduce((e,_)=>(e<<5)-e+_.charCodeAt(0),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue">
+  
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&"object"==typeof palette.color)for(var key of Object.keys(palette.color))document.body.setAttribute("data-md-color-"+key,palette.color[key])</script>
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#running_from_source" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="index.html" title="hydrus network" class="md-header__button md-logo" aria-label="hydrus network" data-md-component="logo">
+      
+  <img src="assets/hydrus-white.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6m0 5h18v2H3v-2m0 5h18v2H3v-2Z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            hydrus network
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Running From Source
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="blue-grey" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6zm0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4zM7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="black" data-md-color-accent="blue"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3Z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+    
+      <label class="md-header__button md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+      </label>
+      <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.516 6.516 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5Z"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11h12Z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/hydrusnetwork/hydrus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hydrusnetwork/hydrus
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="index.html" class="md-tabs__link">
+        
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="introduction.html" class="md-tabs__link">
+          
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="advanced_siblings.html" class="md-tabs__link">
+          
+  
+  Advanced
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="client_api.html" class="md-tabs__link">
+          
+  
+  API
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="faq.html" class="md-tabs__link">
+          
+  
+  Misc
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="index.html" title="hydrus network" class="md-nav__button md-logo" aria-label="hydrus network" data-md-component="logo">
+      
+  <img src="assets/hydrus-white.svg" alt="logo">
+
+    </a>
+    hydrus network
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/hydrusnetwork/hydrus" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+  </div>
+  <div class="md-source__repository">
+    hydrusnetwork/hydrus
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="index.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Getting Started
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting Started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="introduction.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction and Statement of Principles
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="gettingStartedOverview.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview For Getting Started
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_installing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Installing and Updating
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_files.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Files
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_importing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Importing and Exporting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_tags.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tags
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_searching.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Searching and Sorting
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_more_tags.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    More Tags
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_downloading.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Downloading
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_ratings.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Ratings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_11" >
+        
+          <label class="md-nav__link" for="__nav_2_11" id="__nav_2_11_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    PTR
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_11_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_11">
+            <span class="md-nav__icon md-icon"></span>
+            PTR
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="access_keys.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PTR Access Keys
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="PTR.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    PTR Guide
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="petitionPractices.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Petition Practices
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        
+          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Next Steps
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_12">
+            <span class="md-nav__icon md-icon"></span>
+            Next Steps
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="adding_new_downloaders.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Adding New Downloaders
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="getting_started_subscriptions.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Subscriptions
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="duplicates.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Filtering Duplicates
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Advanced
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            Advanced
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_siblings.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tag Siblings
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_parents.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Tag Parents
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_sidecars.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Sidecars
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced_multiple_local_file_services.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Multiple Local File Services
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="advanced.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    General Clever Tricks
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="reducing_lag.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Reducing Lag
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="database_migration.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Database Migration
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="launch_arguments.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Launch Arguments
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="ipfs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    IPFS
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="local_booru.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Local Booru
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="server.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running Your Own Server
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_12" checked>
+        
+          <label class="md-nav__link" for="__nav_3_12" id="__nav_3_12_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Alternate Installations
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_12_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_3_12">
+            <span class="md-nav__icon md-icon"></span>
+            Alternate Installations
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="docker.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Docker
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="wine.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Running In Wine
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  <span class="md-ellipsis">
+    Running From Source
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="running_from_source.html" class="md-nav__link md-nav__link--active">
+        
+  
+  <span class="md-ellipsis">
+    Running From Source
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple_setup_guide" class="md-nav__link">
+    Simple Setup Guide
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple Setup Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    Summary:
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#walkthrough" class="md-nav__link">
+    Walkthrough
+  </a>
+  
+    <nav class="md-nav" aria-label="Walkthrough">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core" class="md-nav__link">
+    Core
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#built_programs" class="md-nav__link">
+    Built Programs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment_setup" class="md-nav__link">
+    Environment setup
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running_it_1" class="md-nav__link">
+    Running it
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simple_updating_guide" class="md-nav__link">
+    Simple Updating Guide
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrating_from_an_existing_install" class="md-nav__link">
+    Migrating from an Existing Install
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what_you_need" class="md-nav__link">
+    Doing it Yourself
+  </a>
+  
+    <nav class="md-nav" aria-label="Doing it Yourself">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#qt" class="md-nav__link">
+    Qt
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mpv" class="md-nav__link">
+    mpv
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sqlite" class="md-nav__link">
+    SQLite
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffmpeg" class="md-nav__link">
+    FFMPEG
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running_it" class="md-nav__link">
+    Running It
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building_these_docs" class="md-nav__link">
+    Building these Docs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows_build" class="md-nav__link">
+    Building Packages on Windows
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional_windows" class="md-nav__link">
+    Additional Windows Info
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#my_code" class="md-nav__link">
+    My Code
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+      
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13" >
+        
+          <label class="md-nav__link" for="__nav_3_13" id="__nav_3_13_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Downloader Creation
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_3_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13">
+            <span class="md-nav__icon md-icon"></span>
+            Downloader Creation
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_intro.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Introduction
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_gugs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Gallery URL Generators
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_url_classes.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    URL Classes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4" id="__nav_3_13_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Parsers
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="3" aria-labelledby="__nav_3_13_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4">
+            <span class="md-nav__icon md-icon"></span>
+            Parsers
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Overview
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4_2" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4_2" id="__nav_3_13_4_2_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Components
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_13_4_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4_2">
+            <span class="md-nav__icon md-icon"></span>
+            Components
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_formulae.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Formulae
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_content_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Content Parsers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_page_parsers.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Page Parsers
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3_13_4_3" >
+        
+          <label class="md-nav__link" for="__nav_3_13_4_3" id="__nav_3_13_4_3_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Walkthroughs
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="4" aria-labelledby="__nav_3_13_4_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3_13_4_3">
+            <span class="md-nav__icon md-icon"></span>
+            Walkthroughs
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_gallery_page.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Gallery Page Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_file_page.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    File Page Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_parsers_full_example_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API Example
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_completion.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Putting It All Together
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_sharing.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Sharing
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="downloader_login.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Login Manager
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    API
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            API
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="client_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Client API
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="developer_api.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    API documentation
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+    
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" >
+        
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  <span class="md-ellipsis">
+    Misc
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            Misc
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="faq.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    FAQ
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="privacy.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Privacy
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contact.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Contact and Links
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="support.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Financial Support
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="changelog.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Changelog
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="about_docs.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    About These Docs
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#simple_setup_guide" class="md-nav__link">
+    Simple Setup Guide
+  </a>
+  
+    <nav class="md-nav" aria-label="Simple Setup Guide">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#summary" class="md-nav__link">
+    Summary:
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#walkthrough" class="md-nav__link">
+    Walkthrough
+  </a>
+  
+    <nav class="md-nav" aria-label="Walkthrough">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core" class="md-nav__link">
+    Core
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#built_programs" class="md-nav__link">
+    Built Programs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment_setup" class="md-nav__link">
+    Environment setup
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running_it_1" class="md-nav__link">
+    Running it
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#simple_updating_guide" class="md-nav__link">
+    Simple Updating Guide
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#migrating_from_an_existing_install" class="md-nav__link">
+    Migrating from an Existing Install
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#what_you_need" class="md-nav__link">
+    Doing it Yourself
+  </a>
+  
+    <nav class="md-nav" aria-label="Doing it Yourself">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#qt" class="md-nav__link">
+    Qt
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mpv" class="md-nav__link">
+    mpv
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sqlite" class="md-nav__link">
+    SQLite
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ffmpeg" class="md-nav__link">
+    FFMPEG
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#running_it" class="md-nav__link">
+    Running It
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#building_these_docs" class="md-nav__link">
+    Building these Docs
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#windows_build" class="md-nav__link">
+    Building Packages on Windows
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional_windows" class="md-nav__link">
+    Additional Windows Info
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#my_code" class="md-nav__link">
+    My Code
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+  
+
+
+<h1 id="running_from_source">running from source<a class="headerlink" href="#running_from_source" title="Permanent link">&para;</a></h1>
+<p>I write the client and server entirely in <a href="https://python.org">python</a>, which can run straight from source. It is getting simpler and simpler to run python programs like this, so don't be afraid of it. If none of the built packages work for you (for instance if you use Windows 8.1 or 18.04 Ubuntu (or equivalent)), it may be the only way you can get the program to run. Also, if you have a general interest in exploring the code or wish to otherwise modify the program, you will obviously need to do this.</p>
+<h2 id="simple_setup_guide">Simple Setup Guide<a class="headerlink" href="#simple_setup_guide" title="Permanent link">&para;</a></h2>
+<p>There are now setup scripts that make this easy on Windows and Linux. You do not need any python experience.</p>
+<h3 id="summary">Summary:<a class="headerlink" href="#summary" title="Permanent link">&para;</a></h3>
+<ol>
+<li>Get Python.</li>
+<li>Get Hydrus source.</li>
+<li>Get mpv/SQLite/FFMPEG.</li>
+<li>Run setup_venv script.</li>
+<li>Run setup_help script.</li>
+<li>Run client script.</li>
+</ol>
+<h3 id="walkthrough">Walkthrough<a class="headerlink" href="#walkthrough" title="Permanent link">&para;</a></h3>
+<h4 id="core">Core<a class="headerlink" href="#core" title="Permanent link">&para;</a></h4>
+<div class="tabbed-set tabbed-alternate" data-tabs="1:3"><input checked="checked" id="__tabbed_1_1" name="__tabbed_1" type="radio" /><input id="__tabbed_1_2" name="__tabbed_1" type="radio" /><input id="__tabbed_1_3" name="__tabbed_1" type="radio" /><div class="tabbed-labels"><label for="__tabbed_1_1">Windows</label><label for="__tabbed_1_2">Linux</label><label for="__tabbed_1_3">macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>First of all, you will need to install Python. Get 3.10 or 3.11 <a href="https://www.python.org/downloads/windows/">here</a>. During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available to your Windows.  </p>
+</div>
+<div class="tabbed-block">
+<p>You should already have a fairly new python. Ideally, you want at last 3.9.</p>
+</div>
+<div class="tabbed-block">
+<p>You should already have python of about the correct version.</p>
+</div>
+</div>
+</div>
+<p>If you are already on a very new version of python, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on a much older version of python, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).</p>
+<p>Then, get the hydrus source. The github repo is <a href="https://github.com/hydrusnetwork/hydrus">https://github.com/hydrusnetwork/hydrus</a>. If you are familiar with git, you can just clone the repo to the location you want with <code>git clone https://github.com/hydrusnetwork/hydrus</code>, but if not, then just go to the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> and download and extract the source code .zip somewhere. Make sure the directory has write permissions (e.g. don't put it in "Program Files"). Extracting straight to a spare drive, something like "D:\Hydrus Network", is ideal.</p>
+<p>We will call the base extract directory, the one with 'hydrus_client.py' in it, <code>install_dir</code>.</p>
+<div class="admonition info">
+<p class="admonition-title">Mixed Builds</p>
+<p>Don't mix and match build extracts and source extracts. The process that runs the code gets confused if there are unexpected extra .dlls in the directory. <strong>If you need to convert between built and source releases, perform a <a href="getting_started_installing.html#clean_installs">clean install</a>.</strong>  </p>
+<p>If you are converting from one install type to another, make a backup before you start. Then, if it all goes wrong, you'll always have a safe backup to rollback to.</p>
+</div>
+<h4 id="built_programs">Built Programs<a class="headerlink" href="#built_programs" title="Permanent link">&para;</a></h4>
+<p>There are three special external libraries. You just have to get them and put them in the correct place:</p>
+<div class="tabbed-set tabbed-alternate" data-tabs="2:3"><input checked="checked" id="__tabbed_2_1" name="__tabbed_2" type="radio" /><input id="__tabbed_2_2" name="__tabbed_2" type="radio" /><input id="__tabbed_2_3" name="__tabbed_2" type="radio" /><div class="tabbed-labels"><label for="__tabbed_2_1">Windows</label><label for="__tabbed_2_2">Linux</label><label for="__tabbed_2_3">macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<ol>
+<li>
+<p>mpv  </p>
+<ol>
+<li>If you are on Windows 8.1 or older, <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z">this</a> is known safe.</li>
+<li>If you are on Windows 10 or newer and want the simple answer, try <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z">this</a>.</li>
+<li>Ideally, go for <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z">this</a>, but you have to rename the dll to <code>mpv-2.dll</code>.</li>
+</ol>
+<p>Then open that archive and place the 'mpv-1.dll' or 'mpv-2.dll' into <code>install_dir</code>.</p>
+<details class="info">
+<summary>mpv on older Windows</summary>
+<p>I have word that that newer mpv, the API version 2.1 that you have to rename to mpv-2.dll, will work on Qt5 and Windows 7. If this applies to you, feel free to have a play around with different versions here. You'll need the newer mpv choice in the setup-venv script too, which, depending on your situation, may not be possible.</p>
+</details>
+</li>
+<li>
+<p>SQLite3  </p>
+<p>Go to <code>install_dir/static/build_files/windows</code> and copy 'sqlite3.dll' into <code>install_dir</code>.</p>
+</li>
+<li>
+<p>FFMPEG  </p>
+<p>Get a Windows build of FFMPEG <a href="https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z">here</a>.</p>
+<p>Extract the ffmpeg.exe into <code>install_dir/bin</code>.</p>
+</li>
+</ol>
+</div>
+<div class="tabbed-block">
+<ol>
+<li>
+<p>mpv  </p>
+<p>Try running <code>apt-get install libmpv1</code> in a new terminal. You can type <code>apt show libmpv1</code> to see your current version. Or, if you use a different package manager, try searching <code>libmpv</code> or <code>libmpv1</code> on that.</p>
+<ol>
+<li>If you have earlier than 0.34.1, you will be looking at running the 'advanced' setup in the next section and selecting the 'old' mpv.</li>
+<li>If you have 0.34.1 or later, you can run the normal setup script.</li>
+</ol>
+</li>
+<li>
+<p>SQLite3  </p>
+<p>No action needed.</p>
+</li>
+<li>
+<p>FFMPEG  </p>
+<p>You should already have ffmpeg. Just type <code>ffmpeg</code> into a new terminal, and it should give a basic version response. If you somehow don't have ffmpeg, check your package manager.</p>
+</li>
+</ol>
+<details>
+<summary>Qt compatibility note</summary>
+<p>If you run into trouble running newer versions of Qt6, which you will be setting up later, some users have fixed it by installing the packages <code>libicu-dev</code> and <code>libxcb-cursor-dev</code>. With <code>apt</code> that will be:</p>
+<ul>
+<li><code>sudo apt-get install libicu-dev</code></li>
+<li><code>sudo apt-get install libxcb-cursor-dev</code></li>
+</ul>
+</details>
+</div>
+<div class="tabbed-block">
+<ol>
+<li>
+<p>mpv  </p>
+<p>Unfortunately, mpv is not well supported in macOS yet. You may be able to install it in brew, but it seems to freeze the client as soon as it is loaded. Hydev is thinking about fixes here.</p>
+</li>
+<li>
+<p>SQLite3  </p>
+<p>No action needed.</p>
+</li>
+<li>
+<p>FFMPEG  </p>
+<p>You should already have ffmpeg.</p>
+</li>
+</ol>
+</div>
+</div>
+</div>
+<h4 id="environment_setup">Environment setup<a class="headerlink" href="#environment_setup" title="Permanent link">&para;</a></h4>
+<div class="tabbed-set tabbed-alternate" data-tabs="3:3"><input checked="checked" id="__tabbed_3_1" name="__tabbed_3" type="radio" /><input id="__tabbed_3_2" name="__tabbed_3" type="radio" /><input id="__tabbed_3_3" name="__tabbed_3" type="radio" /><div class="tabbed-labels"><label for="__tabbed_3_1">Windows</label><label for="__tabbed_3_2">Linux</label><label for="__tabbed_3_3">macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Double-click <code>setup_venv.bat</code>.</p>
+</div>
+<div class="tabbed-block">
+<p>The file is <code>setup_venv.sh</code>. You may be able to double-click it. If not, open a terminal in the folder and type:  </p>
+<p><code>./setup_venv.sh</code></p>
+<p>If you do not have permission to execute the file, do this before trying again:  </p>
+<p><code>chmod +x setup_venv.sh</code></p>
+<p>You will likely have to do the same on the other .sh files.</p>
+<p>If you get an error about the venv failing to activate during <code>setup_venv.sh</code>, you may need to install venv especially for your system. The specific error message should help you out, but you'll be looking at something along the lines of <code>apt install python3.10-venv</code>. </p>
+<p>If you like, you can run the <code>setup_desktop.sh</code> file to install a hydrus.desktop file to your applications folder. (Or check the template in <code>install_dir/static/hydrus.desktop</code> and do it yourself!)</p>
+</div>
+<div class="tabbed-block">
+<p>Double-click <code>setup_venv.command</code>.</p>
+<p>If you do not have permission to run the .command file, then open a terminal on the folder and enter:</p>
+<p><code>chmod +x setup_venv.command</code></p>
+<p>You will likely have to do the same on the other .command files.</p>
+<p>You may need to experiment with the advanced choices, especially if your macOS is a litle old.</p>
+</div>
+</div>
+</div>
+<p>The setup will ask you some questions. Just type the letters it asks for and hit enter. Most users are looking at the (s)imple setup, but if your situation is unusual, try the (a)dvanced, which will walk you through the main decisions. Once ready, it should take a minute to download its packages and a couple minutes to install them. Do not close it until it is finished installing everything and says 'Done!'. If it seems like it hung, just give it time to finish.</p>
+<p>If something messes up, or you want to make a different decision, just run the setup script again and it will reinstall everything. Everything these scripts do ends up in the 'venv' directory, so you can also just delete that folder to 'uninstall' the venv. It should <em>just work</em> on most normal computers, but let me know if you have any trouble.</p>
+<p>Then run the 'setup_help' script to build the help. This isn't necessary, but it is nice to have it built locally. You can run this again at any time to rebuild the current help.</p>
+<h4 id="running_it_1">Running it<a class="headerlink" href="#running_it_1" title="Permanent link">&para;</a></h4>
+<div class="tabbed-set tabbed-alternate" data-tabs="4:3"><input checked="checked" id="__tabbed_4_1" name="__tabbed_4" type="radio" /><input id="__tabbed_4_2" name="__tabbed_4" type="radio" /><input id="__tabbed_4_3" name="__tabbed_4" type="radio" /><div class="tabbed-labels"><label for="__tabbed_4_1">Windows</label><label for="__tabbed_4_2">Linux</label><label for="__tabbed_4_3">macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>Run 'hydrus_client.bat' to start the client.</p>
+</div>
+<div class="tabbed-block">
+<p>Run 'hydrus_client.sh' to start the client. Don't forget to set <code>chmod +x hydrus_client.sh</code> if you need it.</p>
+</div>
+<div class="tabbed-block">
+<p>Run 'hydrus_client.command' to start the client. Don't forget to set <code>chmod +x hydrus_client.command</code> if you need it.</p>
+</div>
+</div>
+</div>
+<p>The first start will take a little longer (it has to compile all the code into something your computer understands). Once up, it will operate just like a normal build with the same folder structure and so on.</p>
+<div class="admonition warning">
+<p class="admonition-title">Missing a Library</p>
+<p>If the client fails to boot, it should place a 'hydrus_crash.log' in your 'db' directory or your desktop, or, if it got far enough, it may write the error straight to the 'client - date.log' file in your db directory.  </p>
+<p>If that error talks about a missing library, try reinstalling your venv. Are you sure it finished correctly? Do you need to run the advanced setup and select a different version of Qt?</p>
+</div>
+<div class="tabbed-set tabbed-alternate" data-tabs="5:3"><input checked="checked" id="__tabbed_5_1" name="__tabbed_5" type="radio" /><input id="__tabbed_5_2" name="__tabbed_5" type="radio" /><input id="__tabbed_5_3" name="__tabbed_5" type="radio" /><div class="tabbed-labels"><label for="__tabbed_5_1">Windows</label><label for="__tabbed_5_2">Linux</label><label for="__tabbed_5_3">macOS</label></div>
+<div class="tabbed-content">
+<div class="tabbed-block">
+<p>If you want to redirect your database or use any other launch arguments, then copy 'hydrus_client.bat' to 'hydrus_client-user.bat' and edit it, inserting your desired db path. Run this instead of 'hydrus_client.bat'. New <code>git pull</code> commands will not affect 'hydrus_client-user.bat'.</p>
+<p>You probably can't pin your .bat file to your Taskbar or Start (and if you try and pin the running program to your taskbar, its icon may revert to Python), but you can make a shortcut to the .bat file, pin that to Start, and in its properties set a custom icon. There's a nice hydrus one in <code>install_dir/static</code>.</p>
+<p>However, some versions of Windows won't let you pin a shortcut to a bat to the start menu. In this case, make a shortcut like this:</p>
+<p><code>C:\Windows\System32\cmd.exe /c "C:\hydrus\Hydrus Source\hydrus_client-user.bat"</code></p>
+<p>This is a shortcut to tell the terminal to run the bat; it should be pinnable to start. You can give it a nice name and the hydrus icon and you should be good!</p>
+</div>
+<div class="tabbed-block">
+<p>If you want to redirect your database or use any other launch arguments, then copy 'hydrus_client.sh' to 'hydrus_client-user.sh' and edit it, inserting your desired db path. Run this instead of 'hydrus_client.sh'. New <code>git pull</code> commands will not affect 'hydrus_client-user.sh'.</p>
+</div>
+<div class="tabbed-block">
+<p>If you want to redirect your database or use any other launch arguments, then copy 'hydrus_client.command' to 'hydrus_client-user.command' and edit it, inserting your desired db path. Run this instead of 'hydrus_client.command'. New <code>git pull</code> commands will not affect 'hydrus_client-user.command'.</p>
+</div>
+</div>
+</div>
+<h3 id="simple_updating_guide">Simple Updating Guide<a class="headerlink" href="#simple_updating_guide" title="Permanent link">&para;</a></h3>
+<p>To update, you do the same thing as for the extract builds.</p>
+<ol>
+<li>If you installed by extracting the source zip, then download the <a href="https://github.com/hydrusnetwork/hydrus/releases/latest">latest release</a> source zip and extract it over the top of the folder you have, overwriting the existing source files.</li>
+<li>If you installed with git, then just run <code>git pull</code> as normal.</li>
+</ol>
+<p>If you get a library version error when you try to boot, run the venv setup again. It is worth doing this anyway, every now and then, just to stay up to date.</p>
+<h3 id="migrating_from_an_existing_install">Migrating from an Existing Install<a class="headerlink" href="#migrating_from_an_existing_install" title="Permanent link">&para;</a></h3>
+<p>Many users start out using one of the official built releases and decide to move to source. There is lots of information <a href="database_migration.html">here</a> about how to migrate the database, but for your purposes, the simple method is this:</p>
+<p><strong>If you never moved your database to another place and do not use -d/--db_dir launch parameter</strong></p>
+<ol>
+<li>Follow the above guide to get the source install working in a new folder on a fresh database</li>
+<li><strong>MAKE A BACKUP OF EVERYTHING</strong></li>
+<li>Delete everything from the source install's <code>db</code> directory.</li>
+<li>Move your built release's entire <code>db</code> directory to the source.</li>
+<li>Run your source release again--it should load your old db no problem!</li>
+<li>Update your backup routine to point to the new source install location.</li>
+</ol>
+<p><strong>If you moved your database to another location and use the -d/--db_dir launch parameter</strong></p>
+<ol>
+<li>Follow the above guide to get the source install working in a new folder on a fresh database (without -db_dir)</li>
+<li><strong>MAKE A BACKUP OF EVERYTHING</strong></li>
+<li>Just to be neat, delete the .db files, .log files, and client_files folder from the source install's <code>db</code> directory.</li>
+<li>Run the source install with --db_dir just as you would the built executable--it should load your old db no problem!</li>
+</ol>
+<h2 id="what_you_need">Doing it Yourself<a class="headerlink" href="#what_you_need" title="Permanent link">&para;</a></h2>
+<p><em>This is for advanced users only.</em></p>
+<p><em>If you have never used python before, do not try this. If the easy setup scripts failed for you and you don't know what happened, please contact hydev before trying this, as the thing that went wrong there will probably go much more wrong here.</em></p>
+<p>You can also set up the environment yourself. Inside the extract should be hydrus_client.py and hydrus_server.py. You will be treating these basically the same as the 'client' and 'server' executables--with the right environment, you should be able to launch them the same way and they take the same launch parameters as the exes.</p>
+<p>Hydrus needs a whole bunch of libraries, so let's now set your python up. I <strong>strongly</strong> recommend you create a virtual environment. It is easy and doesn't mess up your system python.</p>
+<p><strong>You have to do this in the correct order! Do not switch things up. If you make a mistake, delete your venv folder and start over from the beginning.</strong></p>
+<p>To create a new venv environment:</p>
+<ul>
+<li>Open a terminal at your hydrus extract folder. If <code>python3</code> doesn't work, use <code>python</code>.</li>
+<li><code>python3 -m pip install virtualenv</code> (if you need it)</li>
+<li><code>python3 -m venv venv</code></li>
+<li><code>source venv/bin/activate</code> (<code>CALL venv\Scripts\activate.bat</code> in Windows cmd)</li>
+<li><code>python -m pip install --upgrade pip</code></li>
+<li><code>python -m pip install --upgrade wheel</code></li>
+</ul>
+<div class="admonition info">
+<p class="admonition-title">venvs</p>
+<p>That <code>source venv/bin/activate</code> line turns on your venv. You should see your terminal prompt note you are now in it. A venv is an isolated environment of python that you can install modules to without worrying about breaking something system-wide. <strong>Ideally, you do not want to install python modules to your system python.</strong>  </p>
+<p>This activate line will be needed every time you alter your venv or run the <code>hydrus_client.py</code>/<code>hydrus_server.py</code> files. You can easily tuck this into a launch script--check the easy setup files for examples.  </p>
+<p>On Windows Powershell, the command is <code>.\venv\Scripts\activate</code>, but you may find the whole deal is done much easier in cmd than Powershell. When in Powershell, just type <code>cmd</code> to get an old fashioned command line. In cmd, the launch command is just <code>venv\scripts\activate.bat</code>, no leading period.</p>
+</div>
+<p><strong>After you have activated the venv</strong>, you can use pip to install everything you need to it from the requirements.txt in the install_dir:</p>
+<div class="highlight"><pre><span></span><code>python -m pip install -r requirements.txt
+</code></pre></div>
+<p>If you need different versions of libraries, check the cut-up requirements.txts the 'advanced' easy-setup uses in <code>install_dir/static/requirements/advanced</code>. Check and compare their contents to the main requirements.txt to see what is going on. You'll likely need the newer OpenCV on Python 3.10, for instance.</p>
+<h3 id="qt">Qt<a class="headerlink" href="#qt" title="Permanent link">&para;</a></h3>
+<p>Qt is the UI library. You can run PySide2, PySide6, PyQt5, or PyQt6. A wrapper library called <code>qtpy</code> allows this. The default is PySide6, but if it is missing, qtpy will fall back to an available alternative. For PyQt5 or PyQt6, you need an extra Chart module, so go:</p>
+<div class="highlight"><pre><span></span><code>python -m pip install qtpy PyQtChart PyQt5
+-or-
+python -m pip install qtpy PyQt6-Charts PyQt6
+</code></pre></div>
+<p>If you have multiple Qts installed, then select which one you want to use by setting the <code>QT_API</code> environment variable to 'pyside2', 'pyside6', 'pyqt5', or 'pyqt6'. Check <em>help-&gt;about</em> to make sure it loaded the right one.</p>
+<p>If you want to set QT_API in a batch file, do this:</p>
+<p><code>set QT_API=pyqt6</code></p>
+<p>If you run &lt;= Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Try PySide2 or PyQt5.</p>
+<h3 id="mpv">mpv<a class="headerlink" href="#mpv" title="Permanent link">&para;</a></h3>
+<p>MPV is optional and complicated, but it is great, so it is worth the time to figure out!</p>
+<p>As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is <em>not</em> mpv the program, but 'libmpv', often called 'libmpv1'.</p>
+<p>For Windows, the dll builds are <a href="https://sourceforge.net/projects/mpv-player-windows/files/libmpv/">here</a>, although getting a stable version can be difficult. Just put it in your hydrus base install directory. Check the links in the easy-setup guide above for good versions. You can also just grab the 'mpv-1.dll'/'mpv-2.dll' I bundle in my extractable Windows release.</p>
+<p>If you are on Linux, you can usually get 'libmpv1' like so:</p>
+<p><code>apt-get install libmpv1</code></p>
+<p>On macOS, you should be able to get it with <code>brew install mpv</code>, but you are likely to find mpv crashes the program when it tries to load. Hydev is working on this, but it will probably need a completely different render API.</p>
+<p>Hit <em>help-&gt;about</em> to see your mpv status. If you don't have it, it will present an error popup box with more info.</p>
+<h3 id="sqlite">SQLite<a class="headerlink" href="#sqlite" title="Permanent link">&para;</a></h3>
+<p>If you can, update python's SQLite--it'll improve performance. The SQLite that comes with stock python is usually quite old, so you'll get a significant boost in speed. In some python deployments, the built-in SQLite not compiled with neat features like Fast Text Search (FTS) that hydrus needs.</p>
+<p>On Windows, get the 64-bit sqlite3.dll <a href="https://www.sqlite.org/download.html">here</a>, and just drop it in your base install directory. You can also just grab the 'sqlite3.dll' I bundle in my extractable Windows release.</p>
+<p>You <em>may</em> be able to update your SQLite on Linux or macOS with:</p>
+<ul>
+<li><code>apt-get install libsqlite3-dev</code></li>
+<li>(activate your venv)</li>
+<li><code>python -m pip install pysqlite3</code></li>
+</ul>
+<p>But as long as the program launches, it usually isn't a big deal.</p>
+<div class="admonition warning">
+<p class="admonition-title">Extremely safe no way it can go wrong</p>
+<p>If you want to update sqlite for your system python install, you can also drop it into <code>C:\Python38\DLLs</code> or wherever you have python installed. You'll be overwriting the old file, so make a backup if you want to (I have never had trouble updating like this, however).</p>
+<p>A user who made a Windows venv with Anaconda reported they had to replace the sqlite3.dll in their conda env at <code>~/.conda/envs/&lt;envname&gt;/Library/bin/sqlite3.dll</code>.</p>
+</div>
+<h3 id="ffmpeg">FFMPEG<a class="headerlink" href="#ffmpeg" title="Permanent link">&para;</a></h3>
+<p>If you don't have FFMPEG in your PATH and you want to import anything more fun than jpegs, you will need to put a static <a href="https://ffmpeg.org/">FFMPEG</a> executable in your PATH or the <code>install_dir/bin</code> directory. <a href="https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z">This</a> should always point to a new build for Windows. Alternately, you can just copy the exe from one of my extractable Windows releases.</p>
+<h3 id="running_it">Running It<a class="headerlink" href="#running_it" title="Permanent link">&para;</a></h3>
+<p>Once you have everything set up, hydrus_client.py and hydrus_server.py should look for and run off client.db and server.db just like the executables. You can use the 'hydrus_client.bat/sh/command' scripts in the install dir or use them as inspiration for your own. In any case, you are looking at entering something like this into the terminal:</p>
+<div class="highlight"><pre><span></span><code>source venv/bin/activate
+python hydrus_client.py
+</code></pre></div>
+<p>This will use the 'db' directory for your database by default, but you can use the <a href="launch_arguments.html">launch arguments</a> just like for the executables. For example, this could be your client-user.sh file:</p>
+<div class="highlight"><pre><span></span><code>#!/bin/bash
+
+source venv/bin/activate
+python hydrus_client.py -d=&quot;/path/to/database&quot;
+</code></pre></div>
+<h3 id="building_these_docs">Building these Docs<a class="headerlink" href="#building_these_docs" title="Permanent link">&para;</a></h3>
+<p>When running from source you may want to <a href="about_docs.html">build the hydrus help docs</a> yourself. You can also check the <code>setup_help</code> scripts in the install directory. </p>
+<h3 id="windows_build">Building Packages on Windows<a class="headerlink" href="#windows_build" title="Permanent link">&para;</a></h3>
+<p>Almost everything you get through pip is provided as pre-compiled 'wheels' these days, but if you get an error about Visual Studio C++ when you try to pip something, you have two choices:</p>
+<ul>
+<li>Get Visual Studio 14/whatever build tools</li>
+<li>Pick a different library version</li>
+</ul>
+<p>Option B is always the simpler. If opencv-headless as the requirements.txt specifies won't compile in Python 3.10, then try a newer version--there will probably be one of these new highly compatible wheels and it'll just work in seconds. Check my build scripts and various requirements.txts for ideas on what versions to try for your python etc...</p>
+<p>If you are confident you need Visual Studio tools, then prepare for headaches. Although the tools are free from Microsoft, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Expect a 5GB+ install with an eye-watering number of checkboxes that probably needs some stackexchange searches to figure out.</p>
+<p>On Windows 10, <a href="https://chocolatey.org/">Chocolatey</a> has been the easy answer. Get it installed and and use this one simple line:</p>
+<div class="highlight"><pre><span></span><code>choco install -y vcbuildtools visualstudio2017buildtools windows-sdk-10.0
+</code></pre></div>
+<p>Trust me, just do this, it will save a ton of headaches!</p>
+<p><em>Update:</em> On Windows 11, in 2023-01, I had trouble with the above. There's a couple '11' SDKs that installed ok, but the vcbuildtools stuff had unusual errors. I hadn't done this in years, so maybe they are broken for Windows 10 too! The good news is that a basic stock Win 11 install with Python 3.10 is fine getting everything on our requirements and even making a build without any extra compiler tech. </p>
+<h3 id="additional_windows">Additional Windows Info<a class="headerlink" href="#additional_windows" title="Permanent link">&para;</a></h3>
+<p>This does not matter much any more, but in the old days, building modules like lz4 and lxml was a complete nightmare, and hooking up Visual Studio was even more difficult. <a href="http://www.lfd.uci.edu/~gohlke/pythonlibs/">This page</a> has a lot of prebuilt binaries--I have found it very helpful many times.</p>
+<p>I have a fair bit of experience with Windows python, so send me a mail if you need help.</p>
+<h2 id="my_code">My Code<a class="headerlink" href="#my_code" title="Permanent link">&para;</a></h2>
+<p>I develop hydrus on and am most experienced with Windows, so the program is more stable and reasonable on that. I do not have as much experience with Linux or macOS, but I still appreciate and will work on your Linux/macOS bug reports.</p>
+<p>My coding style is unusual and unprofessional. Everything is pretty much hacked together. If you are interested in how things work, please do look through the source and ask me if you don't understand something.</p>
+<p>I'm constantly throwing new code together and then cleaning and overhauling it down the line. I work strictly alone. While I am very interested in detailed bug reports or suggestions for good libraries to use, I am not looking for pull requests or suggestions on style. I know a lot of things are a mess. Everything I do is <a href="https://github.com/sirkris/WTFPL/blob/master/WTFPL.md">WTFPL</a>, so feel free to fork and play around with things on your end as much as you like.</p>
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var tab,labels=set.querySelector(".tabbed-labels");for(tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+            
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12Z"/></svg>
+            Back to top
+          </button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        <div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/hydrusnetwork/hydrus" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8zM97.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1zm-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7zm32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1zm-11.4-14.7c-1.6 1-1.6 3.6 0 5.9 1.6 2.3 4.3 3.3 5.6 2.3 1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://twitter.com/hydrusnetwork" target="_blank" rel="noopener" title="twitter.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.797 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.797-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://hydrus.tumblr.com/" target="_blank" rel="noopener" title="hydrus.tumblr.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M309.8 480.3c-13.6 14.5-50 31.7-97.4 31.7-120.8 0-147-88.8-147-140.6v-144H17.9c-5.5 0-10-4.5-10-10v-68c0-7.2 4.5-13.6 11.3-16 62-21.8 81.5-76 84.3-117.1.8-11 6.5-16.3 16.1-16.3h70.9c5.5 0 10 4.5 10 10v115.2h83c5.5 0 10 4.4 10 9.9v81.7c0 5.5-4.5 10-10 10h-83.4V360c0 34.2 23.7 53.6 68 35.8 4.8-1.9 9-3.2 12.7-2.2 3.5.9 5.8 3.4 7.4 7.9l22 64.3c1.8 5 3.3 10.6-.4 14.5z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+    <a href="mailto:hydrus.admin@gmail.com" target="_blank" rel="noopener" title="" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M48 64C21.5 64 0 85.5 0 112c0 15.1 7.1 29.3 19.2 38.4l217.6 163.2c11.4 8.5 27 8.5 38.4 0l217.6-163.2c12.1-9.1 19.2-23.3 19.2-38.4 0-26.5-21.5-48-48-48H48zM0 176v208c0 35.3 28.7 64 64 64h384c35.3 0 64-28.7 64-64V176L294.4 339.2a63.9 63.9 0 0 1-76.8 0L0 176z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://discord.gg/wPHPCUZ" target="_blank" rel="noopener" title="discord.gg" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M524.531 69.836a1.5 1.5 0 0 0-.764-.7A485.065 485.065 0 0 0 404.081 32.03a1.816 1.816 0 0 0-1.923.91 337.461 337.461 0 0 0-14.9 30.6 447.848 447.848 0 0 0-134.426 0 309.541 309.541 0 0 0-15.135-30.6 1.89 1.89 0 0 0-1.924-.91 483.689 483.689 0 0 0-119.688 37.107 1.712 1.712 0 0 0-.788.676C39.068 183.651 18.186 294.69 28.43 404.354a2.016 2.016 0 0 0 .765 1.375 487.666 487.666 0 0 0 146.825 74.189 1.9 1.9 0 0 0 2.063-.676A348.2 348.2 0 0 0 208.12 430.4a1.86 1.86 0 0 0-1.019-2.588 321.173 321.173 0 0 1-45.868-21.853 1.885 1.885 0 0 1-.185-3.126 251.047 251.047 0 0 0 9.109-7.137 1.819 1.819 0 0 1 1.9-.256c96.229 43.917 200.41 43.917 295.5 0a1.812 1.812 0 0 1 1.924.233 234.533 234.533 0 0 0 9.132 7.16 1.884 1.884 0 0 1-.162 3.126 301.407 301.407 0 0 1-45.89 21.83 1.875 1.875 0 0 0-1 2.611 391.055 391.055 0 0 0 30.014 48.815 1.864 1.864 0 0 0 2.063.7A486.048 486.048 0 0 0 610.7 405.729a1.882 1.882 0 0 0 .765-1.352c12.264-126.783-20.532-236.912-86.934-334.541ZM222.491 337.58c-28.972 0-52.844-26.587-52.844-59.239s23.409-59.241 52.844-59.241c29.665 0 53.306 26.82 52.843 59.239 0 32.654-23.41 59.241-52.843 59.241Zm195.38 0c-28.971 0-52.843-26.587-52.843-59.239s23.409-59.241 52.843-59.241c29.667 0 53.307 26.82 52.844 59.239 0 32.654-23.177 59.241-52.844 59.241Z"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://www.patreon.com/hydrus_dev" target="_blank" rel="noopener" title="www.patreon.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 6.4.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2023 Fonticons, Inc.--><path d="M512 194.8c0 101.3-82.4 183.8-183.8 183.8-101.7 0-184.4-82.4-184.4-183.8 0-101.6 82.7-184.3 184.4-184.3C429.6 10.5 512 93.2 512 194.8zM0 501.5h90v-491H0v491z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    
+    
+      <script src="assets/javascripts/bundle.78eede0e.min.js"></script>
+      
+    
+  </body>
+</html>
