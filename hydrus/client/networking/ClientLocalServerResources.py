@@ -2209,10 +2209,6 @@ class HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( HydrusResou
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         tags = request.parsed_request_args.GetValue( 'tags', list, expected_list_type = str )
-        
-        job_key = ClientThreading.JobKey( cancellable = True )
-            
-        request.disconnect_callables.append( job_key.Cancel )
 
         tags_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', tags )
         
