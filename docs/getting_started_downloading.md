@@ -30,19 +30,26 @@ There are a number of different downloader types, each with its own purpose. Thi
 **Simple downloader**
 :    Intended for simple one-off jobs like grabbing all linked images in a page.
 
+# Import options
+In previous versions these were split into completely different windows called `file import options` and `tag import options` so if you see those anywhere, this is what they're talking about and not some hidden menu anywhere.
+
 ## File import settings
-File import settings has a number of options that deal with the files being downloaded and what should happen to them. There's a few more tickboxes if you turn on advanced mode
+File import settings has a number of options that deal with the files being downloaded and what should happen to them. There's a few more tickboxes if you turn on advanced mode.
 
 ![](images/file_import.png)
 
-**Pre-import checks**
-:    Pretty self-explanatory for the most part. If you want to redownload previously deleted files turning off `exclude previously deleted files` will have Hydrus ignore deletion status.
+**pre-import checks**
+:    Pretty self-explanatory for the most part. If you want to redownload previously deleted files turning off `exclude previously deleted files` will have Hydrus ignore deletion status.  
+A few of the options have more information if you hover over them.
 
-**Import destinations**
+**import destinations**
 :    See [multiple file services](advanced_multiple_local_file_services.md), an advanced feature.
 
+**post import actions**
+:    See the [files section on filtering](getting_started_files.md#inbox-and-archive) for the first option, the other two have information if you hover over them.
+
 ## Parsing
-By default, hydrus now starts with a local tag service called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click `tag import options`:
+By default, hydrus now starts with a local tag service called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click `import options`:
 
 ![](images/tag_import_options_default.png)
 

@@ -729,6 +729,7 @@ IMAGE_AVIF_SEQUENCE = 66
 UNDETERMINED_GIF = 67
 IMAGE_GIF = 68
 APPLICATION_PROCREATE = 69
+IMAGE_QOI = 70
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -750,6 +751,7 @@ SEARCHABLE_MIMES = {
     ANIMATION_GIF,
     IMAGE_WEBP,
     IMAGE_TIFF,
+    IMAGE_QOI,
     IMAGE_ICON,
     IMAGE_SVG,
     IMAGE_HEIF,
@@ -810,6 +812,7 @@ IMAGES = [
     IMAGE_BMP,
     IMAGE_WEBP,
     IMAGE_TIFF,
+    IMAGE_QOI,
     IMAGE_ICON,
     IMAGE_HEIF,
     IMAGE_HEIC,
@@ -940,6 +943,7 @@ mime_enum_lookup = {
     'image/bmp' : IMAGE_BMP,
     'image/webp' : IMAGE_WEBP,
     'image/tiff' : IMAGE_TIFF,
+    'image/qoi' : IMAGE_QOI,
     'image/x-icon' : IMAGE_ICON,
     'image/svg+xml': IMAGE_SVG,
     'image/heif' : IMAGE_HEIF,
@@ -1011,6 +1015,7 @@ mime_string_lookup = {
     IMAGE_BMP : 'bmp',
     IMAGE_WEBP : 'webp',
     IMAGE_TIFF : 'tiff',
+    IMAGE_QOI : 'qoi',
     IMAGE_ICON : 'icon',
     IMAGE_SVG : 'svg',
     IMAGE_HEIF: 'heif',
@@ -1087,6 +1092,7 @@ mime_mimetype_string_lookup = {
     IMAGE_BMP : 'image/bmp',
     IMAGE_WEBP : 'image/webp',
     IMAGE_TIFF : 'image/tiff',
+    IMAGE_QOI : 'image/qoi',
     IMAGE_ICON : 'image/x-icon',
     IMAGE_SVG : 'image/svg+xml',
     IMAGE_HEIF: 'image/heif',
@@ -1162,6 +1168,7 @@ mime_ext_lookup = {
     IMAGE_BMP : '.bmp',
     IMAGE_WEBP : '.webp',
     IMAGE_TIFF : '.tiff',
+    IMAGE_QOI: '.qoi',
     IMAGE_ICON : '.ico',
     IMAGE_SVG : '.svg',
     IMAGE_HEIF: '.heif',
