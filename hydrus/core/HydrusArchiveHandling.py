@@ -23,4 +23,6 @@ def ReadSingleFileFromZip( path_to_zip, filename_to_extract ):
             return reader.read()
             
         
-    
+def GetZipAsPath( path_to_zip, path_in_zip="" ):
+
+    return zipfile.Path( path_to_zip, at=path_in_zip )

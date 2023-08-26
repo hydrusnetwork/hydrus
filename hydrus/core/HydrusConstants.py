@@ -728,6 +728,7 @@ IMAGE_AVIF = 65
 IMAGE_AVIF_SEQUENCE = 66
 UNDETERMINED_GIF = 67
 IMAGE_GIF = 68
+APPLICATION_PROCREATE = 69
 IMAGE_QOI = 70
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
@@ -774,6 +775,7 @@ SEARCHABLE_MIMES = {
     APPLICATION_SAI2,
     APPLICATION_KRITA,
     APPLICATION_XCF,
+    APPLICATION_PROCREATE,
     APPLICATION_PDF,
     APPLICATION_ZIP,
     APPLICATION_RAR,
@@ -869,7 +871,8 @@ IMAGE_PROJECT_FILES = [
     APPLICATION_SAI2,
     APPLICATION_KRITA,
     IMAGE_SVG,
-    APPLICATION_XCF
+    APPLICATION_XCF,
+    APPLICATION_PROCREATE
 ]
 
 ARCHIVES = [
@@ -913,7 +916,7 @@ PIL_HEIF_MIMES = {
 MIMES_THAT_DEFINITELY_HAVE_AUDIO = tuple( [ APPLICATION_FLASH ] + list( AUDIO ) )
 MIMES_THAT_MAY_HAVE_AUDIO = tuple( list( MIMES_THAT_DEFINITELY_HAVE_AUDIO ) + list( VIDEO ) )
 
-APPLICATIONS_WITH_THUMBNAILS = set( { IMAGE_SVG, APPLICATION_FLASH, APPLICATION_CLIP, APPLICATION_KRITA } ).union( VIEWABLE_IMAGE_PROJECT_FILES )
+APPLICATIONS_WITH_THUMBNAILS = set( { IMAGE_SVG, APPLICATION_FLASH, APPLICATION_CLIP, APPLICATION_KRITA, APPLICATION_PROCREATE } ).union( VIEWABLE_IMAGE_PROJECT_FILES )
 
 MIMES_WITH_THUMBNAILS = set( IMAGES ).union( ANIMATIONS ).union( VIDEO ).union( APPLICATIONS_WITH_THUMBNAILS )
 
@@ -955,9 +958,10 @@ mime_enum_lookup = {
     'application/x-photoshop' : APPLICATION_PSD,
     'image/vnd.adobe.photoshop' : APPLICATION_PSD,
     'application/vnd.adobe.photoshop' : APPLICATION_PSD,
-    'application/clip' : APPLICATION_CLIP,
-    'application/sai2': APPLICATION_SAI2,
+    'application/clip' : APPLICATION_CLIP, # made up
+    'application/sai2': APPLICATION_SAI2, # made up
     'application/x-krita': APPLICATION_KRITA,
+    'application/x-procreate': APPLICATION_PROCREATE, # made up
     'image/x-xcf' : APPLICATION_XCF,
     'application/octet-stream' : APPLICATION_OCTET_STREAM,
     'application/x-yaml' : APPLICATION_YAML,
@@ -1031,6 +1035,7 @@ mime_string_lookup = {
     APPLICATION_SAI2 : 'sai2',
     APPLICATION_KRITA : 'krita',
     APPLICATION_XCF : 'xcf',
+    APPLICATION_PROCREATE : 'procreate',
     APPLICATION_ZIP : 'zip',
     APPLICATION_RAR : 'rar',
     APPLICATION_7Z : '7z',
@@ -1103,10 +1108,11 @@ mime_mimetype_string_lookup = {
     APPLICATION_CBOR : 'application/cbor',
     APPLICATION_PDF : 'application/pdf',
     APPLICATION_PSD : 'image/vnd.adobe.photoshop',
-    APPLICATION_CLIP : 'application/clip',
-    APPLICATION_SAI2: 'application/sai2',
+    APPLICATION_CLIP : 'application/clip', # made up
+    APPLICATION_SAI2: 'application/sai2', # made up
     APPLICATION_KRITA: 'application/x-krita',
     APPLICATION_XCF : 'image/x-xcf',
+    APPLICATION_PROCREATE : 'application/x-procreate', # made up
     APPLICATION_ZIP : 'application/zip',
     APPLICATION_RAR : 'application/vnd.rar',
     APPLICATION_7Z : 'application/x-7z-compressed',
@@ -1181,6 +1187,7 @@ mime_ext_lookup = {
     APPLICATION_SAI2: '.sai2',
     APPLICATION_KRITA: '.kra',
     APPLICATION_XCF : '.xcf',
+    APPLICATION_PROCREATE : '.procreate',
     APPLICATION_ZIP : '.zip',
     APPLICATION_RAR : '.rar',
     APPLICATION_7Z : '.7z',
