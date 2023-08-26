@@ -2199,6 +2199,47 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         return response_context
         
+class HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( HydrusResourceClientAPIRestrictedAddTags ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES )
+        
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        tags = request.parsed_request_args.GetValue( 'tags', list, expected_list_type = str )
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+            
+        request.disconnect_callables.append( job_key.Cancel )
+
+        tags_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', tags )
+        
+        print(tags_to_service_keys_to_siblings_and_parents)
+
+        body_dict = { }
+
+        for tag, service_keys_to_siblings_parents in tags_to_service_keys_to_siblings_and_parents.items():
+
+            body_dict[tag] = {}
+
+            for service_key, siblings_parents in service_keys_to_siblings_parents.items():
+
+                body_dict[tag][service_key.hex()] = {
+                    'sibling_chain_members': list(siblings_parents[0]),
+                    'ideal_tag': siblings_parents[1],
+                    'descendants': list(siblings_parents[2]),
+                    'ancestors': list(siblings_parents[3])
+                }
+
+        print(body_dict)
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
     
 class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPIRestrictedAddTags ):
     
