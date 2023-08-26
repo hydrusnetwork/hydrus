@@ -99,7 +99,7 @@ warnings.filterwarnings( "ignore", "Metadata Warning", UserWarning )
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
 
-PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP }.union( HC.PIL_HEIF_MIMES )
+PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI }.union( HC.PIL_HEIF_MIMES )
 
 try:
     
