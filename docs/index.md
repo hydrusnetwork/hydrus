@@ -11,12 +11,7 @@ The hydrus network client is a desktop application written for Anonymous and oth
 
 The software is constantly being improved. I try to put out a new release every Wednesday by 8pm Eastern.
 
-Currently importable filetypes are:
-
-*   images - jpg, gif (including animated), png (including animated!), tiff, webp, bmp
-*   video - webm, mp4, mpeg, avi, mov, mkv, flv, wmv
-*   audio - mp3, flac, ogg, wma
-*   misc - swf, pdf, psd, clip, sai2, zip, rar, 7z
+Hydrus supports various filetypes for images, video and audio files, image project files, and more. A full list of supported filetypes is [here](filetypes.md).
 
 On the Windows and Linux builds, an MPV window is embedded to play video and audio smoothly. For files like pdf, which cannot currently be viewed in the client, it is easy to launch any file with your OS's default program.
 
