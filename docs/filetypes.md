@@ -2,6 +2,7 @@
 title: Supported Filetypes
 ---
 
+This is a list of all filetypes Hydrus can import. Hydrus determines the filetype based on examining the file itself rather than the extension or MIME type.
 
 ## Images
 
@@ -19,6 +20,7 @@ title: Supported Filetypes
 | heic       | `.heic`   | `image/heic`   |     ✅     |         ✅         |                                            |
 | avif       | `.avif`   | `image/avif`   |     ✅     |         ✅         |                                            |
 
+
 ## Animations
 
 | Filetype      | Extension | MIME type             | Thumbnails | Viewable in Hydrus | Notes |
@@ -28,6 +30,7 @@ title: Supported Filetypes
 | heif sequence | `.heifs`  | `image/heif-sequence` |     ✅     |         ✅         |       |
 | heic sequence | `.heics`  | `image/heic-sequence` |     ✅     |         ✅         |       |
 | avif sequence | `.avifs`  | `image/avif-sequence` |     ✅     |         ✅         |       |
+
 
 ## Video
 
@@ -43,6 +46,7 @@ title: Supported Filetypes
 | ogv       | `.ogv`    | `video/ogg`              |     ✅     |         ✅         |       |
 | realvideo | `.rm`     | `video/vnd.rn-realvideo` |     ✅     |         ✅         |       |
 | wmv       | `.wmv`    | `video/x-ms-wmv`         |     ✅     |         ✅         |       |
+
 
 ## Audio
 
@@ -60,6 +64,7 @@ title: Supported Filetypes
 | wavpack        | `.wv`     | `audio/wavpack`          |         ✅         |       |
 | wma            | `.wma`    | `audio/x-ms-wma`         |         ✅         |       |
 
+
 ## Applications
 
 | Filetype | Extension | MIME type                       | Thumbnails | Viewable in Hydrus | Notes |
@@ -67,8 +72,8 @@ title: Supported Filetypes
 | flash    | `.swf`    | `application/x-shockwave-flash` |     ✅     |         ❌         |       |
 | pdf      | `.pdf`    | `application/pdf`               |     ❌     |         ❌         |       |
 
-## Image Project Files
 
+## Image Project Files
 
 | Filetype  | Extension    | MIME type                     | Thumbnails | Viewable in Hydrus | Notes             |
 | --------- | ------------ | ----------------------------- | :--------: | :----------------: | ----------------- |
@@ -79,6 +84,7 @@ title: Supported Filetypes
 | svg       | `.svg`       | `image/svg+xml`               |     ✅     |         ❌         |                   |
 | xcf       | `.xcf`       | `application/x-xcf`           |     ❌     |         ❌         | GIMP              |
 | procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app     |
+
 
 ## Archives
 
