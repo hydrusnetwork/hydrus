@@ -90,4 +90,4 @@ title: Supported Filetypes
 | zip      | `.zip`    | `application/zip`             |       |
 
 
-[^1]: This filetype doesn't have an official or defacto media type, the one listed was made up for Hydrus.
+[^1]: This filetype doesn't have an official or de facto media type, the one listed was made up for Hydrus.
