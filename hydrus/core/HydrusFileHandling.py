@@ -126,7 +126,11 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             thumbnail_bytes = HydrusPSDHandling.GenerateThumbnailBytesFromPSDPath( path, target_resolution, clip_rect = clip_rect )
             
-        except:
+        except Exception as e:
+
+            HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
+            HydrusData.PrintException( e )
+            HydrusData.Print( 'Attempting ffmpeg PSD thumbnail fallback' )
             
             try:
                 
@@ -136,12 +140,15 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
                 
                 thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
                 
-            except: 
+            except Exception as e: 
                 
                 thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
                 
                 thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
-                
+            
+            finally:
+            
+                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     elif mime == HC.APPLICATION_CLIP:
@@ -427,8 +434,18 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
         
     elif mime == HC.APPLICATION_PSD:
-        
-        ( width, height ) = HydrusPSDHandling.GetPSDResolution( path )
+
+        try:
+            
+            ( width, height ) = HydrusPSDHandling.GetPSDResolution( path )
+
+        except Exception as e:
+
+            HydrusData.Print( 'Problem calculating resolution for "{}":'.format( path ) )
+            HydrusData.PrintException( e )
+            HydrusData.Print( 'Attempting PSD resolution fallback' )
+
+            ( width, height ) = HydrusPSDHandling.GetPSDResolutionFallback( path )
         
     elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
         
