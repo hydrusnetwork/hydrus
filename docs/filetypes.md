@@ -37,7 +37,7 @@ title: Supported Filetypes
 | webm      | `.webm`   | `video/webm`             |     ✅     |         ✅         |       |
 | matroska  | `.mkv`    | `video/x-matroska`       |     ✅     |         ✅         |       |
 | avi       | `.avi`    | `video/x-msvideo`        |     ✅     |         ✅         |       |
-| flv       | `.flv`    | `video/x-flv`            |     ✅     |         ❌         |       |
+| flv       | `.flv`    | `video/x-flv`            |     ✅     |         ✅         |       |
 | quicktime | `.mov`    | `video/quicktime`        |     ✅     |         ✅         |       |
 | mpeg      | `.mpeg`   | `video/mpeg`             |     ✅     |         ✅         |       |
 | ogv       | `.ogv`    | `video/ogg`              |     ✅     |         ✅         |       |
