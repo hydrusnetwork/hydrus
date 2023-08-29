@@ -81,6 +81,7 @@ title: Supported Filetypes
 | procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app     |
 
 ## Archives
+
 | Filetype | Extension | MIME type                     | Notes |
 | -------- | --------- | ----------------------------- | ----- |
 | 7z       | `.7z`     | `application/x-7z-compressed` |       |
