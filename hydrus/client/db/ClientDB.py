@@ -9462,7 +9462,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._Execute( 'CREATE TABLE IF NOT EXISTS main.client_files_subfolders ( prefix TEXT, location TEXT, purge INTEGER_BOOLEAN, PRIMARY KEY ( prefix, location ) );' )
                 
-                self._Execute( 'INSERT INTO client_files_subfolders SELECT prefix, location, ? FROM client_files_locations;', ( False, ) )
+                self._Execute( 'INSERT INTO client_files_subfolders SELECT DISTINCT prefix, location, ? FROM client_files_locations;', ( False, ) )
                 
                 self._Execute( 'DROP TABLE client_files_locations;' )
                 
