@@ -9,7 +9,8 @@ title: Changelog
 
 ## [Version 541](https://github.com/hydrusnetwork/hydrus/releases/tag/v541)
 
-* misc
+### misc
+
 * fixed the gallery downloader and thread watcher loading with the 'clear highlight' button enabled despite there being nothing currently highlighted
 * to fix the darkmode tooltips on the new Qt 6.5.2 on Windows (the text is stuck on a dark grey, which is unreadable in darkmodes), all the default darkmode styles now have an 'alternate-tooltip-colour' variant, which swaps out the tooltip background colour for the much brighter normal widget text colour
 * rewrote the apng parser to work much faster on large files. someone encountered a 200MB giga apng that locked up the client for minutes. now it takes a second or two (unfortunately it looks like that huge apng breaks mpv, but there we go)
@@ -41,10 +42,10 @@ title: Changelog
 ### file storage (mostly boring)
 
 * the file storage system is creaky and ugly to use. I have prepped some longer-term upgrades, mostly by writing new tools and cleaning and reworking existing code. I am nowhere near to done, but I'd like us to have four new features in the nearish future: 
-* - dynamic-length subfolders (where instead of a fixed set of 256 x00-xff folders, we can bump up to 4096 x000-xfff, and beyond, based on total number of files)
-* - setting fixed space limits on particular database locations (e.g. 'no more than 200GB of files here') to complement the current weight system
-* - permitting multiple valid locations for a particular subfolder prefix
-* - slow per-file background migration between valid subfolders, rather than the giganto folder-atomic program-blocking 'move files now' button in database maintenance
+  - dynamic-length subfolders (where instead of a fixed set of 256 x00-xff folders, we can bump up to 4096 x000-xfff, and beyond, based on total number of files)
+  - setting fixed space limits on particular database locations (e.g. 'no more than 200GB of files here') to complement the current weight system
+  - permitting multiple valid locations for a particular subfolder prefix
+  - slow per-file background migration between valid subfolders, rather than the giganto folder-atomic program-blocking 'move files now' button in database maintenance
 * so, it is pretty boring so far, but I did the following: 
 * wrote a new class to handle a specific file storage subfolder and spammed it everywhere, replacing previous location and prefix juggling
 * wrote some new tools to scan and check the coverage of multiple locations and dynamic-length subfolders

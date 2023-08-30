@@ -37,7 +37,7 @@
                 <li>
                     <h2 id="version_541"><a href="#version_541">version 541</a></h2>
                     <ul>
-                        <li>misc</li>
+                        <li><h3>misc</h3></li>
                         <li>fixed the gallery downloader and thread watcher loading with the 'clear highlight' button enabled despite there being nothing currently highlighted</li>
                         <li>to fix the darkmode tooltips on the new Qt 6.5.2 on Windows (the text is stuck on a dark grey, which is unreadable in darkmodes), all the default darkmode styles now have an 'alternate-tooltip-colour' variant, which swaps out the tooltip background colour for the much brighter normal widget text colour</li>
                         <li>rewrote the apng parser to work much faster on large files. someone encountered a 200MB giga apng that locked up the client for minutes. now it takes a second or two (unfortunately it looks like that huge apng breaks mpv, but there we go)</li>
