@@ -91,17 +91,24 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         s_pixel_hash = hashes_to_pixel_hashes[ s_hash ]
         c_pixel_hash = hashes_to_pixel_hashes[ c_hash ]
         
+        # this is not appropriate for, say, PSD files
+        other_file_is_pixel_png_appropriate_filetypes = {
+            HC.IMAGE_JPEG,
+            HC.IMAGE_GIF,
+            HC.IMAGE_WEBP
+        }
+        
         if s_pixel_hash == c_pixel_hash:
             
             is_a_pixel_dupe = True
             
-            if s_mime == HC.IMAGE_PNG and c_mime != HC.IMAGE_PNG:
+            if s_mime == HC.IMAGE_PNG and c_mime in other_file_is_pixel_png_appropriate_filetypes:
                 
                 statement = 'this is a pixel-for-pixel duplicate png!'
                 
                 score = -100
                 
-            elif s_mime != HC.IMAGE_PNG and c_mime == HC.IMAGE_PNG:
+            elif s_mime in other_file_is_pixel_png_appropriate_filetypes and c_mime == HC.IMAGE_PNG:
                 
                 statement = 'other file is a pixel-for-pixel duplicate png!'
                 

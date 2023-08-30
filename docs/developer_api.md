@@ -852,9 +852,9 @@ _Ask the client about how it will see certain tags._
 
 Restricted access: 
 :   YES. Add Tags permission needed.
-    
+
 Required Headers: n/a
-    
+
 Arguments (in percent-encoded JSON):
 :   
 *   `tags`: (a list of the tags you want cleaned)
@@ -876,12 +876,108 @@ Response:
     Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "\[no namespace\]:\[colon-prefixed-subtag\]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.
     
 
+### **GET `/add_tags/get_siblings_and_parents`** { id="add_tags_get_siblings_and_parents" }
+
+_Ask the client about tags' sibling and parent relationships._
+
+Restricted access: 
+:   YES. Add Tags permission needed.
+
+Required Headers: n/a
+
+Arguments (in percent-encoded JSON):
+:   
+*   `tags`: (a list of the tags you want info on)
+
+Example request:
+:   Given tags `#!json [ "blue eyes", "samus aran" ]`:
+    ```
+    /add_tags/get_siblings_and_parents?tags=%5B%22blue%20eyes%22%2C%20%22samus%20aran%22%5D
+    ```
+
+Response: 
+:  An Object showing all the display relationships for each tag on each service. Also [The Services Object](#services_object).
+```json title="Example response"
+{
+  "services" : "The Services Object"
+  "tags" : {
+    "blue eyes" : {
+      "6c6f63616c2074616773" : {
+        "ideal_tag" : "blue eyes",
+        "siblings" : [
+          "blue eyes",
+          "blue_eyes",
+          "blue eye",
+          "blue_eye"
+        ],
+        "descendants" : [],
+        "ancestors" : []
+      },
+      "877bfcf81f56e7e3e4bc3f8d8669f92290c140ba0acfd6c7771c5e1dc7be62d7": {
+        "ideal_tag" : "blue eyes",
+        "siblings" : [
+          "blue eyes"
+        ],
+        "descendants" : [],
+        "ancestors" : []
+      }
+    },
+    "samus aran" : {
+      "6c6f63616c2074616773" : {
+        "ideal_tag" : "character:samus aran",
+        "siblings" : [
+          "samus aran",
+          "samus_aran",
+          "character:samus aran"
+        ],
+        "descendants" : [
+          "character:samus aran (zero suit)"
+          "cosplay:samus aran"
+        ],
+        "ancestors" : [
+          "series:metroid",
+          "studio:nintendo"
+        ]
+      },
+      "877bfcf81f56e7e3e4bc3f8d8669f92290c140ba0acfd6c7771c5e1dc7be62d7": {
+        "ideal_tag" : "samus aran",
+        "siblings" : [
+          "samus aran"
+        ],
+        "descendants" : [
+          "zero suit samus",
+          "samus_aran_(cosplay)"
+        ],
+        "ancestors" : []
+      }
+    }
+  }
+}
+```
+    
+    This data is essentially how mappings in the `storage` `tag_display_type` become `display`.
+    
+    The hex keys are the service keys, which you will have seen elsewhere, like [GET /get\_files/file\_metadata](#get_files_file_metadata). Note that there is no concept of 'all known tags' here. If a tag is in 'my tags', it follows the rules of 'my tags', and then all the services' display tags are merged into the 'all known tags' pool for user display.
+    
+    **Also, the siblings and parents here are not just what is in _tags->manage tag siblings/parents_, they are the final computed combination of rules as set in _tags->manage where tag siblings and parents apply_.** The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.
+    
+    - `ideal_tag` is how the tag appears in normal display to the user.
+    - `siblings` is every tag that will show as the `ideal_tag`, including the `ideal_tag` itself.
+    - `descendants` is every child (and recursive grandchild, great-grandchild...) that implies the `ideal_tag`.
+    - `ancestors` is every parent (and recursive grandparent, great-grandparent...) that our tag implies.
+    
+    Every descendant and ancestor is an `ideal_tag` itself that may have its own siblings.
+    
+    Most situations are simple, but remember that siblings and parents in hydrus can get complex. If you want to display this data, I recommend you plan to support simple service-specific workflows, and add hooks to recognise conflicts and other difficulty and, when that happens, abandon ship (send the user back to Hydrus proper). Also, if you show summaries of the data anywhere, make sure you add a 'and 22 more...' overflow mechanism to your menus, since if you hit up 'azur lane' or 'pokemon', you are going to get hundreds of children.
+    
+    I generally warn you off computing sibling and parent mappings or counts yourself. The data from this request is best used for sibling and parent decorators on individual tags in a 'manage tags' presentation. The code that actually computes what siblings and parents look like in the 'display' context can be a pain at times, and I've already done it. Just run /search_tags or /file_metadata again after any changes you make and you'll get updated values.
+
 ### **GET `/add_tags/search_tags`** { id="add_tags_search_tags" }
 
 _Search the client for tags._
 
 Restricted access:
-:   YES. Search for Files permission needed.
+:   YES. Search for Files and Add Tags permission needed.
 
 Required Headers: n/a
 

@@ -5,7 +5,7 @@ pushd "%~dp0"
 where /q git
 IF ERRORLEVEL 1 (
 
-	SET /P gumpf=You do not seem to have git installed!
+	SET /P gumpf="You do not seem to have git installed!"
 	
 	popd
 	
@@ -17,4 +17,4 @@ git pull
 
 popd
 
-SET /P done=Done!
+SET /P done="Done!"

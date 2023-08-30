@@ -976,11 +976,11 @@ class Controller( HydrusController.HydrusController ):
     
     def InitClientFilesManager( self ):
         
-        def qt_code( missing_locations ):
+        def qt_code( missing_subfolders ):
             
             with ClientGUITopLevelWindowsPanels.DialogManage( None, 'repair file system' ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsManagement.RepairFileSystemPanel( dlg, missing_locations )
+                panel = ClientGUIScrolledPanelsManagement.RepairFileSystemPanel( dlg, missing_subfolders )
                 
                 dlg.SetPanel( panel )
                 
@@ -988,7 +988,7 @@ class Controller( HydrusController.HydrusController ):
                     
                     self.client_files_manager = ClientFiles.ClientFilesManager( self )
                     
-                    missing_locations = self.client_files_manager.GetMissing()
+                    missing_subfolders = self.client_files_manager.GetMissingSubfolders()
                     
                 else:
                     
@@ -996,18 +996,18 @@ class Controller( HydrusController.HydrusController ):
                     
                 
             
-            return missing_locations
+            return missing_subfolders
             
         
         self.client_files_manager = ClientFiles.ClientFilesManager( self )
         
         self.files_maintenance_manager = ClientFiles.FilesMaintenanceManager( self )
         
-        missing_locations = self.client_files_manager.GetMissing()
+        missing_subfolders = self.client_files_manager.GetMissingSubfolders()
         
-        while len( missing_locations ) > 0:
+        while len( missing_subfolders ) > 0:
             
-            missing_locations = self.CallBlockingToQt( self._splash, qt_code, missing_locations )
+            missing_subfolders = self.CallBlockingToQt( self._splash, qt_code, missing_subfolders )
             
         
     

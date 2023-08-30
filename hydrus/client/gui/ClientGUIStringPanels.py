@@ -1131,6 +1131,135 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+
+class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent, string_joiner: ClientStrings.StringJoiner, test_data: typing.Optional[ typing.Sequence[ str ] ] = None ):
+        
+        if test_data is None:
+            
+            test_data = []
+            
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        #
+        
+        self._controls_panel = ClientGUICommon.StaticBox( self, 'join text' )
+        
+        self._joiner = QW.QLineEdit( self._controls_panel )
+        self._joiner.setToolTip( 'The strings will be joined using this text. For instance, joining "A" "B" "C" with ", " will create "A, B, C". You can enter the empty string, which simply concatenates.' )
+        
+        self._join_tuple_size = ClientGUICommon.NoneableSpinCtrl( self._controls_panel, none_phrase = 'merge all into one string', min = 2 )
+        self._join_tuple_size.setToolTip( 'If you want to merge your strings in a 1-2, 1-2, 1-2 (e.g. you have domain-path pairs you want to joint into URLs), or 1-2-3, 1-2-3, 1-2-3 fashion, set the size of your groups here. If the remainder at the end of the list does not fit the group size, it is discarded.' )
+        
+        self._summary_st = ClientGUICommon.BetterStaticText( self._controls_panel )
+        
+        #
+        
+        self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
+        
+        self._example_strings = QW.QListWidget( self._example_panel )
+        self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
+        
+        self._example_strings_joined = QW.QListWidget( self._example_panel )
+        self._example_strings_joined.setSelectionMode( QW.QListWidget.NoSelection )
+        
+        #
+        
+        for s in test_data:
+            
+            self._example_strings.addItem( s )
+            
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'text to join with: ', self._joiner ) )
+        rows.append( ( 'join groups of size: ', self._join_tuple_size ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
+        
+        self._controls_panel.Add( gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._controls_panel.Add( self._summary_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._example_strings, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._example_strings_joined, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._example_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._controls_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._example_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        #
+        
+        self.SetValue( string_joiner )
+        
+        self._joiner.textChanged.connect( self._UpdateControls )
+        self._join_tuple_size.valueChanged.connect( self._UpdateControls )
+        
+    
+    def _GetValue( self ):
+        
+        joiner = self._joiner.text()
+        join_tuple_size = self._join_tuple_size.GetValue()
+        
+        string_joiner = ClientStrings.StringJoiner( joiner = joiner, join_tuple_size = join_tuple_size )
+        
+        return string_joiner
+        
+    
+    def _UpdateControls( self ):
+        
+        string_joiner = self._GetValue()
+        
+        self._summary_st.setText( string_joiner.ToString() )
+        
+        texts = [ self._example_strings.item( i ).text() for i in range( self._example_strings.count() ) ]
+        
+        try:
+            
+            joined_texts = string_joiner.Join( texts )
+            
+        except Exception as e:
+            
+            joined_texts = [ 'Error: {}'.format( e ) ]
+            
+        
+        self._example_strings_joined.clear()
+        
+        for s in joined_texts:
+            
+            self._example_strings_joined.addItem( s )
+            
+        
+    
+    def GetValue( self ):
+        
+        string_slicer = self._GetValue()
+        
+        return string_slicer
+        
+    
+    def SetValue( self, string_joiner: ClientStrings.StringJoiner ):
+        
+        joiner = string_joiner.GetJoiner()
+        join_tuple_size = string_joiner.GetJoinTupleSize()
+        
+        self._joiner.setText( joiner )
+        self._join_tuple_size.SetValue( join_tuple_size )
+        
+        self._UpdateControls()
+        
+    
+
 class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
@@ -1564,6 +1693,7 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
         self._ShowHideControls()
         
     
+
 class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, string_sorter: ClientStrings.StringSorter, test_data: typing.Optional[ typing.Sequence[ str ] ] = None ):
@@ -1724,6 +1854,7 @@ class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
     
+
 class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, string_splitter: ClientStrings.StringSplitter, example_string: str = '' ):
@@ -1847,6 +1978,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateControls()
         
     
+
 class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, string_tag_filter: ClientStrings.StringTagFilter, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
@@ -2039,6 +2171,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
             ( 'String Tag Filter', ClientStrings.StringTagFilter, 'An object that filters strings using tag rules.' ),
             ( 'String Converter', ClientStrings.StringConverter, 'An object that converts strings from one thing to another.' ),
             ( 'String Splitter', ClientStrings.StringSplitter, 'An object that breaks strings into smaller strings.' ),
+            ( 'String Joiner', ClientStrings.StringJoiner, 'An object that concatenates strings together.' ),
             ( 'String Sorter', ClientStrings.StringSorter, 'An object that sorts strings.' ),
             ( 'String Selector/Slicer', ClientStrings.StringSlicer, 'An object that filter-selects from the list of strings. Either absolute index position or a range.' )
         ]
@@ -2101,6 +2234,12 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
                 test_data = self._GetExampleTextsForStringSorter( string_processing_step )
                 
                 panel = EditStringSlicerPanel( dlg, string_processing_step, test_data = test_data )
+                
+            elif isinstance( string_processing_step, ClientStrings.StringJoiner ):
+                
+                test_data = self._GetExampleTextsForStringSorter( string_processing_step )
+                
+                panel = EditStringJoinerPanel( dlg, string_processing_step, test_data = test_data )
                 
             elif isinstance( string_processing_step, ClientStrings.StringTagFilter ):
                 

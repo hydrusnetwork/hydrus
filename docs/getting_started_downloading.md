@@ -14,7 +14,9 @@ The downloader is highly parallelisable, and while the default [bandwidth rules]
 It also takes a decent whack of CPU to import a file. You'll usually never notice this with just one hard drive import going, but if you have twenty different download queues all competing for database access and individual 0.1-second hits of heavy CPU work, you will discover your client starts to judder and lag. Keep it in mind, and you'll figure out what your computer is happy with. I also recommend you try to keep your total loaded files/urls to be under 20,000 to keep things snappy. Remember that you can pause your import queues, if you need to calm things down a bit.
 
 ## Downloader types
-There are a number of different downloader types, each with its own purpose. This is a short summary of them:  
+
+There are a number of different downloader types, each with its own purpose:  
+
 **URL download**
 :    Intended for single posts or images. (Works with the [API](client_api.md))
 
@@ -30,54 +32,15 @@ There are a number of different downloader types, each with its own purpose. Thi
 **Simple downloader**
 :    Intended for simple one-off jobs like grabbing all linked images in a page.
 
-# Import options
-In previous versions these were split into completely different windows called `file import options` and `tag import options` so if you see those anywhere, this is what they're talking about and not some hidden menu anywhere.
-
-## File import settings
-File import settings has a number of options that deal with the files being downloaded and what should happen to them. There's a few more tickboxes if you turn on advanced mode.
-
-![](images/file_import.png)
-
-**pre-import checks**
-:    Pretty self-explanatory for the most part. If you want to redownload previously deleted files turning off `exclude previously deleted files` will have Hydrus ignore deletion status.  
-A few of the options have more information if you hover over them.
-
-**import destinations**
-:    See [multiple file services](advanced_multiple_local_file_services.md), an advanced feature.
-
-**post import actions**
-:    See the [files section on filtering](getting_started_files.md#inbox-and-archive) for the first option, the other two have information if you hover over them.
-
-## Parsing
-By default, hydrus now starts with a local tag service called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click `import options`:
-
-![](images/tag_import_options_default.png)
-
-This is an important dialog, although you will not need to use it much. It governs which tags are parsed and where they go. To keep things easy to manage, a new downloader will refer to the 'default' tag import options for a website, but for now let's set some values just for this downloader:
-
-![](images/tag_import_options_specific.png)
-
-You can see that each tag service on your client has a separate section. If you add the PTR, that will get a new box too. A new client is set to _get all tags_ for 'downloader tags' service. Things can get much more complicated. Have a play around with the options here as you figure things out. Most of the controls have tooltips or longer explainers in sub-dialogs, so don't be afraid to try things.
-
-It is easy to get tens of thousands of tags by downloading this way. Different sites offer different kinds and qualities of tags, and the client's downloaders (which were designed by me, the dev, or a user) may parse all or only some of them. Many users like to just get everything on offer, but others only ever want, say, `creator`, `series`, and `character` tags. If you feel brave, click that 'all tags' button, which will take you into hydrus's advanced 'tag filter', which allows you to select which of the incoming list of tags will be added.
-
-The blacklist button will let you skip downloading files that have certain tags (perhaps you would like to auto-skip all images with `gore`, `scat`, or `diaper`?), again using the tag filter, while the whitelist enables you to only allow files that have at least one of a set of tags. The 'additional tags' adds some fixed personal tags to all files coming in--for instance, you might like to add 'process into favourites' to your 'my tags' for some query you really like so you can find those files again later and process them separately. That little 'cog' icon button can also do some advanced things.
-
-To edit the defaults, hit up _network->downloaders->manage default tag import options_. You should do this as you get a better idea of your preferences. You can set them for all file posts generally, all watchers, and for specific sites as well.
-
-
-!!! warning
-    The file limit and file/tag import options on the upper panel, if changed, will only apply to **new** queries. If you want to change the options for an existing queue, either do so on its highlight panel below or use the 'set options to queries' button.
-
-## URL download
+### URL download
 The **url downloader** works like the gallery downloader but does not do searches. You can paste downloadable URLs to it, and it will work through them as one list. Dragging and dropping recognisable URLs onto the client (e.g. from your web browser) will also spawn and use this downloader.
 
 The button next to the input field lets you paste multiple URLs at once such as if you've copied from a document or browser bookmarks. The URLs need to be newline separated.
 
-### API
+#### API
 If you use [API-connected](client_api.md) programs such as the Hydrus Companion, then any [non-watchable](downloader_url_classes.md#url_types) URLs sent to Hydrus through them will end up in an URL downloader page, the specifics depending on the program's settings. You can't use this to force Hydrus to download paged galleries since the URL downloader page doesn't support traversing to the next page, use the gallery downloader for this.
 
-## Gallery download
+### Gallery download
 ![](images/downloader_page.png)
 
 The gallery page can download from multiple sources at the same time. Each entry in the list represents a basic combination of two things:
@@ -100,7 +63,7 @@ _Note that some sites only serve 25 or 50 pages of results, despite their indice
 
 **In general, particularly when starting out, artist searches are best.** They are usually fewer than a thousand files and have fairly uniform quality throughout.
 
-## Subscriptions { id="subscriptions" }
+### Subscriptions { id="subscriptions" }
 Let's say you found an artist you like. You downloaded everything of theirs from some site, but every week, one or two new pieces is posted. You'd like to keep up with the new stuff, but you don't want to manually make a new download job every week for every single artist you like.
 
 Subscriptions are a way to automatically recheck a good query in future, to keep up with new files. Many users come to use them. You set up a number of saved queries, and the client will 'sync' with the latest files in the gallery and download anything new, just as if you were running the download yourself.
@@ -112,7 +75,7 @@ Subscriptions only work for booru-like galleries that put the newest files first
 
 It is important to note that while subscriptions can have multiple queries (even hundreds!), they _generally_ only work on one site. Expect to create one subscription for safebooru, one for artstation, one for paheal, and so on for every site you care about. Advanced users may be able to think of ways to get around this, but I recommend against it as it throws off some of the internal check timing calculations.
 
-### Setting up subscriptions
+#### Setting up subscriptions
 
 Here's the dialog, which is under _network->manage subscriptions_:
 
@@ -136,7 +99,7 @@ Despite all the controls, the basic idea is simple: Up top, I have selected the 
 
 You might want to put subscriptions off until you are more comfortable with galleries. There is more help [here](getting_started_subscriptions.md).
 
-## Watchers
+### Watchers
 If you are an imageboard user, try going to a thread you like and drag-and-drop its URL (straight from your web browser's address bar) onto the hydrus client. It should open up a new 'watcher' page and import the thread's files!
 
 ![](images/watcher_page.png)
@@ -145,11 +108,59 @@ With only one URL to check, watchers are a little simpler than gallery searches,
 
 In general, you can leave the checker options alone, but you might like to revisit them if you are always visiting faster or slower boards and find you are missing files or getting DEAD too early.
 
-### API
+#### API
 If you use [API-connected](client_api.md) programs such as the Hydrus Companion, then any [watchable](downloader_url_classes.md#url_types) URLs sent to Hydrus through them will end up in a watcher page, the specifics depending on the program's settings.
 
-## Simple downloader
+### Simple downloader
 The **simple downloader** will do very simple parsing for unusual jobs. If you want to download all the images in a page, or all the image link destinations, this is the one to use. There are several default parsing rules to choose from, and if you learn the downloader system yourself, it will be easy to make more.
+
+## Import options
+Every importer in Hydrus has some 'import options' that change what is allowed, what is blacklisted, and whether tags or notes should be saved.
+
+In previous versions these were split into completely different windows called `file import options` and `tag import options` so if you see those anywhere, this is what they're talking about and not some hidden menu anywhere.
+
+Importers that download from websites rely on a flexible 'defaults' system, so you do not have to set them up every time you start a new downloader. While you should play around with your import options, once you know what works for you, you should set that as the default under _network->downloaders->manage default import options_. You can set them for all file posts generally, all watchers, and for specific sites as well.
+
+### File import options
+This deals with the files being downloaded and what should happen to them. There's a few more tickboxes if you turn on advanced mode.
+
+![](images/file_import.png)
+
+**pre-import checks**
+:    Pretty self-explanatory for the most part. If you want to redownload previously deleted files turning off `exclude previously deleted files` will have Hydrus ignore deletion status.  
+A few of the options have more information if you hover over them.
+
+**import destinations**
+:    See [multiple file services](advanced_multiple_local_file_services.md), an advanced feature.
+
+**post import actions**
+:    See the [files section on filtering](getting_started_files.md#inbox-and-archive) for the first option, the other two have information if you hover over them.
+
+### Tag Parsing
+By default, hydrus now starts with a local tag service called 'downloader tags' and it will parse (get) all the tags from normal gallery sites and put them in this service. You don't have to do anything, you will get some decent tags. As you use the client, you will figure out which tags you like and where you want them. On the downloader page, click `import options`:
+
+![](images/tag_import_options_default.png)
+
+This is an important dialog, although you will not need to use it much. It governs which tags are parsed and where they go. To keep things easy to manage, a new downloader will refer to the 'default' tag import options for a website, but for now let's set some values just for this downloader:
+
+![](images/tag_import_options_specific.png)
+
+You can see that each tag service on your client has a separate section. If you add the PTR, that will get a new box too. A new client is set to _get all tags_ for 'downloader tags' service. Things can get much more complicated. Have a play around with the options here as you figure things out. Most of the controls have tooltips or longer explainers in sub-dialogs, so don't be afraid to try things.
+
+It is easy to get tens of thousands of tags by downloading this way. Different sites offer different kinds and qualities of tags, and the client's downloaders (which were designed by me, the dev, or a user) may parse all or only some of them. Many users like to just get everything on offer, but others only ever want, say, `creator`, `series`, and `character` tags. If you feel brave, click that 'all tags' button, which will take you into hydrus's advanced 'tag filter', which allows you to select which of the incoming list of tags will be added.
+
+The blacklist button will let you skip downloading files that have certain tags (perhaps you would like to auto-skip all images with `gore`, `scat`, or `diaper`?), again using the tag filter, while the whitelist enables you to only allow files that have at least one of a set of tags. The 'additional tags' adds some fixed personal tags to all files coming in--for instance, you might like to add 'process into favourites' to your 'my tags' for some query you really like so you can find those files again later and process them separately. That little 'cog' icon button can also do some advanced things.
+
+!!! warning
+    The file limit and import options on the upper panel of a gallery or watcher page, if changed, will only apply to **new** queries. If you want to change the options for an existing queue, either do so on its highlight panel below or use the 'set options to queries' button.
+
+### Note Parsing
+
+Hydrus alsos parse 'notes' from some sites. This is a young feature, and a little advanced at times, but it generally means the comments that artists leave on certain gallery sites, or something like a tweet text. Notes are editable by you and appear in a hovering window on the right side of the media viewer.
+
+![](images/note_import_options_normal.png)
+
+Most of the controls here ensure that successive parses do not duplicate existing notes. The default settings are fine for all normal purposes, and you can leave them alone unless you know you want something special (e.g. turning note parsing off completely).
 
 ## Bandwidth
 

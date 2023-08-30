@@ -1,6 +1,5 @@
 import collections
 import os
-import queue
 import random
 import threading
 import time
@@ -20,6 +19,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSVGHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
@@ -212,8 +212,6 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
     
     file_paths = []
     
-    num_sidecars = 0
-    
     paths_to_process = list( raw_paths )
     
     while len( paths_to_process ) > 0:
@@ -303,6 +301,7 @@ def GetAllFilePaths( raw_paths, do_human_sort = True, clear_out_sidecars = True 
     
     return ( file_paths, num_sidecars )
     
+
 class ClientFilesManager( object ):
     
     def __init__( self, controller ):
@@ -311,27 +310,47 @@ class ClientFilesManager( object ):
         
         self._rwlock = ClientThreading.FileRWLock()
         
-        self._prefixes_to_locations = {}
+        self._prefixes_to_client_files_subfolders = collections.defaultdict( list )
+        self._smallest_prefix = 2
+        self._largest_prefix = 2
         
         self._physical_file_delete_wait = threading.Event()
         
         self._locations_to_free_space = {}
         
         self._bad_error_occurred = False
-        self._missing_locations = set()
+        self._missing_subfolders = set()
         
         self._Reinit()
         
         self._controller.sub( self, 'shutdown', 'shutdown' )
         
     
+    def _GetCurrentSubfolderLocations( self, only_files = False ):
+        
+        known_locations = set()
+        
+        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
+            
+            if only_files and not prefix.startswith( 'f' ):
+                
+                continue
+                
+            
+            for subfolder in subfolders:
+                
+                known_locations.add( subfolder.location )
+                
+            
+        
+        return known_locations
+        
+    
     def _GetFileStorageFreeSpace( self, hash: bytes ) -> int:
         
-        hash_encoded = hash.hex()
+        subfolder = self._GetSubfolderForFile( hash, 'f' )
         
-        prefix = 'f' + hash_encoded[:2]
-        
-        location = self._prefixes_to_locations[ prefix ]
+        location = subfolder.location
         
         if location in self._locations_to_free_space:
             
@@ -365,6 +384,52 @@ class ClientFilesManager( object ):
             
         
         return free_space
+        
+    
+    def _GetPossibleSubfoldersForFile( self, hash: bytes, prefix_type: str ) -> typing.List[ ClientFilesPhysical.FilesStorageSubfolder ]:
+        
+        hash_encoded = hash.hex()
+        
+        result = []
+        
+        for i in range( self._smallest_prefix, self._largest_prefix + 1 ):
+            
+            prefix = prefix_type + hash_encoded[ : i ]
+            
+            if prefix in self._prefixes_to_client_files_subfolders:
+                
+                result.extend( self._prefixes_to_client_files_subfolders[ prefix ] )
+                
+            
+        
+        return result
+        
+    
+    def _GetAllSubfolders( self ):
+        
+        result = []
+        
+        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
+            
+            result.extend( subfolders )
+            
+        
+        return result
+        
+    
+    def _GetSubfolderForFile( self, hash: bytes, prefix_type: str ) -> ClientFilesPhysical.FilesStorageSubfolder:
+        
+        # TODO: So this will be a crux of the more complicated system
+        # might even want a media result eventually, for various 'ah, because it is archived, it should go here'
+        # for now it is a patch to navigate multiples into our currently mutually exclusive storage dataset
+        
+        # we probably need to break this guy into variants of 'getpossiblepaths' vs 'getidealpath' for different callers
+        # getideal would be testing purge states and client files locations max num bytes stuff
+        # there should, in all circumstances, be a place to put a file, so there should always be at least one non-num_bytes'd location with weight to handle 100% coverage of the spillover
+        # if we are over the limit on the place the directory is supposed to be, I think we are creating a stub subfolder in the spillover place and writing there, but that'll mean saving a new subfolder, so be careful
+        # maybe the spillover should always have 100% coverage no matter what, and num_bytes'd locations should always just have extensions. something to think about
+        
+        return self._GetPossibleSubfoldersForFile( hash, prefix_type )[0]
         
     
     def _HandleCriticalDriveError( self ):
@@ -436,13 +501,9 @@ class ClientFilesManager( object ):
             
         except Exception as e:
             
-            hash_encoded = hash.hex()
+            subfolder = self._GetSubfolderForFile( hash, 't' )
             
-            prefix = 't' + hash_encoded[:2]
-            
-            location = self._prefixes_to_locations[ prefix ]    
-            
-            thumb_dir = os.path.join( location, prefix )
+            thumb_dir = subfolder.GetDirectory()
             
             if not os.path.exists( thumb_dir ):
                 
@@ -468,9 +529,7 @@ class ClientFilesManager( object ):
         
         fixes_counter = collections.Counter()
         
-        known_locations = set()
-        
-        known_locations.update( self._prefixes_to_locations.values() )
+        known_locations = self._GetCurrentSubfolderLocations()
         
         ( locations_to_ideal_weights, thumbnail_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
@@ -481,7 +540,10 @@ class ClientFilesManager( object ):
             known_locations.add( thumbnail_override )
             
         
-        for ( missing_location, prefix ) in self._missing_locations:
+        for subfolder in self._missing_subfolders:
+            
+            missing_location = subfolder.location
+            prefix = subfolder.prefix
             
             potential_correct_locations = []
             
@@ -504,7 +566,7 @@ class ClientFilesManager( object ):
                 
                 correct_location = potential_correct_locations[0]
                 
-                correct_rows.append( ( prefix, correct_location ) )
+                correct_rows.append( ( prefix, missing_location, correct_location ) )
                 
                 fixes_counter[ ( missing_location, correct_location ) ] += 1
                 
@@ -523,13 +585,13 @@ class ClientFilesManager( object ):
         
         if len( correct_rows ) > 0:
             
-            summaries = sorted( ( '{} moved from {} to {}'.format( HydrusData.ToHumanInt( count ), missing_location, correct_location ) for ( ( missing_location, correct_location ), count ) in fixes_counter.items() ) )
+            summaries = sorted( ( '{} folders seem to have moved from {} to {}'.format( HydrusData.ToHumanInt( count ), missing_location, correct_location ) for ( ( missing_location, correct_location ), count ) in fixes_counter.items() ) )
             
-            summary_message = 'Some client file folders were missing, but they seem to be in other known locations! The folders are:'
+            summary_message = 'Some client file folders were missing, but they appear to be in other known locations! The folders are:'
             summary_message += os.linesep * 2
             summary_message += os.linesep.join( summaries )
             summary_message += os.linesep * 2
-            summary_message += 'Assuming you did this on purpose, Hydrus is ready to update its internal knowledge to reflect these new mappings as soon as this dialog closes. If you know these proposed fixes are incorrect, terminate the program now.'
+            summary_message += 'Assuming you did this on purpose, or hydrus recently inserted stub values after database corruption, Hydrus is ready to update its internal knowledge to reflect these new mappings as soon as this dialog closes. If you know these proposed fixes are incorrect, terminate the program now.'
             
             HydrusData.Print( summary_message )
             
@@ -585,13 +647,13 @@ class ClientFilesManager( object ):
         
         self._WaitOnWakeup()
         
+        subfolder = self._GetSubfolderForFile( hash, 'f' )
+        
+        file_dir = subfolder.GetDirectory()
+        
         hash_encoded = hash.hex()
         
-        prefix = 'f' + hash_encoded[:2]
-        
-        location = self._prefixes_to_locations[ prefix ]
-        
-        path = os.path.join( location, prefix, hash_encoded + HC.mime_ext_lookup[ mime ] )
+        path = os.path.join( file_dir, hash_encoded + HC.mime_ext_lookup[ mime ] )
         
         return path
         
@@ -600,13 +662,13 @@ class ClientFilesManager( object ):
         
         self._WaitOnWakeup()
         
+        subfolder = self._GetSubfolderForFile( hash, 't' )
+        
+        thumb_dir = subfolder.GetDirectory()
+        
         hash_encoded = hash.hex()
         
-        prefix = 't' + hash_encoded[:2]
-        
-        location = self._prefixes_to_locations[ prefix ]
-        
-        path = os.path.join( location, prefix, hash_encoded ) + '.thumbnail'
+        path = os.path.join( thumb_dir, hash_encoded ) + '.thumbnail'
         
         return path
         
@@ -639,51 +701,9 @@ class ClientFilesManager( object ):
         return thumbnail_bytes
         
     
-    def _GetRecoverTuple( self ):
-        
-        all_locations = { location for location in self._prefixes_to_locations.values() }
-        
-        all_prefixes = list(self._prefixes_to_locations.keys())
-        
-        for possible_location in all_locations:
-            
-            if not os.path.exists( possible_location ):
-                
-                continue
-                
-            
-            for prefix in all_prefixes:
-                
-                correct_location = self._prefixes_to_locations[ prefix ]
-                
-                if correct_location == possible_location:
-                    
-                    continue
-                    
-                
-                if os.path.exists( os.path.join( possible_location, prefix ) ):
-                    
-                    if not os.path.exists( correct_location ):
-                        
-                        continue
-                        
-                    
-                    if os.path.samefile( possible_location, correct_location ):
-                        
-                        continue
-                        
-                    
-                    recoverable_location = possible_location
-                    
-                    return ( prefix, recoverable_location, correct_location )
-                    
-                
-            
-        
-        return None
-        
-    
     def _GetRebalanceTuple( self ):
+        
+        # TODO: obviously this will change radically when we move to multiple folders for real and background migration. hacks for now
         
         ( locations_to_ideal_weights, thumbnail_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
@@ -693,16 +713,20 @@ class ClientFilesManager( object ):
         
         current_locations_to_normalised_weights = collections.defaultdict( lambda: 0 )
         
-        file_prefixes = [ prefix for prefix in self._prefixes_to_locations if prefix.startswith( 'f' ) ]
+        file_prefixes = [ prefix for prefix in self._prefixes_to_client_files_subfolders.keys() if prefix.startswith( 'f' ) ]
         
         for file_prefix in file_prefixes:
             
-            location = self._prefixes_to_locations[ file_prefix ]
+            subfolders = self._prefixes_to_client_files_subfolders[ file_prefix ]
+            
+            subfolder = subfolders[0]
+            
+            location = subfolder.location
             
             current_locations_to_normalised_weights[ location ] += 1.0 / 256
             
         
-        for location in list(current_locations_to_normalised_weights.keys()):
+        for location in list( current_locations_to_normalised_weights.keys() ):
             
             if location not in ideal_locations_to_normalised_weights:
                 
@@ -747,7 +771,11 @@ class ClientFilesManager( object ):
             
             for file_prefix in file_prefixes:
                 
-                location = self._prefixes_to_locations[ file_prefix ]
+                subfolders = self._prefixes_to_client_files_subfolders[ file_prefix ]
+                
+                subfolder = subfolders[0]
+                
+                location = subfolder.location
                 
                 if location == overweight_location:
                     
@@ -757,6 +785,9 @@ class ClientFilesManager( object ):
             
         else:
             
+            # TODO: this needs work too. either we guarantee we split thumb and file dirs at the same time, so we know there is a matching file prefix for any thumb one,
+            # or we learn how to match thumb dirs with their fxx000 parent or whatever, _and vice versa_
+            
             for hex_prefix in HydrusData.IterateHexPrefixes():
                 
                 thumbnail_prefix = 't' + hex_prefix
@@ -765,14 +796,22 @@ class ClientFilesManager( object ):
                     
                     file_prefix = 'f' + hex_prefix
                     
-                    correct_location = self._prefixes_to_locations[ file_prefix ]
+                    subfolders = self._prefixes_to_client_files_subfolders[ file_prefix ]
+                    
+                    subfolder = subfolders[0]
+                    
+                    correct_location = subfolder.location
                     
                 else:
                     
                     correct_location = thumbnail_override
                     
                 
-                current_thumbnails_location = self._prefixes_to_locations[ thumbnail_prefix ]
+                subfolders = self._prefixes_to_client_files_subfolders[ thumbnail_prefix ]
+                
+                subfolder = subfolders[0]
+                
+                current_thumbnails_location = subfolder.location
                 
                 if current_thumbnails_location != correct_location:
                     
@@ -786,17 +825,20 @@ class ClientFilesManager( object ):
     
     def _IterateAllFilePaths( self ):
         
-        for ( prefix, location ) in list(self._prefixes_to_locations.items()):
+        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
             
             if prefix.startswith( 'f' ):
                 
-                dir = os.path.join( location, prefix )
-                
-                filenames = list( os.listdir( dir ) )
-                
-                for filename in filenames:
+                for subfolder in subfolders:
                     
-                    yield os.path.join( dir, filename )
+                    files_dir = subfolder.GetDirectory()
+                    
+                    filenames = list( os.listdir( files_dir ) )
+                    
+                    for filename in filenames:
+                        
+                        yield os.path.join( files_dir, filename )
+                        
                     
                 
             
@@ -804,17 +846,20 @@ class ClientFilesManager( object ):
     
     def _IterateAllThumbnailPaths( self ):
         
-        for ( prefix, location ) in list(self._prefixes_to_locations.items()):
+        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
             
             if prefix.startswith( 't' ):
                 
-                dir = os.path.join( location, prefix )
-                
-                filenames = list( os.listdir( dir ) )
-                
-                for filename in filenames:
+                for subfolder in subfolders:
                     
-                    yield os.path.join( dir, filename )
+                    files_dir = subfolder.GetDirectory()
+                    
+                    filenames = list( os.listdir( files_dir ) )
+                    
+                    for filename in filenames:
+                        
+                        yield os.path.join( files_dir, filename )
+                        
                     
                 
             
@@ -832,17 +877,16 @@ class ClientFilesManager( object ):
                 
             
         
-        hash_encoded = hash.hex()
+        subfolders = self._GetPossibleSubfoldersForFile( hash, 'f' )
         
-        prefix = 'f' + hash_encoded[:2]
-        
-        location = self._prefixes_to_locations[ prefix ]
-        
-        subdir = os.path.join( location, prefix )
-        
-        if not os.path.exists( subdir ):
+        for subfolder in subfolders:
             
-            raise HydrusExceptions.DirectoryMissingException( 'The directory {} was not found! Reconnect the missing location or shut down the client immediately!'.format( subdir ) )
+            files_dir = subfolder.GetDirectory()
+            
+            if not os.path.exists( files_dir ):
+                
+                raise HydrusExceptions.DirectoryMissingException( 'The directory {} was not found! Reconnect the missing location or shut down the client immediately!'.format( files_dir ) )
+                
             
         
         raise HydrusExceptions.FileMissingException( 'File for ' + hash.hex() + ' not found!' )
@@ -850,24 +894,39 @@ class ClientFilesManager( object ):
     
     def _Reinit( self ):
         
-        self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
+        self._ReinitSubfolders()
         
         if HG.client_controller.IsFirstStart():
             
             try:
                 
-                for ( prefix, location ) in list( self._prefixes_to_locations.items() ):
+                dirs_to_test = set()
+                
+                for subfolder in self._GetAllSubfolders():
                     
-                    HydrusPaths.MakeSureDirectoryExists( location )
+                    dirs_to_test.add( subfolder.location )
+                    dirs_to_test.add( subfolder.GetDirectory() )
                     
-                    subdir = os.path.join( location, prefix )
+                
+                for dir_to_test in dirs_to_test:
                     
-                    HydrusPaths.MakeSureDirectoryExists( subdir )
+                    try:
+                        
+                        HydrusPaths.MakeSureDirectoryExists( dir_to_test )
+                        
+                    except:
+                        
+                        text = 'Attempting to create the database\'s client_files folder structure in {} failed!'.format( dir_to_test )
+                        
+                        self._controller.SafeShowCriticalMessage( 'unable to create file structure', text )
+                        
+                        raise
+                        
                     
                 
             except:
                 
-                text = 'Attempting to create the database\'s client_files folder structure in {} failed!'.format( location )
+                text = 'Attempting to create the database\'s client_files folder structure failed!'
                 
                 self._controller.SafeShowCriticalMessage( 'unable to create file structure', text )
                 
@@ -878,22 +937,22 @@ class ClientFilesManager( object ):
             
             self._ReinitMissingLocations()
             
-            if len( self._missing_locations ) > 0:
+            if len( self._missing_subfolders ) > 0:
                 
                 self._AttemptToHealMissingLocations()
                 
-                self._prefixes_to_locations = self._controller.Read( 'client_files_locations' )
+                self._ReinitSubfolders()
                 
                 self._ReinitMissingLocations()
                 
             
-            if len( self._missing_locations ) > 0:
+            if len( self._missing_subfolders ) > 0:
                 
                 self._bad_error_occurred = True
                 
                 #
                 
-                missing_dict = HydrusData.BuildKeyToListDict( self._missing_locations )
+                missing_dict = HydrusData.BuildKeyToListDict( [ ( subfolder.location, subfolder.prefix ) for subfolder in self._missing_subfolders ] )
                 
                 missing_locations = sorted( missing_dict.keys() )
                 
@@ -913,7 +972,7 @@ class ClientFilesManager( object ):
                 
                 #
                 
-                if len( self._missing_locations ) > 4:
+                if len( self._missing_subfolders ) > 4:
                     
                     text = 'When initialising the client files manager, some file locations did not exist! They have all been written to the log!'
                     text += os.linesep * 2
@@ -938,21 +997,34 @@ class ClientFilesManager( object ):
             
         
     
+    def _ReinitSubfolders( self ):
+        
+        subfolders = self._controller.Read( 'client_files_subfolders' )
+        
+        self._prefixes_to_client_files_subfolders = collections.defaultdict( list )
+        
+        for subfolder in subfolders:
+            
+            self._prefixes_to_client_files_subfolders[ subfolder.prefix ].append( subfolder )
+            
+        
+        self._smallest_prefix = min( ( len( prefix ) for prefix in self._prefixes_to_client_files_subfolders.keys() ) ) - 1
+        self._largest_prefix = max( ( len( prefix ) for prefix in self._prefixes_to_client_files_subfolders.keys() ) ) - 1
+        
+    
     def _ReinitMissingLocations( self ):
         
-        self._missing_locations = set()
+        self._missing_subfolders = set()
         
-        for ( prefix, location ) in self._prefixes_to_locations.items():
+        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
             
-            if os.path.exists( location ):
+            for subfolder in subfolders:
                 
-                if os.path.exists( os.path.join( location, prefix ) ):
+                if not os.path.exists( subfolder.GetDirectory() ):
                     
-                    continue
+                    self._missing_subfolders.add( subfolder )
                     
                 
-            
-            self._missing_locations.add( ( location, prefix ) )
             
         
     
@@ -977,7 +1049,7 @@ class ClientFilesManager( object ):
             
             client_files_default = os.path.join( db_dir, 'client_files' )
             
-            all_locations = set( self._prefixes_to_locations.values() )
+            all_locations = self._GetCurrentSubfolderLocations()
             
             return False not in ( location.startswith( client_files_default ) for location in all_locations )
             
@@ -1329,17 +1401,7 @@ class ClientFilesManager( object ):
         
         with self._rwlock.read:
             
-            locations = set()
-            
-            for ( prefix, location ) in self._prefixes_to_locations.items():
-                
-                if prefix.startswith( 'f' ):
-                    
-                    locations.add( location )
-                    
-                
-            
-            return locations
+            return self._GetCurrentSubfolderLocations( only_files = True )
             
         
     
@@ -1383,9 +1445,9 @@ class ClientFilesManager( object ):
             
         
     
-    def GetMissing( self ):
+    def GetMissingSubfolders( self ):
         
-        return self._missing_locations
+        return self._missing_subfolders
         
     
     def GetThumbnailPath( self, media ):
@@ -1461,33 +1523,6 @@ class ClientFilesManager( object ):
                     self._Reinit()
                     
                     rebalance_tuple = self._GetRebalanceTuple()
-                    
-                    time.sleep( 0.01 )
-                    
-                
-                recover_tuple = self._GetRecoverTuple()
-                
-                while recover_tuple is not None:
-                    
-                    if job_key.IsCancelled():
-                        
-                        break
-                        
-                    
-                    ( prefix, recoverable_location, correct_location ) = recover_tuple
-                    
-                    text = 'Recovering \'' + prefix + '\' from ' + recoverable_location + ' to ' + correct_location
-                    
-                    HydrusData.Print( text )
-                    
-                    job_key.SetStatusText( text )
-                    
-                    recoverable_path = os.path.join( recoverable_location, prefix )
-                    correct_path = os.path.join( correct_location, prefix )
-                    
-                    HydrusPaths.MergeTree( recoverable_path, correct_path )
-                    
-                    recover_tuple = self._GetRecoverTuple()
                     
                     time.sleep( 0.01 )
                     
@@ -1734,6 +1769,8 @@ class FilesMaintenanceManager( object ):
         
         file_is_missing = False
         file_is_invalid = False
+        
+        path = ''
         
         try:
             
@@ -2330,8 +2367,6 @@ class FilesMaintenanceManager( object ):
             big_pauser = HydrusThreading.BigJobPauser( wait_time = 0.8 )
             
             last_time_jobs_were_cleared = HydrusTime.GetNow()
-            
-            num_to_do = sum( len( job_types ) for ( media_result, job_types ) in media_results_to_job_types.items() )
             
             for ( media_result, job_types ) in media_results_to_job_types.items():
                 

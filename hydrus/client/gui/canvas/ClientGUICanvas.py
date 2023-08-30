@@ -1322,6 +1322,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
+
 class MediaContainerDragClickReportingFilter( QC.QObject ):
     
     def __init__( self, parent: Canvas ):

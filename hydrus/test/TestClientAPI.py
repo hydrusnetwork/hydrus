@@ -2175,6 +2175,131 @@ class TestClientAPI( unittest.TestCase ):
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
     
+    def _test_add_tags_get_tag_siblings_and_parents( self, connection, set_up_permissions ):
+        
+        db_data = {}
+        
+        db_data[ 'blue eyes' ] = {
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : [
+                {
+                    "blue eyes",
+                    "blue_eyes",
+                    "blue eye",
+                    "blue_eye"
+                },
+                'blue eyes',
+                set(),
+                set()
+            ],
+            HG.test_controller.example_tag_repo_service_key : [
+                { 'blue eyes' },
+                'blue eyes',
+                set(),
+                set()
+            ]
+        }
+        
+        db_data[ 'samus aran' ] = {
+            CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : [
+                {
+                    "samus aran",
+                    "samus_aran",
+                    "character:samus aran"
+                },
+                'character:samus aran',
+                {
+                    "character:samus aran (zero suit)"
+                    "cosplay:samus aran"
+                },
+                {
+                    "series:metroid",
+                    "studio:nintendo"
+                }
+            ],
+            HG.test_controller.example_tag_repo_service_key : [
+                { 'samus aran' },
+                'samus aran',
+                {
+                    "zero suit samus",
+                    "samus_aran_(cosplay)"
+                },
+                set()
+            ]
+        }
+        
+        HG.test_controller.SetRead( 'tag_siblings_and_parents_lookup', db_data )
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'add_urls' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/add_tags/get_siblings_and_parents?tags={}'.format( urllib.parse.quote( json.dumps( [ 'blue eyes', 'samus aran' ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 403 )
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/add_tags/get_siblings_and_parents?tags={}'.format( urllib.parse.quote( json.dumps( [ 'blue eyes', 'samus aran' ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_answer = {
+            'services' : GetExampleServicesDict(),
+            'tags' : {}
+        }
+        
+        for ( tag, data ) in db_data.items():
+            
+            tag_dict = {}
+            
+            for ( service_key, ( siblings, ideal_tag, descendants, ancestors ) ) in data.items():
+                
+                tag_dict[ service_key.hex() ] = {
+                    'siblings' : list( siblings ),
+                    'ideal_tag' : ideal_tag,
+                    'descendants' : list( descendants ),
+                    'ancestors' : list( ancestors )
+                }
+                
+            
+            expected_answer[ 'tags' ][ tag ] = tag_dict
+            
+        
+        self.assertEqual( expected_answer, d )
+        
+    
     def _test_add_tags_search_tags( self, connection, set_up_permissions ):
         
         predicates = [
@@ -5594,6 +5719,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_ratings( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_tags_search_tags( connection, set_up_permissions )
+        self._test_add_tags_get_tag_siblings_and_parents( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
         self._test_manage_duplicates( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )

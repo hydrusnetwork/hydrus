@@ -1,0 +1,439 @@
+/* OledBlack.qss based on CutieDuck Hydrus.qss */
+
+QToolTip
+{
+    border: 1px solid black;
+    background-color: white;
+    padding: 1px;
+}
+
+QWidget
+{
+
+    color: white;
+    background-color: #101010;
+    alternate-background-color: #101010;
+}
+
+QWidget:disabled
+{
+    background-color: #101010;
+}
+
+QWidget:item:hover
+{
+    background-color: #FF2800;
+    color: black;
+}
+
+QWidget:item:selected
+{
+    background-color: #9B1800;
+}
+
+QMenuBar::item
+{
+    background: transparent;
+}
+
+QMenuBar::item:selected
+{
+    background: transparent;
+    border: 1px solid #9B1800;
+}
+
+QMenu
+{
+    border: 1px solid #000;
+}
+
+QMenu::item
+{
+    padding: 2px 20px 2px 20px;
+}
+
+QMenu::item:selected
+{
+    color: black;
+}
+
+QAbstractItemView
+{
+    background-color: #242424;
+}
+
+QLineEdit
+{
+	color: white;
+    background-color: #242424;
+    padding: 1px;
+    border-style: solid;
+    border: 1px solid #000000;
+}
+
+QPushButton
+{
+    color: white;
+    background-color: #242424;
+    border-width: 1px;
+    border-color: #000000;
+    border-style: solid;
+    padding: 3px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+QPushButton:pressed
+{
+    background-color: #323232;
+}
+
+QComboBox
+{
+    selection-background-color: #9B1800;
+    background-color: #242424;
+    border-style: solid;
+    border: 1.0px solid #000000;
+}
+
+QComboBox:hover,QPushButton:hover
+{
+    border: 1px solid #FF2800;
+}
+
+QComboBox:on
+{
+    padding-top: 3px;
+    padding-left: 4px;
+    background-color: #2d2d2d;
+    selection-background-color: #9B1800;
+}
+
+QComboBox QAbstractItemView
+{
+    border: 1px solid darkgray;
+    selection-background-color: #9B1800;
+}
+
+QComboBox::drop-down
+{
+     subcontrol-origin: padding;
+     subcontrol-position: top right;
+     width: 15px;
+
+     border-left-width: 0px;
+     border-left-color: darkgray;
+     border-left-style: solid; /* just a single line */
+ }
+ 
+QComboBox::down-arrow
+{
+     image: url(:/down_arrow.png);
+}
+
+QGroupBox:focus
+{
+border: 1px solid #FF2800;
+}
+QTextEdit:focus
+{
+    border: 1px solid #2d2d2d;
+}
+
+QScrollBar:horizontal {
+     border: 1px solid #000000;
+     background: black;
+     height: 7px;
+     margin: 0px 16px 0 16px;
+}
+
+QScrollBar::handle:horizontal
+{
+      background: #9B1800;
+      min-height: 20px;
+      border-radius: 2px;
+}
+
+QScrollBar::add-line:horizontal {
+      border: 1px solid #000000;
+      border-radius: 2px;
+      background: #FF2800;
+      width: 14px;
+      subcontrol-position: right;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:horizontal {
+      border: 1px solid #000000;
+      border-radius: 2px;
+      background: #FF2800;
+      width: 14px;
+     subcontrol-position: left;
+     subcontrol-origin: margin;
+}
+
+QScrollBar::right-arrow:horizontal, QScrollBar::left-arrow:horizontal
+{
+      border: 1px solid black;
+      width: 1px;
+      height: 1px;
+      background: white;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal
+{
+      background: none;
+}
+
+QScrollBar:vertical
+{
+      background: #484848;
+      width: 7px;
+      margin: 16px 0 16px 0;
+      border: 1px solid #000000;
+}
+
+QScrollBar::handle:vertical
+{
+      background: #9B1800;
+      min-height: 20px;
+}
+
+QScrollBar::add-line:vertical
+{
+      border: 1px solid #000000;
+      background: #9B1800;
+      height: 14px;
+      subcontrol-position: bottom;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:vertical
+{
+      border: 1px solid #000000;
+      background: #9B1800;
+      height: 14px;
+      subcontrol-position: top;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical
+{
+      border: 1px solid black;
+      width: 1px;
+      height: 1px;
+      background: white;
+}
+
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical
+{
+      background: none;
+}
+
+QTextEdit
+{
+    background-color: #000000;
+}
+
+QPlainTextEdit
+{
+    background-color: #000000;
+}
+
+QHeaderView::section
+{
+    background-color: #616161;
+    color: white;
+    padding-left: 4px;
+    border: 1px solid #6c6c6c;
+}
+
+QProgressBar
+{
+    border: 1px solid grey;
+    text-align: center;
+}
+
+QProgressBar::chunk
+{
+	background-color: #FF2800;
+}
+
+QTabBar::tab {
+    color: #b1b1b1;
+    background-color: #323232;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 2px;
+}
+
+QTabWidget::pane {
+    border: 1px solid #444;
+    top: 1px;
+}
+
+QTabBar::tab:last
+{
+    margin-right: 0; /* the last selected tab has nothing to overlap with on the right */
+    border-top-right-radius: 3px;
+}
+
+QTabBar::tab:first:!selected
+{
+ margin-left: 0px; /* the last selected tab has nothing to overlap with on the right */
+
+
+    border-top-left-radius: 3px;
+}
+
+QTabBar::tab:selected
+{
+    color: black;
+    border-bottom-style: solid;
+    background-color: #9B1800;
+}
+
+QTabBar::tab:hover:!selected
+{
+	color: black;
+	background-color: #FF2800;
+}
+
+/*
+DUCK
+*/
+/*
+Default QSS for hydrus. This is prepended to any stylesheet loaded in hydrus.
+Copying these entries in your own stylesheets should override these settings.
+This will get more work in future.
+*/
+
+/*
+
+Here are some text and background colours
+
+*/
+
+/* Example: This regex is valid */
+
+QLabel#HydrusValid
+{
+	color: #2ed42e;
+}
+
+QLineEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QPlainTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+/* Duplicates 'middle' text colour */
+
+QLabel#HydrusIndeterminate
+{
+	color: #8080ff;
+}
+
+QLineEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+QTextEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+QPlainTextEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+
+/* Example: This regex is invalid */
+
+QLabel#HydrusInvalid
+{
+	color: #ff7171;
+}
+
+QLineEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QPlainTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+/* Example: Your files are going to be deleted! */
+
+QLabel#HydrusWarning
+{
+	color: #ff7171;
+}
+
+QCheckBox#HydrusWarning
+{
+	color: #ff7171;
+}
+
+/*
+
+Buttons on dialogs
+
+*/
+
+QPushButton#HydrusAccept
+{
+	color: #2ed42e;
+}
+
+QPushButton#HydrusCancel
+{
+	color: #ff7171;
+}
+
+/*
+
+This is the green/red button that switches 'include current tags' and similar states on/off
+
+*/
+
+QPushButton#HydrusOnOffButton[hydrus_on=true]
+{
+	color: #2ed42e;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false]
+{
+	color: #ff7171;
+}
+
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: white;
+}

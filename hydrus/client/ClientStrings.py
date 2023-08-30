@@ -71,6 +71,7 @@ class StringProcessingStep( HydrusSerialisable.SerialisableBase ):
         raise NotImplementedError()
         
     
+
 class StringConverter( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER
@@ -453,7 +454,111 @@ class StringConverter( StringProcessingStep ):
             
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_CONVERTER ] = StringConverter
+
+class StringJoiner( StringProcessingStep ):
+    
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_JOINER
+    SERIALISABLE_NAME = 'String Concatenator'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, joiner: str = '', join_tuple_size = None ):
+        
+        StringProcessingStep.__init__( self )
+        
+        self._joiner = joiner
+        self._join_tuple_size = join_tuple_size
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        return ( self._joiner, self._join_tuple_size )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self._joiner, self._join_tuple_size ) = serialisable_info
+        
+    
+    def GetJoiner( self ):
+        
+        return self._joiner
+        
+    
+    def GetJoinTupleSize( self ):
+        
+        return self._join_tuple_size
+        
+    
+    def MakesChanges( self ) -> bool:
+        
+        return True
+        
+    
+    def Join( self, texts: typing.Collection[ str ] ) -> typing.List[ str ]:
+        
+        for text in texts:
+            
+            if isinstance( text, bytes ):
+                
+                raise HydrusExceptions.StringJoinerException( 'Got a bytes value in a string joiner!' )
+                
+            
+        
+        try:
+            
+            joined_texts = []
+            
+            if self._join_tuple_size is None:
+                
+                joined_texts.append( self._joiner.join( texts ) )
+                
+            else:
+                
+                for chunk_of_texts in HydrusData.SplitIteratorIntoChunks( texts, self._join_tuple_size ):
+                    
+                    if len( chunk_of_texts ) == self._join_tuple_size:
+                        
+                        joined_texts.append( self._joiner.join( chunk_of_texts ) )
+                        
+                    
+                
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.StringJoinerException( 'Problem when joining text: {}'.format( e ) )
+            
+        
+        return joined_texts
+        
+    
+    def ToString( self, simple = False, with_type = False ) -> str:
+        
+        if simple:
+            
+            return 'joiner'
+            
+        
+        if self._join_tuple_size is None:
+            
+            result = f'joining all strings using "{self._joiner}"'
+            
+        else:
+            
+            result = f'joining every {self._join_tuple_size} strings using "{self._joiner}"'
+            
+        
+        if with_type:
+            
+            result = 'JOIN: {}'.format( result )
+            
+        
+        return result
+        
+    
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_JOINER ] = StringJoiner
 
 STRING_MATCH_FIXED = 0
 STRING_MATCH_FLEXIBLE = 1
@@ -1090,6 +1195,7 @@ class StringSplitter( StringProcessingStep ):
         return result
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER ] = StringSplitter
 
 class StringTagFilter( StringProcessingStep ):
@@ -1325,6 +1431,17 @@ class StringProcessor( StringProcessingStep ):
                     next_strings = current_strings
                     
                 
+            elif isinstance( processing_step, StringJoiner ):
+                
+                try:
+                    
+                    next_strings = processing_step.Join( current_strings )
+                    
+                except:
+                    
+                    next_strings = current_strings
+                    
+                
             else:
                 
                 next_strings = []
@@ -1408,6 +1525,11 @@ class StringProcessor( StringProcessingStep ):
             if True in ( isinstance( ps, StringConverter ) for ps in self._processing_steps ):
                 
                 components.append( 'conversion' )
+                
+            
+            if True in ( isinstance( ps, StringJoiner ) for ps in self._processing_steps ):
+                
+                components.append( 'joining' )
                 
             
             if True in ( isinstance( ps, StringMatch ) for ps in self._processing_steps ):

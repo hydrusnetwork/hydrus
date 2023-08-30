@@ -14,7 +14,7 @@ A hydrus client consists of three components:
     
     It doesn't really matter where you put this. An SSD will load it marginally quicker the first time, but you probably won't notice. If you run it without command-line parameters, it will try to write to its own directory (to create the initial database), so if you mean to run it like that, it should not be in a protected place like _Program Files_.
     
-2.  **the actual database**
+2.  **the actual SQLite database**
     
     The client stores all its preferences and current state and knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and so on--in a handful of SQLite database files, defaulting to _install_dir/db_. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.
     
@@ -29,7 +29,7 @@ A hydrus client consists of three components:
 
 ## these components can be put on different drives { id="different_drives" }
 
-Although an initial install will keep these parts together, it is possible to, say, run the database on a fast drive but keep your media in cheap slow storage. This is an excellent arrangement that works for many users. And if you have a very large collection, you can even spread your files across multiple drives. It is not very technically difficult, but I do not recommend it for new users.
+Although an initial install will keep these parts together, it is possible to, say, run the SQLite database on a fast drive but keep your media in cheap slow storage. This is an excellent arrangement that works for many users. And if you have a very large collection, you can even spread your files across multiple drives. It is not very technically difficult, but I do not recommend it for new users.
 
 Backing such an arrangement up is obviously more complicated, and the internal client backup is not sophisticated enough to capture everything, so I recommend you figure out a broader solution with a third-party backup program like FreeFileSync.
 
@@ -44,8 +44,6 @@ Go _database->migrate database_, giving you this dialog:
 
 ![](images/db_migration.png)
 
-This is an image from my old laptop's client. At that time, I had moved the main database and its files out of the install directory but otherwise kept everything together. Your situation may be simpler or more complicated.
-
 To move your files somewhere else, add the new location, empty/remove the old location, and then click 'move files now'.
 
 **Portable** means that the path is beneath the main db dir and so is stored as a relative path. Portable paths will still function if the database changes location between boots (for instance, if you run the client from a USB drive and it mounts under a different location).
@@ -54,13 +52,11 @@ To move your files somewhere else, add the new location, empty/remove the old lo
 
 The operations on this dialog are simple and atomic--at no point is your db ever invalid. Once you have the locations and ideal usage set how you like, hit the 'move files now' button to actually shuffle your files around. It will take some time to finish, but you can pause and resume it later if the job is large or you want to undo or alter something.
 
-If you decide to move your actual database, the program will have to shut down first. Before you boot up again, you will have to create a new program shortcut:
+## informing the software that the SQLite database is not in the default location { id="launch_parameter" }
 
-## informing the software that the database is not in the default location { id="launch_parameter" }
+A straight call to the hydrus_client executable will look for a SQLite database in _install_dir/db_. If one is not found, it will create one. If you move your database and then try to run the client again, it will try to create a new empty database in that old location!
 
-A straight call to the hydrus_client executable will look for a database in _install_dir/db_. If one is not found, it will create one. So, if you move your database and then try to run the client again, it will try to create a new empty database in the previous location!
-
-So, pass it a -d or --db_dir command line argument, like so:
+To tell it about the new database location, pass it a `-d` or `--db_dir` command line argument, like so:
 
 *   `hydrus_client -d="D:\media\my_hydrus_database"`
 *   _--or--_
@@ -70,11 +66,11 @@ So, pass it a -d or --db_dir command line argument, like so:
 
 And it will instead use the given path. If no database is found, it will similarly create a new empty one at that location. You can use any path that is valid in your system, but I would not advise using network locations and so on, as the database works best with some clever device locking calls these interfaces may not provide.
 
-Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this, which is from my main development computer and tests that a fresh default install will run an existing database ok:
+Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this:
 
 ![](images/db_migration_shortcut.png)
 
-Note that an install with an 'external' database no longer needs access to write to its own path, so you can store it anywhere you like, including protected read-only locations (e.g. in 'Program Files'). If you do move it, just double-check your shortcuts are still good and you are done.
+Note that an install with an 'external' database no longer needs access to write to its own path, so you can store it anywhere you like, including protected read-only locations (e.g. in 'Program Files'). Just double-check your shortcuts are good.
 
 ## finally { id="finally" }
 
@@ -90,22 +86,18 @@ As an example, let's say you started using the hydrus client on your HDD, and no
 
 Specifically:
 
-*   Update your backup if you maintain one.
-*   Create an empty folder on your HDD that is outside of your current install folder. Call it 'hydrus_files' or similar.
-*   Create two empty folders on your SSD with names like 'hydrus\_db' and 'hydrus\_thumbnails'.
-
-*   Set the 'thumbnail location override' to 'hydrus_thumbnails'. You should get that new location in the list, currently empty but prepared to take all your thumbs.
-*   Hit 'move files now' to actually move the thumbnails. Since this involves moving a lot of individual files from a high-latency source, it will take a long time to finish. The hydrus client may hang periodically as it works, but you can just leave it to work on its own--it will get there in the end. You can also watch it do its disk work under Task Manager.
-
-*   Now hit 'add location' and select your new 'hydrus\_files'. 'hydrus\_files' should be added and willing to take 50% of the files.
-*   Select the old location (probably 'install\_dir/db/client\_files') and hit 'decrease weight' until it has weight 0 and you are prompted to remove it completely. 'hydrus_files' should now be willing to take all the files from the old location.
-*   Hit 'move files now' again to make this happen. This should be fast since it is just moving a bunch of folders across the same partition.
-
-*   With everything now 'non-portable' and hence decoupled from the db, you can now easily migrate the install and db to 'hydrus_db' simply by shutting the client down and moving the install folder in a file explorer.
-*   Update your shortcut to the new hydrus_client.exe location and try to boot.
-
-*   Update your backup scheme to match your new locations.
-*   Enjoy a much faster client.
+1. Update your backup if you maintain one.
+* Create an empty folder on your HDD that is outside of your current install folder. Call it 'hydrus_files' or similar.
+* Create two empty folders on your SSD with names like 'hydrus\_db' and 'hydrus\_thumbnails'.
+* Set the 'thumbnail location override' to 'hydrus_thumbnails'. You should get that new location in the list, currently empty but prepared to take all your thumbs.
+* Hit 'move files now' to actually move the thumbnails. Since this involves moving a lot of individual files from a high-latency source, it will take a long time to finish. The hydrus client may hang periodically as it works, but you can just leave it to work on its own--it will get there in the end. You can also watch it do its disk work under Task Manager.
+* Now hit 'add location' and select your new 'hydrus\_files'. 'hydrus\_files' should be added and willing to take 50% of the files.
+* Select the old location (probably 'install\_dir/db/client\_files') and hit 'decrease weight' until it has weight 0 and you are prompted to remove it completely. 'hydrus_files' should now be willing to take all the files from the old location.
+* Hit 'move files now' again to make this happen. This should be fast since it is just moving a bunch of folders across the same partition.
+* With everything now 'non-portable' and hence decoupled from the db, you can now easily migrate the install and db to 'hydrus_db' simply by shutting the client down and moving the install folder in a file explorer.
+* Update your shortcut to the new hydrus_client.exe location and try to boot.
+* Update your backup scheme to match your new locations.
+* Enjoy a much faster client.
 
 You should now have _something_ like this:
 
@@ -113,4 +105,4 @@ You should now have _something_ like this:
 
 ## p.s. running multiple clients { id="multiple_clients" }
 
-Since you now know how to tell the software about an external database, you can, if you like, run multiple clients from the same install (and if you previously had multiple install folders, now you can now just use the one). Just make multiple shortcuts to the same hydrus_client executable but with different database directories. They can run at the same time. You'll save yourself a little memory and update-hassle. I do this on my laptop client to run a regular client for my media and a separate 'admin' client to do PTR petitions and so on.
+Since you now know how to tell the software about an external database, you can, if you like, run multiple clients from the same install (and if you previously had multiple install folders, now you can now just use the one). Just make multiple shortcuts to the same hydrus_client executable but with different database directories. They can run at the same time. You'll save yourself a little memory and update-hassle.

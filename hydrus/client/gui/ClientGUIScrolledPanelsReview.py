@@ -132,7 +132,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self._prefixes_to_locations = HG.client_controller.Read( 'client_files_locations' )
+        self._client_files_subfolders = HG.client_controller.Read( 'client_files_subfolders' )
         
         ( self._locations_to_ideal_weights, self._ideal_thumbnails_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
@@ -189,12 +189,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        migration_panel = ClientGUICommon.StaticBox( self, 'migrate database files (and portable media file locations)' )
-        
-        self._migrate_db_button = ClientGUICommon.BetterButton( migration_panel, 'move entire database and all portable paths', self._MigrateDatabase )
-        
-        #
-        
         info_panel.Add( self._current_install_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.Add( self._current_db_path_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         info_panel.Add( self._current_media_paths_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -217,10 +211,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        migration_panel.Add( self._migrate_db_button, CC.FLAGS_ON_RIGHT )
-        
-        #
-        
         vbox = QP.VBoxLayout()
         
         message = 'THIS IS ADVANCED. DO NOT CHANGE ANYTHING HERE UNLESS YOU KNOW WHAT IT DOES!'
@@ -233,7 +223,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, info_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, file_locations_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, migration_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         self.widget().setLayout( vbox )
         
@@ -577,7 +566,10 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         locations_to_file_weights = collections.Counter()
         locations_to_thumb_weights = collections.Counter()
         
-        for ( prefix, location ) in list(self._prefixes_to_locations.items()):
+        for client_files_subfolder in self._client_files_subfolders:
+            
+            prefix = client_files_subfolder.prefix
+            location = client_files_subfolder.location
             
             if prefix.startswith( 'f' ):
                 
@@ -636,92 +628,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _IncreaseWeight( self ):
         
         self._AdjustWeight( 1 )
-        
-    
-    def _MigrateDatabase( self ):
-        
-        message = 'This operation will move your database files and any \'portable\' paths. It is a big job that will require a client shutdown and need you to create a new shortcut before you can launch it again.'
-        message += os.linesep * 2
-        message += 'If you have not read the database migration help or otherwise do not know what is going on here, turn back now!'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
-        
-        if result == QW.QDialog.Accepted:
-            
-            source = self._controller.GetDBDir()
-            
-            with QP.DirDialog( self, message = 'Choose new database location.' ) as dlg:
-                
-                dlg.setDirectory( source )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    dest = dlg.GetPath()
-                    
-                    if source == dest:
-                        
-                        QW.QMessageBox.warning( self, 'Warning', 'That is the same location!' )
-                        
-                        return
-                        
-                    
-                    if len( os.listdir( dest ) ) > 0:
-                        
-                        message = '"{}" is not empty! Please select an empty destination--if your situation is more complicated, please do this move manually! Feel free to ask hydrus dev for help.'.format( dest )
-                        
-                        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                        
-                        if result != QW.QDialog.Accepted:
-                            
-                            return
-                            
-                        
-                    
-                    message = 'Here is the client\'s best guess at your new launch command. Make sure it looks correct and copy it to your clipboard. Update your program shortcut when the transfer is complete.'
-                    message += os.linesep * 2
-                    message += 'Hit ok to close the client and start the transfer, cancel to back out.'
-                    
-                    me = sys.argv[0]
-                    
-                    shortcut = '"' + me + '" -d="' + dest + '"'
-                    
-                    with ClientGUIDialogs.DialogTextEntry( self, message, default = shortcut ) as dlg_3:
-                        
-                        if dlg_3.exec() == QW.QDialog.Accepted:
-                            
-                            # The below comment is from before the Qt port and probably obsolote, leaving it for explanation.
-                            #
-                            # careful with this stuff!
-                            # the app's mainloop didn't want to exit for me, for a while, because this dialog didn't have time to exit before the thread's dialog laid a new event loop on top
-                            # the confused event loops lead to problems at a C++ level in ShowModal not being able to do the Destroy because parent stuff had already died
-                            # this works, so leave it alone if you can
-                            
-                            QP.CallAfter( self.parentWidget().close )
-                            
-                            portable_locations = []
-                            
-                            for location in set( self._prefixes_to_locations.values() ):
-                                
-                                if not os.path.exists( location ):
-                                    
-                                    continue
-                                    
-                                
-                                portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
-                                portable = not os.path.isabs( portable_location )
-                                
-                                if portable:
-                                    
-                                    portable_locations.append( portable_location )
-                                    
-                                
-                            
-                            HG.client_controller.CallToThreadLongRunning( THREADMigrateDatabase, self._controller, source, portable_locations, dest )
-                            
-                        
-                    
-                
-            
         
     
     def _Rebalance( self ):
@@ -882,7 +788,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Update( self ):
         
-        self._prefixes_to_locations = HG.client_controller.Read( 'client_files_locations' )
+        self._client_files_subfolders = HG.client_controller.Read( 'client_files_subfolders' )
         
         ( self._locations_to_ideal_weights, self._ideal_thumbnails_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
@@ -941,96 +847,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
 
-def THREADMigrateDatabase( controller, source, portable_locations, dest ):
-    
-    time.sleep( 2 ) # important to have this, so the migrate dialog can close itself and clean its event loop, wew
-    
-    def qt_code( job_key ):
-        
-        HG.client_controller.CallLaterQtSafe( controller.gui, 3.0, 'close program', controller.Exit )
-        
-        # no parent because this has to outlive the gui, obvs
-        
-        with ClientGUITopLevelWindowsPanels.DialogNullipotent( None, 'migrating files' ) as dlg:
-            
-            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
-            
-            dlg.SetPanel( panel )
-            
-            dlg.exec()
-            
-        
-    
-    db = controller.db
-    
-    job_key = ClientThreading.JobKey( cancel_on_shutdown = False )
-    
-    job_key.SetStatusTitle( 'migrating database' )
-    
-    QP.CallAfter( qt_code, job_key )
-    
-    try:
-        
-        job_key.SetStatusText( 'waiting for db shutdown' )
-        
-        while not db.LoopIsFinished():
-            
-            time.sleep( 1 )
-            
-        
-        job_key.SetStatusText( 'doing the move' )
-        
-        def text_update_hook( text ):
-            
-            job_key.SetStatusText( text )
-            
-        
-        for filename in os.listdir( source ):
-            
-            if filename.startswith( 'client' ) and filename.endswith( '.db' ):
-                
-                job_key.SetStatusText( 'moving ' + filename )
-                
-                source_path = os.path.join( source, filename )
-                dest_path = os.path.join( dest, filename )
-                
-                if os.path.exists( source_path ) and os.path.exists( dest_path ) and os.path.samefile( source_path, dest_path ):
-                    
-                    continue
-                    
-                
-                HydrusPaths.MergeFile( source_path, dest_path )
-                
-            
-        
-        for portable_location in portable_locations:
-            
-            source_path = os.path.join( source, portable_location )
-            dest_path = os.path.join( dest, portable_location )
-            
-            if os.path.exists( source_path ) and os.path.exists( dest_path ) and os.path.samefile( source_path, dest_path ):
-                
-                continue
-                
-            
-            HydrusPaths.MergeTree( source_path, dest_path, text_update_hook = text_update_hook )
-            
-        
-        job_key.SetStatusText( 'done!' )
-        
-    except:
-        
-        QP.CallAfter( QW.QMessageBox.critical, None, 'Error', traceback.format_exc() )
-        
-        job_key.SetStatusText( 'error!' )
-        
-    finally:
-        
-        time.sleep( 3 )
-        
-        job_key.Finish()
-        
-    
 class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     COPY = 0

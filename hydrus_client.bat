@@ -4,7 +4,7 @@ pushd "%~dp0"
 
 IF NOT EXIST "venv\" (
 
-	SET /P gumpf=You need to set up a venv! Check the running from source help for more info!
+	SET /P gumpf="You need to set up a venv! Check the running from source help for more info!"
 	
 	popd
 	
@@ -16,7 +16,7 @@ CALL venv\Scripts\activate.bat
 
 IF ERRORLEVEL 1 (
 	
-	SET /P gumpf=The venv failed to activate, stopping now!
+	SET /P gumpf="The venv failed to activate, stopping now!"
 	
 	popd
 	

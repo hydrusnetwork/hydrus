@@ -89,6 +89,8 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._basic_permissions.sortItems()
         
+        self._check_all_permissions_button = ClientGUICommon.BetterButton( self, 'check all permissions', self._CheckAllPermissions )
+        
         search_tag_filter = api_permissions.GetSearchTagFilter()
         
         message = 'The API will only permit searching for tags that pass through this filter.'
@@ -118,6 +120,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'access key: ', self._access_key ) )
         rows.append( ( 'name: ', self._name ) )
         rows.append( ( 'permissions: ', self._basic_permissions ) )
+        rows.append( ( '', self._check_all_permissions_button ) )
         rows.append( ( 'tag search permissions: ', self._search_tag_filter ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -135,11 +138,29 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._basic_permissions.checkBoxListChanged.connect( self._UpdateEnabled )
         
     
+    def _CheckAllPermissions( self ):
+        
+        for i in range( self._basic_permissions.count() ):
+            
+            self._basic_permissions.Check( i )
+            
+        
+    
     def _UpdateEnabled( self ):
         
         can_search = ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES in self._basic_permissions.GetValue()
         
         self._search_tag_filter.setEnabled( can_search )
+        
+        self._check_all_permissions_button.setEnabled( False )
+        
+        for i in range( self._basic_permissions.count() ):
+            
+            if not self._basic_permissions.IsChecked( i ):
+                
+                self._check_all_permissions_button.setEnabled( True )
+                
+            
         
     
     def _GetValue( self ):
