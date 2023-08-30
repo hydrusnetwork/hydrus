@@ -65,38 +65,11 @@ Now:
 *   Play with the system tags more if you like, and the sort-by dropdown. The collect-by dropdown is advanced, so wait until you understand _namespaces_ before expecting it to do anything.
 *   To close a page, middle-click its tab.
 
-### The client can currently import the following mimetypes:
 
-*   **image/bmp** (.bmp - converted to image/png on import)
-*   **image/gif** (.gif)
-*   **image/png** (.png)
-*   **image/apng** (.apng)
-*   **image/jpeg** (.jpg)
-*   **image/svg+xml** (.svg)
-*   **image/tiff** (.tiff)
-*   **image/webp** (.webp)
-*   **video/x-msvideo** (.avi)
-*   **video/x-flv** (.flv)
-*   **video/x-matroska** (.mkv)
-*   **video/quicktime** (.mov)
-*   **video/mp4** (.mp4)
-*   **video/mpeg** (.mpeg)
-*   **video/webm** (.webm)
-*   **video/x-ms-wmv** (.wmv)
-*   **audio/mp3** (.mp3)
-*   **audio/ogg** (.ogg)
-*   **audio/flac** (.flac)
-*   **audio/x-ms-wma** (.wma)
-*   **application/x-shockwave-flash** (.swf)
-*   **application/pdf** (.pdf)
-*   **application/x-photoshop** (.psd)
-*   **application/clip** (.clip)
-*   **application/x-krita** (.kra, .krz)
-*   **application/sai2** (.sai2)
-*   **application/vnd.rar** (.rar)
-*   **application/zip** (.zip)
-*   **application/x-7z-compressed** (.7z)
-*   **application/gzip** (.gz)
+
+### Filetype support
+
+Hydrus supports many filetypes. A full list can be viewed on the [Supported Filetypes](filetypes.md) page.
 
 Although some support is imperfect for the complicated filetypes. For the Windows and Linux built releases, hydrus now embeds an MPV player for video, audio and gifs, which provides smooth playback and audio, but some other environments may not support MPV and so will default when possible to the native hydrus software renderer, which does not support audio. When something does not render how you want, right-clicking on its thumbnail presents the option 'open externally', which will open the file in the appropriate default program (e.g. ACDSee, VLC).
 

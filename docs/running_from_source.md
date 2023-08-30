@@ -29,7 +29,7 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 === "Linux"
 
-    You should already have a fairly new python. Ideally, you want at last 3.9.
+    You should already have a fairly new python. Ideally, you want at least 3.9.
 
 === "macOS"
 

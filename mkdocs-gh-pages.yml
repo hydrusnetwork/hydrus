@@ -4,6 +4,9 @@ site_url: https://hydrusnetwork.github.io/hydrus/
 
 plugins:
   - search
+  - git-revision-date-localized:
+      exclude:
+          - index.md
   - redirects:
       redirect_maps:
         'help/access_keys.md': 'access_keys.md'
@@ -47,3 +50,15 @@ plugins:
         'help/server.md': 'server.md'
         'help/support.md': 'support.md'
         'help/wine.md': 'wine.md'
+
+theme:
+  features:
+    - navigation.tracking
+    - navigation.sections
+    - navigation.tabs
+    - content.tabs.link
+    - navigation.top
+    - search.suggest
+    - content.code.annotate
+    - navigation.instant
+    - content.action.edit
