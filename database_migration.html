@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.4">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.5">
     
     
       
@@ -483,6 +483,26 @@
   
   
     <li class="md-nav__item">
+      <a href="filetypes.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Supported Filetypes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
       <a href="getting_started_importing.html" class="md-nav__link">
         
   
@@ -613,9 +633,9 @@
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_11" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
         
-          <label class="md-nav__link" for="__nav_2_11" id="__nav_2_11_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -626,8 +646,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_11">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_12">
             <span class="md-nav__icon md-icon"></span>
             PTR
           </label>
@@ -717,9 +737,9 @@
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
         
-          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -730,8 +750,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_13">
             <span class="md-nav__icon md-icon"></span>
             Next Steps
           </label>
@@ -1042,7 +1062,7 @@
       
         <li class="md-nav__item">
   <a href="#launch_parameter" class="md-nav__link">
-    informing the software that the database is not in the default location
+    informing the software that the SQLite database is not in the default location
   </a>
   
 </li>
@@ -1989,7 +2009,7 @@
       
         <li class="md-nav__item">
   <a href="#launch_parameter" class="md-nav__link">
-    informing the software that the database is not in the default location
+    informing the software that the SQLite database is not in the default location
   </a>
   
 </li>
@@ -2030,6 +2050,11 @@
                   
 
   
+    <a href="https://github.com/hydrusnetwork/hydrus/edit/master/docs/database_migration.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4v-2m10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1 2.1 2.1Z"/></svg>
+    </a>
+  
   
 
 
@@ -2043,7 +2068,7 @@
 <p>It doesn't really matter where you put this. An SSD will load it marginally quicker the first time, but you probably won't notice. If you run it without command-line parameters, it will try to write to its own directory (to create the initial database), so if you mean to run it like that, it should not be in a protected place like <em>Program Files</em>.</p>
 </li>
 <li>
-<p><strong>the actual database</strong></p>
+<p><strong>the actual SQLite database</strong></p>
 <p>The client stores all its preferences and current state and knowledge <em>about</em> files--like file size and resolution, tags, ratings, inbox status, and so on and so on--in a handful of SQLite database files, defaulting to <em>install_dir/db</em>. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.</p>
 <p>In order to perform a search or to fetch or process tags, the client has to interact with these files in many small bursts, which means it is best if these files are on a drive with low latency. An SSD is ideal, but a regularly-defragged HDD with a reasonable amount of free space also works well.</p>
 </li>
@@ -2054,7 +2079,7 @@
 </li>
 </ol>
 <h2 id="different_drives">these components can be put on different drives<a class="headerlink" href="#different_drives" title="Permanent link">&para;</a></h2>
-<p>Although an initial install will keep these parts together, it is possible to, say, run the database on a fast drive but keep your media in cheap slow storage. This is an excellent arrangement that works for many users. And if you have a very large collection, you can even spread your files across multiple drives. It is not very technically difficult, but I do not recommend it for new users.</p>
+<p>Although an initial install will keep these parts together, it is possible to, say, run the SQLite database on a fast drive but keep your media in cheap slow storage. This is an excellent arrangement that works for many users. And if you have a very large collection, you can even spread your files across multiple drives. It is not very technically difficult, but I do not recommend it for new users.</p>
 <p>Backing such an arrangement up is obviously more complicated, and the internal client backup is not sophisticated enough to capture everything, so I recommend you figure out a broader solution with a third-party backup program like FreeFileSync.</p>
 <h2 id="pulling_media_apart">pulling your media apart<a class="headerlink" href="#pulling_media_apart" title="Permanent link">&para;</a></h2>
 <div class="admonition danger">
@@ -2064,15 +2089,13 @@
 <p>If you would like to move your files and thumbnails to new locations, I generally recommend you not move their folders around yourself--the database has an internal knowledge of where it thinks its file and thumbnail folders are, and if you move them while it is closed, it will become confused and you will have to manually relocate what is missing on the next boot via a repair dialog. This is not impossible to figure out, but if the program's 'client files' folder confuses you at all, I'd recommend you stay away. Instead, you can simply do it through the gui:</p>
 <p>Go <em>database-&gt;migrate database</em>, giving you this dialog:</p>
 <p><img alt="" src="images/db_migration.png" /></p>
-<p>This is an image from my old laptop's client. At that time, I had moved the main database and its files out of the install directory but otherwise kept everything together. Your situation may be simpler or more complicated.</p>
 <p>To move your files somewhere else, add the new location, empty/remove the old location, and then click 'move files now'.</p>
 <p><strong>Portable</strong> means that the path is beneath the main db dir and so is stored as a relative path. Portable paths will still function if the database changes location between boots (for instance, if you run the client from a USB drive and it mounts under a different location).</p>
 <p><strong>Weight</strong> means the relative amount of media you would like to store in that location. It only matters if you are spreading your files across multiple locations. If location A has a weight of 1 and B has a weight of 2, A will get approximately one third of your files and B will get approximately two thirds.</p>
 <p>The operations on this dialog are simple and atomic--at no point is your db ever invalid. Once you have the locations and ideal usage set how you like, hit the 'move files now' button to actually shuffle your files around. It will take some time to finish, but you can pause and resume it later if the job is large or you want to undo or alter something.</p>
-<p>If you decide to move your actual database, the program will have to shut down first. Before you boot up again, you will have to create a new program shortcut:</p>
-<h2 id="launch_parameter">informing the software that the database is not in the default location<a class="headerlink" href="#launch_parameter" title="Permanent link">&para;</a></h2>
-<p>A straight call to the hydrus_client executable will look for a database in <em>install_dir/db</em>. If one is not found, it will create one. So, if you move your database and then try to run the client again, it will try to create a new empty database in the previous location!</p>
-<p>So, pass it a -d or --db_dir command line argument, like so:</p>
+<h2 id="launch_parameter">informing the software that the SQLite database is not in the default location<a class="headerlink" href="#launch_parameter" title="Permanent link">&para;</a></h2>
+<p>A straight call to the hydrus_client executable will look for a SQLite database in <em>install_dir/db</em>. If one is not found, it will create one. If you move your database and then try to run the client again, it will try to create a new empty database in that old location!</p>
+<p>To tell it about the new database location, pass it a <code>-d</code> or <code>--db_dir</code> command line argument, like so:</p>
 <ul>
 <li><code>hydrus_client -d="D:\media\my_hydrus_database"</code></li>
 <li><em>--or--</em></li>
@@ -2081,9 +2104,9 @@
 <li><code>open -n -a "Hydrus Network.app" --args -d="/path/to/db"</code></li>
 </ul>
 <p>And it will instead use the given path. If no database is found, it will similarly create a new empty one at that location. You can use any path that is valid in your system, but I would not advise using network locations and so on, as the database works best with some clever device locking calls these interfaces may not provide.</p>
-<p>Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this, which is from my main development computer and tests that a fresh default install will run an existing database ok:</p>
+<p>Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this:</p>
 <p><img alt="" src="images/db_migration_shortcut.png" /></p>
-<p>Note that an install with an 'external' database no longer needs access to write to its own path, so you can store it anywhere you like, including protected read-only locations (e.g. in 'Program Files'). If you do move it, just double-check your shortcuts are still good and you are done.</p>
+<p>Note that an install with an 'external' database no longer needs access to write to its own path, so you can store it anywhere you like, including protected read-only locations (e.g. in 'Program Files'). Just double-check your shortcuts are good.</p>
 <h2 id="finally">finally<a class="headerlink" href="#finally" title="Permanent link">&para;</a></h2>
 <p>If your database now lives in one or more new locations, make sure to update your backup routine to follow them!</p>
 <h2 id="to_an_ssd">moving to an SSD<a class="headerlink" href="#to_an_ssd" title="Permanent link">&para;</a></h2>
@@ -2094,40 +2117,35 @@
 <li>Move the install and db itself to the fast location and update shortcuts.</li>
 </ol>
 <p>Specifically:</p>
-<ul>
+<ol>
 <li>Update your backup if you maintain one.</li>
 <li>Create an empty folder on your HDD that is outside of your current install folder. Call it 'hydrus_files' or similar.</li>
-<li>
-<p>Create two empty folders on your SSD with names like 'hydrus_db' and 'hydrus_thumbnails'.</p>
-</li>
-<li>
-<p>Set the 'thumbnail location override' to 'hydrus_thumbnails'. You should get that new location in the list, currently empty but prepared to take all your thumbs.</p>
-</li>
-<li>
-<p>Hit 'move files now' to actually move the thumbnails. Since this involves moving a lot of individual files from a high-latency source, it will take a long time to finish. The hydrus client may hang periodically as it works, but you can just leave it to work on its own--it will get there in the end. You can also watch it do its disk work under Task Manager.</p>
-</li>
-<li>
-<p>Now hit 'add location' and select your new 'hydrus_files'. 'hydrus_files' should be added and willing to take 50% of the files.</p>
-</li>
+<li>Create two empty folders on your SSD with names like 'hydrus_db' and 'hydrus_thumbnails'.</li>
+<li>Set the 'thumbnail location override' to 'hydrus_thumbnails'. You should get that new location in the list, currently empty but prepared to take all your thumbs.</li>
+<li>Hit 'move files now' to actually move the thumbnails. Since this involves moving a lot of individual files from a high-latency source, it will take a long time to finish. The hydrus client may hang periodically as it works, but you can just leave it to work on its own--it will get there in the end. You can also watch it do its disk work under Task Manager.</li>
+<li>Now hit 'add location' and select your new 'hydrus_files'. 'hydrus_files' should be added and willing to take 50% of the files.</li>
 <li>Select the old location (probably 'install_dir/db/client_files') and hit 'decrease weight' until it has weight 0 and you are prompted to remove it completely. 'hydrus_files' should now be willing to take all the files from the old location.</li>
-<li>
-<p>Hit 'move files now' again to make this happen. This should be fast since it is just moving a bunch of folders across the same partition.</p>
-</li>
-<li>
-<p>With everything now 'non-portable' and hence decoupled from the db, you can now easily migrate the install and db to 'hydrus_db' simply by shutting the client down and moving the install folder in a file explorer.</p>
-</li>
-<li>
-<p>Update your shortcut to the new hydrus_client.exe location and try to boot.</p>
-</li>
-<li>
-<p>Update your backup scheme to match your new locations.</p>
-</li>
+<li>Hit 'move files now' again to make this happen. This should be fast since it is just moving a bunch of folders across the same partition.</li>
+<li>With everything now 'non-portable' and hence decoupled from the db, you can now easily migrate the install and db to 'hydrus_db' simply by shutting the client down and moving the install folder in a file explorer.</li>
+<li>Update your shortcut to the new hydrus_client.exe location and try to boot.</li>
+<li>Update your backup scheme to match your new locations.</li>
 <li>Enjoy a much faster client.</li>
-</ul>
+</ol>
 <p>You should now have <em>something</em> like this:</p>
 <p><img alt="" src="images/db_migration_example.png" /></p>
 <h2 id="multiple_clients">p.s. running multiple clients<a class="headerlink" href="#multiple_clients" title="Permanent link">&para;</a></h2>
-<p>Since you now know how to tell the software about an external database, you can, if you like, run multiple clients from the same install (and if you previously had multiple install folders, now you can now just use the one). Just make multiple shortcuts to the same hydrus_client executable but with different database directories. They can run at the same time. You'll save yourself a little memory and update-hassle. I do this on my laptop client to run a regular client for my media and a separate 'admin' client to do PTR petitions and so on.</p>
+<p>Since you now know how to tell the software about an external database, you can, if you like, run multiple clients from the same install (and if you previously had multiple install folders, now you can now just use the one). Just make multiple shortcuts to the same hydrus_client executable but with different database directories. They can run at the same time. You'll save yourself a little memory and update-hassle.</p>
+
+  <hr>
+<div class="md-source-file">
+  <small>
+    
+      Last update:
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 30, 2023</span>
+      
+    
+  </small>
+</div>
 
 
 
@@ -2240,7 +2258,7 @@
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="assets/javascripts/bundle.78eede0e.min.js"></script>

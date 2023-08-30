@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.4">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.5">
     
     
       
@@ -485,6 +485,26 @@
   
   
     <li class="md-nav__item">
+      <a href="filetypes.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Supported Filetypes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
       <a href="getting_started_importing.html" class="md-nav__link">
         
   
@@ -615,9 +635,9 @@
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_11" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
         
-          <label class="md-nav__link" for="__nav_2_11" id="__nav_2_11_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -628,8 +648,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_11">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_12">
             <span class="md-nav__icon md-icon"></span>
             PTR
           </label>
@@ -719,9 +739,9 @@
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
         
-          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -732,8 +752,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_13">
             <span class="md-nav__icon md-icon"></span>
             Next Steps
           </label>
@@ -1945,6 +1965,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#add_tags_get_siblings_and_parents" class="md-nav__link">
+    GET /add_tags/get_siblings_and_parents
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#add_tags_search_tags" class="md-nav__link">
     GET /add_tags/search_tags
   </a>
@@ -2771,6 +2798,13 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#add_tags_get_siblings_and_parents" class="md-nav__link">
+    GET /add_tags/get_siblings_and_parents
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#add_tags_search_tags" class="md-nav__link">
     GET /add_tags/search_tags
   </a>
@@ -3177,6 +3211,11 @@
                 
                   
 
+  
+    <a href="https://github.com/hydrusnetwork/hydrus/edit/master/docs/developer_api.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4v-2m10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1 2.1 2.1Z"/></svg>
+    </a>
   
   
 
@@ -3945,11 +3984,102 @@ Accept: application/json
 <p>Mostly, hydrus simply trims excess whitespace, but the other examples are rare issues you might run into. 'system' is an invalid namespace, tags cannot be prefixed with hyphens, and any tag starting with ':' is secretly dealt with internally as "[no namespace]:[colon-prefixed-subtag]". Again, you probably won't run into these, but if you see a mismatch somewhere and want to figure it out, or just want to sort some numbered tags, you might like to try this.</p>
 </dd>
 </dl>
+<h3 id="add_tags_get_siblings_and_parents"><strong>GET <code>/add_tags/get_siblings_and_parents</code></strong><a class="headerlink" href="#add_tags_get_siblings_and_parents" title="Permanent link">&para;</a></h3>
+<p><em>Ask the client about tags' sibling and parent relationships.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Add Tags permission needed.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<dl>
+<dt>Arguments (in percent-encoded JSON):</dt>
+<dd>
+<ul>
+<li><code>tags</code>: (a list of the tags you want info on)</li>
+</ul>
+</dd>
+<dt>Example request:</dt>
+<dd>Given tags <code class="highlight"><span class="p">[</span><span class="w"> </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;samus aran&quot;</span><span class="w"> </span><span class="p">]</span></code>:
+<div class="highlight"><pre><span></span><code>/add_tags/get_siblings_and_parents?tags=%5B%22blue%20eyes%22%2C%20%22samus%20aran%22%5D
+</code></pre></div></dd>
+<dt>Response:</dt>
+<dd>
+<p>An Object showing all the display relationships for each tag on each service. Also <a href="#services_object">The Services Object</a>.
+<div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;services&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;The Services Object&quot;</span>
+<span class="w">  </span><span class="nt">&quot;tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;blue eyes&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;6c6f63616c2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ideal_tag&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;siblings&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="s2">&quot;blue_eyes&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="s2">&quot;blue eye&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="s2">&quot;blue_eye&quot;</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;descendants&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">        </span><span class="nt">&quot;ancestors&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;877bfcf81f56e7e3e4bc3f8d8669f92290c140ba0acfd6c7771c5e1dc7be62d7&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ideal_tag&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blue eyes&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;siblings&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="s2">&quot;blue eyes&quot;</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;descendants&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[],</span>
+<span class="w">        </span><span class="nt">&quot;ancestors&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;samus aran&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;6c6f63616c2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ideal_tag&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;character:samus aran&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;siblings&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="s2">&quot;samus aran&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="s2">&quot;samus_aran&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="s2">&quot;character:samus aran&quot;</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;descendants&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="s2">&quot;character:samus aran (zero suit)&quot;</span>
+<span class="w">          </span><span class="s2">&quot;cosplay:samus aran&quot;</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;ancestors&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="s2">&quot;series:metroid&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="s2">&quot;studio:nintendo&quot;</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">      </span><span class="p">},</span>
+<span class="w">      </span><span class="nt">&quot;877bfcf81f56e7e3e4bc3f8d8669f92290c140ba0acfd6c7771c5e1dc7be62d7&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;ideal_tag&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;samus aran&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;siblings&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="s2">&quot;samus aran&quot;</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;descendants&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">          </span><span class="s2">&quot;zero suit samus&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="s2">&quot;samus_aran_(cosplay)&quot;</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;ancestors&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<p>This data is essentially how mappings in the <code>storage</code> <code>tag_display_type</code> become <code>display</code>.</p>
+<p>The hex keys are the service keys, which you will have seen elsewhere, like <a href="#get_files_file_metadata">GET /get_files/file_metadata</a>. Note that there is no concept of 'all known tags' here. If a tag is in 'my tags', it follows the rules of 'my tags', and then all the services' display tags are merged into the 'all known tags' pool for user display.</p>
+<p><strong>Also, the siblings and parents here are not just what is in <em>tags-&gt;manage tag siblings/parents</em>, they are the final computed combination of rules as set in <em>tags-&gt;manage where tag siblings and parents apply</em>.</strong> The data given here is not guaranteed to be useful for editing siblings and parents on a particular service. That data, which is currently pair-based, will appear in a different API request in future.</p>
+<ul>
+<li><code>ideal_tag</code> is how the tag appears in normal display to the user.</li>
+<li><code>siblings</code> is every tag that will show as the <code>ideal_tag</code>, including the <code>ideal_tag</code> itself.</li>
+<li><code>descendants</code> is every child (and recursive grandchild, great-grandchild...) that implies the <code>ideal_tag</code>.</li>
+<li><code>ancestors</code> is every parent (and recursive grandparent, great-grandparent...) that our tag implies.</li>
+</ul>
+<p>Every descendant and ancestor is an <code>ideal_tag</code> itself that may have its own siblings.</p>
+<p>Most situations are simple, but remember that siblings and parents in hydrus can get complex. If you want to display this data, I recommend you plan to support simple service-specific workflows, and add hooks to recognise conflicts and other difficulty and, when that happens, abandon ship (send the user back to Hydrus proper). Also, if you show summaries of the data anywhere, make sure you add a 'and 22 more...' overflow mechanism to your menus, since if you hit up 'azur lane' or 'pokemon', you are going to get hundreds of children.</p>
+<p>I generally warn you off computing sibling and parent mappings or counts yourself. The data from this request is best used for sibling and parent decorators on individual tags in a 'manage tags' presentation. The code that actually computes what siblings and parents look like in the 'display' context can be a pain at times, and I've already done it. Just run /search_tags or /file_metadata again after any changes you make and you'll get updated values.</p>
+</dd>
+</dl>
 <h3 id="add_tags_search_tags"><strong>GET <code>/add_tags/search_tags</code></strong><a class="headerlink" href="#add_tags_search_tags" title="Permanent link">&para;</a></h3>
 <p><em>Search the client for tags.</em></p>
 <dl>
 <dt>Restricted access:</dt>
-<dd>YES. Search for Files permission needed.</dd>
+<dd>YES. Search for Files and Add Tags permission needed.</dd>
 </dl>
 <p>Required Headers: n/a</p>
 <dl>
@@ -5604,6 +5734,17 @@ This request will also return any cookies for subdomains. The session system in 
 <span class="p">}</span>
 </code></pre></div>
 
+  <hr>
+<div class="md-source-file">
+  <small>
+    
+      Last update:
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 30, 2023</span>
+      
+    
+  </small>
+</div>
+
 
 
   
@@ -5717,7 +5858,7 @@ This request will also return any cookies for subdomains. The session system in 
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="assets/javascripts/bundle.78eede0e.min.js"></script>

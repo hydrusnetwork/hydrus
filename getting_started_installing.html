@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.4">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.5">
     
     
       
@@ -621,6 +621,26 @@
   
   
     <li class="md-nav__item">
+      <a href="filetypes.html" class="md-nav__link">
+        
+  
+  <span class="md-ellipsis">
+    Supported Filetypes
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+    <li class="md-nav__item">
       <a href="getting_started_importing.html" class="md-nav__link">
         
   
@@ -751,9 +771,9 @@
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_11" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
         
-          <label class="md-nav__link" for="__nav_2_11" id="__nav_2_11_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -764,8 +784,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_11_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_11">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_12">
             <span class="md-nav__icon md-icon"></span>
             PTR
           </label>
@@ -855,9 +875,9 @@
         
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_12" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2_13" >
         
-          <label class="md-nav__link" for="__nav_2_12" id="__nav_2_12_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_2_13" id="__nav_2_13_label" tabindex="0">
             
   
   <span class="md-ellipsis">
@@ -868,8 +888,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_12_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_2_12">
+        <nav class="md-nav" data-md-level="2" aria-labelledby="__nav_2_13_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2_13">
             <span class="md-nav__icon md-icon"></span>
             Next Steps
           </label>
@@ -2124,6 +2144,11 @@
                   
 
   
+    <a href="https://github.com/hydrusnetwork/hydrus/edit/master/docs/getting_started_installing.md" title="Edit this page" class="md-content__button md-icon">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M10 20H6V4h7v5h5v3.1l2-2V8l-6-6H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h4v-2m10.2-7c.1 0 .3.1.4.2l1.3 1.3c.2.2.2.6 0 .8l-1 1-2.1-2.1 1-1c.1-.1.2-.2.4-.2m0 3.9L14.1 23H12v-2.1l6.1-6.1 2.1 2.1Z"/></svg>
+    </a>
+  
   
 
 
@@ -2361,6 +2386,17 @@ Almost every OS you can name.</p>
 <p>If you are really short on space, note also that the database files are very compressible. A very large database where the four files add up to 70GB can compress down to 17GB zip with 7zip on default settings. Better compression ratios are possible if you make sure to put all four files in the same archive and turn up the quality. This obviously takes some additional time to do, but if you are really short on space it may be the only way it fits, and if your only backup drive is a slow USB stick, then you might actually save time from not having to transfer the other 53GB! Media files (jpegs, webms, etc...) are generally not very compressible, usually 5% at best, so it is usually not worth trying.</p>
 <p>It is best to have all four database files. It is generally easy and quick to fix problems if you have a backup of all four. If client.caches.db is missing, you can recover but it might take ten or more hours of CPU work to regenerate. If client.mappings.db is missing, you might be able to recover tags for your local files from a mirror in an intact client.caches.db. However, client.master.db and client.db are the most important. If you lose either of those, or they become too damaged to read and you have no backup, then your database is essentially dead and likely every single archive and view and tag and note and url record you made is lost. This has happened before, do not let it be you.</p>
 
+  <hr>
+<div class="md-source-file">
+  <small>
+    
+      Last update:
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 9, 2023</span>
+      
+    
+  </small>
+</div>
+
 
 
 
@@ -2472,7 +2508,7 @@ Almost every OS you can name.</p>
       <div class="md-dialog__inner md-typeset"></div>
     </div>
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.instant", "navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="assets/javascripts/bundle.78eede0e.min.js"></script>
