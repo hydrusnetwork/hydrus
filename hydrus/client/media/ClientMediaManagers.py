@@ -61,20 +61,7 @@ class FileInfoManager( object ):
         if mime is None:
             
             mime = HC.APPLICATION_UNKNOWN
-            
-        
-        if mime in HC.MIMES_WITH_THUMBNAILS:
-            
-            if width is None or width <= 0:
                 
-                width = 1
-                
-            
-            if height is None or height <= 0:
-                
-                height = 1
-                
-        
         self.hash_id = hash_id
         self.hash = hash
         self.size = size

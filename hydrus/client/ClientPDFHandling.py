@@ -22,12 +22,30 @@ def LoadPDF( path: str ):
         
         raise  HydrusExceptions.DamagedOrUnusualFileException( 'Could not load PDF file.' )
         
+    status = document.status()
     
-    if document.status() is not QtPdf.QPdfDocument.Status.Ready :
+    if status is not QtPdf.QPdfDocument.Status.Ready:
+
+        if status is QtPdf.QPdfDocument.Status.Error:
+
+            error = document.error()
+
+            if error is QtPdf.QPdfDocument.Error.IncorrectPassword:
+
+                raise  HydrusExceptions.UnsupportedFileException( f'PDF is password protected!' )
+            
+            elif error is QtPdf.QPdfDocument.Error.UnsupportedSecurityScheme:
+
+                raise  HydrusExceptions.UnsupportedFileException( f'PDF uses an unsupported security scheme' )
+            
+            else:
+
+                raise  HydrusExceptions.DamagedOrUnusualFileException( f'PDF document error: {document.error()}!' )
         
-        raise  HydrusExceptions.DamagedOrUnusualFileException( 'PDF document was not ready!' )
+        else:
+
+            raise  HydrusExceptions.DamagedOrUnusualFileException( f'PDF document status: {status}!' )
         
-    
     return document
     
 
@@ -36,7 +54,6 @@ def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tupl
     document = LoadPDF( path )
 
     resolution = QC.QSize( target_resolution[0], target_resolution[1] )
-    
     
     try:
         
@@ -54,26 +71,35 @@ def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tupl
         
     except:
         
-        raise HydrusExceptions.UnsupportedFileException()
+        raise HydrusExceptions.DamagedOrUnusualFileException()
         
     
 
 HydrusPDFHandling.GenerateThumbnailBytesFromPDFPath = GenerateThumbnailBytesFromPDFPath
 
+PDF_ASSUMED_DPI = 300
+
 def GetPDFResolution( path: str ):
     
-    document = LoadPDF( path )
-    
-    pointSize = document.pagePointSize(0)
+    try:
 
-    # pointSize is in pts which are 1/72 of an inch.
-    # this calculates the "resolution" assuming 96 dpi (the traditional standard on windows)
-    width = pointSize.width() * (96/72)
-    height = pointSize.height() * (96/72)
+        document = LoadPDF( path )
     
-    document.close()
+        pointSize = document.pagePointSize(0)
 
-    return (width, height)
+        # pointSize is in pts which are 1/72 of an inch.
+        # this calculates the "resolution" assuming PDF_ASSUMED_DPI dpi
+        width = pointSize.width() * PDF_ASSUMED_DPI
+        height = pointSize.height() * PDF_ASSUMED_DPI
+        
+        document.close()
+
+        return (width, height)
+    
+    except HydrusExceptions.UnsupportedFileException:
+
+        return (None, None)
+
     
 
 HydrusPDFHandling.GetPDFResolution = GetPDFResolution
