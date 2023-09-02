@@ -89,8 +89,8 @@ def GetPDFResolution( path: str ):
 
         # pointSize is in pts which are 1/72 of an inch.
         # this calculates the "resolution" assuming PDF_ASSUMED_DPI dpi
-        width = pointSize.width() * PDF_ASSUMED_DPI
-        height = pointSize.height() * PDF_ASSUMED_DPI
+        width = pointSize.width() * (PDF_ASSUMED_DPI/72)
+        height = pointSize.height() * (PDF_ASSUMED_DPI/72)
         
         document.close()
 
