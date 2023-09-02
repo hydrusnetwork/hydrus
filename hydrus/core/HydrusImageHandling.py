@@ -793,6 +793,15 @@ def GetThumbnailResolutionAndClipRegion( image_resolution: typing.Tuple[ int, in
         
         bounding_height = int( bounding_height * thumbnail_dpr )
         bounding_width = int( bounding_width * thumbnail_dpr )
+
+    if im_width is None:
+
+        im_width = bounding_width
+
+    if im_height is None:
+
+        im_height = bounding_height
+        
         
     # TODO SVG thumbs should always scale up to the bounding dimensions
     

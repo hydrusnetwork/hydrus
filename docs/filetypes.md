@@ -70,7 +70,7 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 | Filetype | Extension | MIME type                       | Thumbnails | Viewable in Hydrus | Notes |
 | -------- | --------- | ------------------------------- | :--------: | :----------------: | ----- |
 | flash    | `.swf`    | `application/x-shockwave-flash` |     ✅     |         ❌         |       |
-| pdf      | `.pdf`    | `application/pdf`               |     ❌     |         ❌         |       |
+| pdf      | `.pdf`    | `application/pdf`               |     ✅     |         ❌         | 300 DPI assumed for resolution. No thumbnails for encrypted PDFs. |
 
 
 ## Image Project Files

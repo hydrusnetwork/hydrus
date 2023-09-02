@@ -16,6 +16,7 @@ from hydrus.core import HydrusProcreateHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusSVGHandling
+from hydrus.core import HydrusPDFHandling
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
@@ -229,6 +230,24 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             thumb_path = os.path.join( HC.STATIC_DIR, 'svg.png' )
             
             thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+
+    elif mime == HC.APPLICATION_PDF: 
+        
+        try:
+            
+            thumbnail_bytes = HydrusPDFHandling.GenerateThumbnailBytesFromPDFPath( path, target_resolution, clip_rect = clip_rect )
+            
+        except Exception as e:
+            
+            if not isinstance( e, HydrusExceptions.UnsupportedFileException ):
+                
+                HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
+                HydrusData.PrintException( e )
+                
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'pdf.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
             
         
     elif mime == HC.APPLICATION_FLASH:
@@ -424,6 +443,10 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     elif mime == HC.IMAGE_SVG:
         
         ( width, height ) = HydrusSVGHandling.GetSVGResolution( path )
+
+    elif mime == HC.APPLICATION_PDF:
+        
+        ( width, height ) = HydrusPDFHandling.GetPDFResolution( path )
         
     elif mime == HC.APPLICATION_FLASH:
         
