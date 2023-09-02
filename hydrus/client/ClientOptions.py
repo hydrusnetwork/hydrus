@@ -292,6 +292,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'fade_sibling_connector' ] = True
         self._dictionary[ 'booleans' ][ 'use_custom_sibling_connector_colour' ] = False
         
+        self._dictionary[ 'booleans' ][ 'hide_uninteresting_local_import_time' ] = True
+        self._dictionary[ 'booleans' ][ 'hide_uninteresting_modified_time' ] = True
+        
         from hydrus.client.gui.canvas import ClientGUIMPV
         
         self._dictionary[ 'booleans' ][ 'mpv_available_at_start' ] = ClientGUIMPV.MPV_IS_AVAILABLE

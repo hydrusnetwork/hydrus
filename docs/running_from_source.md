@@ -29,7 +29,7 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 === "Linux"
 
-    You should already have a fairly new python. Ideally, you want at last 3.9.
+    You should already have a fairly new python. Ideally, you want at least 3.9.
 
 === "macOS"
 
@@ -57,6 +57,7 @@ There are three special external libraries. You just have to get them and put th
         1. If you are on Windows 8.1 or older, [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z) is known safe.
         2. If you are on Windows 10 or newer and want the simple answer, try [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z).
         3. Ideally, go for [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z), but you have to rename the dll to `mpv-2.dll`.
+        4. I have been testing [this newer version](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z) and things seem to be fine too, at least on updated Windows.
         
         Then open that archive and place the 'mpv-1.dll' or 'mpv-2.dll' into `install_dir`.
         

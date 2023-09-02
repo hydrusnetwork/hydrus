@@ -78,7 +78,7 @@ Note that if you say `A->B`, you cannot also say `A->C`. This is an `n->1` relat
 
 ## how you do it { id="how_to_do_it" }
 
-Just open _services->manage tag siblings_, and add a few.
+Just open _tags->manage tag siblings_, and add a few.
 
 ![](images/tag_siblings_dialog.png)
 

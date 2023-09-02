@@ -13,9 +13,11 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-      - uses: actions/setup-python@v2
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v4
         with:
           python-version: 3.x
-      - run: pip install mkdocs-material mkdocs-redirects
+      - run: pip install mkdocs-material mkdocs-redirects mkdocs-git-revision-date-localized-plugin
       - run: mkdocs gh-deploy --force --config-file mkdocs-gh-pages.yml

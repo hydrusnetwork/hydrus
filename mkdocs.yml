@@ -11,6 +11,7 @@ nav:
     - gettingStartedOverview.md
     - getting_started_installing.md
     - getting_started_files.md
+    - filetypes.md
     - getting_started_importing.md
     - getting_started_tags.md
     - getting_started_searching.md
@@ -89,8 +90,8 @@ theme:
   logo: assets/hydrus-white.svg
   favicon: assets/favicon.svg
   font: false
+  language: en
   features:
-    - navigation.instant
     - navigation.tracking
     - navigation.sections
     - navigation.tabs
@@ -157,3 +158,7 @@ markdown_extensions:
       custom_checkbox: true
   - pymdownx.tilde
   - pymdownx.snippets
+
+plugins:
+  - search
+  - offline

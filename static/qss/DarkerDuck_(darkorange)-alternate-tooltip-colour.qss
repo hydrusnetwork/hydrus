@@ -1,0 +1,397 @@
+/* CutieDuck Hydrus.qss based on QTOrange */
+
+QToolTip
+{
+    border: 1px solid black;
+    background-color: white;
+    padding: 1px;
+}
+
+QWidget
+{
+
+    color: white;
+    background-color: #323232;
+    alternate-background-color: #323232;
+}
+
+QWidget:disabled
+{
+    background-color: #404040;
+}
+
+QWidget:item:hover
+{
+    background-color: #d7801a;
+    color: black;
+}
+
+QWidget:item:selected
+{
+    background-color: #ffa02f;
+}
+
+QMenuBar::item
+{
+    background: transparent;
+}
+
+QMenuBar::item:selected
+{
+    background: transparent;
+    border: 1px solid #ffa02f;
+}
+
+QMenu
+{
+    border: 1px solid #000;
+}
+
+QMenu::item
+{
+    padding: 2px 20px 2px 20px;
+}
+
+QMenu::item:selected
+{
+    color: black;
+}
+
+QAbstractItemView
+{
+    background-color: #4d4d4d;
+}
+
+QLineEdit
+{
+	color: white;
+    background-color: #4d4d4d;
+    padding: 1px;
+    border-style: solid;
+    border: 1px solid #1e1e1e;
+}
+
+QPushButton
+{
+    color: white;
+    background-color: #000000;
+    border-width: 1px;
+    border-color: #bcbcbc;
+    border-style: solid;
+    padding: 3px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+QPushButton:pressed
+{
+    background-color: #323232;
+}
+
+QComboBox
+{
+    selection-background-color: #ffa02f;
+    background-color: #565656;
+    border-style: solid;
+    border: 1.0px solid #1e1e1e;
+}
+
+QComboBox:hover,QPushButton:hover
+{
+    border: 1px solid #d7801a;
+}
+
+QComboBox:on
+{
+    padding-top: 3px;
+    padding-left: 4px;
+    background-color: #2d2d2d;
+    selection-background-color: #ffa02f;
+}
+
+QComboBox QAbstractItemView
+{
+    border: 1px solid darkgray;
+    selection-background-color: #ffa02f;
+}
+
+QComboBox::drop-down
+{
+     subcontrol-origin: padding;
+     subcontrol-position: top right;
+     width: 15px;
+
+     border-left-width: 0px;
+     border-left-color: darkgray;
+     border-left-style: solid; /* just a single line */
+ }
+ 
+QComboBox::down-arrow
+{
+     image: url(:/down_arrow.png);
+}
+
+QGroupBox:focus
+{
+border: 1px solid #d7801a;
+}
+QTextEdit:focus
+{
+    border: 1px solid #ffa02f;
+}
+
+QScrollBar:horizontal {
+     border: 1px solid #222222;
+     background: #121212;
+     height: 7px;
+     margin: 0px 16px 0 16px;
+}
+
+QScrollBar::handle:horizontal
+{
+      background: #ffa02f;
+      min-height: 20px;
+      border-radius: 2px;
+}
+
+QScrollBar::add-line:horizontal {
+      border: 1px solid #1b1b19;
+      border-radius: 2px;
+      background: #d7801a;
+      width: 14px;
+      subcontrol-position: right;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:horizontal {
+      border: 1px solid #1b1b19;
+      border-radius: 2px;
+      background: #d7801a;
+      width: 14px;
+     subcontrol-position: left;
+     subcontrol-origin: margin;
+}
+
+QScrollBar::right-arrow:horizontal, QScrollBar::left-arrow:horizontal
+{
+      border: 1px solid black;
+      width: 1px;
+      height: 1px;
+      background: white;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal
+{
+      background: none;
+}
+
+QScrollBar:vertical
+{
+      background: #484848;
+      width: 7px;
+      margin: 16px 0 16px 0;
+      border: 1px solid #222222;
+}
+
+QScrollBar::handle:vertical
+{
+      background: #ffa02f;
+      min-height: 20px;
+}
+
+QScrollBar::add-line:vertical
+{
+      border: 1px solid #1b1b19;
+      background: #ffa02f;
+      height: 14px;
+      subcontrol-position: bottom;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:vertical
+{
+      border: 1px solid #1b1b19;
+      background: #ffa02f;
+      height: 14px;
+      subcontrol-position: top;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical
+{
+      border: 1px solid black;
+      width: 1px;
+      height: 1px;
+      background: white;
+}
+
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical
+{
+      background: none;
+}
+
+QTextEdit
+{
+    background-color: #242424;
+}
+
+QPlainTextEdit
+{
+    background-color: #242424;
+}
+
+QHeaderView::section
+{
+    background-color: #616161;
+    color: white;
+    padding-left: 4px;
+    border: 1px solid #6c6c6c;
+}
+
+QProgressBar
+{
+    border: 1px solid grey;
+    text-align: center;
+}
+
+QProgressBar::chunk
+{
+	background-color: #d7801a;
+}
+
+QTabBar::tab {
+    color: #b1b1b1;
+    background-color: #323232;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 2px;
+}
+
+QTabWidget::pane {
+    border: 1px solid #444;
+    top: 1px;
+}
+
+QTabBar::tab:last
+{
+    margin-right: 0; /* the last selected tab has nothing to overlap with on the right */
+    border-top-right-radius: 3px;
+}
+
+QTabBar::tab:first:!selected
+{
+ margin-left: 0px; /* the last selected tab has nothing to overlap with on the right */
+
+
+    border-top-left-radius: 3px;
+}
+
+QTabBar::tab:selected
+{
+    color: black;
+    border-bottom-style: solid;
+    background-color: #ffa02f;
+}
+
+QTabBar::tab:hover:!selected
+{
+	color: black;
+	background-color: #d7801a;
+}
+
+/* Hydev gonking in here with some late entries */
+
+/* Example: This regex is valid */
+
+QLabel#HydrusValid
+{
+	color: #2ed42e;
+}
+
+QLineEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QPlainTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+/* Duplicates 'middle' text colour */
+
+QLabel#HydrusIndeterminate
+{
+	color: #8080ff;
+}
+
+QLineEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+QTextEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+QPlainTextEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+/* Example: This regex is invalid */
+
+QLabel#HydrusInvalid
+{
+	color: #ff7171;
+}
+
+QLineEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QPlainTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+/*
+
+Buttons on dialogs
+
+*/
+
+QPushButton#HydrusAccept
+{
+	color: #2ed42e;
+}
+
+QPushButton#HydrusCancel
+{
+	color: #ff7171;
+}
+
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: #ffa02f;
+}

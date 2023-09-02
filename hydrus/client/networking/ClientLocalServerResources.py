@@ -167,6 +167,26 @@ def CheckTagService( tag_service_key: bytes ):
     return service
     
 
+def CheckTags( tags: typing.Collection[ str ] ):
+    
+    for tag in tags:
+        
+        try:
+            
+            clean_tag = HydrusTags.CleanTag( tag )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.BadRequestException( 'Could not parse tag "{}"!'.format( tag ) )
+            
+        
+        if clean_tag == '':
+            
+            raise HydrusExceptions.BadRequestException( 'Tag "{}" was empty!'.format( tag ) )
+            
+        
+    
+
 def GetServicesDict():
     
     service_types = [
@@ -2121,6 +2141,8 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
         
+        # this doesn't need 'add tags' atm. I was going to add it, but I'm not sure it is actually appropriate
+        # this thing probably should have been in search files space, but whatever
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES )
         
     
@@ -2200,6 +2222,49 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         return response_context
         
     
+
+class HydrusResourceClientAPIRestrictedAddTagsGetTagSiblingsParents( HydrusResourceClientAPIRestrictedAddTags ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        tags = request.parsed_request_args.GetValue( 'tags', list, expected_list_type = str )
+        
+        CheckTags( tags )
+        
+        tags_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', tags )
+        
+        tags_dict = {}
+        
+        for ( tag, service_keys_to_siblings_parents ) in tags_to_service_keys_to_siblings_and_parents.items():
+            
+            tag_dict = {}
+            
+            for ( service_key, siblings_parents ) in service_keys_to_siblings_parents.items():
+                
+                tag_dict[ service_key.hex() ] = {
+                    'siblings': list( siblings_parents[0] ),
+                    'ideal_tag': siblings_parents[1],
+                    'descendants': list( siblings_parents[2] ),
+                    'ancestors': list( siblings_parents[3] )
+                }
+                
+            
+            tags_dict[ tag ] = tag_dict
+            
+        
+        body_dict = {
+            'tags' : tags_dict,
+            'services' : GetServicesDict()
+        }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
 class HydrusResourceClientAPIRestrictedAddTagsCleanTags( HydrusResourceClientAPIRestrictedAddTags ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):

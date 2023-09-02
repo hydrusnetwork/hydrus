@@ -35,6 +35,47 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_541"><a href="#version_541">version 541</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed the gallery downloader and thread watcher loading with the 'clear highlight' button enabled despite there being nothing currently highlighted</li>
+                        <li>to fix the darkmode tooltips on the new Qt 6.5.2 on Windows (the text is stuck on a dark grey, which is unreadable in darkmodes), all the default darkmode styles now have an 'alternate-tooltip-colour' variant, which swaps out the tooltip background colour for the much brighter normal widget text colour</li>
+                        <li>rewrote the apng parser to work much faster on large files. someone encountered a 200MB giga apng that locked up the client for minutes. now it takes a second or two (unfortunately it looks like that huge apng breaks mpv, but there we go)</li>
+                        <li>the 'media' options page has two new checkboxes--'hide uninteresting import/modified times'--which allow you to turn off the media viewer behaivour where import and modified times similar to the 'added to my files xxx days ago' are hidden</li>
+                        <li>reworked the layout of the 'media' options page. everything is in sections now and re-ordered a bit</li>
+                        <li>the 'other file is a pixel-for-pixel duplicate png!' statements will now only show if the complement is a jpeg, gif, or webp. this statement isn't so appropriate for formats like PSD</li>
+                        <li>a variety of tricky tags like `:>=` are now searchable in normal autocomplete lookup. a test that determined whether to use a slower but more capable search was misfiring</li>
+                        <li>the client api key editing window has a new 'check all permissions' button</li>
+                        <li>fixed the updates I made last week to the missing-master-file-id recovery system. I made a stupid typo and didn't test it properly, fixed now. sorry for the trouble!</li>
+                        <li>thanks to a user, the help has a bunch of updated screenshots and fixed references to old concepts</li>
+                        <li>did a little more reformatting and cleanup of 'getting started with downloading' help document and added a short section on note import options</li>
+                        <li>cleaned up some of the syntax in our various batch files. fingers crossed, the setup_venv.bat script will absolutely retain the trailing space after its questions now, no matter what whitespace my IDE and github want to trim</li>
+                        <li><h3>string joiner</h3></li>
+                        <li>the parsing system has a new String Processor object--the 'String Joiner'. this is a simple concatenator that takes the list of strings and joins them together. it has two variables: what joining text to use, e.g. ', ', or '-', or empty string '' for simple concatenation; and an optional 'group size', which lets you join every two or three or n strings in 1-2-3, 1-2-3, 1-2-3 style patterns</li>
+                        <li><h3>new file types</h3></li>
+                        <li>thanks to a user; we now have support for QOI (a png-like lossless image type) and procreate (Apple image project file) files. the former has full support; the latter has thumbnails</li>
+                        <li>QOI needs Pillow 9.5 at least, so if you are on a super old 'running from source' version, try rebuilding your venv; or cope with you QOI-lessness</li>
+                        <li><h3>client api</h3></li>
+                        <li>thanks to a user, we now have `/add_tags/get_siblings_and_parents`, which, given a set of tags, shows their sibling and parent display rules for each service</li>
+                        <li>I wrote some help and unit tests for this</li>
+                        <li>client api version is now 51</li>
+                        <li><h3>file storage (mostly boring)</h3></li>
+                        <li>the file storage system is creaky and ugly to use. I have prepped some longer-term upgrades, mostly by writing new tools and cleaning and reworking existing code. I am nowhere near to done, but I'd like us to have four new features in the nearish future: </li>
+                        <li>- dynamic-length subfolders (where instead of a fixed set of 256 x00-xff folders, we can bump up to 4096 x000-xfff, and beyond, based on total number of files)</li>
+                        <li>- setting fixed space limits on particular database locations (e.g. 'no more than 200GB of files here') to complement the current weight system</li>
+                        <li>- permitting multiple valid locations for a particular subfolder prefix</li>
+                        <li>- slow per-file background migration between valid subfolders, rather than the giganto folder-atomic program-blocking 'move files now' button in database maintenance</li>
+                        <li>so, it is pretty boring so far, but I did the following: </li>
+                        <li>wrote a new class to handle a specific file storage subfolder and spammed it everywhere, replacing previous location and prefix juggling</li>
+                        <li>wrote some new tools to scan and check the coverage of multiple locations and dynamic-length subfolders</li>
+                        <li>rewrote the file location database initialisation, storage, testing, updating, and repair to support multiple valid locations</li>
+                        <li>updated the database to hold 'max num bytes' per file storage location</li>
+                        <li>the feature to migrate the SQLite database files and then restart is removed from the 'migrate database' dialog. it was always ultrajank in a place that really shouldn't be, and it was completely user-unfriendly. just move things manually, while the client is closed</li>
+                        <li>the old 'recover and merge surplus database locations into the correct position' side feature in 'move files now' is removed. it was always a little jank, was very rarely actually helpful, and had zero reporting. it will return in the new system as a better one-shot maintenance job</li>
+                        <li>touched up the migrated database help a little</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_540"><a href="#version_540">version 540</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

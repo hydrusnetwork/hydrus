@@ -2,6 +2,7 @@ import collections
 import os
 import random
 import traceback
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -20,6 +21,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientFilesPhysical
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -2059,58 +2061,78 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options = HG.client_controller.new_options
             
-            self._animation_start_position = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
+            #
             
-            self._disable_cv_for_gifs = QW.QCheckBox( self )
-            self._disable_cv_for_gifs.setToolTip( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
+            animations_panel = ClientGUICommon.StaticBox( self, 'animations' )
             
-            self._load_images_with_pil = QW.QCheckBox( self )
-            self._load_images_with_pil.setToolTip( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
+            self._animated_scanbar_height = ClientGUICommon.BetterSpinBox( animations_panel, min=1, max=255 )
+            self._animated_scanbar_hide_height = ClientGUICommon.NoneableSpinCtrl( animations_panel, none_phrase = 'no, hide it', min = 1, max = 255, unit = 'px' )
+            self._animated_scanbar_nub_width = ClientGUICommon.BetterSpinBox( animations_panel, min=1, max=63 )
             
-            self._use_system_ffmpeg = QW.QCheckBox( self )
-            self._use_system_ffmpeg.setToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
+            self._animation_start_position = ClientGUICommon.BetterSpinBox( animations_panel, min=0, max=100 )
             
-            self._always_loop_animations = QW.QCheckBox( self )
+            self._always_loop_animations = QW.QCheckBox( animations_panel )
             self._always_loop_animations.setToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' )
             
-            self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( self )
-            self._draw_transparency_checkerboard_media_canvas.setToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' )
+            #
             
-            self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
+            system_panel = ClientGUICommon.StaticBox( self, 'system' )
             
-            self._anchor_and_hide_canvas_drags = QW.QCheckBox( self )
-            self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( self )
+            self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
+            
+            self._use_system_ffmpeg = QW.QCheckBox( system_panel )
+            self._use_system_ffmpeg.setToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
+            
+            self._disable_cv_for_gifs = QW.QCheckBox( system_panel )
+            self._disable_cv_for_gifs.setToolTip( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
+            
+            self._load_images_with_pil = QW.QCheckBox( system_panel )
+            self._load_images_with_pil.setToolTip( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
+            
+            #
+            
+            media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer' )
+            
+            self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( media_viewer_panel, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
+            
+            self._slideshow_durations = QW.QLineEdit( media_viewer_panel )
+            self._slideshow_durations.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' )
+            self._slideshow_durations.textChanged.connect( self.EventSlideshowDurationsChanged )
+            
+            self._media_zooms = QW.QLineEdit( media_viewer_panel )
+            self._media_zooms.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' )
+            self._media_zooms.textChanged.connect( self.EventZoomsChanged )
             
             from hydrus.client.gui.canvas import ClientGUICanvasMedia
             
-            self._media_viewer_zoom_center = ClientGUICommon.BetterChoice()
+            self._media_viewer_zoom_center = ClientGUICommon.BetterChoice( media_viewer_panel )
             
             for zoom_centerpoint_type in ClientGUICanvasMedia.ZOOM_CENTERPOINT_TYPES:
                 
                 self._media_viewer_zoom_center.addItem( ClientGUICanvasMedia.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
                 
             
-            tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit.'
+            tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit before zooming.'
             
             self._media_viewer_zoom_center.setToolTip( tt )
             
-            self._slideshow_durations = QW.QLineEdit( self )
-            self._slideshow_durations.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' )
-            self._slideshow_durations.textChanged.connect( self.EventSlideshowDurationsChanged )
+            self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_viewer_panel )
+            self._draw_transparency_checkerboard_media_canvas.setToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' )
             
-            self._media_zooms = QW.QLineEdit( self )
-            self._media_zooms.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' )
-            self._media_zooms.textChanged.connect( self.EventZoomsChanged )
+            self._hide_uninteresting_local_import_time = QW.QCheckBox( media_viewer_panel )
+            self._hide_uninteresting_local_import_time.setToolTip( 'If the file was imported at a similar time to when it was added to its current services (i.e. the number of seconds since both events differs by less than 10%), hide the import time in the top of the media viewer.' )
             
-            self._mpv_conf_path = QP.FilePickerCtrl( self, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
+            self._hide_uninteresting_modified_time = QW.QCheckBox( media_viewer_panel )
+            self._hide_uninteresting_modified_time.setToolTip( 'If the file has a modified time similar to its import time (i.e. the number of seconds since both events differs by less than 10%), hide the modified time in the top of the media viewer.' )
             
-            self._animated_scanbar_height = ClientGUICommon.BetterSpinBox( self, min=1, max=255 )
-            self._animated_scanbar_hide_height = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'no, hide it', min = 1, max = 255, unit = 'px' )
-            self._animated_scanbar_nub_width = ClientGUICommon.BetterSpinBox( self, min=1, max=63 )
+            self._anchor_and_hide_canvas_drags = QW.QCheckBox( media_viewer_panel )
+            self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( media_viewer_panel )
             
-            self._media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer filetype handling' )
+            #
             
-            media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._media_viewer_panel )
+            filetype_handling_panel = ClientGUICommon.StaticBox( media_viewer_panel, 'media viewer filetype handling' )
+            
+            media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( filetype_handling_panel )
             
             self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, 20, data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
             
@@ -2123,6 +2145,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
+            self._hide_uninteresting_local_import_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_local_import_time' ) )
+            self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
             self._disable_cv_for_gifs.setChecked( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
@@ -2162,32 +2186,61 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
+            #
+            
             rows = []
             
-            rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
-            rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
-            rows.append( ( 'Always Loop GIFs/APNGs:', self._always_loop_animations ) )
-            rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
-            rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
+            rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
             rows.append( ( 'Slideshow durations:', self._slideshow_durations ) )
             rows.append( ( 'Media zooms:', self._media_zooms ) )
-            rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
+            rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
+            rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
+            rows.append( ( 'Hide uninteresting import times:', self._hide_uninteresting_local_import_time ) )
+            rows.append( ( 'Hide uninteresting modified times:', self._hide_uninteresting_modified_time ) )
+            rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
+            rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( media_viewer_panel, rows )
+            
+            filetype_handling_panel.Add( media_viewer_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            media_viewer_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            media_viewer_panel.Add( filetype_handling_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            QP.AddToLayout( vbox, media_viewer_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            #
+            
+            rows = []
+            
             rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
             rows.append( ( 'Animation scanbar height when mouse away:', self._animated_scanbar_hide_height ) )
             rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
-            rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
-            rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
-            rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
-            rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
+            rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
+            rows.append( ( 'Always Loop GIFs/APNGs:', self._always_loop_animations ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( animations_panel, rows )
+            
+            animations_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            QP.AddToLayout( vbox, animations_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
+            rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
             rows.append( ( 'BUGFIX: Load gifs with PIL instead of OpenCV (slower, bad transparency):', self._disable_cv_for_gifs ) )
+            rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            gridbox = ClientGUICommon.WrapInGrid( system_panel, rows )
             
-            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            system_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            self._media_viewer_panel.Add( media_viewer_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, system_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            QP.AddToLayout( vbox, self._media_viewer_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            #
             
             self.setLayout( vbox )
             
@@ -2411,6 +2464,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             HC.options[ 'animation_start_position' ] = self._animation_start_position.value() / 100.0
             
+            self._new_options.SetBoolean( 'hide_uninteresting_local_import_time', self._hide_uninteresting_local_import_time.isChecked() )
+            self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
             self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.isChecked() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
@@ -3398,6 +3453,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
+            text += '\n' * 2
+            text += 'Note that there are several colours not handled by this yet. Check out the "colours" page of this options to change them.'
             
             st = ClientGUICommon.BetterStaticText( self, label = text )
             
@@ -4942,24 +4999,16 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
     
 class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, missing_locations ):
+    def __init__( self, parent, missing_subfolders: typing.Collection[ ClientFilesPhysical.FilesStorageSubfolder ] ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
+        # TODO: This needs another pass as we move to multiple locations and other tech
+        # if someone has f10 and we are expecting 16 lots of f10x, or vice versa, (e.g. on an out of sync db recovery, not uncommon) we'll need to handle that
+        
         self._only_thumbs = True
         
-        self._incorrect_locations = {}
         self._correct_locations = {}
-        
-        for ( incorrect_location, prefix ) in missing_locations:
-            
-            self._incorrect_locations[ prefix ] = incorrect_location
-            
-            if prefix.startswith( 'f' ):
-                
-                self._only_thumbs = False
-                
-            
         
         text = 'This dialog has launched because some expected file storage directories were not found. This is a serious error. You have two options:'
         text += os.linesep * 2
@@ -4989,7 +5038,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        self._locations.AddDatas( [ prefix for ( incorrect_location, prefix ) in missing_locations ] )
+        self._locations.AddDatas( missing_subfolders )
         
         self._locations.Sort()
         
@@ -5013,13 +5062,15 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 path = dlg.GetPath()
                 
-                for prefix in self._locations.GetData():
+                for subfolder in self._locations.GetData():
+                    
+                    prefix = subfolder.prefix
                     
                     ok = os.path.exists( os.path.join( path, prefix ) )
                     
                     if ok:
                         
-                        self._correct_locations[ prefix ] = ( path, ok )
+                        self._correct_locations[ subfolder ] = ( path, ok )
                         
                     
                 
@@ -5028,13 +5079,14 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    def _ConvertPrefixToListCtrlTuples( self, prefix ):
+    def _ConvertPrefixToListCtrlTuples( self, subfolder ):
         
-        incorrect_location = self._incorrect_locations[ prefix ]
+        prefix = subfolder.prefix
+        incorrect_location = subfolder.location
         
-        if prefix in self._correct_locations:
+        if subfolder in self._correct_locations:
             
-            ( correct_location, ok ) = self._correct_locations[ prefix ]
+            ( correct_location, ok ) = self._correct_locations[ subfolder ]
             
             if ok:
                 
@@ -5068,11 +5120,12 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         thumb_problems = False
         
-        for prefix in self._locations.GetData():
+        for subfolder in self._locations.GetData():
             
-            incorrect_location = self._incorrect_locations[ prefix ]
+            prefix = subfolder.prefix
+            incorrect_location = subfolder.location
             
-            if prefix not in self._correct_locations:
+            if subfolder not in self._correct_locations:
                 
                 if prefix.startswith( 'f' ):
                     
@@ -5087,7 +5140,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             else:
                 
-                ( correct_location, ok ) = self._correct_locations[ prefix ]
+                ( correct_location, ok ) = self._correct_locations[ subfolder ]
                 
                 if not ok:
                     
@@ -5102,7 +5155,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            correct_rows.append( ( prefix, correct_location ) )
+            correct_rows.append( ( prefix, incorrect_location, correct_location ) )
             
         
         return ( correct_rows, thumb_problems )
@@ -5110,9 +5163,9 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SetLocations( self ):
         
-        prefixes = self._locations.GetData( only_selected = True )
+        subfolders = self._locations.GetData( only_selected = True )
         
-        if len( prefixes ) > 0:
+        if len( subfolders ) > 0:
             
             with QP.DirDialog( self, 'Select correct location.' ) as dlg:
                 
@@ -5120,11 +5173,13 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     path = dlg.GetPath()
                     
-                    for prefix in prefixes:
+                    for subfolder in subfolders:
+                        
+                        prefix = subfolder.prefix
                         
                         ok = os.path.exists( os.path.join( path, prefix ) )
                         
-                        self._correct_locations[ prefix ] = ( path, ok )
+                        self._correct_locations[ subfolder ] = ( path, ok )
                         
                     
                     self._locations.UpdateDatas()

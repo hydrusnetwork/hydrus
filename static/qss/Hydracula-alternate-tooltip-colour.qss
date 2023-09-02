@@ -1,0 +1,489 @@
+/* Hydracula: Dracula theme for Hydrus by deDUCKted aka purple_azurite*/
+
+/* To achieve the intended results you must: 1. Activate dark mode, 2. adjust your color values under files > options > colors > darkmode like so: */
+/* thumbnail grid background: #282a36
+/* media viewer background: #282a36
+
+/*color: usually refers to foreground color */
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Tooltips that appear on mouse hover                                        */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QToolTip
+{
+    border: 1px solid black;
+    background-color: #f8f8f2;
+    padding: 1px;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Widgets are UI elements that are appended on the main GUI. For instance,   */
+/* the tag-selection submenu on the left is a widget.                         */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QWidget
+{
+    color: #f8f8f2;
+    background-color: #282a36;
+  	alternate-background-color: #44475a;
+}
+
+/*DEV: Could you create an entirely new class for the drop-down menus (ie. for the application menu) so they don't share with Qwidget:item:selected?*/
+QWidget:disabled
+{
+    background-color: #44475a;
+}
+
+QWidget:item:hover
+{
+    background-color: #50fa7b;
+    color: black;
+}
+
+QWidget:item:selected
+{
+		color: black;
+    background-color: #50fa7b;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* The application menu stuff (file, undo, page etc.)					      */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QMenuBar::item
+{
+    background: transparent;
+}
+
+QMenuBar::item:selected
+{
+	  color: #50fa7b;
+    background: transparent;
+}
+
+QMenu
+{
+	  color: #f8f8f2;
+	  background: #44475a;
+    border: 1px solid #000;
+}
+
+QMenu::item
+{
+    padding: 2px 20px 2px 20px;
+}
+
+QMenu::item:selected
+{
+    color: black;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* This is hard to explain. Just trial and error. Mostly stuff appended on    */
+/* top of widgets.															  */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QAbstractItemView
+{
+    background-color: #282a36;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Text input fields														  */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QLineEdit
+{
+	color: #f8f8f2;
+    background-color: #6272a4;
+    padding: 1px;
+    border-style: solid;
+    border: 1px solid #000000;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* BUTTONS!																	  */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QPushButton
+{
+    color: #f8f8f2;
+    background-color: transparent;
+    border-width: 1px;
+    border-color: #44475a;
+    border-style: solid;
+    padding: 3px;
+    font-size: 12px;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+QPushButton:hover
+{
+    border-color: #50fa7b;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* May the Omnissiah guide your hand.    									  */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QComboBox
+{
+    selection-background-color: #bd93f9;
+    background-color: #6272a4;
+    border-style: solid;
+    border: 1.0px solid #000000;
+}
+
+QComboBox:hover,QPushButton:hover
+{
+    border: 1px solid #50fa7b;
+}
+
+QComboBox:on
+{
+    padding-top: 3px;
+    padding-left: 4px;
+    background-color: #44475a;
+    selection-background-color: #bd93f9;
+}
+
+QComboBox QAbstractItemView
+{
+    border: 1px solid darkgray;
+    selection-background-color: #bd93f9;
+}
+
+QComboBox::drop-down
+{
+     subcontrol-origin: padding;
+     subcontrol-position: top right;
+     width: 15px;
+
+     border-left-width: 0px;
+     border-left-color: darkgray;
+     border-left-style: solid; /* just a single line */
+ }
+
+QComboBox::down-arrow
+{
+     image: url(:/down_arrow.png);
+}
+
+QGroupBox:focus
+{
+border: 1px solid #50fa7b;
+}
+QTextEdit:focus
+{
+    border: 1px solid #44475a;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Scrollbar																  */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QScrollBar:horizontal {
+     border: 1px solid #000000;
+     background: black;
+     height: 7px;
+     margin: 0px 16px 0 16px;
+}
+
+QScrollBar::handle:horizontal
+{
+      background: #bd93f9;
+      min-height: 20px;
+      border-radius: 2px;
+}
+
+QScrollBar::add-line:horizontal {
+      border: 1px solid #000000;
+      border-radius: 2px;
+      background: #50fa7b;
+      width: 14px;
+      subcontrol-position: right;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:horizontal {
+      border: 1px solid #000000;
+      border-radius: 2px;
+      background: #50fa7b;
+      width: 14px;
+     subcontrol-position: left;
+     subcontrol-origin: margin;
+}
+
+QScrollBar::right-arrow:horizontal, QScrollBar::left-arrow:horizontal
+{
+      border: 1px solid black;
+      width: 1px;
+      height: 1px;
+      background: #f8f8f2;
+}
+
+QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal
+{
+      background: none;
+}
+
+QScrollBar:vertical
+{
+      background: transparent;
+      width: 7px;
+      margin: 16px 0 16px 0;
+      border: 1px solid #000000;
+}
+
+QScrollBar::handle:vertical
+{
+      background: #bd93f9;
+      min-height: 20px;
+}
+
+QScrollBar::add-line:vertical
+{
+      border: 1px solid #000000;
+      background: #bd93f9;
+      height: 14px;
+      subcontrol-position: bottom;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::sub-line:vertical
+{
+      border: 1px solid #000000;
+      background: #bd93f9;
+      height: 14px;
+      subcontrol-position: top;
+      subcontrol-origin: margin;
+}
+
+QScrollBar::up-arrow:vertical, QScrollBar::down-arrow:vertical
+{
+      border: 1px solid black;
+      width: 1px;
+      height: 1px;
+      background: #f8f8f2;
+}
+
+
+QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical
+{
+      background: none;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Progressbar for downloaders etc.                                           */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QTextEdit
+{
+    background-color: #000000;
+}
+
+QPlainTextEdit
+{
+    background-color: #000000;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Headers  												                  */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QHeaderView::section
+{
+    background-color: #6272a4;
+    color: #f8f8f2;
+    padding-left: 4px;
+    border: 1px solid #6272a4;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Progressbar for downloaders etc.                                           */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QProgressBar
+{
+		color: black;
+    border: 1px solid grey;
+    text-align: center;
+}
+
+QProgressBar::chunk
+{
+	background-color: #ffb86c;
+}
+
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+/* Tabs menu (ie. pages)									                  */
+/*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~*/
+QTabBar::tab {
+    color: #8be9fd;
+    background-color: #282a36;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 2px;
+}
+
+QTabWidget::pane {
+    border: 1px solid #444;
+    top: 1px;
+}
+
+QTabBar::tab:last
+{
+    margin-right: 0; /* the last selected tab has nothing to overlap with on the right */
+    border-top-right-radius: 3px;
+}
+
+QTabBar::tab:first:!selected
+{
+ margin-left: 0px; /* the last selected tab has nothing to overlap with on the right */
+
+
+    border-top-left-radius: 3px;
+}
+
+QTabBar::tab:selected
+{
+    color: #50fa7b;
+    border-bottom-style: solid;
+    background-color: #282a36;
+}
+
+QTabBar::tab:hover:!selected
+{
+	color: #bd93f9;
+	background-color: #282a36;
+}
+
+/*
+DUCK
+*/
+/*
+Default QSS for hydrus. This is prepended to any stylesheet loaded in hydrus.
+Copying these entries in your own stylesheets should override these settings.
+This will get more work in future.
+*/
+
+/*
+
+Here are some text and background colours
+
+*/
+
+/* Example: This regex is valid */
+
+QLabel#HydrusValid
+{
+	color: #50fa7b;
+}
+
+QLineEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+QPlainTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+/* Duplicates 'middle' text colour */
+
+QLabel#HydrusIndeterminate
+{
+	color: #8080ff;
+}
+
+QLineEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+QTextEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+QPlainTextEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+/* Example: This regex is invalid */
+
+QLabel#HydrusInvalid
+{
+	color: #ff5555;
+}
+
+QLineEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+QPlainTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+/* Example: Your files are going to be deleted! */
+
+QLabel#HydrusWarning
+{
+	color: #ff5555;
+}
+
+QCheckBox#HydrusWarning
+{
+	color: #ff5555;
+}
+
+/*
+
+Buttons on dialogs
+
+*/
+
+QPushButton#HydrusAccept
+{
+	color: #50fa7b;
+}
+
+QPushButton#HydrusCancel
+{
+	color: #ff5555;
+}
+
+/*
+
+This is the green/red button that switches 'include current tags' and similar states on/off
+
+*/
+
+QPushButton#HydrusOnOffButton[hydrus_on=true]
+{
+	color: #50fa7b;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false]
+{
+	color: #ff5555;
+}
+
+/* You are permitted to use this theme however you want for the low, low price of your soul. :3 */
+
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: #50fa7b;
+}

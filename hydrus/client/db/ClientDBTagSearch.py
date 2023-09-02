@@ -135,7 +135,12 @@ def WildcardHasFTS4SearchableCharacters( wildcard: str ):
     
     for c in wildcard:
         
-        if c.isalnum() or ord( c ) >= 128 or c == '*':
+        if c == '*':
+            
+            continue
+            
+        
+        if c.isalnum() or ord( c ) >= 128:
             
             return True
             

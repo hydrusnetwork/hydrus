@@ -103,6 +103,8 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                         
                         if result is None:
                             
+                            hash = bytes.fromhex( 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' ) + os.urandom( 16 )
+                            
                             if not pubbed_error:
                                 
                                 HydrusData.ShowText( 'A file identifier was missing! This is a serious error that means your client database had an orphan file id! You have very likely encountered database corruption, perhaps recently, or perhaps years ago, please check the "help my db is broke.txt" document under install_dir/db folder as background reading. Additional info has been written to the log.' )
@@ -112,9 +114,9 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                             
                             HydrusData.DebugPrint( 'Database master hash definition error: hash_id {} was missing! Replaced with hash {}.'.format( hash_id, hash.hex() ) )
                             
-                            hash = bytes.fromhex( 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa' ) + os.urandom( 16 )
-                            
                         else:
+                            
+                            ( hash, ) = result
                             
                             if not pubbed_error:
                                 
@@ -124,8 +126,6 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                                 
                             
                             HydrusData.DebugPrint( 'Database master hash definition error: hash_id {} was missing! Recovered from local hash cache with hash {}.'.format( hash_id, hash.hex() ) )
-                            
-                            ( hash, ) = result
                             
                         
                         self._Execute( 'INSERT OR IGNORE INTO hashes ( hash_id, hash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( hash ) ) )

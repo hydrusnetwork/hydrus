@@ -69,6 +69,7 @@ class TagSizeException( VetoException ): pass
 
 class ParseException( HydrusException ): pass
 class StringConvertException( ParseException ): pass
+class StringJoinerException( ParseException ): pass
 class StringMatchException( ParseException ): pass
 class StringSplitterException( ParseException ): pass
 class StringSortException( ParseException ): pass

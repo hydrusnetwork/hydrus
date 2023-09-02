@@ -23,6 +23,7 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
+from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientOptions
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
@@ -47,6 +48,7 @@ from hydrus.test import TestClientData
 from hydrus.test import TestClientDB
 from hydrus.test import TestClientDBDuplicates
 from hydrus.test import TestClientDBTags
+from hydrus.test import TestClientFileStorage
 from hydrus.test import TestClientImageHandling
 from hydrus.test import TestClientImportOptions
 from hydrus.test import TestClientImportSubscriptions
@@ -261,17 +263,17 @@ class Controller( object ):
         
         self._name_read_responses[ 'services' ] = services
         
-        client_files_locations = {}
+        client_files_subfolders = []
         
         for prefix in HydrusData.IterateHexPrefixes():
             
             for c in ( 'f', 't' ):
                 
-                client_files_locations[ c + prefix ] = client_files_default
+                client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( c + prefix, client_files_default, False ) )
                 
             
         
-        self._name_read_responses[ 'client_files_locations' ] = client_files_locations
+        self._name_read_responses[ 'client_files_subfolders' ] = client_files_subfolders
         
         self._name_read_responses[ 'sessions' ] = []
         self._name_read_responses[ 'tag_parents' ] = {}
@@ -775,6 +777,7 @@ class Controller( object ):
             TestClientDaemons,
             TestClientConstants,
             TestClientData,
+            TestClientFileStorage,
             TestClientImportOptions,
             TestClientParsing,
             TestClientTags,
@@ -815,6 +818,7 @@ class Controller( object ):
         module_lookup[ 'data' ] = [
             TestClientConstants,
             TestClientData,
+            TestClientFileStorage,
             TestClientImportOptions,
             TestClientParsing,
             TestClientTags,

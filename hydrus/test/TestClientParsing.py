@@ -309,6 +309,33 @@ class TestStringConverter( unittest.TestCase ):
         self.assertEqual( string_converter.Convert( '0123456789' ), 'z xddddddcba' )
         
     
+class TestStringJoiner( unittest.TestCase ):
+    
+    def test_basics( self ):
+        
+        texts = [
+            'ab',
+            'cd',
+            'ef',
+            'gh',
+            'ij'
+        ]
+        
+        #
+        
+        joiner = ClientStrings.StringJoiner( joiner = '', join_tuple_size = None )
+        self.assertEqual( joiner.Join( texts ), [ 'abcdefghij' ] )
+        self.assertEqual( joiner.ToString(), 'joining all strings using ""' )
+        
+        joiner = ClientStrings.StringJoiner( joiner = ',', join_tuple_size = None )
+        self.assertEqual( joiner.Join( texts ), [ 'ab,cd,ef,gh,ij' ] )
+        self.assertEqual( joiner.ToString(), 'joining all strings using ","' )
+        
+        joiner = ClientStrings.StringJoiner( joiner = '--', join_tuple_size = 2 )
+        self.assertEqual( joiner.Join( texts ), [ 'ab--cd', 'ef--gh' ] )
+        self.assertEqual( joiner.ToString(), 'joining every 2 strings using "--"' )
+        
+    
 class TestStringMatch( unittest.TestCase ):
     
     def test_basics( self ):

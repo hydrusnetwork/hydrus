@@ -6288,7 +6288,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if action == 'autocomplete_predicates': result = self.modules_tag_search.GetAutocompletePredicates( *args, **kwargs )
         elif action == 'boned_stats': result = self._GetBonedStats( *args, **kwargs )
-        elif action == 'client_files_locations': result = self.modules_files_physical_storage.GetClientFilesLocations( *args, **kwargs )
+        elif action == 'client_files_subfolders': result = self.modules_files_physical_storage.GetClientFilesSubfolders( *args, **kwargs )
         elif action == 'deferred_delete_data': result = self.modules_db_maintenance.GetDeferredDeleteTableData( *args, **kwargs )
         elif action == 'deferred_physical_delete': result = self.modules_files_storage.GetDeferredPhysicalDelete( *args, **kwargs )
         elif action == 'duplicate_pairs_for_filtering': result = self._DuplicatesGetPotentialDuplicatePairsForFiltering( *args, **kwargs )
@@ -9451,6 +9451,29 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Some file updates failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 540:
+            
+            result = self._Execute( 'SELECT 1 FROM main.sqlite_master WHERE name = ?;', ( 'client_files_subfolders', ) ).fetchone()
+            
+            if result is None:
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS main.client_files_subfolders ( prefix TEXT, location TEXT, purge INTEGER_BOOLEAN, PRIMARY KEY ( prefix, location ) );' )
+                
+                self._Execute( 'INSERT INTO client_files_subfolders SELECT DISTINCT prefix, location, ? FROM client_files_locations;', ( False, ) )
+                
+                self._Execute( 'DROP TABLE client_files_locations;' )
+                
+            
+            result = self._Execute( 'SELECT * FROM ideal_client_files_locations;' ).fetchone()
+            
+            if len( result ) == 2:
+                
+                self._Execute( 'ALTER TABLE ideal_client_files_locations ADD COLUMN max_num_bytes INTEGER;' )
+                
+                self._Execute( 'UPDATE ideal_client_files_locations SET max_num_bytes = ?;', ( None, ) )
                 
             
         

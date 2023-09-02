@@ -4,7 +4,7 @@ pushd "%~dp0"
 
 IF NOT EXIST "venv\" (
 
-	SET /P gumpf=Sorry, you do not seem to have a venv!
+	SET /P gumpf="Sorry, you do not seem to have a venv!"
 	
 	popd
 	

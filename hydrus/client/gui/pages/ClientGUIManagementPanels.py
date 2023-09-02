@@ -1268,6 +1268,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._loading_highlight_job_key = ClientThreading.JobKey( cancellable = True )
         
+        self._loading_highlight_job_key.Finish()
+        
         #
         
         self._gallery_downloader_panel = ClientGUICommon.StaticBox( self, 'gallery downloader' )
@@ -2199,6 +2201,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._highlighted_watcher = self._multiple_watcher_import.GetHighlightedWatcher()
         
         self._loading_highlight_job_key = ClientThreading.JobKey( cancellable = True )
+        
+        self._loading_highlight_job_key.Finish()
         
         checker_options = self._multiple_watcher_import.GetCheckerOptions()
         file_import_options = self._multiple_watcher_import.GetFileImportOptions()

@@ -1811,8 +1811,15 @@ class MediaSingleton( Media ):
             
             import_timestamp = timestamps_manager.GetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            # if we haven't already printed this timestamp somewhere
-            line_is_interesting = False not in ( timestamp_is_interesting( t, import_timestamp ) for t in seen_local_file_service_timestamps )
+            if HG.client_controller.new_options.GetBoolean( 'hide_uninteresting_local_import_time' ):
+                
+                # if we haven't already printed this timestamp somewhere
+                line_is_interesting = False not in ( timestamp_is_interesting( t, import_timestamp ) for t in seen_local_file_service_timestamps )
+                
+            else:
+                
+                line_is_interesting = True
+                
             
             lines.append( ( line_is_interesting, 'imported: {}'.format( ClientTime.TimestampToPrettyTimeDelta( import_timestamp ) ) ) )
             
@@ -1868,8 +1875,15 @@ class MediaSingleton( Media ):
         
         if file_modified_timestamp is not None:
             
-            # if we haven't already printed this timestamp somewhere
-            line_is_interesting = False not in ( timestamp_is_interesting( timestamp, file_modified_timestamp ) for timestamp in seen_local_file_service_timestamps )
+            if HG.client_controller.new_options.GetBoolean( 'hide_uninteresting_modified_time' ):
+                
+                # if we haven't already printed this timestamp somewhere
+                line_is_interesting = False not in ( timestamp_is_interesting( timestamp, file_modified_timestamp ) for timestamp in seen_local_file_service_timestamps )
+                
+            else:
+                
+                line_is_interesting = True
+                
             
             lines.append( ( line_is_interesting, 'modified: {}'.format( ClientTime.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) ) )
             

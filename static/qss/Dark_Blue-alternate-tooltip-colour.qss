@@ -1,0 +1,441 @@
+/* 
+Dark Blue: A Dark Blue theme for Hydrus Network by B1N4RYJ4N
+Version..: 1.0
+
+To achieve the intended results you must:
+
+1. Activate dark mode
+2. adjust the Qt style to Fusion
+3. adjust the Qt stylesheet to Dark_Blue
+4. adjust the current colourset under files > options > colors > current colourset to darkmode
+5. adjust your color values under files > options > colors > darkmode like so:
+   
+   thumbnail background normal..: #1e1e1e
+   thumbnail background selected: #007acc
+   thumbnail border normal......: #569cd6
+   thumbnail border selected....: #cccccc
+   thumbnail grid background....: #1e1e1e
+   autocomplete background......: #536267
+   media viewer background......: #1e1e1e
+   media viewer text............: #708090
+   tag box background...........: #1e1e1e
+
+6. adjust your tag presentation color values under files > options > tag presentation > (On thumbnail top, On thumbnail bottom-right, On media viewer top) like so:
+   
+   background colour............: #007acc
+   text colour..................: #ffffff
+*/
+
+
+/*
+   ___                          _ 
+  / _ \___ _ __   ___ _ __ __ _| |
+ / /_\/ _ \ '_ \ / _ \ '__/ _` | |
+/ /_\\  __/ | | |  __/ | | (_| | |
+\____/\___|_| |_|\___|_|  \__,_|_|
+
+*/
+
+QAbstractItemView {
+    background-color: #252526;
+}
+
+/*
+   ____  __    __ _     _            _   
+  /___ \/ / /\ \ (_) __| | __ _  ___| |_ 
+ //  / /\ \/  \/ / |/ _` |/ _` |/ _ \ __|
+/ \_/ /  \  /\  /| | (_| | (_| |  __/ |_ 
+\___,_\   \/  \/ |_|\__,_|\__, |\___|\__|
+                          |___/          
+
+*/
+
+QWidget {
+    color: #CCCCCC;
+    background-color: #252526;
+  	alternate-background-color: #252526;
+}
+
+QWidget::disabled {
+    background-color: #252526;
+}
+
+QWidget::item::selected {
+    color: #FFF;
+    background-color: #569cd6;
+}
+
+QWidget::item:hover {
+    color: #FFF;
+    background-color: #569cd6;
+}
+
+/*
+   ____  _____            _ _____ _       
+  /___ \/__   \___   ___ | /__   (_)_ __  
+ //  / /  / /\/ _ \ / _ \| | / /\/ | '_ \ 
+/ \_/ /  / / | (_) | (_) | |/ /  | | |_) |
+\___,_\  \/   \___/ \___/|_|\/   |_| .__/ 
+                                   |_|    
+
+*/
+
+QToolTip {
+    border: 1px solid black;
+    background-color: #CCCCCC;
+    padding: 1px;
+}
+
+/*
+   ____                        
+  /___ \/\/\   ___ _ __  _   _ 
+ //  / /    \ / _ \ '_ \| | | |
+/ \_/ / /\/\ \  __/ | | | |_| |
+\___,_\/    \/\___|_| |_|\__,_|
+
+*/
+
+QMenu {
+	color: #CCCCCC;
+	background: #252526;
+}
+
+QMenu::item {
+    padding: 2px 20px 2px 20px;
+}
+
+QMenu::item:selected {
+    color: #FFF;
+    background: #569cd6;
+}
+
+/*
+   ____                          ___            
+  /___ \/\/\   ___ _ __  _   _  / __\ __ _ _ __ 
+ //  / /    \ / _ \ '_ \| | | |/__\/// _` | '__|
+/ \_/ / /\/\ \  __/ | | | |_| / \/  \ (_| | |   
+\___,_\/    \/\___|_| |_|\__,_\_____/\__,_|_|   
+
+*/
+
+QMenuBar::item {
+    background: transparent;
+}
+
+QMenuBar::item:selected {
+	color: #FFF;
+    background: #569cd6;
+}
+
+/*
+   ____  ___           _       ___       _   _              
+  /___ \/ _ \_   _ ___| |__   / __\_   _| |_| |_ ___  _ __  
+ //  / / /_)/ | | / __| '_ \ /__\// | | | __| __/ _ \| '_ \ 
+/ \_/ / ___/| |_| \__ \ | | / \/  \ |_| | |_| || (_) | | | |
+\___,_\/     \__,_|___/_| |_\_____/\__,_|\__|\__\___/|_| |_|
+
+*/
+
+QPushButton {
+    color: #CCCCCC;
+    background-color: #252526;
+}
+
+QPushButton::hover {
+    color: #FFF;
+    background-color: #252526;
+}
+
+QPushButton#HydrusAccept {
+	color: #50fa7b;
+}
+
+QPushButton#HydrusCancel {
+	color: #ff5555;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=true] {
+	color: #50fa7b;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false] {
+	color: #ff5555;
+}
+
+/*
+   ____  _____      _       ___            
+  /___ \/__   \__ _| |__   / __\ __ _ _ __ 
+ //  / /  / /\/ _` | '_ \ /__\/// _` | '__|
+/ \_/ /  / / | (_| | |_) / \/  \ (_| | |   
+\___,_\  \/   \__,_|_.__/\_____/\__,_|_|   
+
+*/
+
+QTabBar::tab {
+    color: #8be9fd;
+    background-color: #1a1a1a;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-top: 3px;
+    padding-bottom: 2px;
+}
+
+QTabBar::tab:last {
+    border-top-right-radius: 3px;
+}
+
+QTabBar::tab:selected {
+    color: #FFF;
+    background-color: #007ACC;
+}
+
+QTabBar::tab:hover:!selected {
+	color: #FFF;
+	background-color: #007ACC;
+}
+
+/*
+   ____  __ _              __   _ _ _   
+  /___ \/ /(_)_ __   ___  /__\_| (_) |_ 
+ //  / / / | | '_ \ / _ \/_\/ _` | | __|
+/ \_/ / /__| | | | |  __//_| (_| | | |_ 
+\___,_\____/_|_| |_|\___\__/\__,_|_|\__|
+
+*/
+
+QLineEdit { 
+    border: 1px solid #569cd6; 
+    border-radius: 1px;
+    background-color: #383B3D;
+    padding: 1px;
+} 
+
+QLineEdit:focus{
+	color: #FFF;
+    border: 1px solid #CCC;
+}
+
+/*
+   ____  ___                                      ___            
+  /___ \/ _ \_ __ ___   __ _ _ __ ___  ___ ___   / __\ __ _ _ __ 
+ //  / / /_)/ '__/ _ \ / _` | '__/ _ \/ __/ __| /__\/// _` | '__|
+/ \_/ / ___/| | | (_) | (_| | | |  __/\__ \__ \/ \/  \ (_| | |   
+\___,_\/    |_|  \___/ \__, |_|  \___||___/___/\_____/\__,_|_|   
+                       |___/                                     
+
+*/
+
+QProgressBar {
+	color: #FFF;
+    border: 1px solid #569cd6;
+    text-align: center;
+    padding: 1px;
+    border-radius: 0px;
+    background-color: #383B3D;
+    width: 15px;
+}
+
+QProgressBar::chunk {
+    color: #FFF;
+    background: QLinearGradient( x1: 0, y1: 0, x2: 1, y2: 0,
+    stop: 0 #78d,
+    stop: 0.4999 #46a,
+    stop: 0.5 #45a,
+    stop: 1 #238 );
+    border-radius: 0px;
+    border: 0px;
+}
+
+/*
+   ____                     _                 _               
+  /___ \/\  /\___  __ _  __| | ___ _ __/\   /(_) _____      __
+ //  / / /_/ / _ \/ _` |/ _` |/ _ \ '__\ \ / / |/ _ \ \ /\ / /
+/ \_/ / __  /  __/ (_| | (_| |  __/ |   \ V /| |  __/\ V  V / 
+\___,_\/ /_/ \___|\__,_|\__,_|\___|_|    \_/ |_|\___| \_/\_/  
+
+*/
+
+QHeaderView::section {
+    background-color: #007ACC;
+    color: #f8f8f2;
+    padding-left: 4px;
+    border: 1px solid #569cd6;
+}
+
+/*
+   ____  __                _ _   ___            
+  /___ \/ _\ ___ _ __ ___ | | | / __\ __ _ _ __ 
+ //  / /\ \ / __| '__/ _ \| | |/__\/// _` | '__|
+/ \_/ / _\ \ (__| | | (_) | | / \/  \ (_| | |   
+\___,_\ \__/\___|_|  \___/|_|_\_____/\__,_|_|   
+
+From Quassel Wiki: http://sprunge.us/iZGB
+*/
+
+QScrollBar {
+    background: #1A1A1A;
+    margin: 0;
+}
+
+QScrollBar:hover {
+    background: #1A1A1A;
+}
+
+QScrollBar:vertical {
+    width: 8px;
+}
+
+QScrollBar:horizontal {
+    height: 8px;
+}
+
+QScrollBar::handle {
+    padding: 0;
+    margin: 2px;
+    border-radius: 2px;
+    border: 2px solid #569cd6;
+    background: #1E1E1E;
+}
+
+QScrollBar::handle:vertical {
+    min-height: 20px;
+    min-width: 0px;
+}
+
+QScrollBar::handle:horizontal {
+    min-width: 20px;
+    min-height: 0px;
+}
+
+QScrollBar::handle:hover {
+    border-color: #007ACC;
+    background: #1E1E1E;
+}
+
+QScrollBar::handle:pressed {
+    background: #1E1E1E;
+    border-color: #007ACC;
+}
+
+QScrollBar::add-line , QScrollBar::sub-line {
+    height: 0px;
+    border: 0px;
+}
+
+QScrollBar::up-arrow, QScrollBar::down-arrow {
+    border: 0px;
+    width: 0px;
+    height: 0px;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: none;
+}
+
+/*
+   ____  _____          _     __   _ _ _   
+  /___ \/__   \_____  _| |_  /__\_| (_) |_ 
+ //  / /  / /\/ _ \ \/ / __|/_\/ _` | | __|
+/ \_/ /  / / |  __/>  <| |_//_| (_| | | |_ 
+\___,_\  \/   \___/_/\_\\__\__/\__,_|_|\__|
+
+*/
+
+QTextEdit {
+    background-color: #383B3D;
+}
+
+QTextEdit#HydrusValid {
+    background-color: #80ff80;
+}
+
+QTextEdit#HydrusIndeterminate {
+    background-color: #8080ff;
+}
+
+QTextEdit#HydrusInvalid {
+    background-color: #ff8080;
+}
+
+/*
+   ____  ___ _       _      _____          _     __   _ _ _   
+  /___ \/ _ \ | __ _(_)_ __/__   \_____  _| |_  /__\_| (_) |_ 
+ //  / / /_)/ |/ _` | | '_ \ / /\/ _ \ \/ / __|/_\/ _` | | __|
+/ \_/ / ___/| | (_| | | | | / / |  __/>  <| |_//_| (_| | | |_ 
+\___,_\/    |_|\__,_|_|_| |_\/   \___/_/\_\\__\__/\__,_|_|\__|
+
+*/
+
+QPlainTextEdit {
+    background-color: #383B3D;
+}
+
+/*
+   ____  __       _          _ 
+  /___ \/ /  __ _| |__   ___| |
+ //  / / /  / _` | '_ \ / _ \ |
+/ \_/ / /__| (_| | |_) |  __/ |
+\___,_\____/\__,_|_.__/ \___|_|
+
+*/
+
+QLabel#HydrusValid {
+    color: #50fa7b;
+}
+
+QLabel#HydrusIndeterminate {
+	color: #8080ff;
+}
+
+QLabel#HydrusInvalid {
+    color: #ff5555;
+}
+
+QLabel#HydrusWarning {
+    color: #ff5555;
+}
+
+/*
+   ____  __ _              __   _ _ _   
+  /___ \/ /(_)_ __   ___  /__\_| (_) |_ 
+ //  / / / | | '_ \ / _ \/_\/ _` | | __|
+/ \_/ / /__| | | | |  __//_| (_| | | |_ 
+\___,_\____/_|_| |_|\___\__/\__,_|_|\__|
+
+*/
+
+QLineEdit#HydrusValid {
+    background-color: #80ff80;
+}
+
+QLineEdit#HydrusIndeterminateValid {
+    background-color: #8080ff;
+}
+
+QLineEdit#HydrusInvalid {
+    background-color: #ff8080;
+}
+
+/*
+   ____  ___ _               _      ___           
+  /___ \/ __\ |__   ___  ___| | __ / __\ _____  __
+ //  / / /  | '_ \ / _ \/ __| |/ //__\/// _ \ \/ /
+/ \_/ / /___| | | |  __/ (__|   </ \/  \ (_) >  < 
+\___,_\____/|_| |_|\___|\___|_|\_\_____/\___/_/\_\
+
+*/
+
+QCheckBox#HydrusWarning {
+	color: #ff5555;
+}
+
+/*
+
+Extra, hydev added this
+
+*/
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: #8be9fd;
+}

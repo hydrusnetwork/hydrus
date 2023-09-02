@@ -12,6 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFlashHandling
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusKritaHandling
+from hydrus.core import HydrusProcreateHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusSVGHandling
@@ -59,6 +60,7 @@ headers_and_mime.extend( [
     ( ( ( 0, b'BM' ), ), HC.IMAGE_BMP ),
     ( ( ( 0, b'\x00\x00\x01\x00' ), ), HC.IMAGE_ICON ),
     ( ( ( 0, b'\x00\x00\x02\x00' ), ), HC.IMAGE_ICON ),
+    ( ( ( 0, b'qoif' ), ), HC.IMAGE_QOI ),
     ( ( ( 0, b'CWS' ), ), HC.APPLICATION_FLASH ),
     ( ( ( 0, b'FWS' ), ), HC.APPLICATION_FLASH ),
     ( ( ( 0, b'ZWS' ), ), HC.APPLICATION_FLASH ),
@@ -125,7 +127,11 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             thumbnail_bytes = HydrusPSDHandling.GenerateThumbnailBytesFromPSDPath( path, target_resolution, clip_rect = clip_rect )
             
-        except:
+        except Exception as e:
+
+            HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
+            HydrusData.PrintException( e )
+            HydrusData.Print( 'Attempting ffmpeg PSD thumbnail fallback' )
             
             try:
                 
@@ -135,12 +141,15 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
                 
                 thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
                 
-            except: 
+            except Exception as e: 
                 
                 thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
                 
                 thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
-                
+            
+            finally:
+            
+                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     elif mime == HC.APPLICATION_CLIP:
@@ -184,6 +193,25 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
             
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
+    elif mime == HC.APPLICATION_PROCREATE:
+
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        
+        try:
+            
+            HydrusProcreateHandling.ExtractZippedThumbnailToPath( path, temp_path )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            
+        except Exception as e:
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'procreate.png' )
+            
+            thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
         
     elif mime == HC.IMAGE_SVG: 
         
@@ -407,6 +435,10 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     elif mime == HC.APPLICATION_KRITA:
         
         ( width, height ) = HydrusKritaHandling.GetKraProperties( path )
+
+    elif mime == HC.APPLICATION_PROCREATE:
+
+        ( width, height ) = HydrusProcreateHandling.GetProcreateResolution( path )
         
     elif mime == HC.IMAGE_SVG:
         
@@ -425,8 +457,18 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
         
     elif mime == HC.APPLICATION_PSD:
-        
-        ( width, height ) = HydrusPSDHandling.GetPSDResolution( path )
+
+        try:
+            
+            ( width, height ) = HydrusPSDHandling.GetPSDResolution( path )
+
+        except Exception as e:
+
+            HydrusData.Print( 'Problem calculating resolution for "{}":'.format( path ) )
+            HydrusData.PrintException( e )
+            HydrusData.Print( 'Attempting PSD resolution fallback' )
+
+            ( width, height ) = HydrusPSDHandling.GetPSDResolutionFallback( path )
         
     elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
         
@@ -549,6 +591,10 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 if HydrusKritaHandling.ZipLooksLikeAKrita( path ):
                     
                     return HC.APPLICATION_KRITA
+                
+                elif HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
+
+                    return HC.APPLICATION_PROCREATE
                     
                 else:
                     

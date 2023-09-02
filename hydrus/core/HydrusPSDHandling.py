@@ -81,15 +81,12 @@ def GenerateThumbnailBytesFromPSDPath( path: str, target_resolution: typing.Tupl
 def GetPSDResolution( path: str ):
     
     if not PSD_TOOLS_OK:
-        
-        return GetPSDResolutionFallback( path )
-        
+
+        raise HydrusExceptions.UnsupportedFileException( 'psd_tools unavailable' )
     
     psd = PSDImage.open( path )
-    
-    resolution = ( psd.width, psd.height )
-    
-    return resolution
+            
+    return ( psd.width, psd.height )
     
 
 def GetPSDResolutionFallback( path: str ):

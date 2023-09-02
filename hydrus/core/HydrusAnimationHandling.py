@@ -1,3 +1,4 @@
+import io
 import typing
 
 import struct
@@ -41,10 +42,47 @@ def GetAPNGChunks( file_header_bytes: bytes ) ->list:
     # n bytes of data
     # 4 bytes of CRC
     
-    # lop off 8 bytes of 'this is a PNG' at the top
-    remaining_chunk_bytes = file_header_bytes[8:]
+    # ok this method went super slow when given a 200MB giga png
+    # it turns out list slicing on a very large bytes object is extremely slow
+    # so we'll move to a file-like BytesIO and just read the stream like a file
+    
+    # note lol that if you debug this you'll still get the mega slowdown as your IDE copies the giganto bytes around over and over for variable inspection
     
     chunks = []
+    
+    buffer = io.BytesIO( file_header_bytes )
+    
+    # lop off 8 bytes of 'this is a PNG' at the top
+    buffer.read( 8 )
+    
+    while True:
+        
+        chunk_num_bytes = buffer.read( 4 )
+        
+        chunk_name = buffer.read( 4 )
+        
+        if len( chunk_num_bytes ) < 4 or len( chunk_name ) < 4:
+            
+            break
+            
+        
+        ( num_data_bytes, ) = struct.unpack( '>I', chunk_num_bytes )
+        
+        chunk_data = buffer.read( num_data_bytes )
+        
+        if len( chunk_data ) < num_data_bytes:
+            
+            break
+            
+        
+        buffer.read( 4 )
+        
+        chunks.append( ( chunk_name, chunk_data ) )
+        
+    
+    # old solution
+    '''
+    remaining_chunk_bytes = file_header_bytes[8:]
     
     while len( remaining_chunk_bytes ) > 12:
         
@@ -58,6 +96,7 @@ def GetAPNGChunks( file_header_bytes: bytes ) ->list:
         
         remaining_chunk_bytes = remaining_chunk_bytes[ 8 + num_data_bytes + 4 : ]
         
+    '''
     
     return chunks
     
