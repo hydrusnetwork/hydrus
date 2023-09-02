@@ -7,6 +7,7 @@ from qtpy import QtCore as QC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPDFHandling
+from hydrus.core import HydrusData
 
 from hydrus.client.gui import ClientGUIFunctions
 
@@ -50,10 +51,20 @@ def LoadPDF( path: str ):
     
 
 def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
-        
+
     document = LoadPDF( path )
 
-    resolution = QC.QSize( target_resolution[0], target_resolution[1] )
+    if clip_rect is None:
+
+        ( target_width, target_height ) = target_resolution
+
+        resolution = QC.QSize( target_width, target_height )
+
+    else:
+
+        ( pdf_width, pdf_height ) = _GetPDFResolution(document)
+
+        resolution = QC.QSize( pdf_width, pdf_height )
     
     try:
         
@@ -66,11 +77,21 @@ def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tupl
         numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
 
         document.close()
+
+        if clip_rect is None:
             
-        return HydrusImageHandling.GenerateThumbnailBytesNumPy( numpy_image )
+            thumbnail_numpy_image = numpy_image
+
+        else:
+
+            numpy_image = HydrusImageHandling.ClipNumPyImage( numpy_image, clip_rect )
+            
+            thumbnail_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
+            
+        return HydrusImageHandling.GenerateThumbnailBytesNumPy( thumbnail_numpy_image )
         
     except:
-        
+
         raise HydrusExceptions.DamagedOrUnusualFileException()
         
     
@@ -79,10 +100,19 @@ HydrusPDFHandling.GenerateThumbnailBytesFromPDFPath = GenerateThumbnailBytesFrom
 PDF_ASSUMED_DPI = 300
 
 def GetPDFResolution( path: str ):
+
+    document = LoadPDF( path )
+
+    resolution = _GetPDFResolution(document)
+
+    document.close()
+
+    return resolution
+
+
+def _GetPDFResolution( document: QtPdf.QPdfDocument ):
     
     try:
-
-        document = LoadPDF( path )
     
         pointSize = document.pagePointSize(0)
 
@@ -90,10 +120,8 @@ def GetPDFResolution( path: str ):
         # this calculates the "resolution" assuming PDF_ASSUMED_DPI dpi
         width = pointSize.width() * (PDF_ASSUMED_DPI/72)
         height = pointSize.height() * (PDF_ASSUMED_DPI/72)
-        
-        document.close()
 
-        return (width, height)
+        return (round(width), round(height))
     
     except HydrusExceptions.EncryptedFileException:
 
