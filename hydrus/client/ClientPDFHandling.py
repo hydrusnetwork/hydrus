@@ -12,10 +12,10 @@ from hydrus.client.gui import ClientGUIFunctions
 
 def LoadPDF( path: str ):
     
-    
     try:
         
         document = QtPdf.QPdfDocument()
+
         document.load(path)
         
     except:
@@ -74,7 +74,6 @@ def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tupl
         raise HydrusExceptions.DamagedOrUnusualFileException()
         
     
-
 HydrusPDFHandling.GenerateThumbnailBytesFromPDFPath = GenerateThumbnailBytesFromPDFPath
 
 PDF_ASSUMED_DPI = 300
@@ -101,5 +100,4 @@ def GetPDFResolution( path: str ):
         return (None, None)
 
     
-
 HydrusPDFHandling.GetPDFResolution = GetPDFResolution

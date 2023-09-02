@@ -786,7 +786,7 @@ def GetThumbnailResolutionAndClipRegion( image_resolution: typing.Tuple[ int, in
     
     ( im_width, im_height ) = image_resolution
     ( bounding_width, bounding_height ) = bounding_dimensions
-
+    
     if thumbnail_dpr_percent != 100:
         
         thumbnail_dpr = thumbnail_dpr_percent / 100
