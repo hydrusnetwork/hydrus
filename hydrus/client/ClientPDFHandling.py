@@ -32,11 +32,11 @@ def LoadPDF( path: str ):
 
             if error is QtPdf.QPdfDocument.Error.IncorrectPassword:
 
-                raise  HydrusExceptions.UnsupportedFileException( f'PDF is password protected!' )
+                raise  HydrusExceptions.EncryptedFileException( f'PDF is password protected!' )
             
             elif error is QtPdf.QPdfDocument.Error.UnsupportedSecurityScheme:
 
-                raise  HydrusExceptions.UnsupportedFileException( f'PDF uses an unsupported security scheme' )
+                raise  HydrusExceptions.EncryptedFileException( f'PDF uses an unsupported security scheme' )
             
             else:
 
@@ -96,7 +96,7 @@ def GetPDFResolution( path: str ):
 
         return (width, height)
     
-    except HydrusExceptions.UnsupportedFileException:
+    except HydrusExceptions.EncryptedFileException:
 
         return (None, None)
 

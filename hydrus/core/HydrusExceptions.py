@@ -57,6 +57,7 @@ class FileImportBlockException( HydrusException ): pass
 class UnsupportedFileException( HydrusException ): pass
 class ZeroSizeFileException( UnsupportedFileException ): pass
 class DamagedOrUnusualFileException( UnsupportedFileException ): pass
+class EncryptedFileException( UnsupportedFileException ): pass
 
 class VetoException( HydrusException ): pass
 
