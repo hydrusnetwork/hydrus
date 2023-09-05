@@ -33,14 +33,17 @@ if [ "$install_type" = "s" ]; then
 elif [ "$install_type" = "a" ]; then
 	echo
 	echo "Qt is the User Interface library. We are now on Qt6."
-	echo "If you are <= 10.13 (High Sierra), choose 5. If you are <=10.15 (Catalina), choose o."
-	echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, or (t)est? "
+	echo "If you are <= 10.13 (High Sierra), choose 5."
+    echo "If you are <=10.15 (Catalina) or otherwise have trouble with the normal Qt6, try the (o)lder build on Python ^<=3.10 or (m)iddle on Python ^>=3.11."
+    echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, Qt6 (m)iddle or (t)est? "
 	read -r qt
 	if [ "$qt" = "5" ]; then
 		:
 	elif [ "$qt" = "6" ]; then
 		:
 	elif [ "$qt" = "o" ]; then
+		:
+	elif [ "$qt" = "m" ]; then
 		:
 	elif [ "$qt" = "t" ]; then
 		:
@@ -52,11 +55,13 @@ elif [ "$install_type" = "a" ]; then
 	
 	echo
 	echo "mpv is broken on macOS. As a safe default, choose n."
-	echo "Do you want (o)ld mpv or (n)ew mpv? "
+	echo "Do you want (o)ld mpv, (n)ew mpv, or (t)est mpv? "
 	read -r mpv
 	if [ "$mpv" = "o" ]; then
 		:
 	elif [ "$mpv" = "n" ]; then
+		:
+	elif [ "$mpv" = "t" ]; then
 		:
 	else
 		echo "Sorry, did not understand that input!"
@@ -112,6 +117,8 @@ elif [ "$install_type" = "a" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_qt6.txt
 	elif [ "$qt" = "o" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_qt6_older.txt
+	elif [ "$qt" = "m" ]; then
+		python -m pip install -r static/requirements/advanced/requirements_qt6_middle.txt
 	elif [ "$qt" = "t" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_qt6_test.txt
 	fi
@@ -120,6 +127,8 @@ elif [ "$install_type" = "a" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_mpv_old.txt
 	elif [ "$mpv" = "n" ]; then
 		python -m pip install -r static/requirements/advanced/requirements_mpv_new.txt
+	elif [ "$mpv" = "t" ]; then
+		python -m pip install -r static/requirements/advanced/requirements_mpv_test.txt
 	fi
 	
 	if [ "$opencv" = "o" ]; then
