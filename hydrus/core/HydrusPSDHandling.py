@@ -8,9 +8,9 @@ from hydrus.core import HydrusExceptions, HydrusImageHandling
 try:
     
     from psd_tools import PSDImage
-    from psd_tools.constants import Resource, ColorMode, ChannelID, Resource
+    from psd_tools.constants import Resource, ColorMode, Resource
     from psd_tools.api.numpy_io import has_transparency, get_transparency_index
-    from psd_tools.api.pil_io import get_color_mode, get_pil_mode, get_pil_channels, _get_channel, _create_image, _check_channels
+    from psd_tools.api.pil_io import get_pil_mode, get_pil_channels, _create_image
     
     PSD_TOOLS_OK = True
     
@@ -104,7 +104,8 @@ def GetPSDResolutionFallback( path: str ):
     return ( width, height )
     
 
-# modified from psd-tools source
+# modified from psd-tools source:
+# https://github.com/psd-tools/psd-tools/blob/main/src/psd_tools/api/pil_io.py
 
 def convert_image_data_to_pil(psd: PSDImage):
     alpha = None
@@ -135,6 +136,7 @@ def convert_image_data_to_pil(psd: PSDImage):
         return None
 
     return post_process(image, alpha)
+
 
 def post_process(image, alpha):
     # Fix inverted CMYK.
