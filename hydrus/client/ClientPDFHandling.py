@@ -31,8 +31,8 @@ def LoadPDF( path: str ):
     
     try:
         
-        # needs an object parent param, and a permanent one, in PyQt6
-        document = QtPdf.QPdfDocument( HG.client_controller.app )
+        # it wants an Object in PyQt6, but giving it None is better since we are outside the Qt thread here
+        document = QtPdf.QPdfDocument( None )
 
         document.load( path )
         
