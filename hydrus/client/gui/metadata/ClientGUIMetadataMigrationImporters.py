@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
+
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringControls
@@ -20,7 +21,9 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.metadata import ClientGUIMetadataMigrationCommon
 from hydrus.client.gui.parsing import ClientGUIParsingFormulae
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientMetadataMigrationImporters
+from hydrus.client.metadata import ClientTags
 
 choice_tuple_label_lookup = {
     ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes : 'a file\'s notes',
@@ -72,13 +75,33 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._service_selection_panel = QW.QWidget( self )
+        self._tag_service_panel = QW.QWidget( self )
         
         self._service_selection_button = ClientGUICommon.BetterButton( self, 'service', self._SelectService )
         
-        hbox = ClientGUICommon.WrapInText( self._service_selection_button, self._service_selection_panel, 'tag service: ' )
+        tag_display_types = [
+            ClientTags.TAG_DISPLAY_STORAGE,
+            ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL
+        ]
         
-        self._service_selection_panel.setLayout( hbox )
+        choice_tuples = [ ( ClientTags.tag_display_str_lookup[ tag_display_type ], tag_display_type ) for tag_display_type in tag_display_types ]
+        
+        self._tag_display_type_button = ClientGUIMenuButton.MenuChoiceButton( self, choice_tuples )
+        
+        tt = '"storage" = no sibling or parents (what you see in the manage tags dialog, good for cloning to another hydrus client with the same siblings/parents)'
+        tt += '\n'
+        tt += '"display" = with sibling replacements and implied parents (what you see in normal views, good for export to other programs)'
+        
+        self._tag_display_type_button.setToolTip( tt )
+        
+        rows = []
+        
+        rows.append( ( 'tag service: ', self._service_selection_button ) )
+        rows.append( ( 'tag display type: ', self._tag_display_type_button ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._tag_service_panel, rows )
+        
+        self._tag_service_panel.setLayout( gridbox )
         
         #
         
@@ -126,7 +149,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._change_type_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._service_selection_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._tag_service_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._timestamp_data_stub_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._json_parsing_formula_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._txt_separator_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -243,7 +266,9 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._current_importer_class == ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags:
             
-            importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( string_processor = string_processor, service_key = self._service_key )
+            tag_display_type = self._tag_display_type_button.GetValue()
+            
+            importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( string_processor = string_processor, service_key = self._service_key, tag_display_type = tag_display_type )
             
         elif self._current_importer_class == ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes:
             
@@ -308,7 +333,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._string_processor_button.SetValue( string_processor )
         
-        self._service_selection_panel.setVisible( False )
+        self._tag_service_panel.setVisible( False )
         self._json_parsing_formula_panel.setVisible( False )
         self._txt_separator_panel.setVisible( False )
         self._sidecar_panel.setVisible( False )
@@ -333,7 +358,11 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._UpdateServiceKeyButtonLabel()
             
-            self._service_selection_panel.setVisible( True )
+            tag_display_type = importer.GetTagDisplayType()
+            
+            self._tag_display_type_button.SetValue( tag_display_type )
+            
+            self._tag_service_panel.setVisible( True )
             
         elif isinstance( importer, ( ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs ) ):
             

@@ -9,17 +9,17 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 
 TAG_DISPLAY_STORAGE = 0
-TAG_DISPLAY_ACTUAL = 1
+TAG_DISPLAY_DISPLAY_ACTUAL = 1
 TAG_DISPLAY_SINGLE_MEDIA = 2
 TAG_DISPLAY_SELECTION_LIST = 3
-TAG_DISPLAY_IDEAL = 4
+TAG_DISPLAY_DISPLAY_IDEAL = 4
 
 tag_display_str_lookup = {
     TAG_DISPLAY_STORAGE : 'stored tags',
-    TAG_DISPLAY_ACTUAL : 'display tags',
-    TAG_DISPLAY_SINGLE_MEDIA : 'single media views',
-    TAG_DISPLAY_SELECTION_LIST : 'multiple media views',
-    TAG_DISPLAY_IDEAL : 'ideal display tags'
+    TAG_DISPLAY_DISPLAY_ACTUAL : 'display tags',
+    TAG_DISPLAY_SINGLE_MEDIA : 'single media view tags',
+    TAG_DISPLAY_SELECTION_LIST : 'multiple media view tags',
+    TAG_DISPLAY_DISPLAY_IDEAL : 'ideal display tags'
 }
 
 have_shown_invalid_tag_warning = False

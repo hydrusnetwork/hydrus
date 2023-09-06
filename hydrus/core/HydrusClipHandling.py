@@ -7,92 +7,87 @@ def ExtractDBPNGToPath( path, temp_path ):
     
     ( os_file_handle, sqlite_temp_path ) = HydrusTemp.GetTempPath()
     
-    db = None
-    c = None
-    
     try:
         
         ( db, c ) = GetSQLiteDB( path, sqlite_temp_path )
         
-        ( png_bytes, ) = c.execute( 'SELECT ImageData FROM CanvasPreview;' ).fetchone()
-        
-        with open( temp_path, 'wb' ) as f:
+        try:
             
-            f.write( png_bytes )
+            ( png_bytes, ) = c.execute( 'SELECT ImageData FROM CanvasPreview;' ).fetchone()
             
-        
-    finally:
-        
-        if c is not None:
+            with open( temp_path, 'wb' ) as f:
+                
+                f.write( png_bytes )
+                
+            
+        finally:
             
             c.close()
             
-        
-        if db is not None:
-            
             db.close()
             
+        
+    except:
+        
+        raise HydrusExceptions.NoThumbnailFileException()
+        
+    finally:
         
         HydrusTemp.CleanUpTempPath( os_file_handle, sqlite_temp_path )
         
     
+
 def GetClipProperties( path ):
     
     ( os_file_handle, sqlite_temp_path ) = HydrusTemp.GetTempPath()
     
-    db = None
-    c = None
+    num_frames = None
+    duration_ms = None
     
     try:
         
         ( db, c ) = GetSQLiteDB( path, sqlite_temp_path )
         
-        ( width_float, height_float, canvas_unit, canvas_dpi_float ) = c.execute( 'SELECT CanvasWidth, CanvasHeight, CanvasUnit, CanvasResolution FROM Canvas;' ).fetchone()
-        
-        if c.execute( 'SELECT 1 FROM sqlite_master WHERE name = "TimeLine";' ).fetchone() is None:
+        try:
             
-            num_frames = None
-            duration_ms = None
+            ( width_float, height_float, canvas_unit, canvas_dpi_float ) = c.execute( 'SELECT CanvasWidth, CanvasHeight, CanvasUnit, CanvasResolution FROM Canvas;' ).fetchone()
             
-        else:
-            
-            try:
+            if c.execute( 'SELECT 1 FROM sqlite_master WHERE name = "TimeLine";' ).fetchone() is not None:
                 
-                result = c.execute( 'SELECT StartFrame, FrameRate, EndFrame from TimeLine;' ).fetchone()
-                
-                if result is not None:
+                try:
                     
-                    ( start_frame_float, framerate_float, end_frame_float ) = result
+                    result = c.execute( 'SELECT StartFrame, FrameRate, EndFrame from TimeLine;' ).fetchone()
                     
-                    num_frames = int( end_frame_float - start_frame_float )
-                    
-                    if framerate_float == 0:
+                    if result is not None:
                         
-                        framerate_float = 24.0
+                        ( start_frame_float, framerate_float, end_frame_float ) = result
+                        
+                        num_frames = int( end_frame_float - start_frame_float )
+                        
+                        if framerate_float == 0:
+                            
+                            framerate_float = 24.0
+                            
+                        
+                        duration_s = num_frames / framerate_float
+                        
+                        duration_ms = duration_s * 1000
                         
                     
-                    duration_s = num_frames / framerate_float
+                except:
                     
-                    duration_ms = duration_s * 1000
+                    pass
                     
-                
-            except:
-                
-                pass
                 
             
-        
-    finally:
-        
-        if c is not None:
+        finally:
             
             c.close()
             
-        
-        if db is not None:
-            
             db.close()
             
+        
+    finally:
         
         HydrusTemp.CleanUpTempPath( os_file_handle, sqlite_temp_path )
         
@@ -138,6 +133,7 @@ def GetClipProperties( path ):
     
     return ( ( round( width_float * unit_conversion_multiplier ), round( height_float * unit_conversion_multiplier ) ), duration_ms, num_frames )
     
+
 def GetSQLiteDB( path, sqlite_temp_path ):
     
     with open( path, 'rb' ) as f:
@@ -153,7 +149,7 @@ def GetSQLiteDB( path, sqlite_temp_path ):
         
     except IndexError:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( 'This clip file had no internal SQLite file, so no PNG thumb could be extracted!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'This clip file had no internal SQLite file!' )
         
     
     sqlite_bytes = clip_bytes[ i : ]

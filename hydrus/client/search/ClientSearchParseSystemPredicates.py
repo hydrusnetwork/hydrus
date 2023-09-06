@@ -5,7 +5,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.search import ClientSearch
@@ -64,7 +63,7 @@ def date_pred_generator( pred_type, o, v ):
         
         if o == '=':
             
-            o = CC.UNICODE_ALMOST_EQUAL_TO
+            o = HC.UNICODE_APPROX_EQUAL
             
         
     
@@ -202,6 +201,7 @@ def url_class_pred_generator( include, url_class_name ):
 
 SystemPredicateParser.InitialiseFiletypes( HC.mime_enum_lookup )
 SystemPredicateParser.InitialiseFiletypes( HC.string_enum_lookup )
+SystemPredicateParser.InitialiseFiletypes( { 'gif' : [ HC.IMAGE_GIF, HC.ANIMATION_GIF ] } )
 
 pred_generators = {
     SystemPredicateParser.Predicate.EVERYTHING : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ),

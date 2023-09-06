@@ -42,8 +42,7 @@ Once the API is running, go to its entry in _services->review services_. Each ex
 ### Auto-taggers
 
 * [hydrus-dd](https://gitgud.io/koto/hydrus-dd): DeepDanbooru tagging for Hydrus
-* [wd-hydrus-tagger](https://github.com/abtalerico/wd-hydrus-tagger): Danbooru-trained model tagging for Hydrus
-* [wd-e621-hydrus-tagger](https://github.com/Garbevoir/wd-e621-hydrus-tagger): An extension of the above, with more models
+* [wd-e621-hydrus-tagger](https://github.com/Garbevoir/wd-e621-hydrus-tagger): More AI tagging, with more models
 
 ### Misc
 

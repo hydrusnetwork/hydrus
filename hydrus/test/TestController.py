@@ -269,7 +269,7 @@ class Controller( object ):
             
             for c in ( 'f', 't' ):
                 
-                client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( c + prefix, client_files_default, False ) )
+                client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( c + prefix, client_files_default ) )
                 
             
         

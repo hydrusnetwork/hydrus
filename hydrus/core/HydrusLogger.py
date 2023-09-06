@@ -80,7 +80,7 @@ class HydrusLogger( object ):
         
         if is_new_file:
             
-            self._log_file.write( u'\uFEFF' ) # Byte Order Mark, BOM, to help reader software interpret this as utf-8
+            self._log_file.write( HC.UNICODE_BYTE_ORDER_MARK ) # Byte Order Mark, BOM, to help reader software interpret this as utf-8
             
         
     

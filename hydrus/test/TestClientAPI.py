@@ -2448,7 +2448,7 @@ class TestClientAPI( unittest.TestCase ):
         
         ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
         
-        self.assertEqual( args[0], ClientTags.TAG_DISPLAY_ACTUAL )
+        self.assertEqual( args[0], ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
         
         #
         
@@ -4864,7 +4864,7 @@ class TestClientAPI( unittest.TestCase ):
                 
                 storage_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in storage_statuses_to_tags.items() if len( tags ) > 0 }
                 
-                display_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+                display_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
                 
                 display_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in display_statuses_to_tags.items() if len( tags ) > 0 }
                 

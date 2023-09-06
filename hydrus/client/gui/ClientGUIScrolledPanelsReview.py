@@ -375,6 +375,15 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ClearThumbnailLocation( self ):
         
+        message = 'Clear the custom thumbnail location? This will schedule all the thumbnail files to migrate back into the regular file locations.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result != QW.QDialog.Accepted:
+            
+            return
+            
+        
         self._ideal_thumbnails_location_override = None
         
         self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
@@ -569,16 +578,16 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         for client_files_subfolder in self._client_files_subfolders:
             
             prefix = client_files_subfolder.prefix
-            location = client_files_subfolder.location
+            base_location = client_files_subfolder.base_location
             
             if prefix.startswith( 'f' ):
                 
-                locations_to_file_weights[ location ] += 1
+                locations_to_file_weights[ base_location ] += 1
                 
             
             if prefix.startswith( 't' ):
                 
-                locations_to_thumb_weights[ location ] += 1
+                locations_to_thumb_weights[ base_location ] += 1
                 
             
         
@@ -2623,7 +2632,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _RunSearch( self ):
         
-        self._run_search_st.setText( 'loading\u2026' )
+        self._run_search_st.setText( 'loading' + HC.UNICODE_ELLIPSIS )
         
         self._run_search.setEnabled( False )
         

@@ -22,8 +22,8 @@ import re
 import datetime
 from enum import Enum, auto
 
-# TODO: This needs to be updated with all types that Hydrus supports.
-FILETYPES = { }
+UNICODE_APPROX_EQUAL = '\u2248'
+UNICODE_NOT_EQUAL = '\u2260'
 
 # sort according to longest thing first to rid ourselves of ambiguity
 operator_strings_and_results = sorted(
@@ -31,21 +31,26 @@ operator_strings_and_results = sorted(
         ( '=', '=' ),
         ( '==', '=' ),
         ( 'is', '=' ),
-        ( '\u2260', '\u2260' ),
-        ( '!=', '\u2260' ),
-        ( 'is not', '\u2260' ),
-        ( 'isn\'t', '\u2260' ),
+        ( UNICODE_NOT_EQUAL, UNICODE_NOT_EQUAL ),
+        ( '!=', UNICODE_NOT_EQUAL ),
+        ( 'is not', UNICODE_NOT_EQUAL ),
+        ( 'isn\'t', UNICODE_NOT_EQUAL ),
         ( '<', '<' ),
         ( 'less than', '<' ),
         ( '>', '>' ),
         ( 'more than', '>' ),
-        ( '\u2248', '\u2248' ),
-        ( '~=', '\u2248' ),
-        ( 'about', '\u2248' ),
-        ( 'is about', '\u2248' ),
+        ( UNICODE_APPROX_EQUAL, UNICODE_APPROX_EQUAL ),
+        ( '~=', UNICODE_APPROX_EQUAL ),
+        ( 'about', UNICODE_APPROX_EQUAL ),
+        ( 'is about', UNICODE_APPROX_EQUAL ),
     ],
     key = lambda a: -len( a[0] )
 )
+
+operator_strings_to_results = dict( operator_strings_and_results )
+
+# Note this needs to be initialised here with all types that Hydrus supports.
+FILETYPES = { }
 
 def InitialiseFiletypes( str_to_enum ):
     for ( filetype_string, enum ) in str_to_enum.items():
@@ -138,7 +143,7 @@ class Predicate( Enum ):
 # This enum lists the possible value formats a predicate can have (if it has a value).
 # Parsing for each of these options is implemented in parse_value
 class Value( Enum ):
-    NATURAL = auto()  # An int which holds a non-negative value
+    NATURAL = auto()  # An int that holds a non-negative value
     SHA256_HASHLIST_WITH_DISTANCE = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is a non-negative integer
     SIMILAR_TO_HASHLIST_WITH_DISTANCE = auto()  # A 3-tuple, where the first two parts are potential pixel and perceptual hashes (as strings), the second part is a non-negative integer
     HASHLIST_WITH_ALGORITHM = auto()  # A 2-tuple, where the first part is a set of potential hashes (as strings), the second part is one of 'sha256', 'md5', 'sha1', 'sha512'
@@ -161,15 +166,15 @@ class Value( Enum ):
 # Possible operator formats
 # Implemented in parse_operator
 class Operators( Enum ):
-    RELATIONAL = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too)
+    RELATIONAL = auto()  # One of '=', '<', '>', UNICODE_APPROX_EQUAL ('≈') (takes '~=' too)
     RELATIONAL_EXACT = auto() # Like RELATIONAL but without the approximately equal operator
-    RELATIONAL_TIME = auto()  # One of '=', '<', '>', '\u2248' ('≈') (takes '~=' too), and the various 'since', 'before', 'the day of', 'the month of' time-based analogues
+    RELATIONAL_TIME = auto()  # One of '=', '<', '>', UNICODE_APPROX_EQUAL ('≈') (takes '~=' too), and the various 'since', 'before', 'the day of', 'the month of' time-based analogues
     RELATIONAL_FOR_RATING_SERVICE = auto()  # RELATIONAL, but in the middle of a 'service_name = 4/5' kind of thing
     EQUAL = auto()  # One of '=' or '!='
     FILESERVICE_STATUS = auto()  # One of 'is not currently in', 'is currently in', 'is not pending to', 'is pending to'
     TAG_RELATIONAL = auto()  # A tuple of a string (a potential tag name) and a relational operator (as a string)
     ONLY_EQUAL = auto()  # None (meaning =, since thats the only accepted operator)
-    RATIO_OPERATORS = auto()  # One of '=', 'wider than','taller than', '\u2248' ('≈') (takes '~=' too)
+    RATIO_OPERATORS = auto()  # One of '=', 'wider than','taller than', UNICODE_APPROX_EQUAL ('≈') (takes '~=' too)
     RATIO_OPERATORS_SPECIAL = auto() # 'square', 'portrait', 'landscape'
 
 
@@ -336,11 +341,40 @@ def parse_unit( string: str, spec ):
 def parse_value( string: str, spec ):
     string = string.strip()
     if spec is None:
+        
         return string, None
-    elif spec == Value.NATURAL:
-        match = re.match( '0|([1-9][0-9]*)', string )
-        if match: return string[ len( match[ 0 ] ): ], int( match[ 0 ] )
-        raise ValueError( "Invalid value, expected a natural number" )
+        
+    elif spec in ( Value.NATURAL, Value.INTEGER ):
+        
+        match = re.match( '-?[0-9,]+', string )
+        
+        if match:
+            
+            rest_of_string = string[ len( match[ 0 ] ): ]
+            
+            value_text = match[ 0 ]
+            
+            value_text = value_text.replace( ',', '' )
+            
+            value = int( value_text )
+            
+            if spec == Value.NATURAL and value < 0:
+                
+                raise ValueError( "Invalid value, expected a positive integer!" )
+                
+            
+            return ( rest_of_string, value )
+            
+        
+        if spec == Value.NATURAL:
+            
+            raise ValueError( "Invalid value, expected a natural number" )
+            
+        else:
+            
+            raise ValueError( "Invalid value, expected an integer" )
+            
+        
     elif spec == Value.SHA256_HASHLIST_WITH_DISTANCE:
         match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)+)+)(with\s+)?distance\s+(?P<distance>0|([1-9][0-9]*))', string )
         if match:
@@ -424,10 +458,6 @@ def parse_value( string: str, spec ):
             hours = hours % 24
             return string[ len( match[ 0 ] ): ], (days, hours, minutes, seconds)
         raise ValueError( "Invalid value, expected a time interval" )
-    elif spec == Value.INTEGER:
-        match = re.match( '0|(-?[1-9][0-9]*)', string )
-        if match: return string[ len( match[ 0 ] ): ], int( match[ 0 ] )
-        raise ValueError( "Invalid value, expected an integer" )
     elif spec == Value.RATIO:
         match = re.match( '(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string )
         if match: return string[ len( match[ 0 ] ): ], (int( match[ 'first' ] ), int( match[ 'second' ] ))
@@ -553,11 +583,11 @@ def parse_operator( string: str, spec ):
                 
                 if 'month' in op_string and looks_like_date:
                     
-                    return ( string_result, '\u2248' )
+                    return ( string_result, UNICODE_APPROX_EQUAL )
                     
                 elif 'around' in op_string and not looks_like_date:
                     
-                    return ( string_result, '\u2248' )
+                    return ( string_result, UNICODE_APPROX_EQUAL )
                     
                 elif 'day' in op_string and looks_like_date:
                     
@@ -575,13 +605,13 @@ def parse_operator( string: str, spec ):
             
         
         if not exact:
-            ops = ops + [ '\u2260', '\u2248' ]
+            ops = ops + [ UNICODE_NOT_EQUAL, UNICODE_APPROX_EQUAL ]
         if string.startswith( '==' ): return string[ 2: ], '='
         if not exact:
-            if string.startswith( '!=' ): return string[ 2: ], '\u2260'
-            if string.startswith( 'is not' ): return string[ 6: ], '\u2260'
-            if string.startswith( 'isn\'t' ): return string[ 5: ], '\u2260'
-            if string.startswith( '~=' ): return string[ 2: ], '\u2248'
+            if string.startswith( '!=' ): return string[ 2: ], UNICODE_NOT_EQUAL
+            if string.startswith( 'is not' ): return string[ 6: ], UNICODE_NOT_EQUAL
+            if string.startswith( 'isn\'t' ): return string[ 5: ], UNICODE_NOT_EQUAL
+            if string.startswith( '~=' ): return string[ 2: ], UNICODE_APPROX_EQUAL
         for op in ops:
             if string.startswith( op ): return string[ len( op ): ], op
         if string.startswith( 'is' ): return string[ 2: ], '='
@@ -602,7 +632,7 @@ def parse_operator( string: str, spec ):
                 
                 if without_value_string.endswith( operator_string ):
                     
-                    if possible_operator == '\u2260':
+                    if possible_operator == UNICODE_NOT_EQUAL:
                         
                         raise ValueError( 'Invalid rating operator--cannot select "is not"' )
                         
@@ -621,7 +651,7 @@ def parse_operator( string: str, spec ):
     elif spec == Operators.EQUAL:
         if string.startswith( '==' ): return string[ 2: ], '='
         if string.startswith( '=' ): return string[ 1: ], '='
-        if string.startswith( '\u2260' ): return string[ 1: ], '!='
+        if string.startswith( UNICODE_NOT_EQUAL ): return string[ 1: ], '!='
         if string.startswith( '!=' ): return string[ 2: ], '!='
         if string.startswith( 'is not' ): return string[ 6: ], '!='
         if string.startswith( 'is' ): return string[ 2: ], '='
@@ -638,14 +668,40 @@ def parse_operator( string: str, spec ):
         if match: return string[ len( match[ 0 ] ): ], 'is not pending to'
         raise ValueError( "Invalid operator, expected a file service relationship" )
     elif spec == Operators.TAG_RELATIONAL:
-        match = re.match( '(?P<tag>.*)\s+(?P<op>(<|>|=|==|~=|\u2248|\u2260|is|is not))', string )
-        if re.match:
-            tag = match[ 'tag' ]
-            op = match[ 'op' ]
-            if op == '==': op = '='
-            if op == 'is': op = '='
-            return string[ len( match[ 0 ] ): ], (tag, op)
+        
+        # note this is in the correct order, also, to eliminate = vs == ambiguity
+        all_operators_piped = '|'.join( ( s_r[0] for s_r in operator_strings_and_results ) )
+        
+        match = re.match( f'(?P<namespace>.*)\s+(?P<op>({all_operators_piped}))', string )
+        
+        if match:
+            
+            namespace = match[ 'namespace' ]
+            
+            if namespace == 'any namespace':
+                
+                namespace = '*'
+                
+            
+            if namespace == 'unnamespaced':
+                
+                namespace = ''
+                
+            
+            op_string = match[ 'op' ]
+            
+            op = operator_strings_to_results.get( op_string, UNICODE_APPROX_EQUAL )
+            
+            if op not in ( '<', '>', UNICODE_APPROX_EQUAL ):
+                
+                op = UNICODE_APPROX_EQUAL
+                
+            
+            return string[ len( match[ 0 ] ): ], (namespace, op)
+            
+        
         raise ValueError( "Invalid operator, expected a tag followed by a relational operator" )
+        
     elif spec == Operators.ONLY_EQUAL:
         if string.startswith( '==' ): return string[ 2: ], '='
         if string.startswith( '=' ): return string[ 1: ], '='
@@ -659,8 +715,8 @@ def parse_operator( string: str, spec ):
         if string.startswith( '==' ): return string[ 2: ], '='
         if string.startswith( '=' ): return string[ 1: ], '='
         if string.startswith( 'is' ): return string[ 2: ], '='
-        if string.startswith( '~=' ): return string[ 2: ], '\u2248'
-        if string.startswith( '\u2248' ): return string[ 1: ], '\u2248'
+        if string.startswith( '~=' ): return string[ 2: ], UNICODE_APPROX_EQUAL
+        if string.startswith( UNICODE_APPROX_EQUAL ): return string[ 1: ], UNICODE_APPROX_EQUAL
         raise ValueError( "Invalid ratio operator" )
     elif spec == Operators.RATIO_OPERATORS_SPECIAL:
         

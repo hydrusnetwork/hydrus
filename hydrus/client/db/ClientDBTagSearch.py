@@ -363,7 +363,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         #
         
         # we always include all chained guys regardless of count
-        chained_tag_ids = self.modules_tag_display.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_ids )
+        chained_tag_ids = self.modules_tag_display.FilterChained( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, tag_ids )
         
         tag_ids = tag_ids.difference( chained_tag_ids )
         
@@ -671,11 +671,11 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 with self._MakeTemporaryIntegerTable( [], 'ideal_tag_id' ) as temp_ideal_tag_ids_table_name:
                     
-                    self.modules_tag_siblings.FilterChainedIdealsIntoTable( ClientTags.TAG_DISPLAY_ACTUAL, leaf.tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
+                    self.modules_tag_siblings.FilterChainedIdealsIntoTable( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, leaf.tag_service_id, temp_tag_ids_table_name, temp_ideal_tag_ids_table_name )
                     
                     with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_chained_tag_ids_table_name:
                         
-                        self.modules_tag_siblings.GetChainsMembersFromIdealsTables( ClientTags.TAG_DISPLAY_ACTUAL, leaf.tag_service_id, temp_ideal_tag_ids_table_name, temp_chained_tag_ids_table_name )
+                        self.modules_tag_siblings.GetChainsMembersFromIdealsTables( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, leaf.tag_service_id, temp_ideal_tag_ids_table_name, temp_chained_tag_ids_table_name )
                         
                         tag_ids.update( self._STI( self._Execute( 'SELECT tag_id FROM {};'.format( temp_chained_tag_ids_table_name ) ) ) )
                         
@@ -737,7 +737,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             if file_service_id == self.modules_services.combined_file_service_id:
                 
-                # yo this does not support ClientTags.TAG_DISPLAY_ACTUAL--big tricky problem
+                # yo this does not support ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL--big tricky problem
                 
                 ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
                 
@@ -753,7 +753,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     current_tables.append( ( cache_current_mappings_table_name, tags_table_name ) )
                     pending_tables.append( ( cache_pending_mappings_table_name, tags_table_name ) )
                     
-                elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+                elif tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
                     
                     ( cache_current_display_mappings_table_name, cache_pending_display_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
                     

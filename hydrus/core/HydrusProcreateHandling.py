@@ -17,7 +17,7 @@ def ExtractZippedThumbnailToPath( path_to_zip, temp_path_file ):
         
     except KeyError:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( f'This procreate file had no thumbnail file!' )
+        raise HydrusExceptions.NoThumbnailFileException( 'This procreate file had no thumbnail file!' )
         
     
 
@@ -27,7 +27,7 @@ def GetProcreatePlist( path ):
 
     if not plist_file.exists():
         
-        raise HydrusExceptions.DamagedOrUnusualFileException('Procreate file has no plist!')
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Procreate file has no plist!' )
         
     
     with HydrusArchiveHandling.GetZipAsPath( path, PROCREATE_DOCUMENT_ARCHIVE ).open('rb') as document:
@@ -60,33 +60,40 @@ def GetProcreateResolution( path ):
     
     # TODO: animation stuff from plist
     
-    document = GetProcreatePlist( path )
-    
-    objects = document['$objects']
-    
-    dimension_pointer = objects[PROCREATE_PROJECT_KEY]['size'].data
-    
-    # eg '{2894, 4093}'
-    size_string = objects[dimension_pointer]
-    
-    size = size_string.strip('{').strip('}').split(', ')
-    
-    orientation = objects[PROCREATE_PROJECT_KEY]['orientation']
-    
-    if orientation in [3,4]:
+    try:
         
-        # canvas is rotated 90 or -90 degrees
+        document = GetProcreatePlist( path )
         
-        height = size[1]
+        objects = document['$objects']
         
-        width = size[0]
+        dimension_pointer = objects[PROCREATE_PROJECT_KEY]['size'].data
         
-    else:
+        # eg '{2894, 4093}'
+        size_string = objects[dimension_pointer]
         
-        height = size[0]
+        size = size_string.strip('{').strip('}').split(', ')
         
-        width = size[1]
+        orientation = objects[PROCREATE_PROJECT_KEY]['orientation']
+        
+        if orientation in [3,4]:
+            
+            # canvas is rotated 90 or -90 degrees
+            
+            height = size[1]
+            
+            width = size[0]
+            
+        else:
+            
+            height = size[0]
+            
+            width = size[1]
+            
+        
+    except:
+        
+        raise HydrusExceptions.NoResolutionFileException()
         
     
-    return int(width), int(height)
+    return ( int( width ), int( height ) )
     

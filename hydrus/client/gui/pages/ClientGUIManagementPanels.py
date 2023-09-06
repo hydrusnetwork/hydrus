@@ -827,7 +827,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             self._refresh_dupe_counts_button.setEnabled( False )
             
-            self._num_potential_duplicates.setText( 'updating\u2026' )
+            self._num_potential_duplicates.setText( 'updating' + HC.UNICODE_ELLIPSIS )
             
             ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
             
@@ -4222,7 +4222,7 @@ class ManagementPanelPetitions( ManagementPanel ):
     def _ConvertDataToListCtrlTuples( self, petition_header: HydrusNetwork.PetitionHeader ):
         
         pretty_action = ''
-        pretty_content = 'fetching\u2026'
+        pretty_content = 'fetching' + HC.UNICODE_ELLIPSIS
         
         sort_content = 1
         
@@ -4233,7 +4233,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             petition = self._outgoing_petition_headers_to_petitions[ petition_header ]
             
-            pretty_content = 'uploading\u2026'
+            pretty_content = 'uploading' + HC.UNICODE_ELLIPSIS
             
         elif petition_header in self._failed_outgoing_petition_headers_to_petitions:
             
@@ -4519,7 +4519,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
         
         button.setEnabled( False )
-        button.setText( 'Fetching\u2026' )
+        button.setText( 'Fetching' + HC.UNICODE_ELLIPSIS )
         
         self._controller.CallToThread( do_it, self._service )
         
@@ -4877,7 +4877,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             
         
-        self._refresh_num_petitions_button.setText( 'Fetching\u2026' )
+        self._refresh_num_petitions_button.setText( 'Fetching' + HC.UNICODE_ELLIPSIS )
         
         subject_account_key = self._GetSubjectAccountKey()
         

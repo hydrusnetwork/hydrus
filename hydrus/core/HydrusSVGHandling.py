@@ -4,12 +4,12 @@ from hydrus.core import HydrusExceptions
 
 def BaseGenerateThumbnailBytesFromSVGPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
     
-    raise HydrusExceptions.UnsupportedFileException()
+    raise HydrusExceptions.NoThumbnailFileException()
     
 
 def BaseGetSVGResolution( path: str ):
     
-    return ( None, None )
+    raise HydrusExceptions.NoResolutionFileException()
     
 
 GenerateThumbnailBytesFromSVGPath = BaseGenerateThumbnailBytesFromSVGPath

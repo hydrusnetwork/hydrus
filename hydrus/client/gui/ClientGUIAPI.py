@@ -2,7 +2,7 @@ import os
 
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusData
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
@@ -24,7 +24,7 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
         
         self._api_permissions = None
         
-        self._st = ClientGUICommon.BetterStaticText( self, label = 'waiting for request\u2026' )
+        self._st = ClientGUICommon.BetterStaticText( self, label = 'waiting for request' + HC.UNICODE_ELLIPSIS )
         
         vbox = QP.VBoxLayout()
         

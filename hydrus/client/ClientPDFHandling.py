@@ -1,3 +1,4 @@
+import re
 import typing
 
 from qtpy import QtPdf
@@ -7,7 +8,6 @@ from qtpy import QtCore as QC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPDFHandling
-from hydrus.core import HydrusData
 
 from hydrus.client.gui import ClientGUIFunctions
 
@@ -17,115 +17,217 @@ def LoadPDF( path: str ):
         
         document = QtPdf.QPdfDocument()
 
-        document.load(path)
+        document.load( path )
         
     except:
         
-        raise  HydrusExceptions.DamagedOrUnusualFileException( 'Could not load PDF file.' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load PDF file.' )
         
+    
     status = document.status()
     
     if status is not QtPdf.QPdfDocument.Status.Ready:
-
+        
         if status is QtPdf.QPdfDocument.Status.Error:
-
+            
             error = document.error()
-
+            
             if error is QtPdf.QPdfDocument.Error.IncorrectPassword:
-
-                raise  HydrusExceptions.EncryptedFileException( f'PDF is password protected!' )
-            
+                
+                raise HydrusExceptions.EncryptedFileException( 'PDF is password protected!' )
+                
             elif error is QtPdf.QPdfDocument.Error.UnsupportedSecurityScheme:
-
-                raise  HydrusExceptions.EncryptedFileException( f'PDF uses an unsupported security scheme' )
-            
+                
+                raise HydrusExceptions.EncryptedFileException( 'PDF uses an unsupported security scheme' )
+                
             else:
-
-                raise  HydrusExceptions.DamagedOrUnusualFileException( f'PDF document error: {document.error()}!' )
-        
+                
+                raise HydrusExceptions.DamagedOrUnusualFileException( f'PDF document error: {document.error()}!' )
+                
         else:
-
-            raise  HydrusExceptions.DamagedOrUnusualFileException( f'PDF document status: {status}!' )
+            
+            raise HydrusExceptions.DamagedOrUnusualFileException( f'PDF document status: {status}!' )
+            
         
+    
     return document
     
 
 def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
-
-    document = LoadPDF( path )
-
-    if clip_rect is None:
-
-        ( target_width, target_height ) = target_resolution
-
-        resolution = QC.QSize( target_width, target_height )
-
-    else:
-
-        ( pdf_width, pdf_height ) = _GetPDFResolution(document)
-
-        resolution = QC.QSize( pdf_width, pdf_height )
     
     try:
         
+        document = LoadPDF( path )
+        
+        if clip_rect is None:
+            
+            ( target_width, target_height ) = target_resolution
+            
+            resolution = QC.QSize( target_width, target_height )
+            
+        else:
+            
+            ( pdf_width, pdf_height ) = GetPDFResolutionFromDocument( document )
+            
+            resolution = QC.QSize( pdf_width, pdf_height )
+            
+        
         qt_image = document.render(0, resolution)
-
+        
         # ClientGUIFunctions.ConvertQtImageToNumPy doesn't handle other formats well
-        qt_image.convertToFormat(QG.QImage.Format_RGBA8888)
-
+        qt_image.convertToFormat( QG.QImage.Format_RGBA8888 )
         
         numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
-
+        
         document.close()
-
+        
         if clip_rect is None:
             
             thumbnail_numpy_image = numpy_image
-
+            
         else:
-
+            
             numpy_image = HydrusImageHandling.ClipNumPyImage( numpy_image, clip_rect )
             
             thumbnail_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
             
+        
         return HydrusImageHandling.GenerateThumbnailBytesNumPy( thumbnail_numpy_image )
         
     except:
-
-        raise HydrusExceptions.DamagedOrUnusualFileException()
+        
+        raise HydrusExceptions.NoThumbnailFileException()
         
     
+
 HydrusPDFHandling.GenerateThumbnailBytesFromPDFPath = GenerateThumbnailBytesFromPDFPath
 
 PDF_ASSUMED_DPI = 300
 
-def GetPDFResolution( path: str ):
-
-    document = LoadPDF( path )
-
-    resolution = _GetPDFResolution(document)
-
-    document.close()
-
-    return resolution
-
-
-def _GetPDFResolution( document: QtPdf.QPdfDocument ):
+def GetHumanReadableEmbeddedMetadata( path ) -> str:
     
     try:
+        
+        document = LoadPDF( path )
+        
+    except:
+        
+        raise HydrusExceptions.LimitedSupportFileException()
+        
     
-        pointSize = document.pagePointSize(0)
-
-        # pointSize is in pts which are 1/72 of an inch.
-        # this calculates the "resolution" assuming PDF_ASSUMED_DPI dpi
-        width = pointSize.width() * (PDF_ASSUMED_DPI/72)
-        height = pointSize.height() * (PDF_ASSUMED_DPI/72)
-
-        return (round(width), round(height))
+    result_components = []
     
-    except HydrusExceptions.EncryptedFileException:
-
-        return (None, None)
-
+    jobs = [
+        ( 'Title', QtPdf.QPdfDocument.MetaDataField.Title ),
+        ( 'Author', QtPdf.QPdfDocument.MetaDataField.Author ),
+        ( 'Subject', QtPdf.QPdfDocument.MetaDataField.Subject ),
+        ( 'Keywords', QtPdf.QPdfDocument.MetaDataField.Keywords )
+    ]
     
-HydrusPDFHandling.GetPDFResolution = GetPDFResolution
+    for ( prefix, key ) in jobs:
+        
+        text = document.metaData( key )
+        
+        if len( text ) > 0:
+            
+            result_components.append( f'{prefix}: {text}' )
+            
+        
+    
+    return '\n'.join( result_components )
+    
+
+def HasHumanReadableEmbeddedMetadata( path ) -> bool:
+    
+    try:
+        
+        text = GetHumanReadableEmbeddedMetadata( path )
+        
+    except HydrusExceptions.LimitedSupportFileException:
+        
+        return False
+        
+    
+    return len( text ) > 0
+    
+
+def GetPDFInfo( path: str ):
+    
+    try:
+        
+        document = LoadPDF( path )
+        
+    except:
+        
+        raise HydrusExceptions.LimitedSupportFileException()
+        
+    
+    try:
+        
+        ( width, height ) = GetPDFResolutionFromDocument( document )
+        
+    except:
+        
+        ( width, height ) = ( None, None )
+        
+    
+    num_words = 0
+    
+    num_pages = document.pageCount()
+    
+    for i in range( num_pages ):
+        
+        q_selection_gubbins = document.getAllText( i )
+        
+        text = q_selection_gubbins.text()
+        
+        depunctuated_text = re.sub( r'[^\w\s]', ' ', text )
+        
+        despaced_text = re.sub( '\s\s+', ' ', depunctuated_text )
+        
+        if despaced_text not in ( '', ' ' ):
+            
+            num_words += despaced_text.count( ' ' ) + 1
+            
+        
+    
+    document.close()
+    
+    return ( num_words, ( width, height ) )
+    
+
+def GetPDFModifiedDate( path ):
+    
+    # TODO: do something with this
+    # I thought about replacing the disk modified time, but it seemed like a minefield
+    # I think instead we'll have support for more non-web-domain timestamps and add a 'pdf' domain or similar and add hooks for it in normal local file import and timestamp regen code
+    
+    try:
+        
+        document = LoadPDF( path )
+        
+    except:
+        
+        raise HydrusExceptions.LimitedSupportFileException()
+        
+    
+    q_modified_date = document.metaData( QtPdf.QPdfDocument.MetaDataField.ModificationDate )
+    
+    modified_date = q_modified_date.toSecsSinceEpoch()
+    
+    return modified_date
+    
+
+def GetPDFResolutionFromDocument( document: QtPdf.QPdfDocument ):
+    
+    pointSize = document.pagePointSize(0)
+    
+    # pointSize is in pts which are 1/72 of an inch.
+    # this calculates the "resolution" assuming PDF_ASSUMED_DPI dpi
+    width = pointSize.width() * ( PDF_ASSUMED_DPI / 72 )
+    height = pointSize.height() * ( PDF_ASSUMED_DPI / 72 )
+    
+    return ( round( width ), round( height ) )
+    
+
+HydrusPDFHandling.GetPDFInfo = GetPDFInfo

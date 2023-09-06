@@ -5007,7 +5007,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._Execute( 'CREATE TABLE deferred_physical_file_deletes ( master_hash_id INTEGER PRIMARY KEY );' )
                 self._Execute( 'CREATE TABLE deferred_physical_thumbnail_deletes ( master_hash_id INTEGER PRIMARY KEY );' )
                 
-                HydrusData.Print( 'Populating deferred physical file delete tables\u2026' )
+                HydrusData.Print( 'Populating deferred physical file delete tables' + HC.UNICODE_ELLIPSIS )
                 
                 for service_id in self._GetServiceIds( ( HC.FILE_REPOSITORY, ) ):
                     
@@ -5026,7 +5026,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self._Execute( 'CREATE TABLE IF NOT EXISTS service_info ( service_id INTEGER, info_type INTEGER, info INTEGER, PRIMARY KEY ( service_id, info_type ) );' )
             
-            HydrusData.Print( 'Populating new cached counts table\u2026' )
+            HydrusData.Print( 'Populating new cached counts table' + HC.UNICODE_ELLIPSIS )
             
             self._RepositoryRegenerateServiceInfo()
             

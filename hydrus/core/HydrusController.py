@@ -791,7 +791,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
             
             while not self.db.LoopIsFinished():
                 
-                self._PublishShutdownSubtext( 'waiting for db to finish up\u2026' )
+                self._PublishShutdownSubtext( 'waiting for db to finish up' + HC.UNICODE_ELLIPSIS )
                 
                 time.sleep( 0.1 )
                 

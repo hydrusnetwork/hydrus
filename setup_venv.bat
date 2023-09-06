@@ -46,12 +46,14 @@ goto :parse_fail
 
 ECHO:
 ECHO Qt is the User Interface library. We are now on Qt6.
-ECHO If you are on Windows ^<=8.1, choose 5. If 6 gives you trouble, fall back to o.
-SET /P qt="Do you want Qt(5), Qt(6), Qt6 (o)lder, or (t)est? "
+ECHO If you are on Windows ^<=8.1, choose 5.
+ECHO If you have multi-monitor menu position bugs with the normal Qt6, try the (o)lder build on Python ^<=3.10 or (m)iddle on Python ^>=3.11.
+SET /P qt="Do you want Qt(5), Qt(6), Qt6 (o)lder, Qt6 (m)iddle or (t)est? "
 
 IF "%qt%" == "5" goto :question_mpv
 IF "%qt%" == "6" goto :question_mpv
 IF "%qt%" == "o" goto :question_mpv
+IF "%qt%" == "m" goto :question_mpv
 IF "%qt%" == "t" goto :question_mpv
 goto :parse_fail
 
@@ -60,10 +62,11 @@ goto :parse_fail
 ECHO:
 ECHO mpv is the main way to play audio and video. We need to tell hydrus how to talk to your mpv dll.
 ECHO Try the n first. If it doesn't work, fall back to o.
-SET /P mpv="Do you want (o)ld mpv or (n)ew mpv? "
+SET /P mpv="Do you want (o)ld mpv, (n)ew mpv, or (t)est mpv? "
 
 IF "%mpv%" == "o" goto :question_opencv
 IF "%mpv%" == "n" goto :question_opencv
+IF "%mpv%" == "t" goto :question_opencv
 goto :parse_fail
 
 :question_opencv
@@ -115,7 +118,7 @@ IF "%install_type%" == "d" (
     python -m pip install pyside2
     python -m pip install PyQtChart PyQt5
     python -m pip install PyQt6-Charts PyQt6
-    python -m pip install -r static\requirements\advanced\requirements_mpv_new.txt
+    python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
     python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
     python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
 
@@ -129,10 +132,12 @@ IF "%install_type%" == "a" (
     IF "%qt%" == "5" python -m pip install -r static\requirements\advanced\requirements_qt5.txt
     IF "%qt%" == "6" python -m pip install -r static\requirements\advanced\requirements_qt6.txt
     IF "%qt%" == "o" python -m pip install -r static\requirements\advanced\requirements_qt6_older.txt
+    IF "%qt%" == "m" python -m pip install -r static\requirements\advanced\requirements_qt6_middle.txt
     IF "%qt%" == "t" python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
 
     IF "%mpv%" == "o" python -m pip install -r static\requirements\advanced\requirements_mpv_old.txt
     IF "%mpv%" == "n" python -m pip install -r static\requirements\advanced\requirements_mpv_new.txt
+    IF "%mpv%" == "t" python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
 
     IF "%opencv%" == "o" python -m pip install -r static\requirements\advanced\requirements_opencv_old.txt
     IF "%opencv%" == "n" python -m pip install -r static\requirements\advanced\requirements_opencv_new.txt

@@ -584,7 +584,7 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
             
         
         self._test_address_button.setEnabled( False )
-        self._test_address_button.setText( 'testing\u2026' )
+        self._test_address_button.setText( 'testing' + HC.UNICODE_ELLIPSIS )
         
         HG.client_controller.CallToThread( do_it )
         
@@ -2166,7 +2166,7 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
         
         self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
         
-        self._deferred_delete_status = ClientGUICommon.BetterStaticText( self, label = 'loading\u2026' )
+        self._deferred_delete_status = ClientGUICommon.BetterStaticText( self, label = 'loading' + HC.UNICODE_ELLIPSIS )
         
         self._clear_deleted_files_record = ClientGUICommon.BetterButton( self, 'clear deleted files record', self._ClearDeletedFilesRecord )
         
@@ -2680,7 +2680,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
         
         self._refresh_account_button.setEnabled( False )
-        self._refresh_account_button.setText( 'fetching\u2026' )
+        self._refresh_account_button.setText( 'fetching' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
         
@@ -2970,7 +2970,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 
                 path = dlg.GetPath()
                 
-                self._export_updates_button.setText( 'exporting\u2026' )
+                self._export_updates_button.setText( 'exporting' + HC.UNICODE_ELLIPSIS )
                 self._export_updates_button.setEnabled( False )
                 
                 HG.client_controller.CallToThread( do_it, path, self._service )
@@ -3026,7 +3026,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
         
         self._service_info_button.setEnabled( False )
-        self._service_info_button.setText( 'fetching\u2026' )
+        self._service_info_button.setText( 'fetching' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
         

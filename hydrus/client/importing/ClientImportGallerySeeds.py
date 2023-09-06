@@ -346,7 +346,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             first_line = repr( exception ).splitlines()[0]
             
-            note = first_line + '\u2026 (Copy note to see full error)'
+            note = f'{first_line}{HC.UNICODE_ELLIPSIS} (Copy note to see full error)'
             note += os.linesep
             note += traceback.format_exc()
             

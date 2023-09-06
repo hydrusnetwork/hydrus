@@ -29,6 +29,7 @@ class HydrusException( Exception ):
         return os.linesep.join( s )
         
     
+
 class UnknownException( HydrusException ): pass
 
 class CantRenderWithCVException( HydrusException ): pass
@@ -57,7 +58,12 @@ class FileImportBlockException( HydrusException ): pass
 class UnsupportedFileException( HydrusException ): pass
 class ZeroSizeFileException( UnsupportedFileException ): pass
 class DamagedOrUnusualFileException( UnsupportedFileException ): pass
-class EncryptedFileException( UnsupportedFileException ): pass
+
+class LimitedSupportFileException( HydrusException ): pass
+
+class EncryptedFileException( LimitedSupportFileException ): pass
+class NoThumbnailFileException( LimitedSupportFileException ): pass
+class NoResolutionFileException( LimitedSupportFileException ): pass
 
 class VetoException( HydrusException ): pass
 

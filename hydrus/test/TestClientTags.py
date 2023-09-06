@@ -95,7 +95,7 @@ class TestMergeTagsManagers( unittest.TestCase ):
         
         #
         
-        self.assertEqual( tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( 'character', ), ClientTags.TAG_DISPLAY_ACTUAL ), frozenset( { 'character:cibo' } ) )
+        self.assertEqual( tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( 'character', ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), frozenset( { 'character:cibo' } ) )
         
     
 class TestTagsManager( unittest.TestCase ):
@@ -194,8 +194,8 @@ class TestTagsManager( unittest.TestCase ):
     
     def test_get_namespace_slice( self ):
         
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( 'creator', 'series' ), ClientTags.TAG_DISPLAY_ACTUAL ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
-        self.assertEqual( self._tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, [], ClientTags.TAG_DISPLAY_ACTUAL ), frozenset() )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( 'creator', 'series' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), frozenset( { 'creator:tsutomu nihei', 'series:blame!' } ) )
+        self.assertEqual( self._tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, [], ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), frozenset() )
         
     
     def test_get_num_tags( self ):
@@ -1715,7 +1715,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( CC.UNICODE_ALMOST_EQUAL_TO, 'delta', ( 1, 2, 3, 4 ) ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( HC.UNICODE_APPROX_EQUAL, 'delta', ( 1, 2, 3, 4 ) ) )
         
         self.assertEqual( p.ToString(), 'system:import time: around 1 year 2 months ago' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1783,7 +1783,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True )
         
-        self.assertEqual( p.ToString(), 'system:image has exif' )
+        self.assertEqual( p.ToString(), 'system:has exif' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
@@ -1795,7 +1795,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, True )
         
-        self.assertEqual( p.ToString(), 'system:image has human-readable embedded metadata' )
+        self.assertEqual( p.ToString(), 'system:has human-readable embedded metadata' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
@@ -1807,7 +1807,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True )
         
-        self.assertEqual( p.ToString(), 'system:image has icc profile' )
+        self.assertEqual( p.ToString(), 'system:has icc profile' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
@@ -2019,14 +2019,14 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:has tags', "system:has tags" ),
             ( 'system:untagged', "system:no tags" ),
             ( 'system:untagged', "system:untagged" ),
-            ( 'system:image has human-readable embedded metadata', "system:has human readable embedded metadata" ),
+            ( 'system:has human-readable embedded metadata', "system:has human readable embedded metadata" ),
             ( 'system:no human-readable embedded metadata', "system:no human readable embedded metadata" ),
-            ( 'system:image has human-readable embedded metadata', "system:has embedded metadata" ),
+            ( 'system:has human-readable embedded metadata', "system:has embedded metadata" ),
             ( 'system:no human-readable embedded metadata', "system:no embedded metadata" ),
-            ( 'system:image has icc profile', "system:has icc profile" ),
+            ( 'system:has icc profile', "system:has icc profile" ),
             ( 'system:no icc profile', "system:no icc profile" ),
             ( 'system:number of tags > 5', "system:number of tags > 5" ),
-            ( 'system:number of tags \u2248 10', "system:number of tags ~= 10" ),
+            ( f'system:number of tags {HC.UNICODE_APPROX_EQUAL} 10', "system:number of tags ~= 10" ),
             ( 'system:has tags', "system:number of tags > 0  " ),
             ( 'system:number of words < 2', "system:number of words < 2" ),
             ( 'system:height = 600', "system:height = 600px" ),
@@ -2034,7 +2034,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:height > 900', "system:height > 900" ),
             ( 'system:width < 200', "system:width < 200" ),
             ( 'system:width > 1,000', "system:width > 1000 pixels" ),
-            ( 'system:filesize \u2248 50KB', "system:filesize ~= 50 kilobytes" ),
+            ( f'system:filesize {HC.UNICODE_APPROX_EQUAL} 50KB', "system:filesize ~= 50 kilobytes" ),
             ( 'system:filesize > 10MB', "system:filesize > 10megabytes" ),
             ( 'system:filesize < 1GB', "system:file size    < 1 GB" ),
             ( 'system:filesize > 0B', "system:file size > 0 B" ),
@@ -2096,7 +2096,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:import time: on the day of 2020-01-03', "system:import time: the day of 2020-01-03" ),
             ( 'system:import time: around 7 days ago', "system:date imported around 7 days ago" ),
             ( 'system:duration < 5.0 seconds', "system:duration < 5 seconds" ),
-            ( 'system:duration \u2248 11.0 seconds', "system:duration ~= 5 sec 6000 msecs" ),
+            ( f'system:duration {HC.UNICODE_APPROX_EQUAL} 11.0 seconds', "system:duration ~= 5 sec 6000 msecs" ),
             ( 'system:duration > 3 milliseconds', "system:duration > 3 milliseconds" ),
             ( 'system:is pending to my files', "system:file service is pending to my files" ),
             ( 'system:is pending to my files', "system:file service is pending to MY FILES" ),
@@ -2113,13 +2113,13 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:ratio is landscape', "system:ratio is landscape" ),
             ( 'system:number of pixels > 50 pixels', "system:num pixels > 50 px" ),
             ( 'system:number of pixels < 1 megapixels', "system:num pixels < 1 megapixels " ),
-            ( 'system:number of pixels \u2248 5 kilopixels', "system:num pixels ~= 5 kilopixel" ),
-            ( 'system:media views \u2248 10', "system:media views ~= 10" ),
+            ( f'system:number of pixels {HC.UNICODE_APPROX_EQUAL} 5 kilopixels', "system:num pixels ~= 5 kilopixel" ),
+            ( f'system:media views {HC.UNICODE_APPROX_EQUAL} 10', "system:media views ~= 10" ),
             ( 'system:all views > 0', "system:all views > 0" ),
             ( 'system:preview views < 10', "system:preview views < 10  " ),
             ( 'system:media viewtime < 1 day 1 hour', "system:media viewtime < 1 days 1 hour 0 minutes" ),
             ( 'system:all viewtime > 1 hour 1 minute', "system:all viewtime > 1 hours 100 seconds" ),
-            ( 'system:preview viewtime \u2248 2 days 7 hours', "system:preview viewtime ~= 1 day 30 hours 100 minutes 90s" ),
+            ( f'system:preview viewtime {HC.UNICODE_APPROX_EQUAL} 2 days 7 hours', "system:preview viewtime ~= 1 day 30 hours 100 minutes 90s" ),
             ( 'system:has a url matching regex: index\\.php', " system:has url matching regex index\\.php" ),
             ( 'system:does not have a url matching regex: index\\.php', "system:does not have a url matching regex index\\.php" ),
             ( 'system:has url: https://safebooru.donmai.us/posts/4695284', "system:has_url https://safebooru.donmai.us/posts/4695284" ),
@@ -2128,7 +2128,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:does not have a url with domain: safebooru.com', "system:doesn't have domain safebooru.com" ),
             ( 'system:has safebooru file page url', "system:has a url with class safebooru file page" ),
             ( 'system:does not have safebooru file page url', "system:doesn't have a url with url class safebooru file page " ),
-            ( 'system:page less than 5', "system:tag as number page < 5" ),
+            ( 'system:tag as number: page less than 5', "system:tag as number page < 5" ),
+            ( 'system:tag as number: page less than 5', "system:tag as number: page less than 5" ),
             ( 'system:number of notes: has notes', 'system:has note' ),
             ( 'system:number of notes: has notes', 'system:has notes' ),
             ( 'system:number of notes: no notes', 'system:no note' ),
@@ -2155,8 +2156,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:does not have a rating for example local rating numerical service', 'system:does not have a rating for example local rating numerical service' ),
             ( 'system:rating for example local rating numerical service = 3/5', 'system:rating for example local rating numerical service = 3/5' ),
             ( 'system:rating for example local rating numerical service = 3/5', 'system:rating for example local rating numerical service is 3/5' ),
-            ( 'system:rating for example local rating numerical service \u2248 3/5', 'system:rating for example local rating numerical service \u2248 3/5' ),
-            ( 'system:rating for example local rating numerical service \u2248 3/5', 'system:rating for example local rating numerical service about 3/5' ),
+            ( f'system:rating for example local rating numerical service {HC.UNICODE_APPROX_EQUAL} 3/5', f'system:rating for example local rating numerical service {HC.UNICODE_APPROX_EQUAL} 3/5' ),
+            ( f'system:rating for example local rating numerical service {HC.UNICODE_APPROX_EQUAL} 3/5', 'system:rating for example local rating numerical service about 3/5' ),
             ( 'system:rating for example local rating numerical service < 3/5', 'system:rating for example local rating numerical service < 3/5' ),
             ( 'system:rating for example local rating numerical service < 3/5', 'system:rating for example local rating numerical service less than 3/5' ),
             ( 'system:rating for example local rating numerical service > 3/5', 'system:rating for example local rating numerical service > 3/5' ),
@@ -2168,8 +2169,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:rating for example local rating inc/dec service > 123', 'system:rating example local rating inc/dec service more than 123' ),
             ( 'system:rating for example local rating inc/dec service < 123', 'system:rating for example local rating inc/dec service < 123' ),
             ( 'system:rating for example local rating inc/dec service < 123', 'system:rating for example local rating inc/dec service less than 123' ),
-            ( 'system:rating for example local rating inc/dec service \u2248 123', 'system:rating for example local rating inc/dec service \u2248 123' ),
-            ( 'system:rating for example local rating inc/dec service \u2248 123', 'system:rating for example local rating inc/dec service about 123' ),
+            ( f'system:rating for example local rating inc/dec service {HC.UNICODE_APPROX_EQUAL} 123', f'system:rating for example local rating inc/dec service {HC.UNICODE_APPROX_EQUAL} 123' ),
+            ( f'system:rating for example local rating inc/dec service {HC.UNICODE_APPROX_EQUAL} 123', 'system:rating for example local rating inc/dec service about 123' ),
         ]:
             
             ( sys_pred, ) = ClientSearchParseSystemPredicates.ParseSystemPredicateStringsToPredicates( ( sys_pred_text, ) )

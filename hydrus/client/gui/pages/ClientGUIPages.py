@@ -1078,7 +1078,7 @@ class Page( QW.QWidget ):
                 
                 initial_media_results.extend( more_media_results )
                 
-                status = 'Loading initial files\u2026 ' + HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )
+                status = f'Loading initial files{HC.UNICODE_ELLIPSIS} {HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )}'
                 
                 controller.CallAfterQtSafe( self, 'setting status bar loading string', qt_code_status, status )
                 
@@ -2138,7 +2138,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetStatusText( 'loading session "{}"\u2026'.format( name ) )
+        job_key.SetStatusText( 'loading session "{}"'.format( name ) + HC.UNICODE_ELLIPSIS )
         
         HG.client_controller.pub( 'message', job_key )
         

@@ -15,6 +15,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientPDFHandling
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -673,33 +674,47 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
         return
         
     
+    exif_dict = None
+    file_text = None
+    
+    extra_rows = []
+    
     hash = media.GetHash()
     mime = media.GetMime()
     
     path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
     
-    pil_image = HydrusImageHandling.RawOpenPILImage( path )
-    
-    exif_dict = None
-    file_text = None
-    
-    if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
+    if mime == HC.APPLICATION_PDF:
         
-        exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+        try:
+            
+            file_text = ClientPDFHandling.GetHumanReadableEmbeddedMetadata( path )
+            
+        except HydrusExceptions.LimitedSupportFileException:
+            
+            file_text = 'Could not read PDF metadata!'
+            
         
-    
-    if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+    else:
         
-        file_text = HydrusImageHandling.GetEmbeddedFileText( pil_image )
+        pil_image = HydrusImageHandling.RawOpenPILImage( path )
         
-    
-    extra_rows = []
-    
-    if mime == HC.IMAGE_JPEG:
+        if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
+            
+            exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+            
         
-        extra_rows.append( ( 'progressive', 'yes' if 'progression' in pil_image.info else 'no' ) )
+        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
+            
+            file_text = HydrusImageHandling.GetEmbeddedFileText( pil_image )
+            
         
-        extra_rows.append( ( 'subsampling', HydrusImageHandling.GetJpegSubsampling( pil_image ) ) )
+        if mime == HC.IMAGE_JPEG:
+            
+            extra_rows.append( ( 'progressive', 'yes' if 'progression' in pil_image.info else 'no' ) )
+            
+            extra_rows.append( ( 'subsampling', HydrusImageHandling.GetJpegSubsampling( pil_image ) ) )
+            
         
     
     if exif_dict is None and file_text is None:

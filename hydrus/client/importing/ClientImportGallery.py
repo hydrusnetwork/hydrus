@@ -636,7 +636,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
                 
                 if work_is_going_on:
                     
-                    return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PAUSING, 'pausing\u2026' )
+                    return ( ClientImporting.DOWNLOADER_SIMPLE_STATUS_PAUSING, 'pausing' + HC.UNICODE_ELLIPSIS )
                     
                 else:
                     

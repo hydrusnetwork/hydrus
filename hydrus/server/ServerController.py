@@ -116,7 +116,7 @@ def ShutdownSiblingInstance( db_dir ):
             
             port_found = True
             
-            HydrusData.Print( 'Sending shut down instruction\u2026' )
+            HydrusData.Print( 'Sending shut down instruction' + HC.UNICODE_ELLIPSIS )
             
             r = session.post( 'https://127.0.0.1:' + str( port ) + '/shutdown' )
             
@@ -255,11 +255,11 @@ class Controller( HydrusController.HydrusController ):
         
         self.SaveDirtyObjects()
         
-        HydrusData.Print( 'Shutting down daemons\u2026' )
+        HydrusData.Print( 'Shutting down daemons' + HC.UNICODE_ELLIPSIS )
         
         self.ShutdownView()
         
-        HydrusData.Print( 'Shutting down db\u2026' )
+        HydrusData.Print( 'Shutting down db' + HC.UNICODE_ELLIPSIS )
         
         self.ShutdownModel()
         
@@ -362,11 +362,11 @@ class Controller( HydrusController.HydrusController ):
         
         self.RecordRunningStart()
         
-        HydrusData.Print( 'Initialising db\u2026' )
+        HydrusData.Print( 'Initialising db' + HC.UNICODE_ELLIPSIS )
         
         self.InitModel()
         
-        HydrusData.Print( 'Initialising workers\u2026' )
+        HydrusData.Print( 'Initialising workers' + HC.UNICODE_ELLIPSIS )
         
         self.InitView()
         
@@ -381,10 +381,10 @@ class Controller( HydrusController.HydrusController ):
             
         except KeyboardInterrupt:
             
-            HydrusData.Print( 'Received a keyboard interrupt\u2026' )
+            HydrusData.Print( 'Received a keyboard interrupt' + HC.UNICODE_ELLIPSIS )
             
         
-        HydrusData.Print( 'Shutting down controller\u2026' )
+        HydrusData.Print( 'Shutting down controller' + HC.UNICODE_ELLIPSIS )
         
         self.Exit()
         
@@ -420,7 +420,7 @@ class Controller( HydrusController.HydrusController ):
             
             def StartServices( *args, **kwargs ):
                 
-                HydrusData.Print( 'Starting services\u2026' )
+                HydrusData.Print( 'Starting services' + HC.UNICODE_ELLIPSIS )
                 
                 for service in services:
                     
@@ -505,7 +505,7 @@ class Controller( HydrusController.HydrusController ):
             
             if len( self._service_keys_to_connected_ports ) > 0:
                 
-                HydrusData.Print( 'Stopping services\u2026' )
+                HydrusData.Print( 'Stopping services' + HC.UNICODE_ELLIPSIS )
                 
                 deferreds = []
                 
@@ -589,7 +589,7 @@ class Controller( HydrusController.HydrusController ):
     
     def ShutdownFromServer( self ):
         
-        HydrusData.Print( 'Received a server shut down request\u2026' )
+        HydrusData.Print( 'Received a server shut down request' + HC.UNICODE_ELLIPSIS )
         
         self._shutdown = True
         

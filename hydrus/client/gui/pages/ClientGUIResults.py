@@ -2540,7 +2540,7 @@ class MediaPanelLoading( MediaPanel ):
     
     def _GetPrettyStatusForStatusBar( self ):
         
-        s = 'Loading\u2026'
+        s = 'Loading' + HC.UNICODE_ELLIPSIS
         
         if self._current is not None:
             

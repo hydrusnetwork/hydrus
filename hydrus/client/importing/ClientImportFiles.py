@@ -10,7 +10,9 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientFiles
 from hydrus.client import ClientImageHandling
+from hydrus.client import ClientPDFHandling
 from hydrus.client.importing.options import FileImportOptions
 
 class FileImportStatus( object ):
@@ -354,14 +356,8 @@ class FileImportJob( object ):
             
             percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
-            try:
-                
-                self._thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, target_resolution, mime, duration, num_frames, clip_rect = clip_rect, percentage_in = percentage_in )
-                
-            except Exception as e:
-                
-                raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not render a thumbnail: {}'.format( repr( e ) ) )
-                
+            # this guy handles almost all his own exceptions now, so no need for clever catching. if it fails, we are prob talking an I/O failure, which is not a 'thumbnail failed' error
+            self._thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, target_resolution, mime, duration, num_frames, clip_rect = clip_rect, percentage_in = percentage_in )
             
         
         if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
@@ -414,21 +410,7 @@ class FileImportJob( object ):
         
         self._has_exif = has_exif
         
-        has_human_readable_embedded_metadata = False
-        
-        if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
-            
-            try:
-                
-                has_human_readable_embedded_metadata = HydrusImageHandling.HasHumanReadableEmbeddedMetadata( self._temp_path )
-                
-            except:
-                
-                pass
-                
-            
-        
-        self._has_human_readable_embedded_metadata = has_human_readable_embedded_metadata
+        self._has_human_readable_embedded_metadata = ClientFiles.HasHumanReadableEmbeddedMetadata( self._temp_path, mime )
         
         has_icc_profile = False
         

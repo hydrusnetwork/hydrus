@@ -801,7 +801,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         # doesn't work for '= 0' or '< 1'
         
-        if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+        if operator == HC.UNICODE_APPROX_EQUAL:
             
             lower_bound = 0.8 * num_relationships
             upper_bound = 1.2 * num_relationships
