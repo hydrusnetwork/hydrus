@@ -1,11 +1,22 @@
 import re
 import typing
 
-from qtpy import QtPdf
+try:
+    
+    from qtpy import QtPdf
+    
+    PDF_OK = True
+    
+except:
+    
+    PDF_OK = False
+    
+
 from qtpy import QtGui as QG
 from qtpy import QtCore as QC
 
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPDFHandling
 
@@ -13,9 +24,15 @@ from hydrus.client.gui import ClientGUIFunctions
 
 def LoadPDF( path: str ):
     
+    if not PDF_OK:
+        
+        raise HydrusExceptions.LimitedSupportFileException( 'Sorry, no QtPDF support!' )
+        
+    
     try:
         
-        document = QtPdf.QPdfDocument()
+        # needs an object parent param, and a permanent one, in PyQt6
+        document = QtPdf.QPdfDocument( HG.client_controller.app )
 
         document.load( path )
         
@@ -218,7 +235,7 @@ def GetPDFModifiedDate( path ):
     return modified_date
     
 
-def GetPDFResolutionFromDocument( document: QtPdf.QPdfDocument ):
+def GetPDFResolutionFromDocument( document ):
     
     pointSize = document.pagePointSize(0)
     
