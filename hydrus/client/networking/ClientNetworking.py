@@ -3,6 +3,7 @@ import threading
 import time
 import typing
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
@@ -169,11 +170,11 @@ class NetworkEngine( object ):
                         
                         self._current_validation_process = validation_process
                         
-                        job.SetStatus( 'validation presented to user\u2026' )
+                        job.SetStatus( 'validation presented to user' + HC.UNICODE_ELLIPSIS )
                         
                     else:
                         
-                        job.SetStatus( 'waiting in user validation queue\u2026' )
+                        job.SetStatus( 'waiting in user validation queue' + HC.UNICODE_ELLIPSIS )
                         
                         job.Sleep( 5 )
                         
@@ -221,7 +222,7 @@ class NetworkEngine( object ):
             
             elif self._pause_all_new_network_traffic:
                 
-                job.SetStatus( 'all new network traffic is paused\u2026' )
+                job.SetStatus( 'all new network traffic is paused' + HC.UNICODE_ELLIPSIS )
                 
                 job.Sleep( 2 )
                 
@@ -326,11 +327,11 @@ class NetworkEngine( object ):
                     
                     self._current_login_process = login_process
                     
-                    job.SetStatus( 'logging in\u2026' )
+                    job.SetStatus( 'logging in' + HC.UNICODE_ELLIPSIS )
                     
                 else:
                     
-                    job.SetStatus( 'waiting in login queue\u2026' )
+                    job.SetStatus( 'waiting in login queue' + HC.UNICODE_ELLIPSIS )
                     
                 
                 return True
@@ -368,7 +369,7 @@ class NetworkEngine( object ):
                 
                 if self._pause_all_new_network_traffic:
                     
-                    job.SetStatus( 'all new network traffic is paused\u2026' )
+                    job.SetStatus( 'all new network traffic is paused' + HC.UNICODE_ELLIPSIS )
                     
                     job.Sleep( 2 )
                     
@@ -416,7 +417,7 @@ class NetworkEngine( object ):
                 
             else:
                 
-                job.SetStatus( 'waiting for other jobs to finish\u2026' )
+                job.SetStatus( 'waiting for other jobs to finish' + HC.UNICODE_ELLIPSIS )
                 
                 return True
                 

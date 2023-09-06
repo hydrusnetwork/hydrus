@@ -258,7 +258,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
         
         if len( self._routers ) == 0:
             
-            text = 'no metadata migration'
+            text = 'no sidecars'
             
         elif len( self._routers ) == 1:
             
@@ -268,7 +268,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
             
         else:
             
-            text = '{} metadata migrations'.format( HydrusData.ToHumanInt( len( self._routers ) ) )
+            text = '{} sidecar actions'.format( HydrusData.ToHumanInt( len( self._routers ) ) )
             
         
         elided_text = HydrusText.ElideText( text, 64 )

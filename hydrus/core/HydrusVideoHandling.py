@@ -300,6 +300,7 @@ def GetFFMPEGVideoProperties( path, force_count_frames_manually = False ):
     
     return ( resolution, duration_in_ms, num_frames, has_audio )
     
+
 def GetMime( path ):
     
     lines = GetFFMPEGInfoLines( path )

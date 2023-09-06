@@ -105,6 +105,38 @@ The access key is the account. Do not give it to anyone you do not want to have 
 
 This is another long string of random hexadecimal that _identifies_ your account without giving away access. If you need to identify yourself to a repository administrator (say, to get your account's permissions modified), you will need to tell them your account id. You can copy it to your clipboard in _services->review services_.
 
+## Why does the file I deleted and then re-imported still have its tags? { id="service_isolation" }
+
+Hydrus splits its different abilities and domains (e.g. the list of files on your disk, or the tag mappings in 'my tags', or your files' notes) into separate _services_. You can see these in _review services_ and _manage services_. Although the services of the same type may interact (e.g. deleting a file from one service might send that file to the 'trash' service, or adding tag parents to one tag service might implicate tags on another), those of different types are generally completely independent. Your tags don't care where the files they map to are.
+
+So, when you delete a file from 'my files', none of its tag mappings in 'my tags' change--they remain attached to the 'ghost' of the deleted file. Your notes, ratings, and known URLs are the same (URLs is important, since it lets the client skip URLs for files you previously deleted). If you re-import the file, it will have everything it did before, with only a couple of pertinent changes like, obviously, _import time_.
+
+This is an important part of how the PTR works--when you sync with the PTR, your client downloads a couple billion mappings for files you do not have yet. Then, when you happen to import one of those files, it appears in your importer with its PTR tags 'apparently' already set--in truth, it always had them.
+
+When you feel like playing with some more advanced concepts, turn on _help->advanced mode_ and open a new search page. Change the file domain from 'my files' to 'all known files' or 'deleted from my files' and start typing a common tag--you'll get autocomplete results with counts! You can even run the search, and you'll get a ton of 'non-local' and therefore non-viewable files that are typically given a default hydrus thumbnail. These are files that your client is aware of, but does not currently have. You can run the _manage x_ dialogs and edit the metadata of these ghost files just as you can your real ones.
+
+If you really want to delete the tags or other data for some files you deleted, then:
+
+- If the job is small, do a search for the files inside 'deleted from my local files' (or 'all known files' if you did not leave a deletion record) and then hit `Ctrl+A->manage tags` and manually delete the tags there.
+- If the job is very large, then make a backup and hit up _tags->migrate tags_. You can select the tag service _x_ tag mappings for all files in 'deleted from my local files' and then make the action to delete from _x_ again. 
+- If the job is complicated, then note that you can open the _tags->migrate tags_ dialog from _manage tags_, and it will only apply to the files that booted _manage tags_.
+
+### Does this deleted-file metadata take up a lot of database space? Should I clear it to get rid of bloat?
+
+Not really. Unless your situation involves millions of richly locally tagged files and a gigantic deleted:kept file ratio, don't worry about it.
+
+### Does the metadata for files I deleted mean there is some kind of a permanent record of which files my client has heard about and/or seen directly, even if I purge the deletion record?
+
+Yes. I am working on updating the database infrastructure to allow a full purge, but the structure is complicated, so it will take some time. If you are afraid of someone stealing your hard drive and matriculating your sordid MLP collection (or, in this case, the historical log of horrors that you rejected), do some research into drive encryption. Hydrus runs fine off an encrypted disk.
+
+## Does Hydrus run ok off an encrypted drive partition? { id="encryption" }
+
+Yes! Both the database and your files should be fine on any of the popular software solutions. These programs give your OS a virtual drive that on my end looks and operates like any other. I have yet to encounter one that SQLite has a problem with. Make sure you don't have auto-dismount set--or at least be hawkish that it will never trigger while hydrus is running--or you could damage your database.
+
+Drive encryption is a good idea for all your private things. If someone steals your laptop or USB stick, it means you only have to deal with frustration and replacement expenses (rather than also a nightmare of anxiety and identity-loss as some bad guy combs through all your things).
+
+If you don't know how drive encryption works, search it up and have a play with a spare USB stick or a small 256MB file partition. Veracrypt is a popular and easy program, but there are several solutions. Get some practice and take it seriously, since if you act foolishly you can really screw yourself (e.g. locking yourself out of the only copy of data you have left because you forgot the password). Make sure you have a good plan, reliable (encrypted) backups, and a password manager. 
+
 ## Why can my friend not see what I just uploaded? { id="delays" }
 
 The repositories do not work like conventional search engines; it takes a short but predictable while for changes to propagate to other users.

@@ -56,7 +56,7 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
             
         elif term_type == 'namespace':
             
-            tags = tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( term, ), ClientTags.TAG_DISPLAY_ACTUAL )
+            tags = tags_manager.GetNamespaceSlice( CC.COMBINED_TAG_SERVICE_KEY, ( term, ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
             
             subtags = sorted( ( HydrusTags.SplitTag( tag )[1] for tag in tags ) )
             
@@ -66,8 +66,8 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
             
             if term in ( 'tags', 'nn tags' ):
                 
-                current = tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL )
-                pending = tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL )
+                current = tags_manager.GetCurrent( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+                pending = tags_manager.GetPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
                 
                 tags = sorted( current.union( pending ) )
                 
@@ -104,7 +104,7 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
             
             ( namespace, subtag ) = HydrusTags.SplitTag( tag )
             
-            if tags_manager.HasTag( subtag, ClientTags.TAG_DISPLAY_ACTUAL ):
+            if tags_manager.HasTag( subtag, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ):
                 
                 filename += clean_tag_text( subtag )
                 

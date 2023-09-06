@@ -33,7 +33,7 @@ if [ "$install_type" = "s" ]; then
 elif [ "$install_type" = "a" ]; then
     echo
     echo "Qt is the User Interface library. We are now on Qt6."
-    echo "If you are <=Ubuntu 18.04 or equivalent, choose 5.
+    echo "If you are <=Ubuntu 18.04 or equivalent, choose 5."
     echo "If you cannot boot with the normal Qt6, try the (o)lder build on Python ^<=3.10 or (m)iddle on Python ^>=3.11."
     echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, Qt6 (m)iddle or (t)est? "
     read -r qt

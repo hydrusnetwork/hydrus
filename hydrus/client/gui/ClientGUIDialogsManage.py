@@ -810,7 +810,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             self._status_st.setText( self._external_ip )
             
         
-        self._status_st.setText( 'Loading external IP\u2026' )
+        self._status_st.setText( 'Loading external IP' + HC.UNICODE_ELLIPSIS )
         
         async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -870,7 +870,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
             
         
-        self._status_st.setText( 'Refreshing mappings--please wait\u2026' )
+        self._status_st.setText( 'Refreshing mappings--please wait' + HC.UNICODE_ELLIPSIS )
         
         self._mappings_list.SetData( [] )
         

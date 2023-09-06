@@ -152,9 +152,9 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_TAGS
     SERIALISABLE_NAME = 'Metadata Single File Importer Media Tags'
-    SERIALISABLE_VERSION = 2
+    SERIALISABLE_VERSION = 3
     
-    def __init__( self, string_processor = None, service_key = None ):
+    def __init__( self, string_processor = None, service_key = None, tag_display_type = None ):
         
         if string_processor is None:
             
@@ -169,6 +169,12 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
+        if tag_display_type is None:
+            
+            tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL
+            
+        
+        self._tag_display_type = tag_display_type
         self._service_key = service_key
         
     
@@ -177,12 +183,12 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
         serialisable_string_processor = self._string_processor.GetSerialisableTuple()
         serialisable_service_key = self._service_key.hex()
         
-        return ( serialisable_string_processor, serialisable_service_key )
+        return ( serialisable_string_processor, serialisable_service_key, self._tag_display_type )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
     
-        ( serialisable_string_processor, serialisable_service_key ) = serialisable_info
+        ( serialisable_string_processor, serialisable_service_key, self._tag_display_type ) = serialisable_info
         
         self._string_processor = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_string_processor )
         self._service_key = bytes.fromhex( serialisable_service_key )
@@ -203,6 +209,17 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
             return ( 2, new_serialisable_info )
             
         
+        if version == 2:
+            
+            ( serialisable_string_processor, serialisable_service_key ) = old_serialisable_info
+            
+            tag_display_type = ClientTags.TAG_DISPLAY_STORAGE
+            
+            new_serialisable_info = ( serialisable_string_processor, serialisable_service_key, tag_display_type )
+            
+            return ( 3, new_serialisable_info )
+            
+        
     
     def GetExampleStrings( self ):
         
@@ -211,9 +228,13 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
             'blonde hair',
             'skirt',
             'character:jane smith',
-            'series:jane smith adventures',
             'creator:some guy'
         ]
+        
+        if self._tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
+            
+            examples.append( 'series:jane smith adventures' )
+            
         
         return examples
         
@@ -223,9 +244,14 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
         return self._service_key
         
     
+    def GetTagDisplayType( self ) -> int:
+        
+        return self._tag_display_type
+        
+    
     def Import( self, media_result: ClientMediaResult.MediaResult ):
         
-        tags = media_result.GetTagsManager().GetCurrent( self._service_key, ClientTags.TAG_DISPLAY_STORAGE )
+        tags = media_result.GetTagsManager().GetCurrent( self._service_key, self._tag_display_type )
         
         # turning ::) into :)
         tags = { HydrusText.re_leading_double_colon.sub( ':', tag ) for tag in tags }
@@ -263,7 +289,7 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
             full_munge_text = ''
             
         
-        return '"{}" tags from media{}'.format( name, full_munge_text )
+        return f'"{name}" {ClientTags.tag_display_str_lookup[ self._tag_display_type ]}{full_munge_text}'
         
     
 

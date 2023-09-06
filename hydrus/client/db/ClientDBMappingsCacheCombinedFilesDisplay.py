@@ -37,7 +37,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             return
             
         
-        remaining_implication_tag_ids = set( self.modules_tag_display.GetImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_id ) ).difference( implication_tag_ids )
+        remaining_implication_tag_ids = set( self.modules_tag_display.GetImpliedBy( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, tag_id ) ).difference( implication_tag_ids )
         
         ( current_delta, pending_delta ) = self.GetWithAndWithoutTagsFileCountCombined( tag_service_id, implication_tag_ids, remaining_implication_tag_ids )
         
@@ -45,7 +45,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             
             counts_cache_changes = ( ( tag_id, current_delta, pending_delta ), )
             
-            self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+            self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
             
         
     
@@ -56,9 +56,9 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
+            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
             
-            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
+            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
             
             file_service_ids_to_hash_ids = self.modules_files_storage.GroupHashIdsByTagCachedFileServiceId( hash_ids, temp_hash_ids_table_name )
             
@@ -93,14 +93,14 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             
             counts_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_current_counts.items() ]
             
-            self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+            self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
             
         
         if len( ac_pending_counts ) > 0:
             
             counts_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_pending_counts.items() ]
             
-            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
             
         
     
@@ -111,7 +111,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             return
             
         
-        remaining_implication_tag_ids = set( self.modules_tag_display.GetImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, tag_id ) ).difference( implication_tag_ids )
+        remaining_implication_tag_ids = set( self.modules_tag_display.GetImpliedBy( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, tag_id ) ).difference( implication_tag_ids )
         
         ( current_delta, pending_delta ) = self.GetWithAndWithoutTagsFileCountCombined( tag_service_id, implication_tag_ids, remaining_implication_tag_ids )
         
@@ -119,7 +119,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             
             counts_cache_changes = ( ( tag_id, current_delta, pending_delta ), )
             
-            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
             
         
     
@@ -129,9 +129,9 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
+            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
             
-            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
+            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
             
             file_service_ids_to_hash_ids = self.modules_files_storage.GroupHashIdsByTagCachedFileServiceId( hash_ids, temp_hash_ids_table_name )
             
@@ -155,18 +155,18 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             
             counts_cache_changes = [ ( tag_id, current_delta, 0 ) for ( tag_id, current_delta ) in ac_counts.items() ]
             
-            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
             
         
     
     def Clear( self, tag_service_id, keep_pending = False ):
         
-        self.modules_mappings_counts.ClearCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, keep_pending = keep_pending )
+        self.modules_mappings_counts.ClearCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, keep_pending = keep_pending )
         
     
     def Drop( self, tag_service_id ):
         
-        self.modules_mappings_counts.DropTables( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id )
+        self.modules_mappings_counts.DropTables( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id )
         
     
     def Generate( self, tag_service_id, status_hook = None ):
@@ -176,7 +176,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             status_hook( 'copying storage counts' )
             
         
-        self.modules_mappings_counts.CreateTables( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, populate_from_storage = True )
+        self.modules_mappings_counts.CreateTables( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, populate_from_storage = True )
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
@@ -480,9 +480,9 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
+            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
             
-            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
+            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
             
             file_service_ids_to_hash_ids = self.modules_files_storage.GroupHashIdsByTagCachedFileServiceId( hash_ids, temp_hash_ids_table_name )
             
@@ -505,7 +505,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             
             counts_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
             
-            self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+            self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
             
         
     
@@ -522,16 +522,16 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
         
         all_pending_storage_tag_ids = self._STS( self._Execute( 'SELECT DISTINCT tag_id FROM {};'.format( pending_mappings_table_name ) ) )
         
-        storage_tag_ids_to_display_tag_ids = self.modules_tag_display.GetTagsToImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, all_pending_storage_tag_ids )
+        storage_tag_ids_to_display_tag_ids = self.modules_tag_display.GetTagsToImplies( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, all_pending_storage_tag_ids )
         
         all_pending_display_tag_ids = set( itertools.chain.from_iterable( storage_tag_ids_to_display_tag_ids.values() ) )
         
         del all_pending_storage_tag_ids
         del storage_tag_ids_to_display_tag_ids
         
-        self.modules_mappings_counts.ClearCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, keep_current = True )
+        self.modules_mappings_counts.ClearCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, keep_current = True )
         
-        all_pending_display_tag_ids_to_implied_by_storage_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, all_pending_display_tag_ids, tags_are_ideal = True )
+        all_pending_display_tag_ids_to_implied_by_storage_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, all_pending_display_tag_ids, tags_are_ideal = True )
         
         counts_cache_changes = []
         
@@ -566,7 +566,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             counts_cache_changes.append( ( display_tag_id, 0, pending_delta ) )
             
         
-        self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+        self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
         
     
     def RescindPendingMappingsForChained( self, tag_service_id, storage_tag_id, hash_ids ):
@@ -575,9 +575,9 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
         
         with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
             
-            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
+            display_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
             
-            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
+            display_tag_ids_to_implied_by_tag_ids = self.modules_tag_display.GetTagsToImpliedBy( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, display_tag_ids, tags_are_ideal = True )
             
             file_service_ids_to_hash_ids = self.modules_files_storage.GroupHashIdsByTagCachedFileServiceId( hash_ids, temp_hash_ids_table_name )
             
@@ -601,6 +601,6 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
             
             counts_cache_changes = [ ( tag_id, 0, pending_delta ) for ( tag_id, pending_delta ) in ac_counts.items() ]
             
-            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+            self.modules_mappings_counts_update.ReduceCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
             
         

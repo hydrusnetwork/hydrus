@@ -453,7 +453,7 @@ class MediaList( object ):
             
             if len( namespaces_to_collect_by ) > 0:
                 
-                namespace_key = media.GetTagsManager().GetNamespaceSlice( tag_context.service_key, namespaces_to_collect_by, ClientTags.TAG_DISPLAY_ACTUAL )
+                namespace_key = media.GetTagsManager().GetNamespaceSlice( tag_context.service_key, namespaces_to_collect_by, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
                 
             else:
                 
@@ -2231,7 +2231,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             if sort_metatype == 'namespaces':
                 
                 namespaces = serialisable_sort_data
-                serialisable_sort_data = ( namespaces, ClientTags.TAG_DISPLAY_ACTUAL )
+                serialisable_sort_data = ( namespaces, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
                 
             
             new_serialisable_info = ( sort_metatype, serialisable_sort_data, sort_order )
@@ -2523,7 +2523,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     tags_manager = x.GetTagsManager()
                     
-                    return len( tags_manager.GetCurrentAndPending( self.tag_context.service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                    return len( tags_manager.GetCurrentAndPending( self.tag_context.service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_MIME:

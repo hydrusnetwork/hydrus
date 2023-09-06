@@ -697,7 +697,7 @@ def AddServiceKeyLabelsToMenu( menu, service_keys, phrase ):
             ClientGUIMenus.AppendMenuLabel( submenu, name )
             
         
-        ClientGUIMenus.AppendMenu( menu, submenu, phrase + '\u2026' )
+        ClientGUIMenus.AppendMenu( menu, submenu, phrase + HC.UNICODE_ELLIPSIS )
         
     
 

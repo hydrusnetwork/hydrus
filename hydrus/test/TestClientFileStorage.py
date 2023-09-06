@@ -21,6 +21,23 @@ def get_good_prefixes():
 
 class TestClientFileStorage( unittest.TestCase ):
     
+    def test_subfolders( self ):
+        
+        muh_test_base = os.path.join( HG.test_controller.db_dir, 'client_files' )
+        
+        subfolder = ClientFilesPhysical.FilesStorageSubfolder( 'ta', muh_test_base )
+        
+        self.assertEqual( subfolder.directory, os.path.join( muh_test_base, 'ta' ) )
+        
+        subfolder = ClientFilesPhysical.FilesStorageSubfolder( 'fab', muh_test_base )
+        
+        self.assertEqual( subfolder.directory, os.path.join( muh_test_base, 'fab' ) )
+        
+        subfolder = ClientFilesPhysical.FilesStorageSubfolder( 'fab3', muh_test_base )
+        
+        self.assertEqual( subfolder.directory, os.path.join( muh_test_base, 'fab', '3' ) )
+        
+    
     def test_functions( self ):
         
         hex_chars = '0123456789abcdef'

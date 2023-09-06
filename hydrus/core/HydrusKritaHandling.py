@@ -27,7 +27,7 @@ def ExtractZippedImageToPath( path_to_zip, temp_path_file ):
         
     except KeyError:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( f'This krita file had no {KRITA_FILE_MERGED} or {KRITA_FILE_THUMB}, so no PNG thumb could be extracted!' )
+        raise HydrusExceptions.NoThumbnailFileException( f'This krita file had no {KRITA_FILE_MERGED} or {KRITA_FILE_THUMB}!' )
         
     
 
@@ -70,10 +70,10 @@ def GetKraProperties( path ):
         
     except KeyError:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( f'This krita file had no {DOCUMENT_INFO_FILE}, so no information could be extracted!' )
-
+        raise HydrusExceptions.NoResolutionFileException( f'This krita file had no {DOCUMENT_INFO_FILE}!' )
+        
     
-    return width, height
+    return ( width, height )
     
 
 def ZipLooksLikeAKrita( path ):

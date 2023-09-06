@@ -684,7 +684,7 @@ class MediaSortControl( QW.QWidget ):
             
         else:
             
-            sort_data = ( [ 'series' ], ClientTags.TAG_DISPLAY_ACTUAL )
+            sort_data = ( [ 'series' ], ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
             
         
         try:
@@ -791,7 +791,7 @@ class MediaSortControl( QW.QWidget ):
                 ( namespaces, current_tag_display_type ) = sort_data
                 
                 tag_display_types = [
-                    ClientTags.TAG_DISPLAY_ACTUAL,
+                    ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL,
                     ClientTags.TAG_DISPLAY_SELECTION_LIST,
                     ClientTags.TAG_DISPLAY_SINGLE_MEDIA
                 ]

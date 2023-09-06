@@ -285,6 +285,18 @@ If you want to set QT_API in a batch file, do this:
 
 If you run <= Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Try PySide2 or PyQt5.
 
+??? "Qt compatibility notes"
+    
+    If you run into trouble running newer versions of Qt6 on Linux, some users have fixed it by installing the packages `libicu-dev` and `libxcb-cursor-dev`. With `apt` that will be:
+    
+    * `sudo apt-get install libicu-dev`
+    * `sudo apt-get install libxcb-cursor-dev`
+    
+    If you still have trouble with the default Qt6 version, or you rebuilt your venv and the newer version of Qt6 gives you problems, check out the setup_venv script language and the advanced requirements.txts files it relies on in `install_dir/static/requirements/advanced`. There should be several older version examples you can try out.
+    
+    To install a specific version of a library with pip, activate your venv and then type something like `pip install PySide6==6.3.1`.
+    
+
 ### mpv { id="mpv" }
 
 MPV is optional and complicated, but it is great, so it is worth the time to figure out!
@@ -316,7 +328,7 @@ You _may_ be able to update your SQLite on Linux or macOS with:
 But as long as the program launches, it usually isn't a big deal.
 
 !!! warning "Extremely safe no way it can go wrong"
-    If you want to update sqlite for your system python install, you can also drop it into `C:\Python38\DLLs` or wherever you have python installed. You'll be overwriting the old file, so make a backup if you want to (I have never had trouble updating like this, however).
+    If you want to update SQLite for your Windows system python install, you can also drop it into `C:\Program Files\Python310\DLLs` or wherever you have python installed, and it'll update for all your python projects. You'll be overwriting the old file, so make a backup of the old one (I have never had trouble updating like this, however).
     
     A user who made a Windows venv with Anaconda reported they had to replace the sqlite3.dll in their conda env at `~/.conda/envs/<envname>/Library/bin/sqlite3.dll`.
 

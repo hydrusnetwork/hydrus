@@ -81,7 +81,7 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
                 
                 # we don't want to delete chained stuff from definitions cache, even if count goes to zero!
                 
-                chained_tag_ids = self.modules_tag_display.FilterChained( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, deleted_tag_ids )
+                chained_tag_ids = self.modules_tag_display.FilterChained( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, deleted_tag_ids )
                 
                 deleted_tag_ids.difference_update( chained_tag_ids )
                 

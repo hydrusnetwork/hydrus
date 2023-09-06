@@ -2197,7 +2197,7 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
         
         tag_display_type_str = request.parsed_request_args.GetValue( 'tag_display_type', str, default_value = 'storage' )
         
-        tag_display_type = ClientTags.TAG_DISPLAY_STORAGE if tag_display_type_str == 'storage' else ClientTags.TAG_DISPLAY_ACTUAL
+        tag_display_type = ClientTags.TAG_DISPLAY_STORAGE if tag_display_type_str == 'storage' else ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL
         
         tag_service_key = ParseTagServiceKey( request )
         
@@ -3140,7 +3140,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                         storage_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in storage_statuses_to_tags.items() if len( tags ) > 0 }
                         
-                        display_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL )
+                        display_statuses_to_tags = tags_manager.GetStatusesToTags( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
                         
                         display_tags_json_serialisable = { str( status ) : sorted( tags, key = HydrusTags.ConvertTagToSortable ) for ( status, tags ) in display_statuses_to_tags.items() if len( tags ) > 0 }
                         
@@ -3182,7 +3182,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     
                     api_service_keys_to_statuses_to_tags = {}
                     
-                    service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_ACTUAL )
+                    service_keys_to_statuses_to_tags = tags_manager.GetServiceKeysToStatusesToTags( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
                     
                     for ( service_key, statuses_to_tags ) in service_keys_to_statuses_to_tags.items():
                         

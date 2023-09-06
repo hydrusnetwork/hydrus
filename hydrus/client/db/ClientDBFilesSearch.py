@@ -1081,7 +1081,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     # floats are a pain! as is storing rating as 0.0-1.0 and then allowing number of stars to change!
                     
-                    if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                    if operator == HC.UNICODE_APPROX_EQUAL:
                         
                         predicate = str( ( value - half_a_star_value ) * 0.8 ) + ' < rating AND rating < ' + str( ( value + half_a_star_value ) * 1.2 )
                         
@@ -1116,7 +1116,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         
                     else:
                         
-                        if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                        if operator == HC.UNICODE_APPROX_EQUAL:
                             
                             min_value = max( value - 1, int( value * 0.8 ) )
                             max_value = min( value + 1, int( value * 1.2 ) )
@@ -1411,7 +1411,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
-            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            only_do_zero = ( operator in ( '=', HC.UNICODE_APPROX_EQUAL ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -1432,7 +1432,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipCountPredicates():
             
-            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
+            only_do_zero = ( operator in ( '=', HC.UNICODE_APPROX_EQUAL ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -1581,17 +1581,17 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 if query_hash_ids is None:
                     
-                    tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, tag, job_key = job_key )
+                    tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, tag, job_key = job_key )
                     
                 elif is_inbox and len( query_hash_ids ) == len( self.modules_files_inbox.inbox_hash_ids ):
                     
-                    tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, tag, hash_ids = self.modules_files_inbox.inbox_hash_ids, hash_ids_table_name = 'file_inbox', job_key = job_key )
+                    tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, tag, hash_ids = self.modules_files_inbox.inbox_hash_ids, hash_ids_table_name = 'file_inbox', job_key = job_key )
                     
                 else:
                     
                     with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
                         
-                        tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                        tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                         
                     
                 
@@ -1613,7 +1613,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 if query_hash_ids is None or ( is_inbox and len( query_hash_ids ) == len( self.modules_files_inbox.inbox_hash_ids ) ):
                     
-                    namespace_query_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard = namespace, job_key = job_key )
+                    namespace_query_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard = namespace, job_key = job_key )
                     
                 else:
                     
@@ -1621,7 +1621,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        namespace_query_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
+                        namespace_query_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
                         
                     
                 
@@ -1643,7 +1643,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 if query_hash_ids is None:
                     
-                    wildcard_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, wildcard, job_key = job_key )
+                    wildcard_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, wildcard, job_key = job_key )
                     
                 else:
                     
@@ -1651,7 +1651,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                         
                         self._AnalyzeTempTable( temp_table_name )
                         
-                        wildcard_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                        wildcard_query_hash_ids = self.modules_files_search_tags.GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                         
                     
                 
@@ -1694,7 +1694,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if location_context.IsAllKnownFiles():
                 
-                query_hash_ids = intersection_update_qhi( query_hash_ids, self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, job_key = job_key ) )
+                query_hash_ids = intersection_update_qhi( query_hash_ids, self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, job_key = job_key ) )
                 
             else:
                 
@@ -1948,7 +1948,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 for tag in tags_to_exclude:
                     
-                    unwanted_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                    unwanted_hash_ids = self.modules_files_search_tags.GetHashIdsFromTag( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, tag, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                     
                     query_hash_ids.difference_update( unwanted_hash_ids )
                     
@@ -1962,7 +1962,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 for namespace in namespaces_to_exclude:
                     
-                    unwanted_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
+                    unwanted_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard = namespace, hash_ids_table_name = temp_table_name, job_key = job_key )
                     
                     query_hash_ids.difference_update( unwanted_hash_ids )
                     
@@ -1976,7 +1976,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 for wildcard in wildcards_to_exclude:
                     
-                    unwanted_hash_ids = self.modules_files_search_tags.GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                    unwanted_hash_ids = self.modules_files_search_tags.GetHashIdsFromWildcardComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, wildcard, hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                     
                     query_hash_ids.difference_update( unwanted_hash_ids )
                     
@@ -2045,7 +2045,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         for ( operator, num_relationships, dupe_type ) in system_predicates.GetDuplicateRelationshipCountPredicates():
             
-            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
+            only_do_zero = ( operator in ( '=', HC.UNICODE_APPROX_EQUAL ) and num_relationships == 0 ) or ( operator == '<' and num_relationships == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -2072,7 +2072,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         for ( view_type, viewing_locations, operator, viewing_value ) in system_predicates.GetFileViewingStatsPredicates():
             
-            only_do_zero = ( operator in ( '=', CC.UNICODE_ALMOST_EQUAL_TO ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
+            only_do_zero = ( operator in ( '=', HC.UNICODE_APPROX_EQUAL ) and viewing_value == 0 ) or ( operator == '<' and viewing_value == 1 )
             include_zero = operator == '<'
             
             if only_do_zero:
@@ -2200,7 +2200,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 if is_zero or is_anything_but_zero:
                     
-                    nonzero_tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, hash_ids_table_name = temp_table_name, namespace_wildcard = namespace_wildcard, job_key = job_key )
+                    nonzero_tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, hash_ids_table_name = temp_table_name, namespace_wildcard = namespace_wildcard, job_key = job_key )
                     nonzero_tag_query_hash_ids_populated = True
                     
                     if is_zero:
@@ -2217,7 +2217,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             
             if len( specific_number_tests ) > 0:
                 
-                hash_id_tag_counts = self.modules_files_search_tags.GetHashIdsAndNonZeroTagCounts( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, query_hash_ids, namespace_wildcard = namespace_wildcard, job_key = job_key )
+                hash_id_tag_counts = self.modules_files_search_tags.GetHashIdsAndNonZeroTagCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, query_hash_ids, namespace_wildcard = namespace_wildcard, job_key = job_key )
                 
                 good_tag_count_hash_ids = { hash_id for ( hash_id, count ) in hash_id_tag_counts if megalambda( count ) }
                 
@@ -2253,7 +2253,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                good_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard, num, '>', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                good_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard, num, '>', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )
@@ -2267,7 +2267,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                good_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard, num, '<', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
+                good_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagAsNumComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, namespace_wildcard, num, '<', hash_ids = query_hash_ids, hash_ids_table_name = temp_table_name, job_key = job_key )
                 
             
             query_hash_ids = intersection_update_qhi( query_hash_ids, good_hash_ids )

@@ -19,6 +19,7 @@ from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
+from hydrus.client.metadata import ClientTags
 
 from hydrus.test import HelperFunctions as HF
 
@@ -234,11 +235,19 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         # simple local
         
-        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
         
         result = importer.Import( media_result )
         
         self.assertEqual( set( result ), set( my_current_storage_tags ) )
+        
+        #
+        
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+        
+        result = importer.Import( media_result )
+        
+        self.assertEqual( set( result ), set( my_current_display_tags ) )
         
         # simple repo
         
@@ -246,7 +255,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         result = importer.Import( media_result )
         
-        self.assertEqual( set( result ), set( repo_current_storage_tags ) )
+        self.assertEqual( set( result ), set( repo_current_display_tags ) )
         
         # all known
         
@@ -254,7 +263,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         result = importer.Import( media_result )
         
-        self.assertEqual( set( result ), set( my_current_storage_tags ).union( repo_current_storage_tags ) )
+        self.assertEqual( set( result ), set( my_current_display_tags ).union( repo_current_display_tags ) )
         
         # with string processor
         
@@ -264,13 +273,13 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         string_processor.SetProcessingSteps( processing_steps )
         
-        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( string_processor = string_processor, service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY )
+        importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags( string_processor = string_processor, service_key = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
         
         result = importer.Import( media_result )
         
         self.assertTrue( len( result ) > 0 )
-        self.assertNotEqual( set( result ), set( my_current_storage_tags ) )
-        self.assertEqual( set( result ), set( string_processor.ProcessStrings( my_current_storage_tags ) ) )
+        self.assertNotEqual( set( result ), set( my_current_display_tags ) )
+        self.assertEqual( set( result ), set( string_processor.ProcessStrings( my_current_display_tags ) ) )
         
     
     def test_media_notes( self ):

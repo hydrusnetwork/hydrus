@@ -649,7 +649,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         self.assertDictEqual( expected_storage_tags_to_counts, tags_to_counts )
         
-        preds = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = search_text )
+        preds = self._read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = search_text )
         
         tags_to_counts = { pred.GetValue() : pred.GetCount() for pred in preds }
         
@@ -929,12 +929,12 @@ class TestClientDBTags( unittest.TestCase ):
                 
                 if storage_tag != ideal_sibling:
                     
-                    self.assertNotIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                    self.assertNotIn( storage_tag, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
                     
                 
-                self.assertIn( ideal_sibling, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
-                self.assertIn( parent_1, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
-                self.assertIn( parent_2, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) )
+                self.assertIn( ideal_sibling, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                self.assertIn( parent_1, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+                self.assertIn( parent_2, tags_manager.GetCurrent( other_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
                 
             
         
@@ -1094,7 +1094,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1122,8 +1122,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1195,7 +1195,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1223,8 +1223,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1299,8 +1299,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1 } )
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_2 } )
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1328,8 +1328,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, bad_samus_tag_2 } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1403,8 +1403,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { good_samus_tag } )
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1 } )
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1432,8 +1432,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { bad_samus_tag_1, good_samus_tag } )
         
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { good_samus_tag } )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1507,8 +1507,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { lara_tag, bad_samus_tag_1, bad_samus_tag_2 } )
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { lara_tag, good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { lara_tag, good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -1531,8 +1531,8 @@ class TestClientDBTags( unittest.TestCase ):
         self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), set() )
         self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_STORAGE ), { lara_tag, bad_samus_tag_1, bad_samus_tag_2 } )
         
-        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), set() )
-        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { lara_tag, good_samus_tag } )
+        self.assertEqual( tags_manager.GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), set() )
+        self.assertEqual( tags_manager.GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { lara_tag, good_samus_tag } )
         
         # and a/c results, both specific and combined
         
@@ -2475,26 +2475,26 @@ class TestClientDBTags( unittest.TestCase ):
                         
                         hash_ids_to_tags_managers = self._read( 'force_refresh_tags_managers', self._hash_ids )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc bad', 'sameus aran' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc bad' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp bad' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'sameus aran' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc bad' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp bad' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc bad', 'sameus aran', 'process these', 'pc bad', 'pp bad' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'sameus aran', 'process these', 'pc bad', 'pp bad' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc bad', 'mc good' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc bad', 'pc good', 'samus metroid' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp bad', 'pp good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'mc good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc bad', 'pc good', 'samus metroid' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp bad', 'pp good' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc bad', 'mc good', 'process these', 'pc bad', 'pc good', 'samus metroid', 'pp bad', 'pp good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc bad', 'mc good', 'process these', 'pc bad', 'pc good', 'samus metroid', 'pp bad', 'pp good' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc good' } )
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
                         
-                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
+                        self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
                         
                         self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
                         self._test_ac( 'pc bad*', self._public_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'pc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) } )
@@ -2707,26 +2707,26 @@ class TestClientDBTags( unittest.TestCase ):
                     
                     hash_ids_to_tags_managers = self._read( 'force_refresh_tags_managers', self._hash_ids )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'samus metroid' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'samus metroid' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'samus metroid', 'process these', 'pc good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'samus metroid', 'process these', 'pc good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:samus aran' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:samus aran', 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:samus aran', 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
                     
                     # now we get more write a/c suggestions, and accurated merged read a/c values
                     self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )
@@ -2823,26 +2823,26 @@ class TestClientDBTags( unittest.TestCase ):
                     
                     hash_ids_to_tags_managers = self._read( 'force_refresh_tags_managers', self._hash_ids )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'character:samus aran' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'character:samus aran', 'process these', 'pc good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_bad_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'character:samus aran', 'process these', 'pc good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:samus aran' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good', 'pc good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:samus aran', 'pp good', 'pp good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_both_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'mc good', 'process these', 'pc good', 'pc good', 'character:samus aran', 'pp good', 'pp good' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'process these' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pc good' } )
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._my_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._processing_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'process these' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrent( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pc good' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetPending( self._public_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'pp good', 'character:samus aran' } )
                     
-                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
+                    self.assertEqual( hash_ids_to_tags_managers[ self._samus_good_hash_id ].GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), { 'mc good', 'process these', 'pc good', 'pp good', 'character:samus aran' } )
                     
                     # now we get more write a/c suggestions, and accurated merged read a/c values
                     self._test_ac( 'mc bad*', self._my_service_key, CC.COMBINED_FILE_SERVICE_KEY, { 'mc bad' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ), 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 2, 0 ) }, { 'mc good' : ClientSearch.PredicateCount.STATICCreateStaticCount( 3, 0 ) } )

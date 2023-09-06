@@ -824,7 +824,7 @@ class Controller( HydrusController.HydrusController ):
             
             if self.gui is not None and QP.isValid( self.gui ):
                 
-                self.frame_splash_status.SetTitleText( 'saving and hiding gui\u2026' )
+                self.frame_splash_status.SetTitleText( 'saving and hiding gui' + HC.UNICODE_ELLIPSIS )
                 
                 self.gui.SaveAndHide()
                 
@@ -836,7 +836,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self._doing_fast_exit:
             
-            HydrusData.DebugPrint( 'doing fast shutdown\u2026' )
+            HydrusData.DebugPrint( 'doing fast shutdown' + HC.UNICODE_ELLIPSIS )
             
             self.THREADExitEverything()
             
@@ -1013,7 +1013,7 @@ class Controller( HydrusController.HydrusController ):
     
     def InitModel( self ):
         
-        self.frame_splash_status.SetTitleText( 'booting db\u2026' )
+        self.frame_splash_status.SetTitleText( 'booting db' + HC.UNICODE_ELLIPSIS )
         
         HydrusController.HydrusController.InitModel( self )
         
@@ -1250,7 +1250,7 @@ class Controller( HydrusController.HydrusController ):
             self.CallBlockingToQt( self._splash, qt_code_password )
             
         
-        self.frame_splash_status.SetTitleText( 'booting gui\u2026' )
+        self.frame_splash_status.SetTitleText( 'booting gui' + HC.UNICODE_ELLIPSIS )
         
         subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
@@ -1648,7 +1648,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.main_qt_thread = self.app.thread()
         
-        HydrusData.Print( 'booting controller\u2026' )
+        HydrusData.Print( 'booting controller' + HC.UNICODE_ELLIPSIS )
         
         self.frame_icon_pixmap = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'hydrus_32_non-transparent.png' ) )
         
@@ -1672,7 +1672,7 @@ class Controller( HydrusController.HydrusController ):
             self._qt_app_running = False
             
         
-        HydrusData.DebugPrint( 'shutting down controller\u2026' )
+        HydrusData.DebugPrint( 'shutting down controller' + HC.UNICODE_ELLIPSIS )
         
     
     def SafeShowCriticalMessage( self, title, message ):
@@ -1811,7 +1811,7 @@ class Controller( HydrusController.HydrusController ):
             
             def StartServices( *args, **kwargs ):
                 
-                HydrusData.Print( 'starting services\u2026' )
+                HydrusData.Print( 'starting services' + HC.UNICODE_ELLIPSIS )
                 
                 for service in services:
                     
@@ -1939,7 +1939,7 @@ class Controller( HydrusController.HydrusController ):
             
             if len( self._service_keys_to_connected_ports ) > 0:
                 
-                HydrusData.Print( 'stopping services\u2026' )
+                HydrusData.Print( 'stopping services' + HC.UNICODE_ELLIPSIS )
                 
                 deferreds = []
                 
@@ -2253,22 +2253,22 @@ class Controller( HydrusController.HydrusController ):
             
             HG.started_shutdown = True
             
-            self.frame_splash_status.SetTitleText( 'shutting down gui\u2026' )
+            self.frame_splash_status.SetTitleText( 'shutting down gui' + HC.UNICODE_ELLIPSIS )
             
             self.ShutdownView()
             
-            self.frame_splash_status.SetTitleText( 'shutting down db\u2026' )
+            self.frame_splash_status.SetTitleText( 'shutting down db' + HC.UNICODE_ELLIPSIS )
             
             self.ShutdownModel()
             
             if self._restore_backup_path is not None:
                 
-                self.frame_splash_status.SetTitleText( 'restoring backup\u2026' )
+                self.frame_splash_status.SetTitleText( 'restoring backup' + HC.UNICODE_ELLIPSIS )
                 
                 self.db.RestoreBackup( self._restore_backup_path )
                 
             
-            self.frame_splash_status.SetTitleText( 'cleaning up\u2026' )
+            self.frame_splash_status.SetTitleText( 'cleaning up' + HC.UNICODE_ELLIPSIS )
             
             self.CleanRunningFile()
             

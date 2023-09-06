@@ -234,7 +234,7 @@ class NetworkJob( object ):
         
         self._last_time_ongoing_bandwidth_failed = 0
         
-        self._status_text = 'initialising\u2026'
+        self._status_text = 'initialising' + HC.UNICODE_ELLIPSIS
         self._num_bytes_read = 0
         self._num_bytes_to_read = None
         self._num_bytes_read_is_accurate = True
@@ -779,7 +779,7 @@ class NetworkJob( object ):
             
             if self._num_bytes_read == 0:
                 
-                self._status_text = 'sending request\u2026'
+                self._status_text = 'sending request' + HC.UNICODE_ELLIPSIS
                 
             
             snc = self._session_network_context
@@ -1571,7 +1571,7 @@ class NetworkJob( object ):
                         
                         with self._lock:
                             
-                            self._status_text = 'downloading\u2026'
+                            self._status_text = 'downloading' + HC.UNICODE_ELLIPSIS
                             
                         
                         if self._temp_path is None:
@@ -1595,7 +1595,7 @@ class NetworkJob( object ):
                                     
                                     with self._lock:
                                         
-                                        self._status_text = 'downloading next part\u2026'
+                                        self._status_text = 'downloading next part' + HC.UNICODE_ELLIPSIS
                                         
                                     
                                     # this will magically have new Range header
@@ -1921,7 +1921,7 @@ class NetworkJob( object ):
                             
                         
                     
-                    waiting_str += '\u2026 (' + bandwidth_network_context.ToHumanString() + ')'
+                    waiting_str += f'{HC.UNICODE_ELLIPSIS} ({bandwidth_network_context.ToHumanString()})'
                     
                     self._status_text = waiting_str
                     

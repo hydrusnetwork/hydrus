@@ -83,7 +83,7 @@ def EditNamespaceSort( win: QW.QWidget, sort_data ):
                 if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                     
                     available_types = [
-                        ClientTags.TAG_DISPLAY_ACTUAL,
+                        ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL,
                         ClientTags.TAG_DISPLAY_SELECTION_LIST,
                         ClientTags.TAG_DISPLAY_SINGLE_MEDIA
                     ]
@@ -103,7 +103,7 @@ def EditNamespaceSort( win: QW.QWidget, sort_data ):
                     
                 else:
                     
-                    tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL
+                    tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL
                     
                 
                 return ( tuple( edited_namespaces ), tag_display_type )
@@ -3084,8 +3084,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._pursue_whole_chain.setToolTip( tt )
             
             # leave up here since other things have updates based on them
-            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL )
-            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL )
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
@@ -3131,7 +3131,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' + os.linesep + '.' )
+            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising' + HC.UNICODE_ELLIPSIS + os.linesep + '.' )
             self._sync_status_st = ClientGUICommon.BetterStaticText( self, '' )
             self._sync_status_st.setWordWrap( True )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
@@ -4243,7 +4243,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all = QW.QCheckBox( self )
             
             # leave up here since other things have updates based on them
-            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL )
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
@@ -4289,7 +4289,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising\u2026' )
+            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising' + HC.UNICODE_ELLIPSIS )
             self._sync_status_st = ClientGUICommon.BetterStaticText( self, '' )
             self._sync_status_st.setWordWrap( True )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
@@ -5623,7 +5623,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             def loading_callable():
                 
-                self._progress.SetText( 'refreshing\u2026' )
+                self._progress.SetText( 'refreshing' + HC.UNICODE_ELLIPSIS )
                 
                 self._refresh_button.setEnabled( False )
                 

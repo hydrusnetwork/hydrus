@@ -161,7 +161,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 
             else:
                 
-                operator = CC.UNICODE_ALMOST_EQUAL_TO
+                operator = HC.UNICODE_APPROX_EQUAL
                 score = 0
                 
             
@@ -363,8 +363,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
 
     # more tags
     
-    s_num_tags = len( shown_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) )
-    c_num_tags = len( comparison_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_ACTUAL ) )
+    s_num_tags = len( shown_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
+    c_num_tags = len( comparison_media.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) )
     
     if s_num_tags != c_num_tags:
         

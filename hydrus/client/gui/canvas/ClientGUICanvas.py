@@ -2635,7 +2635,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         if self._currently_fetching_pairs:
             
-            text = 'Loading pairs\u2026'
+            text = 'Loading pairs' + HC.UNICODE_ELLIPSIS
             
             ( text_size, text ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, text )
             

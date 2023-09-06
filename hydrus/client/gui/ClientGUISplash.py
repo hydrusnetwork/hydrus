@@ -277,7 +277,7 @@ class FrameSplash( QW.QWidget ):
     
     def CancelShutdownMaintenance( self ):
         
-        self._cancel_shutdown_maintenance.setText( 'stopping\u2026' )
+        self._cancel_shutdown_maintenance.setText( 'stopping' + HC.UNICODE_ELLIPSIS )
         self._cancel_shutdown_maintenance.setEnabled( False )
         
         HG.do_idle_shutdown_work = False

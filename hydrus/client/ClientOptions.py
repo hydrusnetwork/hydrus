@@ -631,8 +631,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         default_namespace_sorts = HydrusSerialisable.SerialisableList()
         
-        default_namespace_sorts.append( ClientMedia.MediaSort( sort_type = ( 'namespaces', ( ( 'series', 'creator', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_ACTUAL ) ) ) )
-        default_namespace_sorts.append( ClientMedia.MediaSort( sort_type = ( 'namespaces', ( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_ACTUAL ) ) ) )
+        default_namespace_sorts.append( ClientMedia.MediaSort( sort_type = ( 'namespaces', ( ( 'series', 'creator', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ) )
+        default_namespace_sorts.append( ClientMedia.MediaSort( sort_type = ( 'namespaces', ( ( 'creator', 'series', 'title', 'volume', 'chapter', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ) )
         
         self._dictionary[ 'default_namespace_sorts' ] = default_namespace_sorts
         

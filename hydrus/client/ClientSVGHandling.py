@@ -35,12 +35,12 @@ def GenerateThumbnailBytesFromSVGPath( path: str, target_resolution: typing.Tupl
     
     # TODO: SVGs have no inherent resolution, so all this is pretty stupid. we should render to exactly the res we want and then clip the result, not beforehand
     
-    renderer = LoadSVGRenderer( path )
-    
-    # Seems to help for some weird floating point dimension SVGs
-    renderer.setAspectRatioMode( QC.Qt.AspectRatioMode.KeepAspectRatio )
-    
     try:
+        
+        renderer = LoadSVGRenderer( path )
+        
+        # Seems to help for some weird floating point dimension SVGs
+        renderer.setAspectRatioMode( QC.Qt.AspectRatioMode.KeepAspectRatio )
         
         if clip_rect is None:
             
@@ -78,7 +78,7 @@ def GenerateThumbnailBytesFromSVGPath( path: str, target_resolution: typing.Tupl
         
     except:
         
-        raise HydrusExceptions.UnsupportedFileException()
+        raise HydrusExceptions.NoThumbnailFileException()
         
     
 
@@ -86,11 +86,18 @@ HydrusSVGHandling.GenerateThumbnailBytesFromSVGPath = GenerateThumbnailBytesFrom
 
 def GetSVGResolution( path: str ):
     
-    renderer = LoadSVGRenderer( path )
-    
-    resolution = renderer.defaultSize().toTuple()
-    
-    return resolution
+    try:
+        
+        renderer = LoadSVGRenderer( path )
+        
+        resolution = renderer.defaultSize().toTuple()
+        
+        return resolution
+        
+    except:
+        
+        raise HydrusExceptions.NoResolutionFileException()
+        
     
 
 HydrusSVGHandling.GetSVGResolution = GetSVGResolution

@@ -1,5 +1,6 @@
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
@@ -103,7 +104,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         
         self._check_nocopy.setEnabled( False )
         
-        self._nocopy_status.setText( 'checking\u2026' )
+        self._nocopy_status.setText( 'checking' + HC.UNICODE_ELLIPSIS )
         
         service = self._service_callable()
         
@@ -162,7 +163,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         self._check_nocopy.setEnabled( False )
         self._enable_nocopy.setEnabled( False )
         
-        self._running_status.setText( 'checking\u2026' )
+        self._running_status.setText( 'checking' + HC.UNICODE_ELLIPSIS )
         
         service = self._service_callable()
         

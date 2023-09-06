@@ -102,7 +102,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 return
                 
             
-            if result != QW.QDialog.DialogCode.Accepted:
+            if result != QW.QDialog.Accepted:
                 
                 metadata_routers = []
                 
@@ -531,7 +531,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         services_manager = HG.client_controller.services_manager
         
-        t = ClientGUIListBoxes.ListBoxTagsMedia( self._tags_box, ClientTags.TAG_DISPLAY_ACTUAL, include_counts = True )
+        t = ClientGUIListBoxes.ListBoxTagsMedia( self._tags_box, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, include_counts = True )
         
         self._tags_box.SetTagsBox( t )
         

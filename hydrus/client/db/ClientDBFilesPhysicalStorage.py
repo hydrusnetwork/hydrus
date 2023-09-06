@@ -32,7 +32,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
     
     def GetClientFilesSubfolders( self ):
         
-        subfolders = { ClientFilesPhysical.FilesStorageSubfolder( prefix, HydrusPaths.ConvertPortablePathToAbsPath( portable_location ), purge ) for ( prefix, portable_location, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ) }
+        subfolders = { ClientFilesPhysical.FilesStorageSubfolder( prefix, HydrusPaths.ConvertPortablePathToAbsPath( portable_location ), purge = purge ) for ( prefix, portable_location, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ) }
         
         all_prefixes = { subfolder.prefix for subfolder in subfolders }
         
@@ -65,7 +65,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
                 self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( missing_prefix, portable_path, False ) )
                 
             
-            subfolders = { ClientFilesPhysical.FilesStorageSubfolder( prefix, HydrusPaths.ConvertPortablePathToAbsPath( portable_location ), purge ) for ( prefix, portable_location, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ) }
+            subfolders = { ClientFilesPhysical.FilesStorageSubfolder( prefix, HydrusPaths.ConvertPortablePathToAbsPath( portable_location ), purge = purge ) for ( prefix, portable_location, purge ) in self._Execute( 'SELECT prefix, location, purge FROM client_files_subfolders;' ) }
             
         
         return subfolders
@@ -122,7 +122,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         self._Execute( 'INSERT INTO ideal_client_files_locations ( location, weight, max_num_bytes ) VALUES ( ?, ?, ? );', ( portable_path, 1, None ) )
         
     
-    def RelocateClientFiles( self, prefix, abs_source, abs_dest ):
+    def RelocateClientFiles( self, source_subfolder: ClientFilesPhysical.FilesStorageSubfolder, dest_subfolder: ClientFilesPhysical.FilesStorageSubfolder ):
         
         # TODO: so this guy is going to be replaces with slow migration, which will be something like:
         # Add a new valid subfolder
@@ -130,42 +130,60 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         # Ask database for valid purge paths
         # once a source is fully purged, remove the now purged subfolder
         
-        if not os.path.exists( abs_source ):
+        if source_subfolder.prefix != dest_subfolder.prefix:
             
-            raise Exception( 'Was commanded to move prefix "{}" from "{}" to "{}", but that source does not exist!'.format( prefix, abs_source, abs_dest ) )
-            
-        
-        if not os.path.exists( abs_dest ):
-            
-            raise Exception( 'Was commanded to move prefix "{}" from "{}" to "{}", but that destination does not exist!'.format( prefix, abs_source, abs_dest ) )
+            raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but the prefixes were different!' )
             
         
-        full_source = os.path.join( abs_source, prefix )
-        full_dest = os.path.join( abs_dest, prefix )
-        
-        if not os.path.samefile( abs_source, abs_dest ):
+        if not source_subfolder.DirectoryExists():
             
-            if os.path.exists( full_source ):
+            raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but the source does not exist!' )
+            
+        
+        if not dest_subfolder.BaseLocationExists():
+            
+            raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but the base destination location does not exist!' )
+            
+        
+        source_dir = source_subfolder.directory
+        dest_dir = dest_subfolder.directory
+        
+        if source_dir == dest_dir:
+            
+            raise Exception( f'Was commanded to move "{source_subfolder}" to "{dest_subfolder}", but they are the same location!' )
+            
+        
+        # via symlinking etc... which means we are just updating a simple db record, not wanting to move any files
+        they_are_secretly_the_same = os.path.samefile( source_subfolder.base_location, dest_subfolder.base_location )
+        
+        if not they_are_secretly_the_same:
+            
+            if os.path.exists( source_dir ):
                 
-                HydrusPaths.MergeTree( full_source, full_dest )
+                HydrusPaths.MergeTree( source_dir, dest_dir )
                 
-            elif not os.path.exists( full_dest ):
+            else:
                 
-                HydrusPaths.MakeSureDirectoryExists( full_dest )
+                if not os.path.exists( dest_dir ):
+                    
+                    HydrusPaths.MakeSureDirectoryExists( dest_dir )
+                    
                 
             
         
-        portable_source = HydrusPaths.ConvertAbsPathToPortablePath( abs_source )
-        portable_dest = HydrusPaths.ConvertAbsPathToPortablePath( abs_dest )
+        prefix = source_subfolder.prefix
         
-        self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_source ) )
-        self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_dest, False ) )
+        portable_source_base_location = source_subfolder.GetPortableBaseLocation()
+        portable_dest_base_location = dest_subfolder.GetPortableBaseLocation()
         
-        if not os.path.samefile( abs_source, abs_dest ):
+        self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_source_base_location ) )
+        self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_dest_base_location, False ) )
+        
+        if not they_are_secretly_the_same:
             
-            if os.path.exists( full_source ) and len( os.listdir( full_source ) ) == 0:
+            if os.path.exists( source_dir ) and len( os.listdir( source_dir ) ) == 0:
                 
-                try: HydrusPaths.RecyclePath( full_source )
+                try: HydrusPaths.RecyclePath( source_dir )
                 except: pass
                 
             
@@ -174,18 +192,28 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
     def RepairClientFiles( self, correct_rows ):
         
         # TODO: as we move to multiple valid locations, this should probably become something else, or the things that feed it should have more sophisticated discovery of the correct 
+        # tbh we should probably replace it with a 'set everything to this' call, like setideal but just an override to fix actual current understanding of file location
         
-        for ( prefix, abs_incorrect_location, abs_correct_location ) in correct_rows:
+        for ( incorrect_subfolder, correct_subfolder ) in correct_rows:
             
-            full_abs_correct_location = os.path.join( abs_correct_location, prefix )
+            if incorrect_subfolder.prefix != correct_subfolder.prefix:
+                
+                raise Exception( f'Was commanded to move "{incorrect_subfolder}" to "{correct_subfolder}", but the prefixes were different!' )
+                
             
-            HydrusPaths.MakeSureDirectoryExists( full_abs_correct_location )
+            correct_subfolder.MakeSureExists()
             
-            portable_incorrect_location = HydrusPaths.ConvertAbsPathToPortablePath( abs_incorrect_location )
-            portable_correct_location = HydrusPaths.ConvertAbsPathToPortablePath( abs_correct_location )
+            prefix = incorrect_subfolder.prefix
             
-            self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_incorrect_location ) )
-            self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_correct_location, False ) )
+            # it is possible these are actually the same, when we do the 'just regen my thumbs, no recovery'
+            portable_incorrect_base_location = incorrect_subfolder.GetPortableBaseLocation()
+            portable_correct_base_location = correct_subfolder.GetPortableBaseLocation()
+            
+            if portable_incorrect_base_location != portable_correct_base_location:
+                
+                self._Execute( 'DELETE FROM client_files_subfolders WHERE prefix = ? AND location = ?;', ( prefix, portable_incorrect_base_location ) )
+                self._Execute( 'INSERT OR IGNORE INTO client_files_subfolders ( prefix, location, purge ) VALUES ( ?, ?, ? );', ( prefix, portable_correct_base_location, False ) )
+                
             
         
     

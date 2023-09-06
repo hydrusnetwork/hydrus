@@ -129,11 +129,11 @@ class FileFilter( object ):
                     
                     select_tags = set( select_tags )
                     
-                    return sum( ( 1 for m in flat_media if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) ) ) )
+                    return sum( ( 1 for m in flat_media if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ) )
                     
                 elif and_or_or == 'OR':
                     
-                    return sum( ( 1 for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), select_tags ) ) )
+                    return sum( ( 1 for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) ) )
                     
                 
             
@@ -210,11 +210,11 @@ class FileFilter( object ):
                     
                     select_tags = set( select_tags )
                     
-                    filtered_media = [ m for m in flat_media if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) ) ]
+                    filtered_media = [ m for m in flat_media if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) ]
                     
                 elif and_or_or == 'OR':
                     
-                    filtered_media = [ m for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), select_tags ) ]
+                    filtered_media = [ m for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) ]
                     
                 
             
@@ -274,11 +274,11 @@ class FileFilter( object ):
                     
                     select_tags = set( select_tags )
                     
-                    filtered_media = { m for m in media_list.GetSortedMedia() if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) ) }
+                    filtered_media = { m for m in media_list.GetSortedMedia() if select_tags.issubset( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) ) }
                     
                 elif and_or_or == 'OR':
                     
-                    filtered_media = { m for m in media_list.GetSortedMedia() if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ), select_tags ) }
+                    filtered_media = { m for m in media_list.GetSortedMedia() if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) }
                     
                 
             

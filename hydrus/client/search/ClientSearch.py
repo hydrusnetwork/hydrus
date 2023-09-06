@@ -287,8 +287,8 @@ number_test_operator_to_str_lookup = {
     NUMBER_TEST_OPERATOR_LESS_THAN : '<',
     NUMBER_TEST_OPERATOR_GREATER_THAN : '>',
     NUMBER_TEST_OPERATOR_EQUAL : '=',
-    NUMBER_TEST_OPERATOR_APPROXIMATE : CC.UNICODE_ALMOST_EQUAL_TO,
-    NUMBER_TEST_OPERATOR_NOT_EQUAL : CC.UNICODE_NOT_EQUAL_TO
+    NUMBER_TEST_OPERATOR_APPROXIMATE : HC.UNICODE_APPROX_EQUAL,
+    NUMBER_TEST_OPERATOR_NOT_EQUAL : HC.UNICODE_NOT_EQUAL
 }
 
 number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() }
@@ -505,7 +505,7 @@ class FileSystemPredicates( object ):
                         
                         self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
                         
-                    elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                    elif operator == HC.UNICODE_APPROX_EQUAL:
                         
                         rough_timedelta_gap = HydrusTime.CalendarDeltaToRoughDateTimeTimeDelta( years, months, days, hours ) * 0.15
                         
@@ -549,7 +549,7 @@ class FileSystemPredicates( object ):
                         self._timestamp_ranges[ predicate_type ][ '>' ] = day_of_start
                         self._timestamp_ranges[ predicate_type ][ '<' ] = day_of_end
                         
-                    elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                    elif operator == HC.UNICODE_APPROX_EQUAL:
                         
                         previous_month_timestamp = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
                         next_month_timestamp = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
@@ -579,8 +579,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_duration' ] = duration
                 elif operator == '>': self._common_info[ 'min_duration' ] = duration
                 elif operator == '=': self._common_info[ 'duration' ] = duration
-                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_duration' ] = duration
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_duration' ] = duration
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     if duration == 0:
                         
@@ -601,7 +601,7 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_framerate' ] = framerate
                 elif operator == '>': self._common_info[ 'min_framerate' ] = framerate
                 elif operator == '=': self._common_info[ 'framerate' ] = framerate
-                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_framerate' ] = framerate
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_framerate' ] = framerate
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
@@ -611,8 +611,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_frames' ] = num_frames
                 elif operator == '>': self._common_info[ 'min_num_frames' ] = num_frames
                 elif operator == '=': self._common_info[ 'num_frames' ] = num_frames
-                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_num_frames' ] = num_frames
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_num_frames' ] = num_frames
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     if num_frames == 0:
                         
@@ -646,11 +646,11 @@ class FileSystemPredicates( object ):
                     
                     self._common_info[ 'max_ratio' ] = ( ratio_width, ratio_height )
                     
-                elif operator == CC.UNICODE_NOT_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL:
                     
                     self._common_info[ 'not_ratio' ] = ( ratio_width, ratio_height )
                     
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     self._common_info[ 'min_ratio' ] = ( ratio_width * 0.85, ratio_height )
                     self._common_info[ 'max_ratio' ] = ( ratio_width * 1.15, ratio_height )
@@ -666,8 +666,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_size' ] = size
                 elif operator == '>': self._common_info[ 'min_size' ] = size
                 elif operator == '=': self._common_info[ 'size' ] = size
-                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_size' ] = size
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_size' ] = size
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     self._common_info[ 'min_size' ] = int( size * 0.85 )
                     self._common_info[ 'max_size' ] = int( size * 1.15 )
@@ -685,7 +685,7 @@ class FileSystemPredicates( object ):
                 
                 if operator == '<': self._common_info[ 'max_tag_as_number' ] = ( namespace, num )
                 elif operator == '>': self._common_info[ 'min_tag_as_number' ] = ( namespace, num )
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
                     self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
@@ -699,8 +699,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_width' ] = width
                 elif operator == '>': self._common_info[ 'min_width' ] = width
                 elif operator == '=': self._common_info[ 'width' ] = width
-                elif operator == '\u2260': self._common_info[ 'not_width' ] = width
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_width' ] = width
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     if width == 0: self._common_info[ 'width' ] = 0
                     else:
@@ -720,8 +720,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_pixels' ] = num_pixels
                 elif operator == '>': self._common_info[ 'min_num_pixels' ] = num_pixels
                 elif operator == '=': self._common_info[ 'num_pixels' ] = num_pixels
-                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_num_pixels' ] = num_pixels
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_num_pixels' ] = num_pixels
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
                     self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
@@ -735,8 +735,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_height' ] = height
                 elif operator == '>': self._common_info[ 'min_height' ] = height
                 elif operator == '=': self._common_info[ 'height' ] = height
-                elif operator == '\u2260': self._common_info[ 'not_height' ] = height
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_height' ] = height
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     if height == 0:
                         
@@ -787,8 +787,8 @@ class FileSystemPredicates( object ):
                 if operator == '<': self._common_info[ 'max_num_words' ] = num_words
                 elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
                 elif operator == '=': self._common_info[ 'num_words' ] = num_words
-                elif operator == CC.UNICODE_NOT_EQUAL_TO: self._common_info[ 'not_num_words' ] = num_words
-                elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_num_words' ] = num_words
+                elif operator == HC.UNICODE_APPROX_EQUAL:
                     
                     if num_words == 0: self._common_info[ 'num_words' ] = 0
                     else:
@@ -2334,7 +2334,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._RecalculateMatchableSearchTexts()
         
     
-    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ) -> str:
+    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ) -> str:
         
         base = ''
         count_text = ''
@@ -2629,7 +2629,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             
                             pretty_operator = 'before'
                             
-                        elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                        elif operator == HC.UNICODE_APPROX_EQUAL:
                             
                             pretty_operator = 'around'
                             
@@ -2660,7 +2660,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                             
                             pretty_operator = 'on the day of '
                             
-                        elif operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                        elif operator == HC.UNICODE_APPROX_EQUAL:
                             
                             pretty_operator = 'a month either side of '
                             
@@ -2709,7 +2709,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_EXIF:
                 
-                base = 'image has exif'
+                base = 'has exif'
                 
                 if self._value is not None:
                     
@@ -2723,7 +2723,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
                 
-                base = 'image has human-readable embedded metadata'
+                base = 'has human-readable embedded metadata'
                 
                 if self._value is not None:
                     
@@ -2737,7 +2737,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE:
                 
-                base = 'image has icc profile'
+                base = 'has icc profile'
                 
                 if self._value is not None:
                     
@@ -2889,11 +2889,9 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
                 
-                if self._value is None:
-                    
-                    base = 'tag as number'
-                    
-                else:
+                base = 'tag as number'
+                
+                if self._value is not None:
                     
                     ( namespace, operator, num ) = self._value
                     
@@ -2903,27 +2901,31 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     elif namespace == '':
                         
-                        n_text = 'lone number'
+                        n_text = 'unnamespaced'
                         
                     else:
                         
                         n_text = namespace
                         
                     
-                    if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                    if operator == HC.UNICODE_APPROX_EQUAL:
                         
-                        o_text = ' about '
+                        o_text = 'about'
                         
                     elif operator == '<':
                         
-                        o_text = ' less than '
+                        o_text = 'less than'
                         
                     elif operator == '>':
                         
-                        o_text = ' more than '
+                        o_text = 'more than'
+                        
+                    else:
+                        
+                        o_text = 'unknown'
                         
                     
-                    base = n_text + o_text + HydrusData.ToHumanInt( num )
+                    base = f'{base}: {n_text} {o_text} {HydrusData.ToHumanInt( num )}'
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT:
@@ -2934,7 +2936,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, num_relationships, dupe_type ) = self._value
                     
-                    if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+                    if operator == HC.UNICODE_APPROX_EQUAL:
                         
                         o_text = ' about '
                         

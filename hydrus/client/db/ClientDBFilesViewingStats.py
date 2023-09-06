@@ -147,7 +147,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             return set()
             
         
-        if operator == CC.UNICODE_ALMOST_EQUAL_TO:
+        if operator == HC.UNICODE_APPROX_EQUAL:
             
             lower_bound = int( 0.8 * viewing_value )
             upper_bound = int( 1.2 * viewing_value )

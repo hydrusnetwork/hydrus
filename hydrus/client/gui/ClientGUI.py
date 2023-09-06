@@ -2296,7 +2296,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetStatusText( 'Loading Statistics\u2026' )
+            job_key.SetStatusText( 'Loading Statistics' + HC.UNICODE_ELLIPSIS )
             
             HG.client_controller.pub( 'message', job_key )
             
@@ -2332,7 +2332,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             job_key = ClientThreading.JobKey()
             
-            job_key.SetStatusText( 'Loading File History\u2026' )
+            job_key.SetStatusText( 'Loading File History' + HC.UNICODE_ELLIPSIS )
             
             HG.client_controller.pub( 'message', job_key )
             
@@ -3830,7 +3830,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetStatusText( 'loading account types\u2026' )
+        job_key.SetStatusText( 'loading account types' + HC.UNICODE_ELLIPSIS )
         
         self._controller.pub( job_key )
         
@@ -4436,7 +4436,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 job_key = ClientThreading.JobKey()
                 
                 job_key.SetStatusTitle( 'setting anonymisation period' )
-                job_key.SetStatusText( 'uploading\u2026' )
+                job_key.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -4495,7 +4495,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 job_key = ClientThreading.JobKey()
                 
                 job_key.SetStatusTitle( 'setting tag filter' )
-                job_key.SetStatusText( 'uploading\u2026' )
+                job_key.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -4565,7 +4565,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 job_key = ClientThreading.JobKey()
                 
                 job_key.SetStatusTitle( 'setting update period' )
-                job_key.SetStatusText( 'uploading\u2026' )
+                job_key.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
                 
                 self._controller.pub( 'message', job_key )
                 
@@ -5464,7 +5464,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetStatusText( 'loading accounts\u2026' )
+        job_key.SetStatusText( 'loading accounts' + HC.UNICODE_ELLIPSIS )
         
         self._controller.pub( job_key )
         
@@ -6131,7 +6131,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     try:
                         
-                        HydrusData.ShowText( 'Starting server\u2026' )
+                        HydrusData.ShowText( 'Starting server' + HC.UNICODE_ELLIPSIS )
                         
                         db_param = '-d=' + self._controller.GetDBDir()
                         
@@ -6198,7 +6198,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             time.sleep( 5 )
             
-            HydrusData.ShowText( 'Creating admin service\u2026' )
+            HydrusData.ShowText( 'Creating admin service' + HC.UNICODE_ELLIPSIS )
             
             admin_service_key = HydrusData.GenerateKey()
             service_type = HC.SERVER_ADMIN
@@ -6240,7 +6240,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             time.sleep( 5 )
             
-            HydrusData.ShowText( 'Creating tag and file services\u2026' )
+            HydrusData.ShowText( 'Creating tag and file services' + HC.UNICODE_ELLIPSIS )
             
             response = admin_service.Request( HC.GET, 'services' )
             

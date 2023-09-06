@@ -40,7 +40,7 @@ from hydrus.external import LogicExpressionQueryParser
 
 def AppendLoadingPredicate( predicates, label ):
     
-    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_LABEL, value = label + '\u2026' ) )
+    predicates.append( ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_LABEL, value = label + HC.UNICODE_ELLIPSIS ) )
     
 
 def InsertOtherPredicatesForRead( predicates: list, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, include_unusual_predicate_types: bool, under_construction_or_predicate: typing.Optional[ ClientSearch.Predicate ] ):
@@ -235,7 +235,7 @@ def ReadFetch(
                 
             else:
                 
-                exact_match_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key )
+                exact_match_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key )
                 
                 small_exact_match_search = ShouldDoExactSearch( parsed_autocomplete_text )
                 
@@ -265,7 +265,7 @@ def ReadFetch(
                     
                     search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
                     if job_key.IsCancelled():
                         
@@ -331,12 +331,12 @@ def ReadFetch(
                     
                     if include_current_tags:
                         
-                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) for tags_manager in group_of_tags_managers ) )
+                        current_tags_to_count.update( itertools.chain.from_iterable( tags_manager.GetCurrent( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) for tags_manager in group_of_tags_managers ) )
                         
                     
                     if include_pending_tags:
                         
-                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_ACTUAL ) for tags_manager in group_of_tags_managers ] ) )
+                        pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) for tags_manager in group_of_tags_managers ] ) )
                         
                     
                     if job_key.IsCancelled():
@@ -2113,7 +2113,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
         
-        favs_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
+        favs_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
         
         return favs_list
         
@@ -2122,7 +2122,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
         
-        return ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
+        return ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
         
     
     def _LocationContextJustChanged( self, location_context: ClientLocation.LocationContext ):

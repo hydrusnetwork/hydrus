@@ -507,7 +507,7 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._status_label.setVisible( True )
         
-        self._status_label.setText( 'searching\u2026' )
+        self._status_label.setText( 'searching' + HC.UNICODE_ELLIPSIS )
         
         if self._just_do_local_files.IsOn():
             

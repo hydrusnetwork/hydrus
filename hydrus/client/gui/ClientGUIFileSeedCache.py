@@ -37,7 +37,7 @@ def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.File
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.DialogCode.Accepted:
+    if result == QW.QDialog.Accepted:
         
         file_seed_cache.RemoveFileSeedsByStatus( statuses_to_remove )
         
@@ -159,7 +159,7 @@ def RetryErrors( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSee
     
     result = ClientGUIDialogsQuick.GetYesNo( win, message )
     
-    if result == QW.QDialog.DialogCode.Accepted:
+    if result == QW.QDialog.Accepted:
         
         file_seed_cache.RetryFailed()
         
@@ -655,7 +655,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message )
                 
-                if result == QW.QDialog.DialogCode.Accepted:
+                if result == QW.QDialog.Accepted:
                     
                     deletee_hashes = { file_seed.GetHash() for file_seed in deleted_and_clearable_file_seeds }
                     

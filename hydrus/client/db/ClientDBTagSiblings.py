@@ -21,11 +21,11 @@ def GenerateTagSiblingsLookupCacheTableName( display_type: int, service_id: int 
     
     ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
     
-    if display_type == ClientTags.TAG_DISPLAY_IDEAL:
+    if display_type == ClientTags.TAG_DISPLAY_DISPLAY_IDEAL:
         
         return cache_ideal_tag_siblings_lookup_table_name
         
-    elif display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+    elif display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
         
         return cache_actual_tag_siblings_lookup_table_name
         
@@ -165,7 +165,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def ClearActual( self, service_id ):
         
-        cache_actual_tag_sibling_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, service_id )
+        cache_actual_tag_sibling_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, service_id )
         
         self._Execute( 'DELETE FROM {};'.format( cache_actual_tag_sibling_lookup_table_name ) )
         
@@ -653,11 +653,11 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         for tag_service_id in tag_service_ids:
             
-            tag_ids_to_ideal_tag_ids = self.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+            tag_ids_to_ideal_tag_ids = self.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
             
             ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
             
-            ideal_tag_ids_to_chain_tag_ids = self.GetIdealTagIdsToChains( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            ideal_tag_ids_to_chain_tag_ids = self.GetIdealTagIdsToChains( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
             
             for tag_id in existing_tag_ids:
                 
@@ -689,7 +689,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         tag_service_id = self.modules_services.GetServiceId( service_key )
         
-        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_ACTUAL, tag_service_id )
+        cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id )
         
         pair_ids = self._Execute( 'SELECT bad_tag_id, ideal_tag_id FROM {};'.format( cache_tag_siblings_lookup_table_name ) ).fetchall()
         
@@ -856,7 +856,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         for tag_service_id in tag_service_ids:
             
-            cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id )
+            cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, tag_service_id )
             
             self._Execute( 'DELETE FROM {};'.format( cache_tag_siblings_lookup_table_name ) )
             
@@ -906,13 +906,13 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         for tag_service_id in tag_service_ids:
             
-            cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id )
+            cache_tag_siblings_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, tag_service_id )
             
             tag_ids_to_clear_and_regen = set( tag_ids )
             
-            ideal_tag_ids = self.GetIdealTagIds( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, tag_ids )
+            ideal_tag_ids = self.GetIdealTagIds( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, tag_service_id, tag_ids )
             
-            tag_ids_to_clear_and_regen.update( self.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_IDEAL, tag_service_id, ideal_tag_ids ) )
+            tag_ids_to_clear_and_regen.update( self.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, tag_service_id, ideal_tag_ids ) )
             
             self._ExecuteMany( 'DELETE FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_clear_and_regen ) )
             

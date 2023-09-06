@@ -2952,7 +2952,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _AddNamespaceSort( self ):
             
-            default = ( ( 'creator', 'series', 'page' ), ClientTags.TAG_DISPLAY_ACTUAL )
+            default = ( ( 'creator', 'series', 'page' ), ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
             
             return self._EditNamespaceSort( default )
             
@@ -5008,7 +5008,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._only_thumbs = True
         
-        self._correct_locations = {}
+        self._missing_subfolders_to_new_subfolders = {}
         
         text = 'This dialog has launched because some expected file storage directories were not found. This is a serious error. You have two options:'
         text += os.linesep * 2
@@ -5064,13 +5064,13 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for subfolder in self._locations.GetData():
                     
-                    prefix = subfolder.prefix
+                    new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, path )
                     
-                    ok = os.path.exists( os.path.join( path, prefix ) )
+                    ok = new_subfolder.DirectoryExists()
                     
                     if ok:
                         
-                        self._correct_locations[ subfolder ] = ( path, ok )
+                        self._missing_subfolders_to_new_subfolders[ subfolder ] = ( new_subfolder, ok )
                         
                     
                 
@@ -5082,11 +5082,13 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     def _ConvertPrefixToListCtrlTuples( self, subfolder ):
         
         prefix = subfolder.prefix
-        incorrect_location = subfolder.location
+        incorrect_base_location = subfolder.base_location
         
-        if subfolder in self._correct_locations:
+        if subfolder in self._missing_subfolders_to_new_subfolders:
             
-            ( correct_location, ok ) = self._correct_locations[ subfolder ]
+            ( new_subfolder, ok ) = self._missing_subfolders_to_new_subfolders[ subfolder ]
+            
+            correct_base_location = new_subfolder.base_location
             
             if ok:
                 
@@ -5099,17 +5101,17 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         else:
             
-            correct_location = ''
+            correct_base_location = ''
             ok = None
             pretty_ok = ''
             
         
-        pretty_incorrect_location = incorrect_location
+        pretty_incorrect_base_location = incorrect_base_location
         pretty_prefix = prefix
-        pretty_correct_location = correct_location
+        pretty_correct_base_location = correct_base_location
         
-        display_tuple = ( pretty_incorrect_location, pretty_prefix, pretty_correct_location, pretty_ok )
-        sort_tuple = ( incorrect_location, prefix, correct_location, ok )
+        display_tuple = ( pretty_incorrect_base_location, pretty_prefix, pretty_correct_base_location, pretty_ok )
+        sort_tuple = ( incorrect_base_location, prefix, correct_base_location, ok )
         
         return ( display_tuple, sort_tuple )
         
@@ -5123,9 +5125,8 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         for subfolder in self._locations.GetData():
             
             prefix = subfolder.prefix
-            incorrect_location = subfolder.location
             
-            if subfolder not in self._correct_locations:
+            if subfolder not in self._missing_subfolders_to_new_subfolders:
                 
                 if prefix.startswith( 'f' ):
                     
@@ -5135,12 +5136,12 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     thumb_problems = True
                     
-                    correct_location = incorrect_location
+                    new_subfolder = subfolder
                     
                 
             else:
                 
-                ( correct_location, ok ) = self._correct_locations[ subfolder ]
+                ( new_subfolder, ok ) = self._missing_subfolders_to_new_subfolders[ subfolder ]
                 
                 if not ok:
                     
@@ -5155,7 +5156,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            correct_rows.append( ( prefix, incorrect_location, correct_location ) )
+            correct_rows.append( ( subfolder, new_subfolder ) )
             
         
         return ( correct_rows, thumb_problems )
@@ -5175,11 +5176,11 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     for subfolder in subfolders:
                         
-                        prefix = subfolder.prefix
+                        new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, path )
                         
-                        ok = os.path.exists( os.path.join( path, prefix ) )
+                        ok = new_subfolder.DirectoryExists()
                         
-                        self._correct_locations[ subfolder ] = ( path, ok )
+                        self._missing_subfolders_to_new_subfolders[ subfolder ] = ( new_subfolder, ok )
                         
                     
                     self._locations.UpdateDatas()

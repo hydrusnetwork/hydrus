@@ -42,7 +42,7 @@ def GetClientDefaultOptions():
     
     regex_favourites = []
     
-    regex_favourites.append( ( r'[1-9]+\d*(?=.{4}$)', '\u2026' + r'0074.jpg -> 74' ) )
+    regex_favourites.append( ( r'[1-9]+\d*(?=.{4}$)', HC.UNICODE_ELLIPSIS + r'0074.jpg -> 74' ) )
     regex_favourites.append( ( r'[^' + re.escape( os.path.sep ) + r']+(?=\s-)', r'E:\my collection\author name - v4c1p0074.jpg -> author name' ) )
     
     options[ 'regex_favourites' ] = regex_favourites

@@ -645,7 +645,7 @@ class PopupMessageManager( QW.QFrame ):
         
         job_key = ClientThreading.JobKey()
         
-        job_key.SetStatusText( 'initialising popup message manager\u2026' )
+        job_key.SetStatusText( 'initialising popup message manager' + HC.UNICODE_ELLIPSIS )
         
         self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.25, 'repeating popup message update', self.REPEATINGUpdate )
         

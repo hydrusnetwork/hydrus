@@ -34,7 +34,7 @@ class PredicateSystemRatingIncDecControl( QW.QWidget ):
             ( 'more than', '>' ),
             ( 'less than', '<' ),
             ( 'is', '=' ),
-            ( 'is about', CC.UNICODE_ALMOST_EQUAL_TO ),
+            ( 'is about', HC.UNICODE_APPROX_EQUAL ),
             ( 'do not search', '' )
         ]
         
@@ -257,7 +257,7 @@ class PredicateSystemRatingNumericalControl( QW.QWidget ):
             ( 'more than', '>' ),
             ( 'less than', '<' ),
             ( 'is', '=' ),
-            ( 'is about', CC.UNICODE_ALMOST_EQUAL_TO ),
+            ( 'is about', HC.UNICODE_APPROX_EQUAL ),
             ( 'do not search', '' )
         ]
         

@@ -12,6 +12,7 @@ from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
@@ -379,8 +380,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 1, 1, 1, 1, ) ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '<', 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( CC.UNICODE_ALMOST_EQUAL_TO, 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( CC.UNICODE_ALMOST_EQUAL_TO, 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( HC.UNICODE_APPROX_EQUAL, 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( HC.UNICODE_APPROX_EQUAL, 'delta', ( 0, 0, 0, 0, ) ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 1, 1, 1, 1, ) ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_AGE, ( '>', 'delta', ( 0, 0, 0, 0, ) ), 1 ) )
         
@@ -388,8 +389,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 100, ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 0, ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( CC.UNICODE_ALMOST_EQUAL_TO, 100, ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( CC.UNICODE_ALMOST_EQUAL_TO, 0, ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( HC.UNICODE_APPROX_EQUAL, 100, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( HC.UNICODE_APPROX_EQUAL, 0, ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 100, ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '=', 0, ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 100, ), 0 ) )
@@ -424,9 +425,9 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 201 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 200 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 0 ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( CC.UNICODE_ALMOST_EQUAL_TO, 200 ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( CC.UNICODE_ALMOST_EQUAL_TO, 60 ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( CC.UNICODE_ALMOST_EQUAL_TO, 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( HC.UNICODE_APPROX_EQUAL, 200 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( HC.UNICODE_APPROX_EQUAL, 60 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( HC.UNICODE_APPROX_EQUAL, 0 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 200 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '=', 0 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '>', 200 ), 0 ) )
@@ -466,8 +467,8 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 1 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 0 ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( CC.UNICODE_ALMOST_EQUAL_TO, 0 ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( CC.UNICODE_ALMOST_EQUAL_TO, 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( HC.UNICODE_APPROX_EQUAL, 0 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( HC.UNICODE_APPROX_EQUAL, 1 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 0 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '=', 1 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '>', 0 ), 0 ) )
@@ -475,9 +476,9 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 1, 1 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( '=', 4, 3 ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( CC.UNICODE_ALMOST_EQUAL_TO, 1, 1 ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( CC.UNICODE_ALMOST_EQUAL_TO, 200, 201 ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( CC.UNICODE_ALMOST_EQUAL_TO, 4, 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( HC.UNICODE_APPROX_EQUAL, 1, 1 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( HC.UNICODE_APPROX_EQUAL, 200, 201 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( HC.UNICODE_APPROX_EQUAL, 4, 1 ), 0 ) )
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( ( hash, ), 5 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 5 ), 0 ) )
@@ -497,8 +498,8 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( CC.UNICODE_ALMOST_EQUAL_TO, 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( CC.UNICODE_ALMOST_EQUAL_TO, 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( HC.UNICODE_APPROX_EQUAL, 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( HC.UNICODE_APPROX_EQUAL, 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
@@ -509,9 +510,9 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 201 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 200 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '<', 0 ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( CC.UNICODE_ALMOST_EQUAL_TO, 200 ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( CC.UNICODE_ALMOST_EQUAL_TO, 60 ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( CC.UNICODE_ALMOST_EQUAL_TO, 0 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( HC.UNICODE_APPROX_EQUAL, 200 ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( HC.UNICODE_APPROX_EQUAL, 60 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( HC.UNICODE_APPROX_EQUAL, 0 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 200 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 0 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '>', 200 ), 0 ) )
@@ -1366,9 +1367,10 @@ class TestClientDB( unittest.TestCase ):
             
             for c in ( 'f', 't' ):
                 
-                dir = os.path.join( client_files_default, c + prefix )
+                subfolder = ClientFilesPhysical.FilesStorageSubfolder( c + prefix, client_files_default )
                 
-                self.assertTrue( os.path.exists( dir ) )
+                self.assertTrue( os.path.exists( subfolder.directory ) )
+                self.assertTrue( subfolder.DirectoryExists() )
                 
             
         

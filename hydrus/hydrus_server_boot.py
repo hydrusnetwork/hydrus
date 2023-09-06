@@ -236,7 +236,7 @@ def boot():
             
             if HG.server_action in ( 'start', 'restart' ):
                 
-                HydrusData.Print( 'Initialising controller\u2026' )
+                HydrusData.Print( 'Initialising controller' + HC.UNICODE_ELLIPSIS )
                 
                 threading.Thread( target = reactor.run, name = 'twisted', kwargs = { 'installSignalHandlers' : 0 } ).start()
                 

@@ -3196,7 +3196,7 @@ class ListBoxTags( ListBox ):
                         
                         tags_sorted_to_show_on_menu.pop( -1 )
                         
-                        tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu + [ '\u2026' ] )
+                        tags_sorted_to_show_on_menu_string = ', '.join( tags_sorted_to_show_on_menu + [ HC.UNICODE_ELLIPSIS ] )
                         
                     
                 
@@ -3290,7 +3290,7 @@ class ListBoxTags( ListBox ):
     
 class ListBoxTagsPredicates( ListBoxTags ):
     
-    def __init__( self, *args, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL, **kwargs ):
+    def __init__( self, *args, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, **kwargs ):
         
         ListBoxTags.__init__( self, *args, tag_display_type = tag_display_type, **kwargs )
         
@@ -3546,7 +3546,7 @@ class ListBoxTagsFilter( ListBoxTags ):
     
 class ListBoxTagsDisplayCapable( ListBoxTags ):
     
-    def __init__( self, parent, service_key = None, tag_display_type = ClientTags.TAG_DISPLAY_ACTUAL, **kwargs ):
+    def __init__( self, parent, service_key = None, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, **kwargs ):
         
         if service_key is None:
             
@@ -3975,7 +3975,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             
             submenu = ClientGUIMenus.GenerateMenu( menu )
             
-            for tag_display_type in ( ClientTags.TAG_DISPLAY_SELECTION_LIST, ClientTags.TAG_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_STORAGE ):
+            for tag_display_type in ( ClientTags.TAG_DISPLAY_SELECTION_LIST, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, ClientTags.TAG_DISPLAY_STORAGE ):
                 
                 if tag_display_type == self._tag_display_type:
                     

@@ -778,7 +778,7 @@ class ReviewAccountsPanel( QW.QWidget ):
             
         
         self._status_st.setVisible( True )
-        self._status_st.setText( 'fetching accounts\u2026' )
+        self._status_st.setText( 'fetching accounts' + HC.UNICODE_ELLIPSIS )
         
         self._accounts_loaded = False
         
@@ -1078,7 +1078,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _DisableUIForRefresh( self ):
         
-        self._DisableUIForJob( 'refreshing accounts\u2026' )
+        self._DisableUIForJob( 'refreshing accounts' + HC.UNICODE_ELLIPSIS )
         
     
     def _DoAccountType( self ):
@@ -1126,7 +1126,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._account_panel.RefreshAccounts()
             
         
-        self._DisableUIForJob( 'setting new account type\u2026' )
+        self._DisableUIForJob( 'setting new account type' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -1206,7 +1206,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._account_panel.RefreshAccounts()
             
         
-        self._DisableUIForJob( 'banning\u2026' )
+        self._DisableUIForJob( 'banning' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -1283,7 +1283,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._account_panel.RefreshAccounts()
             
         
-        self._DisableUIForJob( 'deleting\u2026' )
+        self._DisableUIForJob( 'deleting' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -1318,7 +1318,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._account_panel.RefreshAccounts()
             
         
-        self._DisableUIForJob( 'setting new expiry\u2026' )
+        self._DisableUIForJob( 'setting new expiry' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -1377,7 +1377,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._account_panel.RefreshAccounts()
             
         
-        self._DisableUIForJob( 'setting message\u2026' )
+        self._DisableUIForJob( 'setting message' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -1436,7 +1436,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._account_panel.RefreshAccounts()
             
         
-        self._DisableUIForJob( 'unbanning\u2026' )
+        self._DisableUIForJob( 'unbanning' + HC.UNICODE_ELLIPSIS )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         

@@ -17,7 +17,7 @@ def GenerateCombinedFilesMappingsCountsCacheTableName( tag_display_type, tag_ser
         
         name = 'combined_files_ac_cache'
         
-    elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+    elif tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
         
         name = 'combined_files_display_ac_cache'
         
@@ -34,7 +34,7 @@ def GenerateSpecificCountsCacheTableName( tag_display_type, file_service_id, tag
         
         name = 'specific_ac_cache'
         
-    elif tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL:
+    elif tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
         
         name = 'specific_display_ac_cache'
         
@@ -85,7 +85,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         for file_service_id in file_service_ids:
             
-            for tag_display_type in ( ClientTags.TAG_DISPLAY_STORAGE, ClientTags.TAG_DISPLAY_ACTUAL ):
+            for tag_display_type in ( ClientTags.TAG_DISPLAY_STORAGE, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ):
                 
                 single_table_dict = self._GetServiceTableGenerationDictSingle( tag_display_type, file_service_id, tag_service_id )
                 
@@ -121,7 +121,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                     self._missing_storage_tag_service_pairs.add( ( file_service_id, tag_service_id ) )
                     
                 
-                display_table_dict_for_this = self._GetServiceTableGenerationDictSingle( ClientTags.TAG_DISPLAY_ACTUAL, file_service_id, tag_service_id )
+                display_table_dict_for_this = self._GetServiceTableGenerationDictSingle( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_service_id, tag_service_id )
                 
                 display_table_names_for_this = set( display_table_dict_for_this.keys() )
                 
@@ -196,7 +196,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         #
         
-        if tag_display_type == ClientTags.TAG_DISPLAY_ACTUAL and populate_from_storage:
+        if tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL and populate_from_storage:
             
             display_table_name = self.GetCountsCacheTableName( tag_display_type, file_service_id, tag_service_id )
             storage_table_name = self.GetCountsCacheTableName( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id )
