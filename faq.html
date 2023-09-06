@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.5">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.8">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.0e669242.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.046329b4.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.85d0ee34.min.css">
@@ -1859,6 +1859,40 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#service_isolation" class="md-nav__link">
+    Why does the file I deleted and then re-imported still have its tags?
+  </a>
+  
+    <nav class="md-nav" aria-label="Why does the file I deleted and then re-imported still have its tags?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#does_this_deleted-file_metadata_take_up_a_lot_of_database_space_should_i_clear_it_to_get_rid_of_bloat" class="md-nav__link">
+    Does this deleted-file metadata take up a lot of database space? Should I clear it to get rid of bloat?
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#does_the_metadata_for_files_i_deleted_mean_there_is_some_kind_of_a_permanent_record_of_which_files_my_client_has_heard_about_andor_seen_directly_even_if_i_purge_the_deletion_record" class="md-nav__link">
+    Does the metadata for files I deleted mean there is some kind of a permanent record of which files my client has heard about and/or seen directly, even if I purge the deletion record?
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#encryption" class="md-nav__link">
+    Does Hydrus run ok off an encrypted drive partition?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#delays" class="md-nav__link">
     Why can my friend not see what I just uploaded?
   </a>
@@ -2071,6 +2105,40 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#service_isolation" class="md-nav__link">
+    Why does the file I deleted and then re-imported still have its tags?
+  </a>
+  
+    <nav class="md-nav" aria-label="Why does the file I deleted and then re-imported still have its tags?">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#does_this_deleted-file_metadata_take_up_a_lot_of_database_space_should_i_clear_it_to_get_rid_of_bloat" class="md-nav__link">
+    Does this deleted-file metadata take up a lot of database space? Should I clear it to get rid of bloat?
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#does_the_metadata_for_files_i_deleted_mean_there_is_some_kind_of_a_permanent_record_of_which_files_my_client_has_heard_about_andor_seen_directly_even_if_i_purge_the_deletion_record" class="md-nav__link">
+    Does the metadata for files I deleted mean there is some kind of a permanent record of which files my client has heard about and/or seen directly, even if I purge the deletion record?
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#encryption" class="md-nav__link">
+    Does Hydrus run ok off an encrypted drive partition?
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#delays" class="md-nav__link">
     Why can my friend not see what I just uploaded?
   </a>
@@ -2166,6 +2234,25 @@
 <p>The access key is the account. Do not give it to anyone you do not want to have access to the account. An administrator will never need it; instead they will want your <em>account id</em>.</p>
 <h2 id="account_ids">What is an account id?<a class="headerlink" href="#account_ids" title="Permanent link">&para;</a></h2>
 <p>This is another long string of random hexadecimal that <em>identifies</em> your account without giving away access. If you need to identify yourself to a repository administrator (say, to get your account's permissions modified), you will need to tell them your account id. You can copy it to your clipboard in <em>services-&gt;review services</em>.</p>
+<h2 id="service_isolation">Why does the file I deleted and then re-imported still have its tags?<a class="headerlink" href="#service_isolation" title="Permanent link">&para;</a></h2>
+<p>Hydrus splits its different abilities and domains (e.g. the list of files on your disk, or the tag mappings in 'my tags', or your files' notes) into separate <em>services</em>. You can see these in <em>review services</em> and <em>manage services</em>. Although the services of the same type may interact (e.g. deleting a file from one service might send that file to the 'trash' service, or adding tag parents to one tag service might implicate tags on another), those of different types are generally completely independent. Your tags don't care where the files they map to are.</p>
+<p>So, when you delete a file from 'my files', none of its tag mappings in 'my tags' change--they remain attached to the 'ghost' of the deleted file. Your notes, ratings, and known URLs are the same (URLs is important, since it lets the client skip URLs for files you previously deleted). If you re-import the file, it will have everything it did before, with only a couple of pertinent changes like, obviously, <em>import time</em>.</p>
+<p>This is an important part of how the PTR works--when you sync with the PTR, your client downloads a couple billion mappings for files you do not have yet. Then, when you happen to import one of those files, it appears in your importer with its PTR tags 'apparently' already set--in truth, it always had them.</p>
+<p>When you feel like playing with some more advanced concepts, turn on <em>help-&gt;advanced mode</em> and open a new search page. Change the file domain from 'my files' to 'all known files' or 'deleted from my files' and start typing a common tag--you'll get autocomplete results with counts! You can even run the search, and you'll get a ton of 'non-local' and therefore non-viewable files that are typically given a default hydrus thumbnail. These are files that your client is aware of, but does not currently have. You can run the <em>manage x</em> dialogs and edit the metadata of these ghost files just as you can your real ones.</p>
+<p>If you really want to delete the tags or other data for some files you deleted, then:</p>
+<ul>
+<li>If the job is small, do a search for the files inside 'deleted from my local files' (or 'all known files' if you did not leave a deletion record) and then hit <code>Ctrl+A-&gt;manage tags</code> and manually delete the tags there.</li>
+<li>If the job is very large, then make a backup and hit up <em>tags-&gt;migrate tags</em>. You can select the tag service <em>x</em> tag mappings for all files in 'deleted from my local files' and then make the action to delete from <em>x</em> again. </li>
+<li>If the job is complicated, then note that you can open the <em>tags-&gt;migrate tags</em> dialog from <em>manage tags</em>, and it will only apply to the files that booted <em>manage tags</em>.</li>
+</ul>
+<h3 id="does_this_deleted-file_metadata_take_up_a_lot_of_database_space_should_i_clear_it_to_get_rid_of_bloat">Does this deleted-file metadata take up a lot of database space? Should I clear it to get rid of bloat?<a class="headerlink" href="#does_this_deleted-file_metadata_take_up_a_lot_of_database_space_should_i_clear_it_to_get_rid_of_bloat" title="Permanent link">&para;</a></h3>
+<p>Not really. Unless your situation involves millions of richly locally tagged files and a gigantic deleted:kept file ratio, don't worry about it.</p>
+<h3 id="does_the_metadata_for_files_i_deleted_mean_there_is_some_kind_of_a_permanent_record_of_which_files_my_client_has_heard_about_andor_seen_directly_even_if_i_purge_the_deletion_record">Does the metadata for files I deleted mean there is some kind of a permanent record of which files my client has heard about and/or seen directly, even if I purge the deletion record?<a class="headerlink" href="#does_the_metadata_for_files_i_deleted_mean_there_is_some_kind_of_a_permanent_record_of_which_files_my_client_has_heard_about_andor_seen_directly_even_if_i_purge_the_deletion_record" title="Permanent link">&para;</a></h3>
+<p>Yes. I am working on updating the database infrastructure to allow a full purge, but the structure is complicated, so it will take some time. If you are afraid of someone stealing your hard drive and matriculating your sordid MLP collection (or, in this case, the historical log of horrors that you rejected), do some research into drive encryption. Hydrus runs fine off an encrypted disk.</p>
+<h2 id="encryption">Does Hydrus run ok off an encrypted drive partition?<a class="headerlink" href="#encryption" title="Permanent link">&para;</a></h2>
+<p>Yes! Both the database and your files should be fine on any of the popular software solutions. These programs give your OS a virtual drive that on my end looks and operates like any other. I have yet to encounter one that SQLite has a problem with. Make sure you don't have auto-dismount set--or at least be hawkish that it will never trigger while hydrus is running--or you could damage your database.</p>
+<p>Drive encryption is a good idea for all your private things. If someone steals your laptop or USB stick, it means you only have to deal with frustration and replacement expenses (rather than also a nightmare of anxiety and identity-loss as some bad guy combs through all your things).</p>
+<p>If you don't know how drive encryption works, search it up and have a play with a spare USB stick or a small 256MB file partition. Veracrypt is a popular and easy program, but there are several solutions. Get some practice and take it seriously, since if you act foolishly you can really screw yourself (e.g. locking yourself out of the only copy of data you have left because you forgot the password). Make sure you have a good plan, reliable (encrypted) backups, and a password manager. </p>
 <h2 id="delays">Why can my friend not see what I just uploaded?<a class="headerlink" href="#delays" title="Permanent link">&para;</a></h2>
 <p>The repositories do not work like conventional search engines; it takes a short but predictable while for changes to propagate to other users.</p>
 <p>The client's searches only ever happen over its local cache of what is on the repository. Any changes you make will be delayed for others until their next update occurs. At the moment, the update period is 100,000 seconds, which is about 1 day and 4 hours.</p>
@@ -2175,7 +2262,7 @@
   <small>
     
       Last update:
-      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 5, 2022</span>
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 6, 2023</span>
       
     
   </small>
@@ -2295,7 +2382,7 @@
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.78eede0e.min.js"></script>
+      <script src="assets/javascripts/bundle.dff1b7c8.min.js"></script>
       
     
   </body>

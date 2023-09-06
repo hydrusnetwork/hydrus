@@ -35,6 +35,44 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_542"><a href="#version_542">version 542</a></h2>
+                    <ul>
+                        <li><h3>pdfs</h3></li>
+                        <li>thanks to a user, we now have pdf thumbnails! there is surprisingly little jank!</li>
+                        <li>I hacked together a newer and better word count for PDFs. I can't promise it is perfect, but it does actually inspect the raw text. I'm expect we'll add a separate 'num_pages' row in future to handle comics (and other stuff like cbr/cbz)</li>
+                        <li>I also hacked in 'human-readable file metadata' for PDFs. any PDF with author, title, subject, or keywords metadata is now viewable at the top of the media viewer</li>
+                        <li>on update all your existing pdfs will be scheduled to get new thumbs, count their words, and learn if they have human-readable file metadata</li>
+                        <li>this tech relies on Qt, so users running from source on old OSes (and thus Qt5) may not have very good support, sorry!</li>
+                        <li><h3>predicate parsing</h3></li>
+                        <li>the system predicate parser can now deal with numbers with commas, like in `system:width = 1,920`</li>
+                        <li>`system:filetype is gif` works again in the predicate parser, now resolving to `system:filetype is animated gif, static gif`</li>
+                        <li>fixed some weird parsing for 'system:tag as number' and added more operators like 'less than' and support for 'unnamespaced' and 'any namespace'</li>
+                        <li>`system:tag as number` now labels itself in the client in the style `system:tag as number: page less than 20`, which is parseable by the system</li>
+                        <li>the predicates for 'has exif/icc profile/human-readable embedded metadata' now label themselves in the format `system:has x`, not `system:image has x`. this harmonises with our other `has x` predicates, recognises that we pull metadata from non-images these days, and is the text that they were parsing with anyway</li>
+                        <li><h3>misc</h3></li>
+                        <li>the 'exporting' sidecar system's 'tag' source (i.e. pulling tags from your local tag services) now has a button to select 'storage' (no siblings or parents, what you see in manage tags dialog) or 'display' (has sibling and parent calculations, what you see in normal views) tags. all existing tag source sidecars will stay 'storage', but the default for new ones is now 'display'</li>
+                        <li>renamed the dumb 'x metadata migrations' button label in export files to 'x sidecar actions'</li>
+                        <li>wrote a new FAQ answer about why tags don't disappear when you delete files: https://hydrusnetwork.github.io/hydrus/faq.html#service_isolation</li>
+                        <li>also wrote just a little FAQ about running hydrus off an encrypted partition--yes you can, and this is good tech to learn</li>
+                        <li>moved the builds up to python 3.10. I thought we had already done this, but there we go. no special install instructions, it should just update as normal</li>
+                        <li>for users who run from source: added a '(m)iddle Qt6' selection to the advanced setup venv script, for those who cannot run 6.5.2, with some explanation about it (it is the recently used 6.4.1, since Python 3.11 can't run the '(o)lder' 6.3.1), and added a '(t)est mpv' option for the newer python-mpv 1.0.4</li>
+                        <li><h3>boring file storage work</h3></li>
+                        <li>I decided that the planned granular folders will nest in groups of 2 hex characters. when you move to three-character storage, the files starting 'ab1' will be stored in '/fab/1' directory (rather than '/fab1'). we don't want to solve the overhead of a folder with 30,000 files by creating a folder with 4096 or 65536 folders. all the code was shifted over to this</li>
+                        <li>all the migrate and repair code now uses subfolders</li>
+                        <li>replaced various hardcoded folder determination code with subfolders, ensuring we are all calculating locations using the same single method</li>
+                        <li>a variety of other responsibilities like 'does this subfolder exist on disk?' and 'make sure it does exist' are similarly now all collected in one place, in the subfolder code</li>
+                        <li>added a little suite of unit tests for the new subfolders class</li>
+                        <li>did a bunch of renaming to clear up various different concepts and names in all this code</li>
+                        <li>the 'clear' custom thumbnail location button in migrate database is now wrapped in a yes/no confirmation dialog</li>
+                        <li><h3>other boring stuff</h3></li>
+                        <li>wrote some new exception classes to handle several 'limited support for this particular file' states and refactored a bunch of the resolution and thumbnail producing code to use it instead of None hacks or 'this file is completely busted' exceptions</li>
+                        <li>improved some misc file format handling, particularly when they are damaged. stuff like clip database inspection and general thumbnail generation fail states</li>
+                        <li>refactored many of my hardcoded special unicode characters to constants in HC. not sure I really like all the spammed `{HC.UNICODE_ELLIPSIS}` though, so might revisit</li>
+                        <li>fixed an issue with last week's update code that was affecting users with a history of certain database damage</li>
+                        <li>I may have improved import support for some damaged or generally very strange image files by falling back to OpenCV for resolution parsing when Pillow fails</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_541"><a href="#version_541">version 541</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

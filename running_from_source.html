@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.5">
+      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.2.8">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.0e669242.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.046329b4.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.85d0ee34.min.css">
@@ -2501,6 +2501,16 @@ python -m pip install qtpy PyQt6-Charts PyQt6
 <p>If you want to set QT_API in a batch file, do this:</p>
 <p><code>set QT_API=pyqt6</code></p>
 <p>If you run &lt;= Windows 8.1 or Ubuntu 18.04, you cannot run Qt6. Try PySide2 or PyQt5.</p>
+<details>
+<summary>Qt compatibility notes</summary>
+<p>If you run into trouble running newer versions of Qt6 on Linux, some users have fixed it by installing the packages <code>libicu-dev</code> and <code>libxcb-cursor-dev</code>. With <code>apt</code> that will be:</p>
+<ul>
+<li><code>sudo apt-get install libicu-dev</code></li>
+<li><code>sudo apt-get install libxcb-cursor-dev</code></li>
+</ul>
+<p>If you still have trouble with the default Qt6 version, or you rebuilt your venv and the newer version of Qt6 gives you problems, check out the setup_venv script language and the advanced requirements.txts files it relies on in <code>install_dir/static/requirements/advanced</code>. There should be several older version examples you can try out.</p>
+<p>To install a specific version of a library with pip, activate your venv and then type something like <code>pip install PySide6==6.3.1</code>.</p>
+</details>
 <h3 id="mpv">mpv<a class="headerlink" href="#mpv" title="Permanent link">&para;</a></h3>
 <p>MPV is optional and complicated, but it is great, so it is worth the time to figure out!</p>
 <p>As well as the python wrapper, 'python-mpv' (which is in the requirements.txt), you also need the underlying dev library. This is <em>not</em> mpv the program, but 'libmpv', often called 'libmpv1'.</p>
@@ -2521,7 +2531,7 @@ python -m pip install qtpy PyQt6-Charts PyQt6
 <p>But as long as the program launches, it usually isn't a big deal.</p>
 <div class="admonition warning">
 <p class="admonition-title">Extremely safe no way it can go wrong</p>
-<p>If you want to update sqlite for your system python install, you can also drop it into <code>C:\Python38\DLLs</code> or wherever you have python installed. You'll be overwriting the old file, so make a backup if you want to (I have never had trouble updating like this, however).</p>
+<p>If you want to update SQLite for your Windows system python install, you can also drop it into <code>C:\Program Files\Python310\DLLs</code> or wherever you have python installed, and it'll update for all your python projects. You'll be overwriting the old file, so make a backup of the old one (I have never had trouble updating like this, however).</p>
 <p>A user who made a Windows venv with Anaconda reported they had to replace the sqlite3.dll in their conda env at <code>~/.conda/envs/&lt;envname&gt;/Library/bin/sqlite3.dll</code>.</p>
 </div>
 <h3 id="ffmpeg">FFMPEG<a class="headerlink" href="#ffmpeg" title="Permanent link">&para;</a></h3>
@@ -2565,7 +2575,7 @@ python hydrus_client.py -d=&quot;/path/to/database&quot;
   <small>
     
       Last update:
-      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 30, 2023</span>
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 6, 2023</span>
       
     
   </small>
@@ -2685,7 +2695,7 @@ python hydrus_client.py -d=&quot;/path/to/database&quot;
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.dfff1995.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.78eede0e.min.js"></script>
+      <script src="assets/javascripts/bundle.dff1b7c8.min.js"></script>
       
     
   </body>
