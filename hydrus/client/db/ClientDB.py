@@ -2597,10 +2597,10 @@ class DB( HydrusDB.HydrusDB ):
     ):
         
         boned_stats = {}
-        
+        HydrusData.ShowText( '1' )
         ( num_total, size_total ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {files_table_name} CROSS JOIN files_info USING ( hash_id );' ).fetchone()
         ( num_inbox, size_inbox ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {files_table_name} CROSS JOIN file_inbox USING ( hash_id ) CROSS JOIN files_info USING ( hash_id );' ).fetchone()
-        
+        HydrusData.ShowText( '2' )
         if size_total is None:
             
             size_total = 0
@@ -2631,7 +2631,7 @@ class DB( HydrusDB.HydrusDB ):
             boned_stats[ 'num_deleted' ] = num_deleted
             boned_stats[ 'size_deleted' ] = size_deleted
             
-        
+        HydrusData.ShowText( '3' )
         if job_key.IsCancelled():
             
             return boned_stats
@@ -2659,7 +2659,7 @@ class DB( HydrusDB.HydrusDB ):
                 earliest_import_time = result[0]
                 
             
-        
+        HydrusData.ShowText( '4' )
         if job_key.IsCancelled():
             
             return boned_stats
@@ -2690,7 +2690,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
             
-        
+        HydrusData.ShowText( '5' )
         if earliest_import_time > 0:
             
             boned_stats[ 'earliest_import_time' ] = earliest_import_time
@@ -2727,7 +2727,7 @@ class DB( HydrusDB.HydrusDB ):
             
             return boned_stats
             
-        
+        HydrusData.ShowText( '6' )
         #
         
         total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM {files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) CROSS JOIN alternate_file_group_members USING ( media_id ) GROUP BY alternates_group_id;' ) if count > 1 ) )
@@ -2736,14 +2736,14 @@ class DB( HydrusDB.HydrusDB ):
             
             return boned_stats
             
-        
+        HydrusData.ShowText( '7' )
         total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( f'SELECT media_id, COUNT( * ) FROM {files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) GROUP BY media_id;' ) if count > 1 ) )
         
         if job_key.IsCancelled():
             
             return boned_stats
             
-        
+        HydrusData.ShowText( '8' )
         table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, files_table_name, CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
         
         ( total_potential_pairs, ) = self._Execute( f'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {table_join} );' ).fetchone()
@@ -2752,7 +2752,7 @@ class DB( HydrusDB.HydrusDB ):
             
             return boned_stats
             
-        
+        HydrusData.ShowText( '9' )
         boned_stats[ 'total_alternate_files' ] = total_alternate_files
         boned_stats[ 'total_duplicate_files' ] = total_duplicate_files
         boned_stats[ 'total_potential_pairs' ] = total_potential_pairs
