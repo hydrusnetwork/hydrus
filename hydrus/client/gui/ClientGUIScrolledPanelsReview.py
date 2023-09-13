@@ -2969,9 +2969,10 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         total_alternate_files = boned_stats[ 'total_alternate_files' ]
         total_duplicate_files = boned_stats[ 'total_duplicate_files' ]
-        total_potential_pairs = boned_stats[ 'total_potential_pairs' ]
+        #total_potential_pairs = boned_stats[ 'total_potential_pairs' ]
         
-        potentials_label = f'Total duplicate potential pairs: {HydrusData.ToHumanInt( total_potential_pairs )}'
+        #potentials_label = f'Total duplicate potential pairs: {HydrusData.ToHumanInt( total_potential_pairs )}'
+        potentials_label = f'Total duplicate potential pairs: disabled for now'
         duplicates_label = f'Total files set duplicate: {HydrusData.ToHumanInt( total_duplicate_files )}'
         alternates_label = f'Total duplicate file groups set alternate: {HydrusData.ToHumanInt( total_alternate_files )}'
         
