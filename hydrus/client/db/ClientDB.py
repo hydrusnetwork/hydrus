@@ -2483,6 +2483,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetBonedStats( self, file_search_context: ClientSearch.FileSearchContext = None, job_key = None ):
         
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey()
+            
+        
         if file_search_context is None:
             
             file_search_context = ClientSearch.FileSearchContext(
