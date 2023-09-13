@@ -7,7 +7,7 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 ## Images
 
 | Filetype   | Extension | MIME type      | Thumbnails | Viewable in Hydrus | Notes                                      |
-| ---------- | --------- | -------------- | :--------: | :----------------: | ------------------------------------------ |
+| ---------- | --------- | -------------- | :--------: | :----------------: |--------------------------------------------|
 | jpeg       | `.jpeg`   | `image/jpeg`   |     ✅     |         ✅         |                                            |
 | png        | `.png`    | `image/png`    |     ✅     |         ✅         |                                            |
 | static gif | `.gif`    | `image/gif`    |     ✅     |         ✅         |                                            |
@@ -15,7 +15,7 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 | tiff       | `.tiff`   | `image/tiff`   |     ✅     |         ✅         |                                            |
 | qoi        | `.qoi`    | `image/qoi`    |     ✅     |         ✅         | Quite OK Image Format                      |
 | icon       | `.ico`    | `image/x-icon` |     ✅     |         ✅         |                                            |
-| bmp        | `.bmp`    | `image/bmp`    |     ✅     |         ✅         | Gets converted to png                      |
+| bmp        | `.bmp`    | `image/bmp`    |     ✅     |         ✅         |                                            |
 | heif       | `.heif`   | `image/heif`   |     ✅     |         ✅         |                                            |
 | heic       | `.heic`   | `image/heic`   |     ✅     |         ✅         |                                            |
 | avif       | `.avif`   | `image/avif`   |     ✅     |         ✅         |                                            |
@@ -76,11 +76,11 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 ## Image Project Files
 
 | Filetype  | Extension    | MIME type                     | Thumbnails | Viewable in Hydrus | Notes             |
-| --------- | ------------ | ----------------------------- | :--------: | :----------------: | ----------------- |
+| --------- | ------------ | ----------------------------- | :--------: | :----------------: |-------------------|
 | psd       | `.psd`       | `image/vnd.adobe.photoshop`   |     ✅     |         ✅         | Adobe Photoshop   |
 | clip      | `.clip`      | `application/clip`[^1]        |     ✅     |         ❌         | Clip Studio Paint |
 | sai2      | `.sai2`      | `application/sai2`[^1]        |     ❌     |         ❌         | PaintTool SAI2    |
-| krita     | `.kra`       | `application/x-krita`         |     ✅     |         ❌         |                   |
+| krita     | `.kra`       | `application/x-krita`         |     ✅     |         ❌         | Krita             |
 | svg       | `.svg`       | `image/svg+xml`               |     ✅     |         ❌         |                   |
 | xcf       | `.xcf`       | `application/x-xcf`           |     ❌     |         ❌         | GIMP              |
 | procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app     |

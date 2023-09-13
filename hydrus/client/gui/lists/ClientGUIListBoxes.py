@@ -1019,6 +1019,7 @@ class ListBox( QW.QScrollArea ):
         
         self._height_num_chars = height_num_chars
         self._minimum_height_num_chars = 8
+        self._max_height_num_chars = None
         
         self._num_rows_per_page = 0
         
@@ -2238,6 +2239,11 @@ class ListBox( QW.QScrollArea ):
             
             self.widget().update()
             
+        
+    
+    def SetMaximumHeightNumChars( self, maximum_height_num_chars ):
+        
+        self._maximum_height_num_chars = maximum_height_num_chars
         
     
     def SetMinimumHeightNumChars( self, minimum_height_num_chars ):

@@ -1,5 +1,8 @@
 import re
+import traceback
 import typing
+
+pdf_failed_reason = 'QtPdf seems ok!'
 
 try:
     
@@ -7,7 +10,9 @@ try:
     
     PDF_OK = True
     
-except:
+except Exception as e:
+    
+    pdf_failed_reason = traceback.format_exc()
     
     PDF_OK = False
     
@@ -15,8 +20,8 @@ except:
 from qtpy import QtGui as QG
 from qtpy import QtCore as QC
 
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPDFHandling
 
@@ -33,7 +38,7 @@ def LoadPDF( path: str ):
         
         # it wants an Object in PyQt6, but giving it None is better since we are outside the Qt thread here
         document = QtPdf.QPdfDocument( None )
-
+        
         document.load( path )
         
     except:
@@ -111,7 +116,11 @@ def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tupl
         
         return HydrusImageHandling.GenerateThumbnailBytesNumPy( thumbnail_numpy_image )
         
-    except:
+    except Exception as e:
+        
+        message = f'PDF at {path} failed to make a thumbnail: {e}'
+        
+        HydrusData.Print( message )
         
         raise HydrusExceptions.NoThumbnailFileException()
         

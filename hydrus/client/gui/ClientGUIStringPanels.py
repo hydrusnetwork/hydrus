@@ -716,6 +716,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     ClientStrings.STRING_CONVERSION_DECODE,
                     ClientStrings.STRING_CONVERSION_REVERSE,
                     ClientStrings.STRING_CONVERSION_REGEX_SUB,
+                    ClientStrings.STRING_CONVERSION_DATEPARSER_DECODE,
                     ClientStrings.STRING_CONVERSION_DATE_DECODE,
                     ClientStrings.STRING_CONVERSION_DATE_ENCODE,
                     ClientStrings.STRING_CONVERSION_INTEGER_ADDITION,
@@ -818,13 +819,17 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._data_timezone_decode.SetValue( timezone_type )
                 self._data_timezone_offset.setValue( timezone_offset )
                 
+            elif conversion_type == ClientStrings.STRING_CONVERSION_DATEPARSER_DECODE:
+                
+                pass
+                
             elif conversion_type == ClientStrings.STRING_CONVERSION_DATE_ENCODE:
                 
                 ( phrase, timezone_type ) = data
                 
                 self._data_text.setText( phrase )
                 self._data_timezone_encode.SetValue( timezone_type )
-            
+                
             elif conversion_type == ClientStrings.STRING_CONVERSION_HASH_FUNCTION:
                 
                 self._data_hash_function.SetValue( data )
@@ -857,6 +862,8 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_offset_label = ClientGUICommon.BetterStaticText( self, 'timezone offset: ' )
             self._data_timezone_encode_label = ClientGUICommon.BetterStaticText( self, 'date encode timezone: ' )
             self._data_hash_function_label = ClientGUICommon.BetterStaticText( self, 'hashing function: ' )
+            self._data_dateparser_label = ClientGUICommon.BetterStaticText( self, 'This will parse pretty much any normal looking date into a timestamp that hydrus understands, timezone conversions included, with zero setup! It can even do "2 hours ago"!' )
+            self._data_dateparser_label.setWordWrap( True )
             
             rows.append( ( 'conversion type: ', self._conversion_type ) )
             rows.append( ( self._data_text_label, self._data_text ) )
@@ -873,6 +880,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._control_gridbox = ClientGUICommon.WrapInGrid( self._control_panel, rows )
             
             self._control_panel.Add( self._control_gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            self._control_panel.Add( self._data_dateparser_label, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -930,6 +938,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_timezone_offset_label.setVisible( False )
             self._data_timezone_encode_label.setVisible( False )
             self._data_hash_function_label.setVisible( False )
+            self._data_dateparser_label.setVisible( False )
             
             self._data_text.setVisible( False )
             self._data_number.setVisible( False )
@@ -953,11 +962,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_decoding_label.setVisible( True )
                 self._data_decoding.setVisible( True )
-            
+                
             elif conversion_type == ClientStrings.STRING_CONVERSION_HASH_FUNCTION:
                 
                 self._data_hash_function_label.setVisible( True )
                 self._data_hash_function.setVisible( True )
+                
+            elif conversion_type == ClientStrings.STRING_CONVERSION_DATEPARSER_DECODE:
+                
+                self._data_dateparser_label.setVisible( True )
                 
             elif conversion_type in ( ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE, ClientStrings.STRING_CONVERSION_REGEX_SUB ):
                 
@@ -1124,6 +1137,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
+                # dateparser
                 data = None
                 
             

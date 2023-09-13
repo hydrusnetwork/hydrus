@@ -7,6 +7,39 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 543](https://github.com/hydrusnetwork/hydrus/releases/tag/v543)
+
+### misc
+
+* a new string converter rule now allows for extremely easy date parsing, thanks to the `dateparser` library. all old 'datestring to timestamp' rules remain as they are, but are now called '(advanced)'. a new option, 'datestring to timestamp (easy)', which has exactly zero variables to fiddle with, just eats up pretty much any date string you can think of, including timezone conversions, and even stuff like '2 hours ago'. you need the dateparser library for this to work, so **if you run from source, you might like to rebuild your venv this week**. your `dateparser` import status is in _help->about_
+* thanks to the user who added it recently, PSD rendering is now much faster and uses less memory. if you do a lot of PSD work, let me know how this goes. if PSDs now load pretty much like large pngs, I think we'll set them, by default, to show as normal in the preview viewer
+* thanks to a user, we now have description note parsing for the default e621 downloader
+* the program now supports bitmap files as-is. until now, I automatically converted them to png on import, but this was a mistake--despite this file format being a waste 99.7% of the time, hydrus's philosophy is not to alter files on import, and this long-time exception resulted in several awkward bumps in the code that I'm happy to be rid of now
+* fixed a couple desync bugs in the migrate database dialog where you could change a location's weight (particularly between 0 and 1) and not get the correct flip of the 'files need to be moved'/'files are all good' state until you re-opened the dialog
+
+### PDFs
+
+* I screwed something up with the PDF thumbnail generation at the last minute last week, fixing it on non-PySide6, but introducing some logspam and--for at least one user--adding instability. the logspam is now gone and I _believe_ the instability is fixed. now it is basically the same as the SVG thumbnail code, which hasn't given us any trouble. if we still see some crashes, I'm going to have to overhaul these two thumbnail generation methods
+* when PDFs fail to generate thumbs, a little text about the error is now printed to the log
+* _help->about_ now has lines for QtCharts and QtPdf, and if there is a PDF problem, it puts the import trace in a popup
+
+### mr bones
+
+* mr bones can now take any file search. if you want to see the average filesize of your pngs, or the archive/inbox ratio of creator x's webms, just set that search on the new panel and the numbers will update for that subset
+* this turned, characteristically, into a bottomless rabbit hole, and I culled the more complicated features lest the ride consume me. searching a multiple file domain means deleted numbers cannot be calculated, nor can the 'earliest import' time, and searching deleted domains will generally give you some gonk numbers (and likely reveal some interesting legacy bugs, like inbox count amongst deleted files)
+* the old search was highly optimised, but this has few guard rails. if you give this thing a super difficult query, it'll take a long time. there is now a cancel button that should interrupt all but the weirdest operations fairly promptly, however, just in case it is really lagging. note that hitting 'searching immediately' will pause updates as normal, if you need to set up something complex
+* assuming deleted numbers are available, the stats now include total views/viewtime for deleted files too
+* potential dupe counts are basically a search of 'at least one of the files matches the file list, can be pixel dupes, max distance 8'
+
+### more boring work, file storage and misc
+
+* wrote a new object to handle the base storage location for file/thumbnail subfolders. it can do over/underweight calculations and handles the pending max_num_bytes setting for database migration locations
+* all the new subfolder objects now track their base location using this new object, and all related load/save/display/edit code is now throwing this thing around instead of raw paths
+* the underlying migration determination code is now ready to redistribute according to a max_num_bytes option. I've just got to update the UI, and, fingers crossed, I'll be able to add it next week
+* added a bunch of unit tests for the new base storage location object. it separately reports whether it needs to shrink, wants to shrink, is able to expand, or is eager to expand
+* improved how updated objects are substituted into all multi-column lists, it fixes a couple of odd storage/display sync bugs here and there
+* a core image data loading/conversion tool inside the program is now a bit simpler and faster, and I think it also saves memory. it should speed up various sorts of unusual file loading
+
 ## [Version 542](https://github.com/hydrusnetwork/hydrus/releases/tag/v542)
 
 ### pdfs
@@ -387,43 +420,3 @@ title: Changelog
 * the help is updated for these
 * the unit tests are updated for these
 * the client api version is now 48
-
-## [Version 533](https://github.com/hydrusnetwork/hydrus/releases/tag/v533)
-
-### macOS App crashes
-
-* unfortunately, last week's eventFilter work did not fix the macOS build's crashing--however, thanks to user help, we figured out that it was some half-hidden auxiliary Qt library that updated in the background starting v530 (the excellently named `PyQt6-Qt6` package). the build script is updated to roll back this version and it seems like things are fixed. this particular issue shouldn't happen again. sorry for the trouble, and let me know if there are any new issues! (issue #1379)
-
-### misc
-
-* the download panels in subscription popup windows are now significantly more responsive. ever since the popup manager was embedded into the gui, popup messages were not doing the 'should I update myself?' test correctly, and their network UI was not being updated without other events like surrounding widgets resizing. I was wondering what was going on here for ages--turns out it was regular stupidity
-* if an image has width or height > 1024, the 'share->copy' menu now shows a second, 'source lookup' bitmap, with the resolution clipped to 1024x1024
-* 'sort files by hash' can now be sorted asc or desc. this also fixes a bug where it was secretly either sorting asc or desc based on the previous selection. well done to the user who noticed and tested this
-* if system:limit=0 is in a search, the search is no longer run--it comes back immediately empty. also, the system:limit edit panel now has a minimum value of 1 to dissuade this state
-* the experimental QtMediaPlayer now initialises with the correct volume/mute and updates on volume/mute events. the scanbar and volume control UI are still hidden behind the OpenGL frame for now, but one step forward
-* the system that caches media results now hangs on to the most recent 2048 files aggressively for two minutes after initial load. previously, if you refreshed a page of unique files, or did some repeated client api work on files that were not loaded somewhere as thumbs, in the interim periods those media objects were not strictly in non-weak memory anywhere in the client and could have been eligible for clearing out of the cache. now they are a bit more sticky
-* added some info on editing predicates and the various undocumented click shortcuts the taglist supports (e.g. ctrl+double-left-click) to the 'getting started with searching and sorting' help page
-* added a link to the Client API help for 'Hydrus Video Deduplicator' (https://github.com/appleappleapplenanner/hydrus-video-deduplicator), which neatly discovers duplicate videos in your client and queues them up in the duplicate filter by marking them as 'potential dupes'
-
-### sub-gallery url network parsing gubbins
-
-* sub-gallery import objects now get the tags and custom headers that are parsed with them. if the sub-gallery urls are parsed in 'posts' using a subsidiary parser, they only inherit the metadata within their post
-* sub-gallery import objects now use their parent gallery urls as referral header
-* sub-gallery import objects now inherit the 'can generate more pages' state of their parents (previously it was always 'yes')
-* 'next page' gallery urls do not get the tags they are parsed with. this behaviour makes a little less sense, and I suspect it _could_ cause various troubles, so I'll wait for more input, bug reports, and a larger cleanup and overhaul of how metadata is managed and passed down from one item to the next in the downloader system
-* generally speaking, when file and gallery import objects have the opportunity to acquire tags or headers, they'll now add to the existing store rather than replace it. this should mean if they both inherit and parse stuff, it won't all overwrite each other. this is all a giant mess so I have a cleanup overhaul planned
-
-### boring stuff
-
-* if a critical drive error occurs (e.g. running out of space on a storage drive), the popup message saying 'hey everything just got mega-paused' is now a little clearer about what has happened and how to fix it
-* similarly, the specific 'all watchers are paused'-style messages now specifically state 'network->pause to resume!' to point users to this menu to fix this tricky issue. this has frustrated a couple of newer users before
-* to reduce confusion, the 'clear orphan files' pre-job now only presents the user one combined dialog
-* improved how pages test and recognise that they have changes and thus should be saved--it works faster, and a bunch of false negatives should be removed
-* improved the safety routine that ensures multiple-column list data is read-only
-* fixed .txt sidecar importers' description labels, which were missing extra text munging
-* to relieve some latency stress on session load, pages that are loading their initial files in the background now do so in batches of 64 rather than 256
-* fixed some bad error handling in the master client db update routine
-* fixed a scatter of linting problems a user found
-* last week's pixiv parser hotfix is reinforced this week for anyone who got the early 532 release
-* made some primitive interfaces for the main controller and schedulable job classes and ensured the main hydrusglobals has type hinting for these--now everything that talks to the controller has a _bit_ of an idea what it is actually doing, and as I continue to work on this, we'll get better linting
-* moved the client DataCache object and its friends to a new 'caches' module and cleaned some of the code

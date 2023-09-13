@@ -2481,14 +2481,125 @@ class DB( HydrusDB.HydrusDB ):
         return JobDatabaseClient( job_type, synchronous, action, *args, **kwargs )
         
     
-    def _GetBonedStats( self ):
+    def _GetBonedStats( self, file_search_context: ClientSearch.FileSearchContext = None, job_key = None ):
+        
+        if file_search_context is None:
+            
+            file_search_context = ClientSearch.FileSearchContext(
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            )
+            
+        
+        current_timestamps_table_name = None
+        deleted_files_table_name = None
+        deleted_timestamps_table_name = None
+        
+        location_context = file_search_context.GetLocationContext()
+        
+        db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+        
+        do_not_need_to_search = file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates()
+        
+        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name:
+            
+            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as deleted_temp_table_name:
+                
+                if do_not_need_to_search:
+                    
+                    files_table_name = db_location_context.GetSingleFilesTableName()
+                    
+                else:
+                    
+                    hash_ids = self.modules_files_query.GetHashIdsFromQuery(
+                        file_search_context = file_search_context,
+                        apply_implicit_limit = False,
+                        job_key = job_key
+                    )
+                    
+                    if job_key.IsCancelled():
+                        
+                        return {}
+                        
+                    
+                    self._ExecuteMany( f'INSERT OR IGNORE INTO {temp_table_name} ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
+                    
+                    files_table_name = temp_table_name
+                    
+                
+                hacks_going_to_work = location_context.IsOneDomain()
+                deleted_logic_makes_sense = location_context.IncludesCurrent() and not location_context.IncludesDeleted()
+                current_domains_have_inverse = CC.TRASH_SERVICE_KEY not in location_context.current_service_keys and CC.COMBINED_FILE_SERVICE_KEY not in location_context.current_service_keys
+                
+                if hacks_going_to_work and deleted_logic_makes_sense and current_domains_have_inverse:
+                    
+                    # note I can't currently support two _complicated_ db location contexts in one query since their mickey mouse temp table has a fixed name
+                    # therefore leave this as IsOneDomain for now
+                    # TODO: plug the DBLocationContext into a manager for temp table names and then come back here
+                    
+                    db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+                    
+                    # special IsOneDomain hack
+                    current_timestamps_table_name = db_location_context.GetSingleFilesTableName()
+                    
+                    deleted_location_context = location_context.GetDeletedInverse()
+                    
+                    deleted_db_location_context = self.modules_files_storage.GetDBLocationContext( deleted_location_context )
+                    
+                    # special IsOneDomain hack
+                    deleted_timestamps_table_name = deleted_db_location_context.GetSingleFilesTableName()
+                    
+                    if do_not_need_to_search:
+                        
+                        deleted_files_table_name = deleted_db_location_context.GetSingleFilesTableName()
+                        
+                    else:
+                        
+                        deleted_file_search_context = file_search_context.Duplicate()
+                        deleted_file_search_context.SetLocationContext( deleted_location_context )
+                        
+                        hash_ids = self.modules_files_query.GetHashIdsFromQuery(
+                            file_search_context = deleted_file_search_context,
+                            apply_implicit_limit = False,
+                            job_key = job_key
+                        )
+                        
+                        if job_key.IsCancelled():
+                            
+                            return {}
+                            
+                        
+                        self._ExecuteMany( f'INSERT OR IGNORE INTO {deleted_temp_table_name} ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
+                        
+                        deleted_files_table_name = deleted_temp_table_name
+                        
+                    
+                
+                return self._GetBonedStatsFromTable(
+                    db_location_context,
+                    files_table_name,
+                    current_timestamps_table_name,
+                    deleted_files_table_name,
+                    deleted_timestamps_table_name,
+                    job_key = job_key
+                )
+                
+            
+        
+    
+    def _GetBonedStatsFromTable(
+        self,
+        db_location_context: ClientDBFilesStorage.DBLocationContext,
+        files_table_name: str,
+        current_timestamps_table_name: typing.Optional[ str ],
+        deleted_files_table_name: typing.Optional[ str ],
+        deleted_timestamps_table_name: typing.Optional[ str ],
+        job_key = None
+    ):
         
         boned_stats = {}
         
-        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
-        
-        ( num_total, size_total ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( current_files_table_name ) ).fetchone()
-        ( num_inbox, size_inbox ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM files_info NATURAL JOIN {} NATURAL JOIN file_inbox;'.format( current_files_table_name ) ).fetchone()
+        ( num_total, size_total ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {files_table_name} CROSS JOIN files_info USING ( hash_id );' ).fetchone()
+        ( num_inbox, size_inbox ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {files_table_name} CROSS JOIN file_inbox USING ( hash_id ) CROSS JOIN files_info USING ( hash_id );' ).fetchone()
         
         if size_total is None:
             
@@ -2500,65 +2611,83 @@ class DB( HydrusDB.HydrusDB ):
             size_inbox = 0
             
         
-        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
-        
-        ( num_deleted, size_deleted ) = self._Execute( 'SELECT COUNT( hash_id ), SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( deleted_files_table_name ) ).fetchone()
-        
-        if size_deleted is None:
-            
-            size_deleted = 0
-            
-        
         num_archive = num_total - num_inbox
         size_archive = size_total - size_inbox
         
         boned_stats[ 'num_inbox' ] = num_inbox
         boned_stats[ 'num_archive' ] = num_archive
-        boned_stats[ 'num_deleted' ] = num_deleted
         boned_stats[ 'size_inbox' ] = size_inbox
         boned_stats[ 'size_archive' ] = size_archive
-        boned_stats[ 'size_deleted' ] = size_deleted
         
-        canvas_types_to_total_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( 'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM file_viewing_stats GROUP BY canvas_type;' ) }
+        if deleted_files_table_name is not None:
+            
+            ( num_deleted, size_deleted ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {deleted_files_table_name} CROSS JOIN files_info USING ( hash_id );' ).fetchone()
+            
+            if size_deleted is None:
+                
+                size_deleted = 0
+                
+            
+            boned_stats[ 'num_deleted' ] = num_deleted
+            boned_stats[ 'size_deleted' ] = size_deleted
+            
         
-        if CC.CANVAS_PREVIEW not in canvas_types_to_total_viewtimes:
+        if job_key.IsCancelled():
             
-            canvas_types_to_total_viewtimes[ CC.CANVAS_PREVIEW ] = ( 0, 0 )
+            return boned_stats
             
-        
-        if CC.CANVAS_MEDIA_VIEWER not in canvas_types_to_total_viewtimes:
-            
-            canvas_types_to_total_viewtimes[ CC.CANVAS_MEDIA_VIEWER ] = ( 0, 0 )
-            
-        
-        total_viewtime = canvas_types_to_total_viewtimes[ CC.CANVAS_MEDIA_VIEWER ] + canvas_types_to_total_viewtimes[ CC.CANVAS_PREVIEW ]
         
         #
         
         earliest_import_time = 0
         
-        current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
-        
-        result = self._Execute( 'SELECT MIN( timestamp ) FROM {};'.format( current_files_table_name ) ).fetchone()
-        
-        if result is not None and result[0] is not None:
+        if current_timestamps_table_name is not None:
             
-            earliest_import_time = result[0]
-            
-        
-        deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
-        
-        result = self._Execute( 'SELECT MIN( original_timestamp ) FROM {};'.format( deleted_files_table_name ) ).fetchone()
-        
-        if result is not None and result[0] is not None:
-            
-            if earliest_import_time == 0:
+            if files_table_name != current_timestamps_table_name:
                 
-                earliest_import_time = result[0]
+                table_join = f'{files_table_name} CROSS JOIN {current_timestamps_table_name} USING ( hash_id )'
                 
             else:
                 
-                earliest_import_time = min( earliest_import_time, result[0] )
+                table_join = files_table_name
+                
+            
+            result = self._Execute( f'SELECT MIN( timestamp ) FROM {table_join};' ).fetchone()
+            
+            if result is not None and result[0] is not None:
+                
+                earliest_import_time = result[0]
+                
+            
+        
+        if job_key.IsCancelled():
+            
+            return boned_stats
+            
+        
+        if deleted_files_table_name is not None and deleted_timestamps_table_name is not None:
+            
+            if deleted_files_table_name != deleted_timestamps_table_name:
+                
+                table_join = f'{deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id )'
+                
+            else:
+                
+                table_join = deleted_files_table_name
+                
+            
+            result = self._Execute( f'SELECT MIN( original_timestamp ) FROM {table_join};' ).fetchone()
+            
+            if result is not None and result[0] is not None:
+                
+                if earliest_import_time == 0:
+                    
+                    earliest_import_time = result[0]
+                    
+                else:
+                    
+                    earliest_import_time = min( earliest_import_time, result[0] )
+                    
                 
             
         
@@ -2567,20 +2696,62 @@ class DB( HydrusDB.HydrusDB ):
             boned_stats[ 'earliest_import_time' ] = earliest_import_time
             
         
+        if job_key.IsCancelled():
+            
+            return boned_stats
+            
+        
         #
+        
+        canvas_types_to_total_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM {files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
+        
+        if deleted_files_table_name is not None:
+            
+            canvas_types_to_total_deleted_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM {deleted_files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
+            
+        else:
+            
+            canvas_types_to_total_deleted_viewtimes = {}
+            
+        
+        total_media_views = canvas_types_to_total_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[0] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[0]
+        total_media_viewtime = canvas_types_to_total_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[1] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_MEDIA_VIEWER, ( 0, 0 ) )[1]
+        total_preview_views = canvas_types_to_total_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[0] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[0]
+        total_preview_viewtime = canvas_types_to_total_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[1] + canvas_types_to_total_deleted_viewtimes.get( CC.CANVAS_PREVIEW, ( 0, 0 ) )[1]
+        
+        total_viewtime = ( total_media_views, total_media_viewtime, total_preview_views, total_preview_viewtime )
         
         boned_stats[ 'total_viewtime' ] = total_viewtime
         
-        total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( 'SELECT alternates_group_id, COUNT( * ) FROM alternate_file_group_members GROUP BY alternates_group_id;' ) if count > 1 ) )
-        total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( 'SELECT media_id, COUNT( * ) FROM duplicate_file_members GROUP BY media_id;' ) if count > 1 ) )
+        if job_key.IsCancelled():
+            
+            return boned_stats
+            
         
-        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        #
         
-        db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+        total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM {files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) CROSS JOIN alternate_file_group_members USING ( media_id ) GROUP BY alternates_group_id;' ) if count > 1 ) )
         
-        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnFileService( db_location_context )
+        if job_key.IsCancelled():
+            
+            return boned_stats
+            
         
-        ( total_potential_pairs, ) = self._Execute( 'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {} );'.format( table_join ) ).fetchone()
+        total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( f'SELECT media_id, COUNT( * ) FROM {files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) GROUP BY media_id;' ) if count > 1 ) )
+        
+        if job_key.IsCancelled():
+            
+            return boned_stats
+            
+        
+        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, files_table_name, CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
+        
+        ( total_potential_pairs, ) = self._Execute( f'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {table_join} );' ).fetchone()
+        
+        if job_key.IsCancelled():
+            
+            return boned_stats
+            
         
         boned_stats[ 'total_alternate_files' ] = total_alternate_files
         boned_stats[ 'total_duplicate_files' ] = total_duplicate_files
@@ -9496,6 +9667,38 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Some file updates failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 542:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'e621 file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

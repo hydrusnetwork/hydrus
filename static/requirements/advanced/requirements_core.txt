@@ -1,5 +1,6 @@
 cbor2
 cryptography
+dateparser
 pympler
 python-dateutil
 

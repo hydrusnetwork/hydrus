@@ -201,6 +201,17 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return ( file_service_keys, file_location_is_cross_referenced )
         
     
+    def GetDeletedInverse( self ):
+        
+        inverse = self.Duplicate()
+        
+        a = inverse.current_service_keys
+        inverse.current_service_keys = inverse.deleted_service_keys
+        inverse.deleted_service_keys = a
+        
+        return inverse
+        
+    
     def GetStatusesAndServiceKeysList( self ):
         
         statuses_and_service_keys = [ ( HC.CONTENT_STATUS_CURRENT, service_key ) for service_key in self.current_service_keys ]

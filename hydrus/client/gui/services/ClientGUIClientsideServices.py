@@ -1495,23 +1495,25 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         abs_initial_dict = {}
         
-        current_file_locations = HG.client_controller.client_files_manager.GetCurrentFileLocations()
+        media_base_locations = HG.client_controller.client_files_manager.GetCurrentFileBaseLocations()
+        
+        all_base_location_paths = { base_location.path for base_location in media_base_locations }
         
         for ( portable_hydrus_path, ipfs_path ) in portable_initial_dict.items():
             
             hydrus_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hydrus_path )
             
-            if hydrus_path in current_file_locations:
+            if hydrus_path in all_base_location_paths:
                 
                 abs_initial_dict[ hydrus_path ] = ipfs_path
                 
             
         
-        for hydrus_path in current_file_locations:
+        for base_location in media_base_locations:
             
-            if hydrus_path not in abs_initial_dict:
+            if base_location.path not in abs_initial_dict:
                 
-                abs_initial_dict[ hydrus_path ] = ''
+                abs_initial_dict[ base_location.path ] = ''
                 
             
         

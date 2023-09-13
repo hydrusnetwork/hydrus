@@ -265,11 +265,13 @@ class Controller( object ):
         
         client_files_subfolders = []
         
+        base_location = ClientFilesPhysical.FilesStorageBaseLocation( client_files_default, 1 )
+        
         for prefix in HydrusData.IterateHexPrefixes():
             
             for c in ( 'f', 't' ):
                 
-                client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( c + prefix, client_files_default ) )
+                client_files_subfolders.append( ClientFilesPhysical.FilesStorageSubfolder( c + prefix, base_location ) )
                 
             
         

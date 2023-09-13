@@ -1773,7 +1773,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     searchChanged = QC.Signal( ClientSearch.FileSearchContext )
     searchCancelled = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False ):
+    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
         
         self._page_key = page_key
         
@@ -1788,6 +1788,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._include_unusual_predicate_types = include_unusual_predicate_types
         self._force_system_everything = force_system_everything
         self._hide_favourites_edit_actions = hide_favourites_edit_actions
+        
+        # '*•.¸¸.•*' Debug In Memoriam '*•.¸¸.•*'
+        # self.widget().children()[3].children()[0].children()[0].children()[0].children()[2].children()[0].children()[0].children()[0].children()[0].sizeHint()
+        self._fixed_results_list_height = fixed_results_list_height
         
         self._media_sort_widget = media_sort_widget
         self._media_collect_widget = media_collect_widget
@@ -2111,7 +2115,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitFavouritesList( self ):
         
-        height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
+        if self._fixed_results_list_height is None:
+            
+            height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
+            
+        else:
+            
+            height_num_chars = self._fixed_results_list_height
+            
         
         favs_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
         
@@ -2120,7 +2131,14 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _InitSearchResultsList( self ):
         
-        height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
+        if self._fixed_results_list_height is None:
+            
+            height_num_chars = HG.client_controller.new_options.GetInteger( 'ac_read_list_height_num_chars' )
+            
+        else:
+            
+            height_num_chars = self._fixed_results_list_height
+            
         
         return ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
         
@@ -2306,7 +2324,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key )
         
-        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
         
     
     def _SignalNewSearchState( self ):

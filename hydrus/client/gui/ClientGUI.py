@@ -47,6 +47,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
+from hydrus.client import ClientPDFHandling
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
@@ -782,6 +783,24 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
             
         
+        library_version_lines.append( 'QtCharts ok: {}'.format( ClientGUICharts.QT_CHARTS_OK ) )
+        
+        if QtInit.WE_ARE_QT5:
+            
+            library_version_lines.append( 'QtPdf not available on Qt5' )
+            
+        else:
+            
+            library_version_lines.append( 'QtPdf ok: {}'.format( ClientPDFHandling.PDF_OK ) )
+            
+            if not ClientPDFHandling.PDF_OK:
+                
+                HydrusData.ShowText( 'If this information helps, QtPdf failed to import because:' )
+                
+                HydrusData.ShowText( ClientPDFHandling.pdf_failed_reason )
+                
+            
+        
         library_version_lines.append( 'sqlite: {}'.format( sqlite3.sqlite_version ) )
         
         CBOR_AVAILABLE = False
@@ -819,6 +838,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
         library_version_lines.append( 'cryptography present: {}'.format( HydrusEncryption.CRYPTO_OK ) )
+        library_version_lines.append( 'dateparser present: {}'.format( ClientTime.DATEPARSER_OK ) )
         library_version_lines.append( 'dateutil present: {}'.format( ClientTime.DATEUTIL_OK ) )
         library_version_lines.append( 'html5lib present: {}'.format( ClientParsing.HTML5LIB_IS_OK ) )
         library_version_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
@@ -2287,6 +2307,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _InitialiseMenubarGetBonesUpdater( self ):
         
+        # this thing used to fetch the db stuff itself, so it has the weird async updater stuff. refactor into a straight call sometime
+        
         def loading_callable():
             
             pass
@@ -2294,26 +2316,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def work_callable( args ):
             
-            job_key = ClientThreading.JobKey()
-            
-            job_key.SetStatusText( 'Loading Statistics' + HC.UNICODE_ELLIPSIS )
-            
-            HG.client_controller.pub( 'message', job_key )
-            
-            boned_stats = HG.client_controller.Read( 'boned_stats' )
-            
-            return ( job_key, boned_stats )
+            return 1
             
         
         def publish_callable( result ):
             
-            ( job_key, boned_stats ) = result
-            
-            job_key.Delete()
-            
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'review your fate' )
             
-            panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame, boned_stats )
+            panel = ClientGUIScrolledPanelsReview.ReviewHowBonedAmI( frame )
             
             frame.SetPanel( panel )
             

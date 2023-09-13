@@ -127,10 +127,14 @@ class GIFRenderer( object ):
                 
                 if self._pil_global_palette is not None and self._pil_image.palette == self._pil_global_palette: # for some reason, when pil falls back from local palette to global palette, a bunch of important variables reset!
                     
+                    pass
+                    
+                    # this got nuked in some rewrite. I guess I was caching from the first frame?
+                    '''
                     self._pil_image.palette.dirty = self._pil_dirty
                     self._pil_image.palette.mode = self._pil_mode
                     self._pil_image.palette.rawmode = self._pil_rawmode
-                    
+                    '''
                 
             
         

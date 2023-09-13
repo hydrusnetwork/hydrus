@@ -99,7 +99,7 @@ warnings.filterwarnings( "ignore", "Metadata Warning", UserWarning )
 OLD_PIL_MAX_IMAGE_PIXELS = PILImage.MAX_IMAGE_PIXELS
 PILImage.MAX_IMAGE_PIXELS = None # this turns off decomp check entirely, wew
 
-PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI }.union( HC.PIL_HEIF_MIMES )
+PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI, HC.IMAGE_BMP }.union( HC.PIL_HEIF_MIMES )
 
 try:
     
@@ -172,43 +172,14 @@ def ClipNumPyImage( numpy_image: numpy.array, clip_rect ):
     
     return numpy_image[ y : y + clip_height, x : x + clip_width ]
     
+
 def ClipPILImage( pil_image: PILImage.Image, clip_rect ):
     
     ( x, y, clip_width, clip_height ) = MakeClipRectFit( pil_image.size, clip_rect )
     
     return pil_image.crop( box = ( x, y, x + clip_width, y + clip_height ) )
     
-def ConvertToPNGIfBMP( path ) -> None:
-    
-    with open( path, 'rb' ) as f:
-        
-        header = f.read( 2 )
-        
-    
-    if header == b'BM':
-        
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
-        
-        try:
-            
-            with open( path, 'rb' ) as f_source:
-                
-                with open( temp_path, 'wb' ) as f_dest:
-                    
-                    HydrusPaths.CopyFileLikeToFileLike( f_source, f_dest )
-                    
-                
-            
-            pil_image = GeneratePILImage( temp_path )
-            
-            pil_image.save( path, 'PNG' )
-            
-        finally:
-            
-            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-            
-        
-    
+
 def DequantizeNumPyImage( numpy_image: numpy.array ) -> numpy.array:
     
     # OpenCV loads images in BGR, and we want to normalise to RGB in general
@@ -277,6 +248,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
             HydrusData.ShowText( 'Loading PSD' )
             
+        
         pil_image = HydrusPSDHandling.MergedPILImageFromPSD( path )
         
         pil_image = DequantizePILImage( pil_image )
@@ -387,6 +359,11 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
     
 def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image ) -> numpy.array:
     
+    # this seems to magically work, I guess asarray either has a match for Image or Image provides some common shape/datatype properties that it can hook into
+    return numpy.asarray( pil_image )
+    
+    # old method:
+    '''
     ( w, h ) = pil_image.size
     
     try:
@@ -401,7 +378,9 @@ def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image ) -> numpy.array:
     depth = len( s ) // ( w * h )
     
     return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, depth ) )
+    '''
     
+
 def GeneratePILImage( path, dequantize = True ) -> PILImage.Image:
     
     pil_image = RawOpenPILImage( path )

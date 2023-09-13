@@ -1,10 +1,8 @@
 import collections
 import os
 import queue
-import sys
 import threading
 import time
-import traceback
 import typing
 
 from PIL import ExifTags
@@ -33,18 +31,16 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientLocation
 from hydrus.client import ClientMigration
 from hydrus.client import ClientParsing
-from hydrus.client import ClientPaths
+from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientRendering
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
-from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
@@ -134,7 +130,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._client_files_subfolders = HG.client_controller.Read( 'client_files_subfolders' )
         
-        ( self._locations_to_ideal_weights, self._ideal_thumbnails_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
+        ( self._media_base_locations, self._ideal_thumbnails_base_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
         service_info = HG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         
@@ -161,19 +157,19 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         file_locations_panel = ClientGUICommon.StaticBox( self, 'media file locations' )
         
-        current_media_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_locations_panel )
+        current_media_base_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_locations_panel )
         
-        self._current_media_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_locations_listctrl_panel, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, 8, self._ConvertLocationToListCtrlTuples )
-        self._current_media_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SingleSelection )
+        self._current_media_base_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_base_locations_listctrl_panel, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, 8, self._ConvertLocationToListCtrlTuples )
+        self._current_media_base_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         
-        self._current_media_locations_listctrl.Sort()
+        self._current_media_base_locations_listctrl.Sort()
         
-        current_media_locations_listctrl_panel.SetListCtrl( self._current_media_locations_listctrl )
+        current_media_base_locations_listctrl_panel.SetListCtrl( self._current_media_base_locations_listctrl )
         
-        current_media_locations_listctrl_panel.AddButton( 'add new location for files', self._SelectPathToAdd )
-        current_media_locations_listctrl_panel.AddButton( 'increase location weight', self._IncreaseWeight, enabled_check_func = self._CanIncreaseWeight )
-        current_media_locations_listctrl_panel.AddButton( 'decrease location weight', self._DecreaseWeight, enabled_check_func = self._CanDecreaseWeight )
-        current_media_locations_listctrl_panel.AddButton( 'remove location', self._RemoveSelectedPath, enabled_check_func = self._CanRemoveLocation )
+        current_media_base_locations_listctrl_panel.AddButton( 'add new location for files', self._SelectPathToAdd )
+        current_media_base_locations_listctrl_panel.AddButton( 'increase location weight', self._IncreaseWeight, enabled_check_func = self._CanIncreaseWeight )
+        current_media_base_locations_listctrl_panel.AddButton( 'decrease location weight', self._DecreaseWeight, enabled_check_func = self._CanDecreaseWeight )
+        current_media_base_locations_listctrl_panel.AddButton( 'remove location', self._RemoveSelectedBaseLocation, enabled_check_func = self._CanRemoveLocation )
         
         self._thumbnails_location = QW.QLineEdit( file_locations_panel )
         self._thumbnails_location.setEnabled( False )
@@ -205,7 +201,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( rebalance_hbox, self._rebalance_status_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( rebalance_hbox, self._rebalance_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        file_locations_panel.Add( current_media_locations_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        file_locations_panel.Add( current_media_base_locations_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         file_locations_panel.Add( t_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         file_locations_panel.Add( rebalance_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
@@ -233,85 +229,77 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._Update()
         
     
-    def _AddPath( self, path, starting_weight = 1 ):
+    def _AddBaseLocation( self, base_location ):
         
-        if path in self._locations_to_ideal_weights:
+        if base_location in self._media_base_locations:
             
             QW.QMessageBox.warning( self, 'Warning', 'You already have that location entered!' )
             
             return
             
         
-        if path == self._ideal_thumbnails_location_override:
+        if self._ideal_thumbnails_base_location_override is not None and base_location.path == self._ideal_thumbnails_base_location_override.path:
             
             QW.QMessageBox.warning( self, 'Warning', 'That path is already used as the special thumbnail location--please choose another.' )
             
             return
             
         
-        self._locations_to_ideal_weights[ path ] = 1
+        self._media_base_locations.add( base_location )
         
-        self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
-        
-        self._Update()
+        self._SaveToDB()
         
     
     def _AdjustWeight( self, amount ):
         
-        adjustees = set()
+        base_locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
         
-        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
-        
-        if len( locations ) > 0:
+        if len( base_locations ) > 0:
             
-            location = locations[0]
+            base_location = base_locations[0]
             
-            if location in self._locations_to_ideal_weights:
+            if base_location in self._media_base_locations:
                 
-                current_weight = self._locations_to_ideal_weights[ location ]
-                
-                new_amount = current_weight + amount
+                new_amount = base_location.ideal_weight + amount
                 
                 if new_amount > 0:
                     
-                    self._locations_to_ideal_weights[ location ] = new_amount
+                    base_location.ideal_weight = new_amount
                     
-                    self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
+                    self._SaveToDB()
                     
                 elif new_amount <= 0:
                     
-                    self._RemovePath( location )
+                    self._RemoveBaseLocation( base_location )
                     
                 
             else:
                 
                 if amount > 0:
                     
-                    if location != self._ideal_thumbnails_location_override:
+                    new_base_location = ClientFilesPhysical.FilesStorageBaseLocation( base_location.path, amount )
+                    
+                    if base_location != self._ideal_thumbnails_base_location_override:
                         
-                        self._AddPath( location, starting_weight = amount )
+                        self._AddBaseLocation( new_base_location )
                         
                     
                 
-            
-            self._Update()
             
         
     
     def _CanDecreaseWeight( self ):
         
-        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        base_locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
         
-        if len( locations ) > 0:
+        if len( base_locations ) > 0:
             
-            location = locations[0]
+            base_location = base_locations[0]
             
-            if location in self._locations_to_ideal_weights:
+            if base_location in self._media_base_locations:
                 
-                ideal_weight = self._locations_to_ideal_weights[ location ]
-                
-                is_big = ideal_weight > 1
-                others_can_take_slack = len( self._locations_to_ideal_weights ) > 1
+                is_big = base_location.ideal_weight > 1
+                others_can_take_slack = len( self._media_base_locations ) > 1
                 
                 if is_big or others_can_take_slack:
                     
@@ -327,20 +315,20 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ( locations_to_file_weights, locations_to_thumb_weights ) = self._GetLocationsToCurrentWeights()
         
-        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        base_locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
         
-        if len( locations ) > 0:
+        if len( base_locations ) > 0:
             
-            location = locations[0]
+            base_location = base_locations[0]
             
-            if location in self._locations_to_ideal_weights:
+            if base_location in self._media_base_locations:
                 
-                if len( self._locations_to_ideal_weights ) > 1:
+                if len( self._media_base_locations ) > 1:
                     
                     return True
                     
                 
-            elif location in locations_to_file_weights:
+            elif base_location in locations_to_file_weights:
                 
                 return True
                 
@@ -353,15 +341,15 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ( locations_to_file_weights, locations_to_thumb_weights ) = self._GetLocationsToCurrentWeights()
         
-        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        base_locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
         
-        if len( locations ) > 0:
+        if len( base_locations ) > 0:
             
-            location = locations[0]
+            base_location = base_locations[0]
             
-            if location in self._locations_to_ideal_weights:
+            if base_location in self._media_base_locations:
                 
-                others_can_take_slack = len( self._locations_to_ideal_weights ) > 1
+                others_can_take_slack = len( self._media_base_locations ) > 1
                 
                 if others_can_take_slack:
                     
@@ -384,14 +372,12 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        self._ideal_thumbnails_location_override = None
+        self._ideal_thumbnails_base_location_override = None
         
-        self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
-        
-        self._Update()
+        self._SaveToDB()
         
     
-    def _ConvertLocationToListCtrlTuples( self, location ):
+    def _ConvertLocationToListCtrlTuples( self, base_location ):
         
         f_space = self._all_local_files_total_size
         ( t_space_min, t_space_max ) = self._GetThumbnailSizeEstimates()
@@ -402,20 +388,20 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        pretty_location = location
+        path = base_location.path
         
-        if os.path.exists( location ):
+        if os.path.exists( path ):
             
-            pretty_location = location
+            pretty_location = path
             
             try:
                 
-                free_space = HydrusPaths.GetFreeSpace( location )
+                free_space = HydrusPaths.GetFreeSpace( path )
                 pretty_free_space = HydrusData.ToHumanBytes( free_space )
                 
             except Exception as e:
                 
-                message = 'There was a problem finding the free space for "' + location + '"! Perhaps this location does not exist?'
+                message = 'There was a problem finding the free space for "{path}"! Perhaps this location does not exist?'
                 
                 HydrusData.Print( message )
                 
@@ -427,13 +413,13 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            pretty_location = 'DOES NOT EXIST: {}'.format( location )
+            pretty_location = 'DOES NOT EXIST: {}'.format( path )
             
             free_space = 0
             pretty_free_space = 'DOES NOT EXIST'
             
         
-        portable_location = HydrusPaths.ConvertAbsPathToPortablePath( location )
+        portable_location = HydrusPaths.ConvertAbsPathToPortablePath( base_location.path )
         portable = not os.path.isabs( portable_location )
         
         if portable:
@@ -445,8 +431,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_portable = 'no'
             
         
-        fp = locations_to_file_weights[ location ] / 256.0
-        tp = locations_to_thumb_weights[ location ] / 256.0
+        fp = locations_to_file_weights[ base_location ]
+        tp = locations_to_thumb_weights[ base_location ]
         
         p = HydrusData.ConvertFloatToPercentage
         
@@ -482,11 +468,11 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        total_ideal_weight = sum( self._locations_to_ideal_weights.values() )
+        total_ideal_weight = sum( ( base_location.ideal_weight for base_location in self._media_base_locations ) )
         
-        if location in self._locations_to_ideal_weights:
+        if base_location in self._media_base_locations:
             
-            ideal_weight = self._locations_to_ideal_weights[ location ]
+            ideal_weight = base_location.ideal_weight
             
             pretty_ideal_weight = str( int( ideal_weight ) )
             
@@ -494,7 +480,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             ideal_weight = 0
             
-            if location in locations_to_file_weights:
+            if base_location in locations_to_file_weights:
                 
                 pretty_ideal_weight = '0'
                 
@@ -504,22 +490,22 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        if location in self._locations_to_ideal_weights:
+        if base_location in self._media_base_locations:
             
-            ideal_fp = self._locations_to_ideal_weights[ location ] / total_ideal_weight
+            ideal_fp = base_location.ideal_weight / total_ideal_weight
             
         else:
             
             ideal_fp = 0.0
             
         
-        if self._ideal_thumbnails_location_override is None:
+        if self._ideal_thumbnails_base_location_override is None:
             
             ideal_tp = ideal_fp
             
         else:
             
-            if location == self._ideal_thumbnails_location_override:
+            if base_location == self._ideal_thumbnails_base_location_override:
                 
                 ideal_tp = 1.0
                 
@@ -560,7 +546,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
         display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_current_usage, pretty_ideal_weight, pretty_ideal_usage )
-        sort_tuple = ( location, portable, free_space, ideal_weight, ideal_usage, current_usage )
+        sort_tuple = ( pretty_location, portable, free_space, ideal_weight, ideal_usage, current_usage )
         
         return ( display_tuple, sort_tuple )
         
@@ -580,14 +566,16 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             prefix = client_files_subfolder.prefix
             base_location = client_files_subfolder.base_location
             
+            subfolder_weight = client_files_subfolder.GetNormalisedWeight()
+            
             if prefix.startswith( 'f' ):
                 
-                locations_to_file_weights[ base_location ] += 1
+                locations_to_file_weights[ base_location ] += subfolder_weight
                 
             
             if prefix.startswith( 't' ):
                 
-                locations_to_thumb_weights[ base_location ] += 1
+                locations_to_thumb_weights[ base_location ] += subfolder_weight
                 
             
         
@@ -604,15 +592,15 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         all_locations = set()
         
-        all_locations.update( list(self._locations_to_ideal_weights.keys()) )
+        all_locations.update( self._media_base_locations )
         
-        if self._ideal_thumbnails_location_override is not None:
+        if self._ideal_thumbnails_base_location_override is not None:
             
-            all_locations.add( self._ideal_thumbnails_location_override )
+            all_locations.add( self._ideal_thumbnails_base_location_override )
             
         
-        all_locations.update( list(locations_to_file_weights.keys()) )
-        all_locations.update( list(locations_to_thumb_weights.keys()) )
+        all_locations.update( locations_to_file_weights.keys() )
+        all_locations.update( locations_to_thumb_weights.keys() )
         
         all_locations = list( all_locations )
         
@@ -641,11 +629,11 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Rebalance( self ):
         
-        for location in self._GetListCtrlLocations():
+        for base_location in self._GetListCtrlLocations():
             
-            if not os.path.exists( location ):
+            if not os.path.exists( base_location.path ):
                 
-                message = 'The path "{}" does not exist! Please ensure all the locations on this dialog are valid before trying to rebalance your files.'.format( location )
+                message = 'The path "{}" does not exist! Please ensure all the locations on this dialog are valid before trying to rebalance your files.'.format( base_location )
                 
                 QW.QMessageBox.critical( self, 'Error', message )
                 
@@ -688,27 +676,27 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._OKParent()
         
     
-    def _RemovePath( self, location ):
+    def _RemoveBaseLocation( self, base_location ):
         
         ( locations_to_file_weights, locations_to_thumb_weights ) = self._GetLocationsToCurrentWeights()
         
         removees = set()
         
-        if location not in self._locations_to_ideal_weights:
+        if base_location not in self._media_base_locations:
             
             QW.QMessageBox.warning( self, 'Warning', 'Please select a location with weight.' )
             
             return
             
         
-        if len( self._locations_to_ideal_weights ) == 1:
+        if len( self._media_base_locations ) == 1:
             
             QW.QMessageBox.warning( self, 'Warning', 'You cannot empty every single current file location--please add a new place for the files to be moved to and then try again.' )
             
         
-        if os.path.exists( location ):
+        if os.path.exists( base_location.path ):
             
-            if location in locations_to_file_weights:
+            if base_location in locations_to_file_weights:
                 
                 message = 'Are you sure you want to remove this location? This will schedule all of the files it is currently responsible for to be moved elsewhere.'
                 
@@ -719,7 +707,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            if location in locations_to_file_weights:
+            if base_location in locations_to_file_weights:
                 
                 message = 'This path does not exist, but it seems to have files. This could be a critical error that has occurred while the client is open (maybe a drive unmounting?). I recommend you do not remove it here and instead shut the client down immediately and fix the problem, then restart it, which will run the \'recover missing file locations\' routine if needed.'
                 
@@ -733,24 +721,31 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if result == QW.QDialog.Accepted:
             
-            del self._locations_to_ideal_weights[ location ]
+            self._media_base_locations.remove( base_location )
             
-            self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
-            
-            self._Update()
+            self._SaveToDB()
             
         
     
-    def _RemoveSelectedPath( self ):
+    def _RemoveSelectedBaseLocation( self ):
         
-        locations = self._current_media_locations_listctrl.GetData( only_selected = True )
+        locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
         
         if len( locations ) > 0:
             
             location = locations[0]
             
-            self._RemovePath( location )
+            self._RemoveBaseLocation( location )
             
+        
+    
+    def _SaveToDB( self ):
+        
+        self._controller.Write( 'ideal_client_files_locations', self._media_base_locations, self._ideal_thumbnails_base_location_override )
+        
+        self._controller.client_files_manager.Reinit()
+        
+        self._Update()
         
     
     def _SelectPathToAdd( self ):
@@ -761,7 +756,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 path = dlg.GetPath()
                 
-                self._AddPath( path )
+                base_location = ClientFilesPhysical.FilesStorageBaseLocation( path, 1 )
+                
+                self._AddBaseLocation( base_location )
                 
             
         
@@ -770,26 +767,26 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         with QP.DirDialog( self, 'Select thumbnail location' ) as dlg:
             
-            if self._ideal_thumbnails_location_override is not None:
+            if self._ideal_thumbnails_base_location_override is not None:
                 
-                dlg.setDirectory( self._ideal_thumbnails_location_override )
+                dlg.setDirectory( self._ideal_thumbnails_base_location_override.path )
                 
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
                 path = dlg.GetPath()
                 
-                if path in self._locations_to_ideal_weights:
+                all_paths = { base_location.path for base_location in self._media_base_locations }
+                
+                if path in all_paths:
                     
                     QW.QMessageBox.warning( self, 'Warning', 'That path already exists as a regular file location! Please choose another.' )
                     
                 else:
                     
-                    self._ideal_thumbnails_location_override = path
+                    self._ideal_thumbnails_base_location_override = ClientFilesPhysical.FilesStorageBaseLocation( path, 1 )
                     
-                    self._controller.Write( 'ideal_client_files_locations', self._locations_to_ideal_weights, self._ideal_thumbnails_location_override )
-                    
-                    self._Update()
+                    self._SaveToDB()
                     
                 
             
@@ -799,7 +796,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._client_files_subfolders = HG.client_controller.Read( 'client_files_subfolders' )
         
-        ( self._locations_to_ideal_weights, self._ideal_thumbnails_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
+        ( self._media_base_locations, self._ideal_thumbnails_base_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
         approx_total_db_size = self._controller.db.GetApproxTotalFileSize()
         
@@ -814,13 +811,13 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._current_media_paths_st.setText( label )
         self._current_media_paths_st.setToolTip( 'Precise thumbnail sizes are not tracked, so this is an estimate based on your current thumbnail dimensions.' )
         
-        locations = self._GetListCtrlLocations()
+        base_locations = self._GetListCtrlLocations()
         
-        self._current_media_locations_listctrl.SetData( locations )
+        self._current_media_base_locations_listctrl.SetData( base_locations )
         
         #
         
-        if self._ideal_thumbnails_location_override is None:
+        if self._ideal_thumbnails_base_location_override is None:
             
             self._thumbnails_location.setText( 'none set' )
             
@@ -829,7 +826,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            self._thumbnails_location.setText( self._ideal_thumbnails_location_override )
+            self._thumbnails_location.setText( self._ideal_thumbnails_base_location_override.path )
             
             self._thumbnails_location_set.setEnabled( False )
             self._thumbnails_location_clear.setEnabled( True )
@@ -2768,66 +2765,247 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, boned_stats ):
+    def __init__( self, parent ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        num_inbox = boned_stats[ 'num_inbox' ]
-        num_archive = boned_stats[ 'num_archive' ]
-        num_deleted = boned_stats[ 'num_deleted' ]
-        size_inbox = boned_stats[ 'size_inbox' ]
-        size_archive = boned_stats[ 'size_archive' ]
-        size_deleted = boned_stats[ 'size_deleted' ]
-        total_viewtime = boned_stats[ 'total_viewtime' ]
+        # refresh button
+        # search tab
+        # update function, reset/loading.../set
+        
+        self._update_job = None
+        self._job_key = ClientThreading.JobKey()
+        
+        vbox = QP.VBoxLayout()
+        
+        self._mr_bones_text = ClientGUICommon.BetterStaticText( self )
+        
+        boned_path = os.path.join( HC.STATIC_DIR, 'boned.jpg' )
+        
+        boned_qt_pixmap = ClientRendering.GenerateHydrusBitmap( boned_path, HC.IMAGE_JPEG ).GetQtPixmap()
+        
+        self._mr_bones_image = ClientGUICommon.BufferedWindowIcon( self, boned_qt_pixmap )
+        
+        QP.AddToLayout( vbox, self._mr_bones_image, CC.FLAGS_CENTER )
+        QP.AddToLayout( vbox, self._mr_bones_text, CC.FLAGS_CENTER )
+        
+        self._notebook = ClientGUICommon.BetterNotebook( self )
+        
+        #
+        
+        self._files_panel = QW.QWidget( self._notebook )
+        self._views_panel = QW.QWidget( self._notebook )
+        self._duplicates_panel = QW.QWidget( self._notebook )
+        self._search_panel = QW.QWidget( self._notebook )
+        
+        self._notebook.addTab( self._files_panel, 'files' )
+        self._notebook.addTab( self._views_panel, 'views' )
+        self._notebook.addTab( self._duplicates_panel, 'duplicates' )
+        
+        #
+        
+        self._files_content_panel = QW.QWidget( self._files_panel )
+        
+        self._files_content_vbox = QP.VBoxLayout( margin = 0, spacing = 0 )
+        
+        QP.AddToLayout( self._files_content_vbox, self._files_content_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self._files_panel.setLayout( self._files_content_vbox )
+        
+        #
+        
+        panel_vbox = QP.VBoxLayout()
+        
+        self._media_views_st = ClientGUICommon.BetterStaticText( self._views_panel )
+        
+        self._preview_views_st = ClientGUICommon.BetterStaticText( self._views_panel )
+        
+        QP.AddToLayout( panel_vbox, self._media_views_st, CC.FLAGS_CENTER )
+        QP.AddToLayout( panel_vbox, self._preview_views_st, CC.FLAGS_CENTER )
+        
+        panel_vbox.addStretch( 1 )
+        
+        self._views_panel.setLayout( panel_vbox )
+        
+        #
+        
+        panel_vbox = QP.VBoxLayout()
+        
+        self._potentials_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
+        self._duplicates_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
+        self._alternates_st = ClientGUICommon.BetterStaticText( self._duplicates_panel )
+        
+        QP.AddToLayout( panel_vbox, self._potentials_st, CC.FLAGS_CENTER )
+        QP.AddToLayout( panel_vbox, self._duplicates_st, CC.FLAGS_CENTER )
+        QP.AddToLayout( panel_vbox, self._alternates_st, CC.FLAGS_CENTER )
+        
+        panel_vbox.addStretch( 1 )
+        
+        self._duplicates_panel.setLayout( panel_vbox )
+        
+        #
+        
+        panel_vbox = QP.VBoxLayout()
+        
+        file_search_context = ClientSearch.FileSearchContext(
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        )
+        
+        page_key = b'mr bones placeholder'
+        
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead(
+            self._search_panel,
+            page_key,
+            file_search_context,
+            allow_all_known_files = False,
+            force_system_everything = True,
+            fixed_results_list_height = 8
+        )
+        
+        self._loading_text = ClientGUICommon.BetterStaticText( self._search_panel )
+        self._loading_text.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
+        
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().stop, self._CancelCurrentSearch )
+        self._refresh_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefreshSearch )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._loading_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._refresh_button, CC.FLAGS_CENTER )
+        
+        QP.AddToLayout( panel_vbox, self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( panel_vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        panel_vbox.addStretch( 1 )
+        
+        self._search_panel.setLayout( panel_vbox )
+        
+        #
+        
+        QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        big_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( big_hbox, vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( big_hbox, self._search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( big_hbox )
+        
+        self._tag_autocomplete.searchChanged.connect( self._RefreshSearch )
+        
+        self._RefreshSearch()
+        
+    
+    def _CancelCurrentSearch( self ):
+        
+        self._job_key.Cancel()
+        
+        self._cancel_button.setEnabled( False )
+        
+    
+    def _RefreshSearch( self ):
+        
+        def work_callable():
+            
+            boned_stats = HG.client_controller.Read( 'boned_stats', file_search_context = file_search_context, job_key = job_key )
+            
+            return boned_stats
+            
+        
+        def publish_callable( boned_stats ):
+            
+            if job_key.IsCancelled():
+                
+                self._SetCancelled()
+                
+            else:
+                
+                self._SetBones( boned_stats )
+                
+                self._loading_text.setText( '' )
+                
+            
+            self._cancel_button.setEnabled( False )
+            self._refresh_button.setEnabled( True )
+            
+        
+        if not self._tag_autocomplete.IsSynchronised():
+            
+            self._refresh_button.setEnabled( False )
+            
+            return
+            
+        
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
+        
+        self._SetToLoading()
+        
+        self._job_key.Cancel()
+        
+        job_key = ClientThreading.JobKey()
+        
+        self._job_key = job_key
+        
+        self._update_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        self._update_job.start()
+        
+    
+    def _SetBones( self, boned_stats: dict ):
+        
+        self._SetTheMasterOfCeremonies( boned_stats )
+        self._SetFilesPanel( boned_stats )
+        self._SetViewsPanel( boned_stats )
+        self._SetDuplicatesPanel( boned_stats )
+        
+    
+    def _SetCancelled( self ):
+        
+        self._loading_text.setText( 'cancelled!' )
+        
+    
+    def _SetDuplicatesPanel( self, boned_stats: dict ):
+        
         total_alternate_files = boned_stats[ 'total_alternate_files' ]
         total_duplicate_files = boned_stats[ 'total_duplicate_files' ]
         total_potential_pairs = boned_stats[ 'total_potential_pairs' ]
         
+        potentials_label = f'Total duplicate potential pairs: {HydrusData.ToHumanInt( total_potential_pairs )}'
+        duplicates_label = f'Total files set duplicate: {HydrusData.ToHumanInt( total_duplicate_files )}'
+        alternates_label = f'Total duplicate file groups set alternate: {HydrusData.ToHumanInt( total_alternate_files )}'
+        
+        self._potentials_st.setText( potentials_label )
+        self._duplicates_st.setText( duplicates_label )
+        self._alternates_st.setText( alternates_label )
+        
+    
+    def _SetFilesPanel( self, boned_stats: dict ):
+        
+        self._files_content_vbox.removeWidget( self._files_content_panel )
+        
+        self._files_content_panel.deleteLater()
+        
+        self._files_content_panel = QW.QWidget( self._files_panel )
+        
+        num_inbox = boned_stats[ 'num_inbox' ]
+        num_archive = boned_stats[ 'num_archive' ]
+        size_inbox = boned_stats[ 'size_inbox' ]
+        size_archive = boned_stats[ 'size_archive' ]
+        
         num_total = num_archive + num_inbox
         size_total = size_archive + size_inbox
         
-        num_supertotal = num_total + num_deleted
-        size_supertotal = size_total + size_deleted
+        panel_vbox = QP.VBoxLayout()
         
-        vbox = QP.VBoxLayout()
-        
-        if num_supertotal < 1000:
+        if num_total == 0 or size_total == 0:
             
-            get_more = ClientGUICommon.BetterStaticText( self, label = 'I hope you enjoy my software. You might like to check out the downloaders! :^)' )
+            divide_by_zero_m8 = ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'No files!' )
             
-            QP.AddToLayout( vbox, get_more, CC.FLAGS_CENTER )
-            
-        elif num_inbox <= num_archive / 100:
-            
-            hooray = ClientGUICommon.BetterStaticText( self, label = 'CONGRATULATIONS. YOU APPEAR TO BE UNBONED, BUT REMAIN EVER VIGILANT' )
-            
-            QP.AddToLayout( vbox, hooray, CC.FLAGS_CENTER )
+            QP.AddToLayout( panel_vbox, divide_by_zero_m8, CC.FLAGS_CENTER )
             
         else:
             
-            boned_path = os.path.join( HC.STATIC_DIR, 'boned.jpg' )
-            
-            boned_qt_pixmap = ClientRendering.GenerateHydrusBitmap( boned_path, HC.IMAGE_JPEG ).GetQtPixmap()
-            
-            win = ClientGUICommon.BufferedWindowIcon( self, boned_qt_pixmap )
-            
-            QP.AddToLayout( vbox, win, CC.FLAGS_CENTER )
-            
-        
-        if num_total == 0:
-            
-            nothing_label = 'You have yet to board the ride.'
-            
-            nothing_st = ClientGUICommon.BetterStaticText( self, label = nothing_label )
-            
-            QP.AddToLayout( vbox, nothing_st, CC.FLAGS_CENTER )
-            
-        else:
-            
-            supertotal_average_filesize = size_supertotal // num_supertotal
-            
-            current_num_percent = num_total / num_supertotal
-            current_size_percent = size_total / size_supertotal
             current_average_filesize = size_total // num_total
             
             inbox_num_percent = num_inbox / num_total
@@ -2854,92 +3032,143 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 archive_average_filesize = 0
                 
             
-            deleted_num_percent = num_deleted / num_supertotal
-            deleted_size_percent = size_deleted / size_supertotal
-            
-            if num_deleted > 0:
+            if 'num_deleted' in boned_stats:
                 
-                deleted_average_filesize = size_deleted // num_deleted
+                num_deleted = boned_stats[ 'num_deleted' ]
+                size_deleted = boned_stats[ 'size_deleted' ]
+                
+                num_supertotal = num_total + num_deleted
+                size_supertotal = size_total + size_deleted
+                
+                supertotal_average_filesize = size_supertotal // num_supertotal
+                
+                current_num_percent = num_total / num_supertotal
+                current_size_percent = size_total / size_supertotal
+                
+                deleted_num_percent = num_deleted / num_supertotal
+                deleted_size_percent = size_deleted / size_supertotal
+                
+                if num_deleted > 0:
+                    
+                    deleted_average_filesize = size_deleted // num_deleted
+                    
+                else:
+                    
+                    deleted_average_filesize = 0
+                    
+                
+                # spacing=0 to make the weird unicode characters join up neater
+                text_table_layout = QP.GridLayout( cols = 6, spacing = 0 )
+                
+                text_table_layout.setHorizontalSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
+                
+                text_table_layout.setColumnStretch( 0, 1 )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Files' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '%' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Size' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '%' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Average' ), CC.FLAGS_CENTER )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Total Ever Imported:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_supertotal ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_supertotal ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( supertotal_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u251cCurrent:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_total ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( current_num_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_total ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( current_size_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( current_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2502\u251cInbox:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_inbox ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( inbox_num_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_inbox ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( inbox_size_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( inbox_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2502\u2514Archive:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_archive ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_num_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_size_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2514Deleted:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_deleted ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( deleted_num_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_deleted ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( deleted_size_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( deleted_average_filesize ) ), CC.FLAGS_ON_RIGHT )
                 
             else:
                 
-                deleted_average_filesize = 0
+                panel_vbox = QP.VBoxLayout()
                 
-            
-            notebook = ClientGUICommon.BetterNotebook( self )
-            
-            #
-            
-            panel = QW.QWidget( notebook )
-            
-            panel_vbox = QP.VBoxLayout()
-            
-            # spacing to make the weird unicode characters join up neater
-            text_table_layout = QP.GridLayout( cols = 6, spacing = 0 )
-            
-            text_table_layout.setHorizontalSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
-            
-            text_table_layout.setColumnStretch( 0, 1 )
-            
-            #
-            
-            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Files' ), CC.FLAGS_CENTER )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '%' ), CC.FLAGS_CENTER )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Size' ), CC.FLAGS_CENTER )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '%' ), CC.FLAGS_CENTER )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Average' ), CC.FLAGS_CENTER )
-            
-            #
-            
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = 'Total Ever Imported:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_supertotal ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_supertotal ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, QW.QWidget( panel ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( supertotal_average_filesize ) ), CC.FLAGS_ON_RIGHT )
-            
-            #
-            
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u251cAll My Files:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_total ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( current_num_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_total ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( current_size_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( current_average_filesize ) ), CC.FLAGS_ON_RIGHT )
-            
-            #
-            
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u251cInbox:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_inbox ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( inbox_num_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_inbox ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( inbox_size_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( inbox_average_filesize ) ), CC.FLAGS_ON_RIGHT )
-            
-            #
-            
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2502\u2514Archive:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_archive ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( archive_num_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( archive_size_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
-            
-            #
-            
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = '\u2514Deleted:' ), CC.FLAGS_ON_LEFT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanInt( num_deleted ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( deleted_num_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( size_deleted ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = ClientData.ConvertZoomToPercentage( deleted_size_percent ) ), CC.FLAGS_ON_RIGHT )
-            QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( panel, label = HydrusData.ToHumanBytes( deleted_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                # spacing=0 to make the weird unicode characters join up neater
+                text_table_layout = QP.GridLayout( cols = 6, spacing = 0 )
+                
+                text_table_layout.setHorizontalSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
+                
+                text_table_layout.setColumnStretch( 0, 1 )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Files' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '%' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Size' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '%' ), CC.FLAGS_CENTER )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Average' ), CC.FLAGS_CENTER )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Current:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_total ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_total ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( current_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u251cInbox:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_inbox ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( inbox_num_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_inbox ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( inbox_size_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( inbox_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2514Archive:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_archive ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_num_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_size_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
             
             #
             
             QP.AddToLayout( panel_vbox, text_table_layout, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            #
             
             if 'earliest_import_time' in boned_stats:
                 
@@ -2949,76 +3178,103 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 eit_label = 'Earliest file import: {} ({})'.format( HydrusTime.TimestampToPrettyTime( eit ), HydrusTime.TimestampToPrettyTimeDelta( eit ) )
                 
-                eit_st = ClientGUICommon.BetterStaticText( panel, label = eit_label )
+                eit_st = ClientGUICommon.BetterStaticText( self._files_content_panel, label = eit_label )
                 
                 QP.AddToLayout( panel_vbox, eit_st, CC.FLAGS_CENTER )
                 
             
-            panel_vbox.addStretch( 1 )
-            
-            panel.setLayout( panel_vbox )
-            
-            notebook.addTab( panel, 'files' )
-            
-            #
-            
-            panel = QW.QWidget( notebook )
-            
-            panel_vbox = QP.VBoxLayout()
-            
-            ( media_views, media_viewtime, preview_views, preview_viewtime ) = total_viewtime
-            
-            media_label = 'Total media views: ' + HydrusData.ToHumanInt( media_views ) + ', totalling ' + HydrusTime.TimeDeltaToPrettyTimeDelta( media_viewtime )
-            
-            media_st = ClientGUICommon.BetterStaticText( panel, label = media_label )
-            
-            preview_label = 'Total preview views: ' + HydrusData.ToHumanInt( preview_views ) + ', totalling ' + HydrusTime.TimeDeltaToPrettyTimeDelta( preview_viewtime )
-            
-            preview_st = ClientGUICommon.BetterStaticText( panel, label = preview_label )
-            
-            QP.AddToLayout( panel_vbox, media_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( panel_vbox, preview_st, CC.FLAGS_CENTER )
-            
-            panel_vbox.addStretch( 1 )
-            
-            panel.setLayout( panel_vbox )
-            
-            notebook.addTab( panel, 'views' )
-            
-            #
-            
-            panel = QW.QWidget( notebook )
-            
-            panel_vbox = QP.VBoxLayout()
-            
-            potentials_label = 'Total duplicate potential pairs: {}'.format( HydrusData.ToHumanInt( total_potential_pairs ) )
-            duplicates_label = 'Total files set duplicate: {}'.format( HydrusData.ToHumanInt( total_duplicate_files ) )
-            alternates_label = 'Total duplicate file groups set alternate: {}'.format( HydrusData.ToHumanInt( total_alternate_files ) )
-            
-            potentials_st = ClientGUICommon.BetterStaticText( panel, label = potentials_label )
-            duplicates_st = ClientGUICommon.BetterStaticText( panel, label = duplicates_label )
-            alternates_st = ClientGUICommon.BetterStaticText( panel, label = alternates_label )
-            
-            QP.AddToLayout( panel_vbox, potentials_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( panel_vbox, duplicates_st, CC.FLAGS_CENTER )
-            QP.AddToLayout( panel_vbox, alternates_st, CC.FLAGS_CENTER )
-            
-            panel_vbox.addStretch( 1 )
-            
-            panel.setLayout( panel_vbox )
-            
-            notebook.addTab( panel, 'duplicates' )
-            
-            #
-            
-            QP.AddToLayout( vbox, notebook, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
         
-        vbox.addStretch( 1 )
+        panel_vbox.addStretch( 1 )
         
-        self.widget().setLayout( vbox )
+        self._files_content_panel.setLayout( panel_vbox )
+        
+        QP.AddToLayout( self._files_content_vbox, self._files_content_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
     
+    def _SetTheMasterOfCeremonies( self, boned_stats: dict ):
+        
+        num_inbox = boned_stats[ 'num_inbox' ]
+        num_archive = boned_stats[ 'num_archive' ]
+        
+        num_total = num_archive + num_inbox
+        
+        special_message = None
+        
+        num_deleted = boned_stats.get( 'num_deleted', 0 )
+        
+        current_fsc = self._tag_autocomplete.GetFileSearchContext()
+        
+        special_message_is_appropriate = len( current_fsc.GetPredicates() ) == 0 and current_fsc.GetLocationContext() == ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        if special_message_is_appropriate:
+            
+            if num_total == 0 and num_deleted == 0:
+                
+                special_message = 'You have yet to board the ride.'
+                
+            elif num_total + num_deleted < 1000:
+                
+                special_message = 'I hope you enjoy my software. You might like to check out the downloaders! :^)'
+                
+            elif num_inbox <= num_archive / 99:
+                
+                special_message = 'CONGRATULATIONS. YOU APPEAR TO BE UNBONED--BUT REMAIN EVER VIGILANT'
+                
+            
+        
+        if special_message is None:
+            
+            self._mr_bones_text.setVisible( False )
+            
+            self._mr_bones_image.setVisible( True )
+            
+        else:
+            
+            self._mr_bones_image.setVisible( False )
+            
+            self._mr_bones_text.setVisible( True )
+            self._mr_bones_text.setText( special_message )
+            
+        
+    
+    def _SetToLoading( self ):
+        
+        self._loading_text.setText( 'loading' + HC.UNICODE_ELLIPSIS )
+        
+        self._files_content_vbox.removeWidget( self._files_content_panel )
+        
+        self._files_content_panel.deleteLater()
+        
+        self._files_content_panel = QW.QWidget( self._files_panel )
+        
+        QP.AddToLayout( self._files_content_vbox, self._files_content_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self._potentials_st.setText( '' )
+        self._duplicates_st.setText( '' )
+        self._alternates_st.setText( '' )
+        
+        self._media_views_st.setText( '' )
+        self._preview_views_st.setText( '' )
+        
+        self._refresh_button.setEnabled( False )
+        self._cancel_button.setEnabled( True )
+        
+    
+    def _SetViewsPanel( self, boned_stats: dict ):
+        
+        total_viewtime = boned_stats[ 'total_viewtime' ]
+        
+        ( media_views, media_viewtime, preview_views, preview_viewtime ) = total_viewtime
+        
+        media_label = 'Total media views: ' + HydrusData.ToHumanInt( media_views ) + ', totalling ' + HydrusTime.TimeDeltaToPrettyTimeDelta( media_viewtime )
+        
+        preview_label = 'Total preview views: ' + HydrusData.ToHumanInt( preview_views ) + ', totalling ' + HydrusTime.TimeDeltaToPrettyTimeDelta( preview_viewtime )
+        
+        self._media_views_st.setText( media_label )
+        self._preview_views_st.setText( preview_label )
+        
+    
+
 class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, paths = None ):

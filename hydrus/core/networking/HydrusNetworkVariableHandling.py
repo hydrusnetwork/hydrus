@@ -148,9 +148,7 @@ def DumpToGETQuery( args ):
     return query
     
 def ParseFileArguments( path, decompression_bombs_ok = False ):
-    
-    HydrusImageHandling.ConvertToPNGIfBMP( path )
-    
+
     hash = HydrusFileHandling.GetHashFromPath( path )
     
     try:

@@ -5062,11 +5062,13 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 path = dlg.GetPath()
                 
+                base_location = ClientFilesPhysical.FilesStorageBaseLocation( path, 0 )
+                
                 for subfolder in self._locations.GetData():
                     
-                    new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, path )
+                    new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, base_location )
                     
-                    ok = new_subfolder.DirectoryExists()
+                    ok = new_subfolder.PathExists()
                     
                     if ok:
                         
@@ -5099,19 +5101,20 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 pretty_ok = 'not found'
                 
             
+            pretty_correct_base_location = correct_base_location.path
+            
         else:
             
-            correct_base_location = ''
+            pretty_correct_base_location = ''
             ok = None
             pretty_ok = ''
             
         
-        pretty_incorrect_base_location = incorrect_base_location
+        pretty_incorrect_base_location = incorrect_base_location.path
         pretty_prefix = prefix
-        pretty_correct_base_location = correct_base_location
         
         display_tuple = ( pretty_incorrect_base_location, pretty_prefix, pretty_correct_base_location, pretty_ok )
-        sort_tuple = ( incorrect_base_location, prefix, correct_base_location, ok )
+        sort_tuple = ( pretty_incorrect_base_location, prefix, pretty_correct_base_location, ok )
         
         return ( display_tuple, sort_tuple )
         
@@ -5174,11 +5177,13 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     path = dlg.GetPath()
                     
+                    base_location = ClientFilesPhysical.FilesStorageBaseLocation( path, 0 )
+                    
                     for subfolder in subfolders:
                         
-                        new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, path )
+                        new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, base_location )
                         
-                        ok = new_subfolder.DirectoryExists()
+                        ok = new_subfolder.PathExists()
                         
                         self._missing_subfolders_to_new_subfolders[ subfolder ] = ( new_subfolder, ok )
                         

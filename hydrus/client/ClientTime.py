@@ -1,6 +1,4 @@
-import calendar
 import datetime
-import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -20,8 +18,18 @@ except:
     DATEUTIL_OK = False
     
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusTime
+
+try:
+    
+    import dateparser
+    
+    DATEPARSER_OK = True
+    
+except:
+    
+    DATEPARSER_OK = False
+    
 
 def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> datetime.datetime:
     
@@ -37,6 +45,23 @@ def CalendarDelta( dt: datetime.datetime, month_delta = 0, day_delta = 0 ) -> da
         
         return dt + datetime.timedelta( days = total_days )
         
+    
+
+def ParseDate( date_string: str ):
+    
+    if not DATEPARSER_OK:
+        
+        raise Exception( 'Sorry, you need the dateparse library for this, please try reinstalling your venv!' )
+        
+    
+    dt = dateparser.parse( date_string )
+    
+    if dt is None:
+        
+        raise Exception( 'Sorry, could not parse that date!' )
+        
+    
+    return HydrusTime.DateTimeToTimestamp( dt )
     
 
 def MergeModifiedTimes( existing_timestamp: typing.Optional[ int ], new_timestamp: typing.Optional[ int ] ) -> typing.Optional[ int ]:

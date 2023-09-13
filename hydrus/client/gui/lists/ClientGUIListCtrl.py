@@ -1003,11 +1003,19 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             existing_data_info = self._indices_to_data_info[ index ]
             
-            if data_info != existing_data_info:
+            # catching an object that __eq__ with another but is actually a different lad--we want to swap the new one in
+            the_data_is_actually_a_different_object = data is not existing_data_info[0]
+            
+            if the_data_is_actually_a_different_object:
+                
+                self._data_to_indices[ data ] = index
+                
+            
+            if data_info != existing_data_info or the_data_is_actually_a_different_object:
                 
                 if not sort_data_has_changed:
                     
-                    ( existing_data, existing_display_tuple, existing_sort_tuple ) = existing_data_info
+                    existing_sort_tuple = existing_data_info[2]
                     
                     if existing_sort_tuple is not None and sort_tuple is not None:
                         

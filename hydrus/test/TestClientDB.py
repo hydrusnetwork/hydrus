@@ -1363,14 +1363,16 @@ class TestClientDB( unittest.TestCase ):
         
         self.assertTrue( os.path.exists( client_files_default ) )
         
+        base_location = ClientFilesPhysical.FilesStorageBaseLocation( client_files_default, 1 )
+        
         for prefix in HydrusData.IterateHexPrefixes():
             
             for c in ( 'f', 't' ):
                 
-                subfolder = ClientFilesPhysical.FilesStorageSubfolder( c + prefix, client_files_default )
+                subfolder = ClientFilesPhysical.FilesStorageSubfolder( c + prefix, base_location )
                 
-                self.assertTrue( os.path.exists( subfolder.directory ) )
-                self.assertTrue( subfolder.DirectoryExists() )
+                self.assertTrue( os.path.exists( subfolder.path ) )
+                self.assertTrue( subfolder.PathExists() )
                 
             
         

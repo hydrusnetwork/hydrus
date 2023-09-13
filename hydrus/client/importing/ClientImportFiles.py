@@ -12,7 +12,6 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
 from hydrus.client import ClientImageHandling
-from hydrus.client import ClientPDFHandling
 from hydrus.client.importing.options import FileImportOptions
 
 class FileImportStatus( object ):
@@ -244,8 +243,6 @@ class FileImportJob( object ):
         
     
     def GeneratePreImportHashAndStatus( self, status_hook = None ):
-        
-        HydrusImageHandling.ConvertToPNGIfBMP( self._temp_path )
         
         if status_hook is not None:
             

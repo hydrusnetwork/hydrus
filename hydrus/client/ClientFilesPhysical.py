@@ -64,9 +64,130 @@ def GetMissingPrefixes( merge_target: str, prefixes: typing.Collection[ str ], m
     return missing_prefixes
     
 
+class FilesStorageBaseLocation( object ):
+    
+    def __init__( self, path: str, ideal_weight: int, max_num_bytes = None ):
+        
+        if not os.path.isabs( path ):
+            
+            path = HydrusPaths.ConvertPortablePathToAbsPath( path )
+            
+        
+        self.path = path
+        self.ideal_weight = ideal_weight
+        self.max_num_bytes = max_num_bytes
+        
+    
+    def __eq__( self, other ):
+        
+        if isinstance( other, FilesStorageBaseLocation ):
+            
+            return self.__hash__() == other.__hash__()
+            
+        
+        return NotImplemented
+        
+    
+    def __hash__( self ):
+        
+        return self.path.__hash__()
+        
+    
+    def __repr__( self ):
+        
+        return f'{self.path} ({self.ideal_weight}, {self.max_num_bytes})'
+        
+    
+    def AbleToAcceptSubfolders( self, current_num_bytes: int, num_bytes_of_subfolder: int ):
+        
+        if self.max_num_bytes is not None:
+            
+            if current_num_bytes + num_bytes_of_subfolder > self.max_num_bytes:
+                
+                return False
+                
+            
+        
+        if self.ideal_weight == 0:
+            
+            return False
+            
+        
+        return True
+        
+    
+    def EagerToAcceptSubfolders( self, current_normalised_weight: float, total_ideal_weight: int, weight_of_subfolder: float, current_num_bytes: int, num_bytes_of_subfolder: int ):
+        
+        if self.max_num_bytes is not None:
+            
+            if current_num_bytes + num_bytes_of_subfolder > self.max_num_bytes:
+                
+                return False
+                
+            
+        
+        if self.ideal_weight == 0:
+            
+            return False
+            
+        
+        ideal_normalised_weight = self.ideal_weight / total_ideal_weight
+        
+        if current_normalised_weight + weight_of_subfolder > ideal_normalised_weight:
+            
+            return False
+            
+        
+        return True
+        
+    
+    def GetPortablePath( self ):
+        
+        return HydrusPaths.ConvertAbsPathToPortablePath( self.path )
+        
+    
+    def HasNoUpperLimit( self ):
+        
+        return self.max_num_bytes is None
+        
+    
+    def MakeSureExists( self ):
+        
+        HydrusPaths.MakeSureDirectoryExists( self.path )
+        
+    
+    def NeedsToRemoveSubfolders( self, current_num_bytes: int ):
+        
+        if self.max_num_bytes is not None and current_num_bytes > self.max_num_bytes:
+            
+            return True
+            
+        
+        return False
+        
+    
+    def PathExists( self ):
+        
+        return os.path.exists( self.path ) and os.path.isdir( self.path )
+        
+    
+    def WouldLikeToRemoveSubfolders( self, current_normalised_weight: float, total_ideal_weight: int, weight_of_subfolder: float ):
+        
+        if self.ideal_weight == 0:
+            
+            return True
+            
+        
+        ideal_normalised_weight = self.ideal_weight / total_ideal_weight
+        
+        # the weight_of_subfolder here is a bit of padding to make sure things stay a bit more bistable
+        return current_normalised_weight - weight_of_subfolder > ideal_normalised_weight
+        
+    
+
 class FilesStorageSubfolder( object ):
     
-    def __init__( self, prefix: str, base_location: str, purge: bool = False ):
+    def __init__( self, prefix: str, base_location: FilesStorageBaseLocation, purge: bool = False ):
         
         self.prefix = prefix
         self.base_location = base_location
@@ -83,10 +204,10 @@ class FilesStorageSubfolder( object ):
         # restore the f/t char
         our_subfolders[0] = first_char + our_subfolders[0]
         
-        self.directory = os.path.join( self.base_location, *our_subfolders )
+        self.path = os.path.join( self.base_location.path, *our_subfolders )
         
     
-    def __str__( self ):
+    def __repr__( self ):
         
         if self.prefix[0] == 'f':
             
@@ -101,31 +222,33 @@ class FilesStorageSubfolder( object ):
             t = 'unknown'
             
         
-        return f'{t} {self.prefix[1:]} at {self.directory}'
+        return f'{t} {self.prefix[1:]} at {self.path}'
         
     
-    def BaseLocationExists( self ):
+    def GetNormalisedWeight( self ):
         
-        return os.path.exists( self.base_location ) and os.path.isdir( self.base_location )
+        num_hex = len( self.prefix ) - 1
         
-    
-    def DirectoryExists( self ):
-        
-        return os.path.exists( self.directory ) and os.path.isdir( self.directory )
+        return 1 / ( 16 ** num_hex )
         
     
-    def GetPath( self, filename: str ) -> str:
+    def GetFilePath( self, filename: str ) -> str:
         
-        return os.path.join( self.directory, filename )
+        return os.path.join( self.path, filename )
         
     
-    def GetPortableBaseLocation( self ):
+    def IsForFiles( self ):
         
-        return HydrusPaths.ConvertAbsPathToPortablePath( self.base_location )
+        return self.prefix[0] == 'f'
         
     
     def MakeSureExists( self ):
         
-        HydrusPaths.MakeSureDirectoryExists( self.directory )
+        HydrusPaths.MakeSureDirectoryExists( self.path )
+        
+    
+    def PathExists( self ):
+        
+        return os.path.exists( self.path ) and os.path.isdir( self.path )
         
     

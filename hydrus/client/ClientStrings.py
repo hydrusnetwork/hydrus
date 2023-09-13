@@ -31,6 +31,7 @@ STRING_CONVERSION_DATE_DECODE = 10
 STRING_CONVERSION_INTEGER_ADDITION = 11
 STRING_CONVERSION_DATE_ENCODE = 12
 STRING_CONVERSION_HASH_FUNCTION = 13
+STRING_CONVERSION_DATEPARSER_DECODE = 14
 
 conversion_type_str_lookup = {}
 
@@ -44,7 +45,8 @@ conversion_type_str_lookup[ STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING ] = 'take
 conversion_type_str_lookup[ STRING_CONVERSION_CLIP_TEXT_FROM_END ] = 'take the end of the string'
 conversion_type_str_lookup[ STRING_CONVERSION_REVERSE ] = 'reverse text'
 conversion_type_str_lookup[ STRING_CONVERSION_REGEX_SUB ] = 'regex substitution'
-conversion_type_str_lookup[ STRING_CONVERSION_DATE_DECODE ] = 'datestring to timestamp'
+conversion_type_str_lookup[ STRING_CONVERSION_DATE_DECODE ] = 'datestring to timestamp (advanced)'
+conversion_type_str_lookup[ STRING_CONVERSION_DATEPARSER_DECODE ] = 'datestring to timestamp (easy)'
 conversion_type_str_lookup[ STRING_CONVERSION_INTEGER_ADDITION ] = 'integer addition'
 conversion_type_str_lookup[ STRING_CONVERSION_DATE_ENCODE ] = 'timestamp to datestring'
 conversion_type_str_lookup[ STRING_CONVERSION_HASH_FUNCTION ] = 'get hash of string'
@@ -274,6 +276,12 @@ class StringConverter( StringProcessingStep ):
                     
                     s = str( timestamp )
                     
+                elif conversion_type == STRING_CONVERSION_DATEPARSER_DECODE:
+                    
+                    timestamp = ClientTime.ParseDate( s )
+                    
+                    s = str( timestamp )
+                    
                 elif conversion_type == STRING_CONVERSION_DATE_ENCODE:
                     
                     ( phrase, timezone ) = data
@@ -435,6 +443,10 @@ class StringConverter( StringProcessingStep ):
         elif conversion_type == STRING_CONVERSION_DATE_DECODE:
             
             return 'datestring to timestamp: ' + repr( data )
+            
+        elif conversion_type == STRING_CONVERSION_DATEPARSER_DECODE:
+            
+            return 'datestring to timestamp: automatic'
             
         elif conversion_type == STRING_CONVERSION_DATE_ENCODE:
             
