@@ -18,6 +18,7 @@ class HydrusRequest( Request ):
         self.client_api_permissions = None
         self.disconnect_callables = []
         self.preferred_mime = HC.APPLICATION_JSON
+        self.disconnected = False
         
     
     def IsGET( self ):

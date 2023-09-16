@@ -93,6 +93,11 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         self._this_is_for_metadata_alone = this_is_for_metadata_alone
         
         HG.client_controller.CallToThread( self._Initialise )
+
+
+    def GetNumPyImage(self):
+
+        return self._numpy_image
         
     
     def _GetNumPyImage( self, clip_rect: QC.QRect, target_resolution: QC.QSize ):

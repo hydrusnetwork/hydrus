@@ -540,6 +540,31 @@ def GenerateThumbnailBytesPIL( pil_image: PILImage.Image ) -> bytes:
     
     return thumbnail_bytes
     
+def GeneratePNGBytesNumPy( numpy_image ) -> bytes:
+    
+    ( im_height, im_width, depth ) = numpy_image.shape
+
+    ext = '.png'
+
+    if depth == 4:
+        
+        convert = cv2.COLOR_RGBA2BGRA
+        
+    else:
+        
+        convert = cv2.COLOR_RGB2BGR
+        
+    numpy_image = cv2.cvtColor( numpy_image, convert )
+        
+    ( result_success, result_byte_array ) = cv2.imencode( ext, numpy_image )
+    
+    if result_success:
+        
+        return result_byte_array.tostring()
+                
+    else:
+        
+        raise HydrusExceptions.CantRenderWithCVException( 'Image failed to encode!' )
 
 def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
     
