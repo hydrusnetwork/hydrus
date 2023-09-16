@@ -91,6 +91,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         get_files.putChild( b'file_hashes', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesFileHashes( self._service, self._client_requests_domain ) )
         get_files.putChild( b'file', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetFile( self._service, self._client_requests_domain ) )
         get_files.putChild( b'thumbnail', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( self._service, self._client_requests_domain ) )
+        get_files.putChild( b'render', ClientLocalServerResources.HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( self._service, self._client_requests_domain) )
         
         add_notes = NoResource()
         

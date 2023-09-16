@@ -560,7 +560,7 @@ class HydrusResource( Resource ):
                 
             
         
-        response_context = request.hydrus_response_context
+        response_context: ResponseContext = request.hydrus_response_context
         
         if response_context.HasPath():
             
@@ -604,6 +604,13 @@ class HydrusResource( Resource ):
             
             content_disposition_type = 'inline'
             
+        max_age = response_context.GetMaxAge()
+
+        if max_age is not None:
+
+            request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + max_age ) ) )
+            
+            request.setHeader( 'Cache-Control', 'max-age={}'.format( max_age ) )
         
         if response_context.HasPath():
             
@@ -622,9 +629,6 @@ class HydrusResource( Resource ):
             content_disposition = f'{content_disposition_type}; filename="{filename}"'
             
             request.setHeader( 'Content-Disposition', str( content_disposition ) )
-            
-            request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + 86400 * 365 ) ) )
-            request.setHeader( 'Cache-Control', 'max-age={}'.format( 86400 * 365 ) )
             
             if len( offset_and_block_size_pairs ) <= 1:
                 
@@ -686,8 +690,7 @@ class HydrusResource( Resource ):
             request.setHeader( 'Content-Type', content_type )
             request.setHeader( 'Content-Length', str( content_length ) )
             request.setHeader( 'Content-Disposition', content_disposition )
-            request.setHeader( 'Cache-Control', 'max-age={}'.format( 4 ) ) # hydrus won't change its mind about dynamic data under 4 seconds even if you ask repeatedly
-            
+
             request.write( body_bytes )
             
         else:
@@ -698,7 +701,7 @@ class HydrusResource( Resource ):
                 
                 request.setHeader( 'Content-Length', str( content_length ) )
                 
-            
+        
         
         self._reportDataUsed( request, content_length )
         self._reportRequestUsed( request )
@@ -782,6 +785,8 @@ class HydrusResource( Resource ):
     def _errbackDisconnected( self, failure, request: HydrusServerRequest.HydrusRequest, request_deferred: defer.Deferred ):
         
         request_deferred.cancel()
+
+        request.disconnected = True
         
         for c in request.disconnect_callables:
             
@@ -1222,7 +1227,7 @@ class HydrusResourceWelcome( HydrusResource ):
     
 class ResponseContext( object ):
     
-    def __init__( self, status_code, mime = HC.APPLICATION_JSON, body = None, path = None, cookies = None, is_attachment = False ):
+    def __init__( self, status_code, mime = HC.APPLICATION_JSON, body = None, path = None, cookies = None, is_attachment = False, max_age = None ):
         
         if body is None:
             
@@ -1248,6 +1253,16 @@ class ResponseContext( object ):
         if cookies is None:
             
             cookies = []
+
+        if max_age is None:
+
+            if body is not None:
+
+                max_age = 4
+            
+            elif path is not None:
+
+                max_age = 86400 * 365
             
         
         self._status_code = status_code
@@ -1256,6 +1271,7 @@ class ResponseContext( object ):
         self._path = path
         self._cookies = cookies
         self._is_attachment = is_attachment
+        self._max_age = max_age
         
     
     def GetBodyBytes( self ):
@@ -1270,6 +1286,8 @@ class ResponseContext( object ):
     def GetPath( self ): return self._path
     
     def GetStatusCode( self ): return self._status_code
+
+    def GetMaxAge( self ): return self._max_age
     
     def HasBody( self ): return self._body_bytes is not None
     
