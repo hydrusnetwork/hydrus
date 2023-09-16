@@ -564,7 +564,7 @@ def GeneratePNGBytesNumPy( numpy_image ) -> bytes:
                 
     else:
         
-        raise HydrusExceptions.CantRenderWithCVException( 'Thumb failed to encode!' )
+        raise HydrusExceptions.CantRenderWithCVException( 'Image failed to encode!' )
 
 def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
     

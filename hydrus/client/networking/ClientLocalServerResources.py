@@ -2870,10 +2870,8 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
         body = HydrusImageHandling.GeneratePNGBytesNumPy(numpy_image)
         
         is_attachment = request.parsed_request_args.GetValue( 'download', bool, default_value = False )
-        
-        
 
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.IMAGE_PNG, body = body, is_attachment = is_attachment, max_age = 3600 )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.IMAGE_PNG, body = body, is_attachment = is_attachment, max_age = 86400 * 365 )
         
         return response_context
 
