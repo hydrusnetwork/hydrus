@@ -1820,7 +1820,7 @@ Arguments :
     *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
     *   `download`: (optional, boolean, default `false`)
 
-Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+    Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
 
 ``` title="Example request"
 /get_files/file?file_id=452158
@@ -1866,6 +1866,36 @@ Response:
     If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the defaults straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
 
     
+### **GET `/get_files/render`** { id="get_files_render" }
+
+_Get an image file as rendered by Hydrus._
+
+Restricted access: 
+:   YES. Search for Files permission needed. Additional search permission limits may apply.
+    
+Required Headers: n/a
+    
+Arguments :
+:   
+    *   `file_id`: (selective, numerical file id for the file)
+    *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
+    *   `download`: (optional, boolean, default `false`)
+
+    Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+
+The file you request must be a still image file that Hydrus can render (this includes PSD files). This request uses the client image cache.
+
+``` title="Example request"
+/get_files/render?file_id=452158
+```
+``` title="Example request"
+/get_files/render?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&download=true
+```
+   
+Response:
+:   A PNG file of the image as would be rendered in the client. It will be converted to sRGB color if the file had a color profile but the rendered PNG will not have any color profile.
+
+By default, this will set the `Content-Disposition` header to `inline`, which causes a web browser to show the file. If you set `download=true`, it will set it to `attachment`, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.
 
 ## Managing File Relationships
 
