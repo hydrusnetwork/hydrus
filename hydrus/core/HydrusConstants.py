@@ -730,6 +730,7 @@ UNDETERMINED_GIF = 67
 IMAGE_GIF = 68
 APPLICATION_PROCREATE = 69
 IMAGE_QOI = 70
+APPLICATION_EPUB = 71
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -778,6 +779,7 @@ SEARCHABLE_MIMES = {
     APPLICATION_XCF,
     APPLICATION_PROCREATE,
     APPLICATION_PDF,
+    APPLICATION_EPUB,
     APPLICATION_ZIP,
     APPLICATION_RAR,
     APPLICATION_7Z,
@@ -861,7 +863,8 @@ VIDEO = [
 
 APPLICATIONS = [
     APPLICATION_FLASH,
-    APPLICATION_PDF
+    APPLICATION_PDF,
+    APPLICATION_EPUB
 ]
 
 IMAGE_PROJECT_FILES = [
@@ -882,6 +885,9 @@ ARCHIVES = [
 ]
 
 VIEWABLE_IMAGE_PROJECT_FILES = { APPLICATION_PSD }
+
+# zip files that have a `mimetype` file inside
+OPEN_DOCUMENT_ZIPS = { APPLICATION_KRITA, APPLICATION_EPUB }
 
 general_mimetypes_to_mime_groups = {
     GENERAL_APPLICATION : APPLICATIONS,
@@ -968,6 +974,7 @@ mime_enum_lookup = {
     'application/x-yaml' : APPLICATION_YAML,
     'PDF document' : APPLICATION_PDF,
     'application/pdf' : APPLICATION_PDF,
+    'application/epub+zip' : APPLICATION_EPUB,
     'application/zip' : APPLICATION_ZIP,
     'application/vnd.rar' : APPLICATION_RAR,
     'application/x-7z-compressed' : APPLICATION_7Z,
@@ -1031,6 +1038,7 @@ mime_string_lookup = {
     APPLICATION_JSON : 'json',
     APPLICATION_CBOR : 'cbor',
     APPLICATION_PDF : 'pdf',
+    APPLICATION_EPUB : 'epub',
     APPLICATION_PSD : 'psd',
     APPLICATION_CLIP : 'clip',
     APPLICATION_SAI2 : 'sai2',
@@ -1108,6 +1116,7 @@ mime_mimetype_string_lookup = {
     APPLICATION_JSON : 'application/json',
     APPLICATION_CBOR : 'application/cbor',
     APPLICATION_PDF : 'application/pdf',
+    APPLICATION_EPUB : 'application/epub+zip',
     APPLICATION_PSD : 'image/vnd.adobe.photoshop',
     APPLICATION_CLIP : 'application/clip', # made up
     APPLICATION_SAI2: 'application/sai2', # made up
@@ -1183,6 +1192,7 @@ mime_ext_lookup = {
     APPLICATION_YAML : '.yaml',
     APPLICATION_JSON : '.json',
     APPLICATION_PDF : '.pdf',
+    APPLICATION_EPUB : '.epub',
     APPLICATION_PSD : '.psd',
     APPLICATION_CLIP : '.clip',
     APPLICATION_SAI2: '.sai2',
