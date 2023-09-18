@@ -40,6 +40,6 @@ def MimeFromOpenDocument( path ):
 
         return filetype if filetype in HC.OPEN_DOCUMENT_ZIPS else None
         
-    except KeyError:
+    except:
         
         return None
