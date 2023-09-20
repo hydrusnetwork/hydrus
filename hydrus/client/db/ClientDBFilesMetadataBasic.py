@@ -35,7 +35,8 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
             'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
             'main.has_exif' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
-            'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 )
+            'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
+            'main.blurhash' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, blurhash TEXT );', 545 ),
         }
         
     
@@ -107,7 +108,8 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
                 ( 'files_info', 'hash_id' ),
                 ( 'has_exif', 'hash_id' ),
                 ( 'has_human_readable_embedded_metadata', 'hash_id' ),
-                ( 'has_icc_profile', 'hash_id' )
+                ( 'has_icc_profile', 'hash_id' ),
+                ( 'blurhash', 'hash_id' )
             ]
             
         
@@ -220,16 +222,14 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
 
         # TODO blurhash db stuff
 
-        return
+        self._Execute('INSERT OR REPLACE INTO blurhash ( hash_id, blurhash ) VALUES ( ?, ?);', (hash_id, blurhash))
 
             
     def GetBluRHash( self, hash_id: int ) -> str:
         
-        #result = self._Execute( 'SELECT blurhash FROM blurhash WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        result = self._Execute( 'SELECT blurhash FROM blurhash WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
         # TODO blurhash db stuff
-
-        result = ''
 
         if result is None:
             
