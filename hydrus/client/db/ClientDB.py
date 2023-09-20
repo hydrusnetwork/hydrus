@@ -4609,6 +4609,8 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, file_import_job.HasHumanReadableEmbeddedMetadata() )
             self.modules_files_metadata_basic.SetHasICCProfile( hash_id, file_import_job.HasICCProfile() )
             
+            self.modules_files_metadata_basic.SetBlurHash( hash_id, file_import_job.GetBlurhash())
+
             #
             
             file_modified_timestamp = file_import_job.GetFileModifiedTimestamp()
