@@ -215,6 +215,29 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         else:
             
             self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
+
+    def SetBlurHash( self, hash_id: int, blurhash: str ):
+
+        # TODO blurhash db stuff
+
+        return
+
             
+    def GetBluRHash( self, hash_id: int ) -> str:
+        
+        #result = self._Execute( 'SELECT blurhash FROM blurhash WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        # TODO blurhash db stuff
+
+        result = ''
+
+        if result is None:
+            
+            raise HydrusExceptions.DataMissing( 'Did not have blurhash information for that file!' )
+            
+        
+        ( blurhash, ) = result
+        
+        return blurhash
         
     
