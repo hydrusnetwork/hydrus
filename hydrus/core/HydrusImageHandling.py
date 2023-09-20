@@ -47,6 +47,8 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusPSDHandling
 
+from hydrus.external import blurhash
+
 PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
 
 def EnableLoadTruncatedImages():
@@ -1253,3 +1255,6 @@ def StripOutAnyUselessAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
     
     return numpy_image
     
+def GetImageBlurHashNumPy( numpy_image, components_x = 4, components_y = 4 ):
+
+    return blurhash.blurhash_encode( numpy_image, components_x, components_y )

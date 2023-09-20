@@ -181,7 +181,11 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                             
                             self.modules_similar_files.StopSearchingFile( hash_id )
                             
-                        
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH:
+
+                    blurhash: str = additional_data
+
+                    self.modules_files_metadata_basic.SetBlurHash( hash_id, blurhash )
                     
                 
             
