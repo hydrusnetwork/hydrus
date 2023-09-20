@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.2, mkdocs-material-9.3.1">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.3.2">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.046329b4.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.30068a00.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.85d0ee34.min.css">
@@ -2148,6 +2148,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#get_files_render" class="md-nav__link">
+    GET /get_files/render
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2981,6 +2988,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#get_files_render" class="md-nav__link">
+    GET /get_files/render
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3256,7 +3270,7 @@
 </code></pre></div>
 </li>
 </ul>
-<p>On 200 OK, the API returns JSON for everything except actual file/thumbnail requests. On 4XX and 5XX, assume it will return plain text, which may be a raw traceback that I'd be interested in seeing. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.</p>
+<p>The API returns JSON for everything except actual file/thumbnail requests. For errors, you'll typically get 400 for a missing/invalid parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>For any request sent to the API, the total size of the initial request line (this includes the URL and any parameters) and the headers must not be larger than 2 megabytes.
@@ -4860,9 +4874,9 @@ Accept: application/json
 <li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
 <li><code>download</code>: (optional, boolean, default <code>false</code>)</li>
 </ul>
+<p>Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
 </dd>
 </dl>
-<p>Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
 <p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/file?file_id=452158
 </code></pre></div>
 <div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/file?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&amp;download=true
@@ -4904,6 +4918,34 @@ Accept: application/json
 <p class="admonition-title">Note</p>
 <p>If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the defaults straight from the hydrus/static folder. They will most likely be 200x200 pixels. </p>
 </div>
+<h3 id="get_files_render"><strong>GET <code>/get_files/render</code></strong><a class="headerlink" href="#get_files_render" title="Permanent link">&para;</a></h3>
+<p><em>Get an image file as rendered by Hydrus.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Search for Files permission needed. Additional search permission limits may apply.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<dl>
+<dt>Arguments :</dt>
+<dd>
+<ul>
+<li><code>file_id</code>: (selective, numerical file id for the file)</li>
+<li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
+<li><code>download</code>: (optional, boolean, default <code>false</code>)</li>
+</ul>
+<p>Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
+</dd>
+</dl>
+<p>The file you request must be a still image file that Hydrus can render (this includes PSD files). This request uses the client image cache.</p>
+<p><div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/render?file_id=452158
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request</span><pre><span></span><code>/get_files/render?hash=7f30c113810985b69014957c93bc25e8eb4cf3355dae36d8b9d011d8b0cf623a&amp;download=true
+</code></pre></div></p>
+<dl>
+<dt>Response:</dt>
+<dd>A PNG file of the image as would be rendered in the client. It will be converted to sRGB color if the file had a color profile but the rendered PNG will not have any color profile.</dd>
+</dl>
+<p>By default, this will set the <code>Content-Disposition</code> header to <code>inline</code>, which causes a web browser to show the file. If you set <code>download=true</code>, it will set it to <code>attachment</code>, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.</p>
 <h2 id="managing_file_relationships">Managing File Relationships<a class="headerlink" href="#managing_file_relationships" title="Permanent link">&para;</a></h2>
 <p>This refers to the File Relationships system, which includes 'potential duplicates', 'duplicates', and 'alternates'.</p>
 <p>This system is pending significant rework and expansion, so please do not get too married to some of the routines here. I am mostly just exposing my internal commands, so things are a little ugly/hacked. I expect duplicate and alternate groups to get some form of official identifier in future, which may end up being the way to refer and edit things here.</p>
@@ -5715,8 +5757,18 @@ This request will also return any cookies for subdomains. The session system in 
 <dl>
 <dt>Restricted access:</dt>
 <dd>YES. Manage Database permission needed.</dd>
+<dt>Arguments (in percent-encoded JSON):</dt>
+<dd>
+<ul>
+<li><code>tags</code>: (optional, a list of tags you wish to search for)</li>
+<li><a href="#parameters_file_domain">file domain</a> (optional, defaults to 'all my files')</li>
+<li><code>tag_service_key</code>: (optional, hexadecimal, the tag domain on which to search, defaults to 'all my files')</li>
+</ul>
+<div class="highlight"><span class="filename">Example requests</span><pre><span></span><code>/manage_database/mr_bones
+/manage_database/mr_bones?tags=%5B%22blonde_hair%22%2C%20%22blue_eyes%22%5D
+</code></pre></div>
+</dd>
 </dl>
-<p>Arguments: None</p>
 <div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;boned_stats&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;num_inbox&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">8356</span><span class="p">,</span>
@@ -5733,13 +5785,14 @@ This request will also return any cookies for subdomains. The session system in 
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
 </code></pre></div>
+<p>The arguments here are the same as for <a href="#get_files_search_files">GET /get_files/search_files</a>. You can set any or none of them to set a search domain like in the dialog.</p>
 
   <hr>
 <div class="md-source-file">
   <small>
     
       Last update:
-      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 30, 2023</span>
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 20, 2023</span>
       
     
   </small>
