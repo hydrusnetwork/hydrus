@@ -1582,6 +1582,82 @@ class TestClientDB( unittest.TestCase ):
         self.assertEqual( mr_num_words, None )
         
     
+    def test_mr_bones( self ):
+        
+        TestClientDB._clear_db()
+        
+        test_files = []
+        
+        test_files.append( 'muh_swf.swf' )
+        test_files.append( 'muh_mp4.mp4' )
+        
+        file_import_options = FileImportOptions.FileImportOptions()
+        file_import_options.SetIsDefault( True )
+        
+        for filename in test_files:
+            
+            HG.test_controller.SetRead( 'hash_status', ClientImportFiles.FileImportStatus.STATICGetUnknownStatus() )
+            
+            path = os.path.join( HC.STATIC_DIR, 'testing', filename )
+            
+            file_import_job = ClientImportFiles.FileImportJob( path, file_import_options )
+            
+            file_import_job.GeneratePreImportHashAndStatus()
+            
+            file_import_job.GenerateInfo()
+            
+            file_import_status = self._write( 'import_file', file_import_job )
+            
+        
+        swf_hash_hex = 'edfef9905fdecde38e0752a5b6ab7b6df887c3968d4246adc9cffc997e168cdf'
+        
+        media_result = self._read( 'media_result', bytes.fromhex( swf_hash_hex ) )
+        
+        earliest_import_time = media_result.GetLocationsManager().GetTimestampsManager().GetImportedTimestamp( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        result = self._read( 'boned_stats' )
+        
+        expected_result = {
+            'earliest_import_time': earliest_import_time,
+            'num_archive': 0,
+            'num_deleted': 0,
+            'num_inbox': 2,
+            'size_archive': 0,
+            'size_deleted': 0,
+            'size_inbox': 1027308,
+            'total_alternate_files': 0,
+            'total_duplicate_files': 0,
+            'total_viewtime': (0, 0, 0, 0)
+        }
+        
+        self.assertEqual( result, expected_result )
+        
+        #
+        
+        location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = ( HC.APPLICATION_FLASH, ) ) ]
+        
+        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = predicates )
+        
+        result = self._read( 'boned_stats', file_search_context = file_search_context )
+        
+        expected_result = {
+            'earliest_import_time': earliest_import_time,
+            'num_archive': 0,
+            'num_deleted': 0,
+            'num_inbox': 1,
+            'size_archive': 0,
+            'size_deleted': 0,
+            'size_inbox': 456774,
+            'total_alternate_files': 0,
+            'total_duplicate_files': 0,
+            'total_viewtime': (0, 0, 0, 0)
+        }
+        
+        self.assertEqual( result, expected_result )
+        
+    
     def test_nums_pending( self ):
         
         TestClientDB._clear_db()

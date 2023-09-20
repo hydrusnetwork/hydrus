@@ -690,25 +690,31 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         return HC.IMAGE_SVG
         
     
-    # it is important this goes at the end, because ffmpeg has a billion false positives!
+    # it is important this goes at the end, because ffmpeg has a billion false positives! and it takes CPU to true negative
     # for instance, it once thought some hydrus update files were mpegs
-    try:
+    # it also thinks txt files can be mpegs
+    likely_to_false_positive = True in ( path.endswith( ext ) for ext in ( '.txt', '.log', '.json' ) )
+    
+    if not likely_to_false_positive:
         
-        mime = HydrusVideoHandling.GetMime( path )
-        
-        if mime != HC.APPLICATION_UNKNOWN:
+        try:
             
-            return mime
+            mime = HydrusVideoHandling.GetMime( path )
             
-        
-    except HydrusExceptions.UnsupportedFileException:
-        
-        pass
-        
-    except Exception as e:
-        
-        HydrusData.Print( 'FFMPEG had trouble with: ' + path )
-        HydrusData.PrintException( e, do_wait = False )
+            if mime != HC.APPLICATION_UNKNOWN:
+                
+                return mime
+                
+            
+        except HydrusExceptions.UnsupportedFileException:
+            
+            pass
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'FFMPEG had trouble with: ' + path )
+            HydrusData.PrintException( e, do_wait = False )
+            
         
     
     return HC.APPLICATION_UNKNOWN
