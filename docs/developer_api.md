@@ -1486,6 +1486,7 @@ Arguments (in percent-encoded JSON):
     *   `only_return_identifiers`: true or false (optional, defaulting to false)
     *   `only_return_basic_information`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
+    *   `include_blurhash`: true or false (optional, defaulting to false. Only applies when `only_return_basic_information` is true)
     *   `include_notes`: true or false (optional, defaulting to false)
     *   `include_services_object`: true or false (optional, defaulting to true)
     *   `hide_service_keys_tags`: **Deprecated, will be deleted soon!** true or false (optional, defaulting to true)
@@ -1534,6 +1535,7 @@ Response:
       },
       "ipfs_multihashes" : {},
       "has_audio" : false,
+      "blurhash" : "U6PZfSi_.AyE_3t7t7R**0o#DgR4_3R*D%xt",
       "num_frames" : null,
       "num_words" : null,
       "is_inbox" : false,
@@ -1605,6 +1607,7 @@ Response:
         "55af93e0deabd08ce15ffb2b164b06d1254daab5a18d145e56fa98f71ddb6f11" : "QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb"
       },
       "has_audio" : true,
+      "blurhash" : "UHF5?xYk^6#M@-5b,1J5@[or[k6.};FxngOZ",
       "num_frames" : 102,
       "num_words" : null,
       "is_inbox" : false,
@@ -1725,6 +1728,8 @@ Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 
 The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get\_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
 
+`blurhash` gives a base 83 encoded string of a [blurhash](https://blurha.sh/) generated from the file's thumbnail if the file has a thumbnail.
+
 #### tags
 
 The `tags` structure is similar to the [/add\_tags/add\_tags](#add_tags_add_tags) scheme, excepting that the status numbers are:
@@ -1779,7 +1784,7 @@ You can change this behaviour with `create_new_file_ids=true`, but bear in mind 
 
 If you ask about file_ids that do not exist, you'll get 404.
 
-If you set `only_return_basic_information=true`, this will be much faster for first-time requests than the full metadata result, but it will be slower for repeat requests. The full metadata object is cached after first fetch, the limited file info object is not.
+If you set `only_return_basic_information=true`, this will be much faster for first-time requests than the full metadata result, but it will be slower for repeat requests. The full metadata object is cached after first fetch, the limited file info object is not. You can optionally set `include_blurhash` when using this option to fetch blurhash strings for the files.
 
 If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, will be added for each file, with a list of the same structure as /`add_urls/get_url_info`. This may be an expensive request if you are querying thousands of files at once.
 
