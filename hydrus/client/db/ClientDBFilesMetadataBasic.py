@@ -225,7 +225,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         self._Execute('INSERT OR REPLACE INTO blurhash ( hash_id, blurhash ) VALUES ( ?, ?);', (hash_id, blurhash))
 
             
-    def GetBluRHash( self, hash_id: int ) -> str:
+    def GetBlurHash( self, hash_id: int ) -> str:
         
         result = self._Execute( 'SELECT blurhash FROM blurhash WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
         
@@ -239,5 +239,9 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         ( blurhash, ) = result
         
         return blurhash
+        
+    def GetHashIdsToBlurHash( self, hash_ids_table_name: str ):
+
+        return dict( self._Execute( 'SELECT hash_id, blurhash FROM {} CROSS JOIN blurhash USING ( hash_id );'.format( hash_ids_table_name ) ) )
         
     

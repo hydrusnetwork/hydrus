@@ -66,7 +66,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -2956,6 +2956,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         include_notes = request.parsed_request_args.GetValue( 'include_notes', bool, default_value = False )
         include_services_object = request.parsed_request_args.GetValue( 'include_services_object', bool, default_value = True )
         create_new_file_ids = request.parsed_request_args.GetValue( 'create_new_file_ids', bool, default_value = False )
+        include_blurhash = request.parsed_request_args.GetValue( 'include_blurhash', bool, default_value = False )
         
         hashes = ParseHashes( request )
         
@@ -2992,7 +2993,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         elif only_return_basic_information:
             
-            file_info_managers = HG.client_controller.Read( 'file_info_managers_from_ids', hash_ids )
+            file_info_managers = HG.client_controller.Read( 'file_info_managers_from_ids', hash_ids, blurhash = include_blurhash )
             
             hashes_to_file_info_managers = { file_info_manager.hash : file_info_manager for file_info_manager in file_info_managers }
             
@@ -3017,6 +3018,10 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'num_words' : file_info_manager.num_words,
                         'has_audio' : file_info_manager.has_audio
                     }
+
+                    if include_blurhash:
+
+                        metadata_row['blurhash'] = file_info_manager.blurhash
                     
                     metadata.append( metadata_row )
                     
@@ -3070,7 +3075,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'duration' : file_info_manager.duration,
                         'num_frames' : file_info_manager.num_frames,
                         'num_words' : file_info_manager.num_words,
-                        'has_audio' : file_info_manager.has_audio
+                        'has_audio' : file_info_manager.has_audio,
+                        'blurhash' : file_info_manager.blurhash
                     }
                     
                     if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:

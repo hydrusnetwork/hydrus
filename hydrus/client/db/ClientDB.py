@@ -2770,7 +2770,7 @@ class DB( HydrusDB.HydrusDB ):
         return boned_stats
         
     
-    def _GetFileInfoManagers( self, hash_ids: typing.Collection[ int ], sorted = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+    def _GetFileInfoManagers( self, hash_ids: typing.Collection[ int ], sorted = False, blurhash = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
@@ -2785,6 +2785,9 @@ class DB( HydrusDB.HydrusDB ):
                 # temp hashes to metadata
                 hash_ids_to_info = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, missing_hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_table_name ) ) }
                 
+                if blurhash:
+
+                    hash_ids_to_blurhash = self.modules_files_metadata_basic.GetHashIdsToBlurHash( temp_table_name )
             
             # build it
             
@@ -2793,6 +2796,10 @@ class DB( HydrusDB.HydrusDB ):
                 if hash_id in hash_ids_to_info:
                     
                     file_info_manager = hash_ids_to_info[ hash_id ]
+
+                    if blurhash and hash_id in hash_ids_to_blurhash:
+                    
+                        file_info_manager.blurhash = hash_ids_to_blurhash[hash_id]
                     
                 else:
                     
@@ -3290,6 +3297,8 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_tags_managers = self._GetForceRefreshTagsManagersWithTableHashIds( missing_hash_ids, temp_table_name, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
                 
+                hash_ids_to_blurhash = self.modules_files_metadata_basic.GetHashIdsToBlurHash( temp_table_name )
+
                 has_exif_hash_ids = self.modules_files_metadata_basic.GetHasEXIFHashIds( temp_table_name )
                 has_human_readable_embedded_metadata_hash_ids = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadataHashIds( temp_table_name )
                 has_icc_profile_hash_ids = self.modules_files_metadata_basic.GetHasICCProfileHashIds( temp_table_name )
@@ -3407,6 +3416,10 @@ class DB( HydrusDB.HydrusDB ):
                 file_info_manager.has_exif = hash_id in has_exif_hash_ids
                 file_info_manager.has_human_readable_embedded_metadata = hash_id in has_human_readable_embedded_metadata_hash_ids
                 file_info_manager.has_icc_profile = hash_id in has_icc_profile_hash_ids
+
+                if hash_id in hash_ids_to_blurhash:
+                    
+                    file_info_manager.blurhash = hash_ids_to_blurhash[hash_id]
                 
                 missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
                 
