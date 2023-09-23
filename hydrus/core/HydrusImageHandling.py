@@ -47,6 +47,8 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusPSDHandling
 
+from hydrus.external import blurhash
+
 PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
 
 def EnableLoadTruncatedImages():
@@ -436,7 +438,7 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image
     
     return pil_image
     
-def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, clip_rect = None ) -> bytes:
+def GenerateThumbnailNumPyFromStaticImagePath( path, target_resolution, mime, clip_rect = None ):
     
     if OPENCV_OK:
         
@@ -449,18 +451,9 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, cl
         
         thumbnail_numpy_image = ResizeNumPyImage( numpy_image, target_resolution )
         
-        try:
-            
-            thumbnail_bytes = GenerateThumbnailBytesNumPy( thumbnail_numpy_image )
-            
-            return thumbnail_bytes
-            
-        except HydrusExceptions.CantRenderWithCVException:
-            
-            pass # fallback to PIL
+        return thumbnail_numpy_image
             
         
-    
     pil_image = GeneratePILImage( path )
     
     if clip_rect is not None:
@@ -470,9 +463,9 @@ def GenerateThumbnailBytesFromStaticImagePath( path, target_resolution, mime, cl
     
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
-    thumbnail_bytes = GenerateThumbnailBytesPIL( thumbnail_pil_image )
+    thumbnail_numpy_image = GenerateNumPyImageFromPILImage(thumbnail_pil_image)
     
-    return thumbnail_bytes
+    return thumbnail_numpy_image
     
 def GenerateThumbnailBytesNumPy( numpy_image ) -> bytes:
     
@@ -1253,3 +1246,6 @@ def StripOutAnyUselessAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
     
     return numpy_image
     
+def GetImageBlurHashNumPy( numpy_image, components_x = 4, components_y = 4 ):
+
+    return blurhash.blurhash_encode( numpy_image, components_x, components_y )

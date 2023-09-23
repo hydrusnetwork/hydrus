@@ -76,6 +76,7 @@ class FileInfoManager( object ):
         self.has_exif = False
         self.has_human_readable_embedded_metadata = False
         self.has_icc_profile = False
+        self.blurhash = None
         
     
     def Duplicate( self ):

@@ -31,7 +31,7 @@ def LoadSVGRenderer( path: str ):
     return renderer
     
 
-def GenerateThumbnailBytesFromSVGPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+def GenerateThumbnailNumPyFromSVGPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
     
     # TODO: SVGs have no inherent resolution, so all this is pretty stupid. we should render to exactly the res we want and then clip the result, not beforehand
     
@@ -74,7 +74,7 @@ def GenerateThumbnailBytesFromSVGPath( path: str, target_resolution: typing.Tupl
             thumbnail_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
             
         
-        return HydrusImageHandling.GenerateThumbnailBytesNumPy( thumbnail_numpy_image )
+        return thumbnail_numpy_image
         
     except:
         
@@ -82,7 +82,7 @@ def GenerateThumbnailBytesFromSVGPath( path: str, target_resolution: typing.Tupl
         
     
 
-HydrusSVGHandling.GenerateThumbnailBytesFromSVGPath = GenerateThumbnailBytesFromSVGPath
+HydrusSVGHandling.GenerateThumbnailNumPyFromSVGPath = GenerateThumbnailNumPyFromSVGPath
 
 def GetSVGResolution( path: str ):
     

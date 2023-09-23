@@ -130,6 +130,7 @@ class FileImportJob( object ):
         self._has_icc_profile = None
         self._pixel_hash = None
         self._file_modified_timestamp = None
+        self._blurhash = None
         
     
     def CheckIsGoodToImport( self ):
@@ -353,9 +354,20 @@ class FileImportJob( object ):
             
             percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
+            thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy(self._temp_path, target_resolution, mime, duration, num_frames, clip_rect = clip_rect, percentage_in = percentage_in)
+
             # this guy handles almost all his own exceptions now, so no need for clever catching. if it fails, we are prob talking an I/O failure, which is not a 'thumbnail failed' error
-            self._thumbnail_bytes = HydrusFileHandling.GenerateThumbnailBytes( self._temp_path, target_resolution, mime, duration, num_frames, clip_rect = clip_rect, percentage_in = percentage_in )
+            self._thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( thumbnail_numpy )
             
+            try:
+            
+                self._blurhash = HydrusImageHandling.GetImageBlurHashNumPy( thumbnail_numpy )
+
+            except:
+
+                pass
+            
+
         
         if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
             
@@ -503,6 +515,10 @@ class FileImportJob( object ):
     def HasICCProfile( self ) -> bool:
         
         return self._has_icc_profile
+    
+    def GetBlurhash( self ) -> str:
+
+        return self._blurhash
         
     
     def PubsubContentUpdates( self ):

@@ -75,7 +75,7 @@ def LoadPDF( path: str ):
     return document
     
 
-def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
     
     try:
         
@@ -114,7 +114,7 @@ def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tupl
             thumbnail_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
             
         
-        return HydrusImageHandling.GenerateThumbnailBytesNumPy( thumbnail_numpy_image )
+        return thumbnail_numpy_image
         
     except Exception as e:
         
@@ -126,7 +126,7 @@ def GenerateThumbnailBytesFromPDFPath( path: str, target_resolution: typing.Tupl
         
     
 
-HydrusPDFHandling.GenerateThumbnailBytesFromPDFPath = GenerateThumbnailBytesFromPDFPath
+HydrusPDFHandling.GenerateThumbnailNumPyFromPDFPath = GenerateThumbnailNumPyFromPDFPath
 
 PDF_ASSUMED_DPI = 300
 
