@@ -203,7 +203,7 @@ class EditPanel( ResizingScrolledPanel ):
     
 class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
     
-    def __init__( self, parent, ok_on_these_commands = None ):
+    def __init__( self, parent, ok_on_these_commands = None, message = None ):
         
         EditPanel.__init__( self, parent )
         CAC.ApplicationCommandProcessorMixin.__init__( self )
@@ -220,6 +220,17 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
         #
         
         self._vbox = QP.VBoxLayout( margin = 0 )
+        
+        if message is not None:
+            
+            from hydrus.client.gui.widgets import ClientGUICommon
+            
+            st = ClientGUICommon.BetterStaticText( self, label = message )
+            
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( self._vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
         
         self.widget().setLayout( self._vbox )
         

@@ -51,6 +51,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientTags
@@ -159,7 +160,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         current_media_base_locations_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( file_locations_panel )
         
-        self._current_media_base_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_base_locations_listctrl_panel, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, 8, self._ConvertLocationToListCtrlTuples )
+        self._current_media_base_locations_listctrl = ClientGUIListCtrl.BetterListCtrl( current_media_base_locations_listctrl_panel, CGLC.COLUMN_LIST_DB_MIGRATION_LOCATIONS.ID, 8, self._ConvertLocationToListCtrlTuples, activation_callback = self._SetMaxNumBytes )
         self._current_media_base_locations_listctrl.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         
         self._current_media_base_locations_listctrl.Sort()
@@ -169,6 +170,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         current_media_base_locations_listctrl_panel.AddButton( 'add new location for files', self._SelectPathToAdd )
         current_media_base_locations_listctrl_panel.AddButton( 'increase location weight', self._IncreaseWeight, enabled_check_func = self._CanIncreaseWeight )
         current_media_base_locations_listctrl_panel.AddButton( 'decrease location weight', self._DecreaseWeight, enabled_check_func = self._CanDecreaseWeight )
+        current_media_base_locations_listctrl_panel.AddButton( 'set max size', self._SetMaxNumBytes, enabled_check_func = self._CanSetMaxNumBytes )
         current_media_base_locations_listctrl_panel.AddButton( 'remove location', self._RemoveSelectedBaseLocation, enabled_check_func = self._CanRemoveLocation )
         
         self._thumbnails_location = QW.QLineEdit( file_locations_panel )
@@ -361,6 +363,30 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         return False
         
     
+    def _CanSetMaxNumBytes( self ):
+        
+        only_one_location_is_limitless = len( [ 1 for base_location in self._media_base_locations if base_location.max_num_bytes is None ] ) == 1
+        
+        base_locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
+        
+        if len( base_locations ) > 0:
+            
+            base_location = base_locations[0]
+            
+            if base_location in self._media_base_locations:
+                
+                if base_location.max_num_bytes is None and only_one_location_is_limitless:
+                    
+                    return False
+                    
+                
+                return True
+                
+            
+        
+        return False
+        
+    
     def _ClearThumbnailLocation( self ):
         
         message = 'Clear the custom thumbnail location? This will schedule all the thumbnail files to migrate back into the regular file locations.'
@@ -377,7 +403,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._SaveToDB()
         
     
-    def _ConvertLocationToListCtrlTuples( self, base_location ):
+    def _ConvertLocationToListCtrlTuples( self, base_location: ClientFilesPhysical.FilesStorageBaseLocation ):
         
         f_space = self._all_local_files_total_size
         ( t_space_min, t_space_max ) = self._GetThumbnailSizeEstimates()
@@ -468,8 +494,6 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        total_ideal_weight = sum( ( base_location.ideal_weight for base_location in self._media_base_locations ) )
-        
         if base_location in self._media_base_locations:
             
             ideal_weight = base_location.ideal_weight
@@ -490,14 +514,18 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        if base_location in self._media_base_locations:
+        if base_location.max_num_bytes is None:
             
-            ideal_fp = base_location.ideal_weight / total_ideal_weight
+            pretty_max_num_bytes = 'n/a'
+            sort_max_num_bytes = -1
             
         else:
             
-            ideal_fp = 0.0
+            pretty_max_num_bytes = HydrusData.ToHumanBytes( base_location.max_num_bytes )
+            sort_max_num_bytes = base_location.max_num_bytes
             
+        
+        ideal_fp = self._media_base_locations_to_ideal_usage.get( base_location, 0.0 )
         
         if self._ideal_thumbnails_base_location_override is None:
             
@@ -545,8 +573,8 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_ideal_usage = 'nothing'
             
         
-        display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_current_usage, pretty_ideal_weight, pretty_ideal_usage )
-        sort_tuple = ( pretty_location, portable, free_space, ideal_weight, ideal_usage, current_usage )
+        display_tuple = ( pretty_location, pretty_portable, pretty_free_space, pretty_current_usage, pretty_ideal_weight, pretty_max_num_bytes, pretty_ideal_usage )
+        sort_tuple = ( pretty_location, portable, free_space, ideal_weight, ideal_usage, sort_max_num_bytes, current_usage )
         
         return ( display_tuple, sort_tuple )
         
@@ -763,6 +791,54 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
+    def _SetMaxNumBytes( self ):
+        
+        if not self._CanSetMaxNumBytes():
+            
+            return
+            
+        
+        base_locations = self._current_media_base_locations_listctrl.GetData( only_selected = True )
+        
+        if len( base_locations ) > 0:
+            
+            base_location = base_locations[0]
+            
+            if base_location in self._media_base_locations:
+                
+                max_num_bytes = base_location.max_num_bytes
+                
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit max size' ) as dlg:
+                    
+                    message = 'If a location goes over its set size, it will schedule to migrate some files to other locations. At least one media location must have no limit.'
+                    message += '\n' * 2
+                    message += 'This is not precise (it works on average size, and thumbnails can add a bit), so give it some padding. Also, in general, remember it is not healthy to fill any hard drive more than 90% full.'
+                    message += '\n' * 2
+                    message += 'Also, this feature is under active development. The client will go over this limit if your collection grows significantly--the only way things rebalance atm are if you click "move files now"--but in future I will have things automatically migrate in the background to ensure limits are obeyed. This is just for advanced users to play with for now!'
+                    
+                    panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, message = message )
+                    
+                    control = ClientGUIControls.NoneableBytesControl( panel, initial_value = 100 * ( 1024 ** 3 ) )
+                    
+                    control.SetValue( max_num_bytes )
+                    
+                    panel.SetControl( control )
+                    
+                    dlg.SetPanel( panel )
+                    
+                    if dlg.exec() == QW.QDialog.Accepted:
+                        
+                        max_num_bytes = control.GetValue()
+                        
+                        base_location.max_num_bytes = max_num_bytes
+                        
+                        self._SaveToDB()
+                        
+                    
+                
+            
+        
+    
     def _SetThumbnailLocation( self ):
         
         with QP.DirDialog( self, 'Select thumbnail location' ) as dlg:
@@ -798,10 +874,12 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ( self._media_base_locations, self._ideal_thumbnails_base_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
+        self._media_base_locations_to_ideal_usage = ClientFilesPhysical.FilesStorageBaseLocation.STATICGetIdealWeights( self._all_local_files_total_size, self._media_base_locations )
+        
         approx_total_db_size = self._controller.db.GetApproxTotalFileSize()
         
         self._current_db_path_st.setText( 'database (about '+HydrusData.ToHumanBytes(approx_total_db_size)+'): '+self._controller.GetDBDir() )
-        self._current_install_path_st.setText( 'install: '+HC.BASE_DIR )
+        self._current_install_path_st.setText( 'install: ' + HC.BASE_DIR )
         
         approx_total_client_files = self._all_local_files_total_size
         ( approx_total_thumbnails_min, approx_total_thumbnails_max ) = self._GetThumbnailSizeEstimates()
@@ -2887,8 +2965,8 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         big_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( big_hbox, vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( big_hbox, self._search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( big_hbox, vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( big_hbox )
         
@@ -3085,7 +3163,16 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 #
                 
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u251cCurrent:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Current:' ), CC.FLAGS_ON_LEFT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_total ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( current_num_percent ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_total ) ), CC.FLAGS_ON_RIGHT )
@@ -3094,7 +3181,25 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 #
                 
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2502\u251cInbox:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Deleted:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_deleted ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( deleted_num_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_deleted ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( deleted_size_percent ) ), CC.FLAGS_ON_RIGHT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( deleted_average_filesize ) ), CC.FLAGS_ON_RIGHT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Inbox:' ), CC.FLAGS_ON_LEFT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_inbox ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( inbox_num_percent ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_inbox ) ), CC.FLAGS_ON_RIGHT )
@@ -3103,21 +3208,12 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 #
                 
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2502\u2514Archive:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Archive:' ), CC.FLAGS_ON_LEFT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_archive ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_num_percent ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_size_percent ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( archive_average_filesize ) ), CC.FLAGS_ON_RIGHT )
-                
-                #
-                
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2514Deleted:' ), CC.FLAGS_ON_LEFT )
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_deleted ) ), CC.FLAGS_ON_RIGHT )
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( deleted_num_percent ) ), CC.FLAGS_ON_RIGHT )
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_deleted ) ), CC.FLAGS_ON_RIGHT )
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( deleted_size_percent ) ), CC.FLAGS_ON_RIGHT )
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( deleted_average_filesize ) ), CC.FLAGS_ON_RIGHT )
                 
             else:
                 
@@ -3150,7 +3246,16 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 #
                 
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u251cInbox:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, QW.QWidget( self._files_content_panel ), CC.FLAGS_ON_LEFT )
+                
+                #
+                
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Inbox:' ), CC.FLAGS_ON_LEFT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_inbox ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( inbox_num_percent ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_inbox ) ), CC.FLAGS_ON_RIGHT )
@@ -3159,7 +3264,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 #
                 
-                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = '\u2514Archive:' ), CC.FLAGS_ON_LEFT )
+                QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = 'Archive:' ), CC.FLAGS_ON_LEFT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanInt( num_archive ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = ClientData.ConvertZoomToPercentage( archive_num_percent ) ), CC.FLAGS_ON_RIGHT )
                 QP.AddToLayout( text_table_layout, ClientGUICommon.BetterStaticText( self._files_content_panel, label = HydrusData.ToHumanBytes( size_archive ) ), CC.FLAGS_ON_RIGHT )

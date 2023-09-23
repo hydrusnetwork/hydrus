@@ -280,8 +280,9 @@ class BytesControl( QW.QWidget ):
         
         self._unit.addItem( 'B', 1 )
         self._unit.addItem( 'KB', 1024 )
-        self._unit.addItem( 'MB', 1024 * 1024 )
-        self._unit.addItem( 'GB', 1024 * 1024 * 1024 )
+        self._unit.addItem( 'MB', 1024 ** 2 )
+        self._unit.addItem( 'GB', 1024 ** 3 )
+        self._unit.addItem( 'TB', 1024 ** 4 )
         
         #
         
@@ -311,7 +312,7 @@ class BytesControl( QW.QWidget ):
     
     def GetSeparatedValue( self ):
         
-        return (self._spin.value(), self._unit.GetValue())
+        return ( self._spin.value(), self._unit.GetValue() )
         
     
     def GetValue( self ):
@@ -321,12 +322,12 @@ class BytesControl( QW.QWidget ):
     
     def SetSeparatedValue( self, value, unit ):
         
-        return (self._spin.setValue( value ), self._unit.SetValue( unit ))
+        return ( self._spin.setValue( value ), self._unit.SetValue( unit ) )
         
     
     def SetValue( self, value: int ):
         
-        max_unit = 1024 * 1024 * 1024
+        max_unit = 1024 ** 4
         
         unit = 1
         
@@ -341,6 +342,7 @@ class BytesControl( QW.QWidget ):
         self._unit.SetValue( unit )
         
     
+
 class NoneableBytesControl( QW.QWidget ):
     
     valueChanged = QC.Signal()

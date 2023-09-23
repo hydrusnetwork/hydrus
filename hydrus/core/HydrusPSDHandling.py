@@ -3,7 +3,8 @@ import typing
 
 from PIL import Image as PILImage
 
-from hydrus.core import HydrusExceptions, HydrusImageHandling
+from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusImageHandling
 
 try:
     
@@ -55,8 +56,9 @@ def GenerateThumbnailBytesFromPSDPath( path: str, target_resolution: typing.Tupl
 def GetPSDResolution( path: str ):
     
     if not PSD_TOOLS_OK:
-
+        
         raise HydrusExceptions.UnsupportedFileException( 'psd_tools unavailable' )
+        
     
     return HydrusPSDTools.GetPSDResolution( path )
     

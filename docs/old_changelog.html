@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_544"><a href="#version_544">version 544</a></h2>
+                    <ul>
+                        <li><h3>webp vulnerability</h3></li>
+                        <li>the main webp library (libwebp) that many programs use for webp support had a remote execution (very bad) vulnerability. you probably noticed your chrome/firefox updated this week, which was fixing this. we use the same thing via the `Pillow` library, which also rolled out a fix. I'm not sure how vulnerable hydrus ever was, since we are usually jank about how we do anything, but best to be safe about these things. there were apparently exploits for this floating around</li>
+                        <li>the builds today have the fix, so if you use them, update as normal and you are good</li>
+                        <li>if you run from source, **rebuild your venv at your earliest convenience**, and you'll get the new version of Pillow and be good. note, if you use the advanced setup, that there is a new question about `Pillow`</li>
+                        <li>unfortunately, Windows 7 users (or anyone else running from source on Python 3.7) cannot get the fix! it needs Pillow 10.0.1, which is >=Python 3.8. it seems many large programs are dropping support for Win 7 this year, so while I will continue to support it for a reasonable while longer, I think the train may be running out of track bros</li>
+                        <li><h3>max size in file storage system</h3></li>
+                        <li>the `migrate database` dialog now allows you to set a 'max size' for all but one of your media locations. if you have a 500GB drive you want to store some stuff on, you no longer have to balance the weights in your head--just set a max size of 450GB and hydrus will figure it out for you. it is not super precise (and it isn't healthy to fill drives up to 98% anyway), so make sure you leave some padding</li>
+                        <li>also, please note that this will not automatically rebalance _yet_. right now, the only way files move between locations is through the 'move files now' button on the dialog, so if you have a location that is full up according to its max size rule and then spend a month importing many files, it will go over its limit until and unless you revisit 'migrate database' and move files again. I hope to have automatic background rebalancing in the near future</li>
+                        <li>updated the 'database migration' help to talk about this and added a new migration example</li>
+                        <li>I fleshed out the logic and fixed several bugs in the migration code, mostly to do with the new max size stuff and distributing weights appropriately in various situations</li>
+                        <li><h3>misc</h3></li>
+                        <li>when an image file fails to render in the media viewer, it now draws a bordered box with a brief 'failed to render' note. previously, it janked with a second of lag, made some popups, and left the display on eternal blank hang. now it finishes its job cleanly and returns a 'nah m8' 'image' result</li>
+                        <li>I reworked the Mr Bones layout a bit. the search is now on the left, and the rows of the main count table are separated for readability</li>
+                        <li>it turns out that bitmap (.bmp) files can support ICC Profiles, so I've told hydrus to look for them in new bitmaps and retroactively scan all your existing ones</li>
+                        <li>the 'edit num bytes' widget now supports terabytes (TB)</li>
+                        <li>fixed an issue with the recent PSD code updates that was breaking boot for clients running from source without the psd-tools library (this affected the Docker build)</li>
+                        <li>updated all the 'setup_venv' scripts. all the formatting and text has had a pass, and there is now a question on (n)ew or (old) Pillow</li>
+                        <li>to stop FFMPEG's false positives where it can think a txt file is an mpeg, the main hydrus filetype scanning routine will no longer send files with common text extensions to ffmpeg. if you do have an mp3 called music.txt, rename it before import!</li>
+                        <li>thanks to a user, the inkbunny file page parser fetches the correct source time again (#1431)</li>
+                        <li>thanks to a user, the old sankaku gallery parser can find the 'next page' again</li>
+                        <li>removed the broken sankaku login script for new users. I recommend people move to Hydrus Companion for all tricky login situations (#1435)</li>
+                        <li>thanks to a user, procreate file parsing, which had the width/height flipped, is fixed. all existing procreate files will regen their metadata and thumbs</li>
+                        <li><h3>client api</h3></li>
+                        <li>thanks to a user, the Client API now has a `/get_files/render` command, which gives you a 100% zoom png render of the given file. useful if you want to display a PSD on a web page!</li>
+                        <li>I screwed up Mr Bones's Client API request last week. this is now fixed</li>
+                        <li>Mr Bones now supports a full file search context on the Client API, just like the main UI now. same parameters as `/get_files/search_files`, the help talks about it. He also cancels his work early if the request is terminated</li>
+                        <li>Mr Bones gets several new unit tests to guarantee long-term ride reliability</li>
+                        <li>the Client API (and all hydrus servers) now return proper JSON on an error. there's the error summary, specific exception name, and http status code. the big bad 500-error-of-last-resort still tacks on the large serverside traceback to the summary, so we'll see if that is still annoying and split it off if needed</li>
+                        <li>the new `/add_tags/get_siblings_and_parents` now properly cleans the tags you give it, trimming whitespace and lowercasing letters and so on</li>
+                        <li>the client api version is now 52</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_543"><a href="#version_543">version 543</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
