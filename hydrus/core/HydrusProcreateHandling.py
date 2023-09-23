@@ -79,15 +79,13 @@ def GetProcreateResolution( path ):
             
             # canvas is rotated 90 or -90 degrees
             
-            height = size[1]
-            
-            width = size[0]
+            width = size[1]
+            height = size[0]
             
         else:
             
-            height = size[0]
-            
-            width = size[1]
+            width = size[0]
+            height = size[1]
             
         
     except:

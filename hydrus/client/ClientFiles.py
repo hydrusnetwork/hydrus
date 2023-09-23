@@ -733,23 +733,36 @@ class ClientFilesManager( object ):
         # we want these overweight guys to nonetheless distribute their stuff according to relative weights
         # so, what we'll do is we'll play a game with a split-pot, where bust players can't get dosh from later rounds
         
-        second_round_total_ideal_weight = total_ideal_weight
         second_round_base_locations = []
         
+        desperately_overweight_locations = []
         overweight_locations = []
-        underweight_locations = []
+        available_locations = []
+        starving_locations = []
         
         # first round, we need to sort out who is bust
         
+        total_normalised_weight_lost_in_first_round = 0
+        
         for base_location in all_media_base_locations:
             
-            current_weight = current_base_locations_to_normalised_weights[ base_location ]
             current_num_bytes = current_base_locations_to_size_estimate[ base_location ]
             
-            if base_location.NeedsToRemoveSubfolders( current_num_bytes ):
+            if not base_location.AbleToAcceptSubfolders( current_num_bytes, smallest_subfolder_num_bytes ):
                 
-                overweight_locations.append( base_location )
-                second_round_total_ideal_weight -= current_weight
+                if base_location.max_num_bytes is None:
+                    
+                    total_normalised_weight_lost_in_first_round = base_location.ideal_weight / total_ideal_weight
+                    
+                else:
+                    
+                    total_normalised_weight_lost_in_first_round += base_location.max_num_bytes / all_local_files_total_size
+                    
+                
+                if base_location.NeedsToRemoveSubfolders( current_num_bytes ):
+                    
+                    desperately_overweight_locations.append( base_location )
+                    
                 
             else:
                 
@@ -760,32 +773,56 @@ class ClientFilesManager( object ):
         random.shuffle( second_round_base_locations )
         
         # second round, let's distribute the remainder
+        # I fixed some logic and it seems like everything here is now AbleToAccept, so maybe we want another quick pass on this
+        # or just wait until I do the slow migration and we'll figure something out with the staticmethod on BaseLocation that just gets ideal weights
+        # I also added this jank regarding / ( 1 - first_round_weight ), which makes sure we are distributing the remaining weight correctly
+        
+        second_round_total_ideal_weight = sum( ( base_location.ideal_weight for base_location in second_round_base_locations ) )
         
         for base_location in second_round_base_locations:
             
-            current_weight = current_base_locations_to_normalised_weights[ base_location ]
+            current_normalised_weight = current_base_locations_to_normalised_weights[ base_location ]
             current_num_bytes = current_base_locations_to_size_estimate[ base_location ]
             
-            if base_location.WouldLikeToRemoveSubfolders( current_weight, second_round_total_ideal_weight, largest_subfolder_normalised_weight ):
+            # can be both overweight and able to eat more
+            
+            if base_location.WouldLikeToRemoveSubfolders( current_normalised_weight / ( 1 - total_normalised_weight_lost_in_first_round ), second_round_total_ideal_weight, largest_subfolder_normalised_weight ):
                 
                 overweight_locations.append( base_location )
                 
-            elif base_location.EagerToAcceptSubfolders( current_weight, second_round_total_ideal_weight, smallest_subfolder_normalised_weight, current_num_bytes, smallest_subfolder_num_bytes ):
+            
+            if base_location.EagerToAcceptSubfolders( current_normalised_weight / ( 1 - total_normalised_weight_lost_in_first_round ), second_round_total_ideal_weight, smallest_subfolder_normalised_weight, current_num_bytes, smallest_subfolder_num_bytes ):
                 
-                underweight_locations.insert( 0, base_location )
+                starving_locations.insert( 0, base_location )
                 
             elif base_location.AbleToAcceptSubfolders( current_num_bytes, smallest_subfolder_num_bytes ):
                 
-                underweight_locations.append( base_location )
+                available_locations.append( base_location )
                 
             
         
         #
         
-        if len( underweight_locations ) > 0 and len( overweight_locations ) > 0:
+        if len( desperately_overweight_locations ) > 0:
             
-            overweight_location = overweight_locations.pop( 0 )
-            underweight_location = underweight_locations.pop( 0 )
+            potential_sources = desperately_overweight_locations
+            potential_destinations = starving_locations + available_locations
+            
+        elif len( overweight_locations ) > 0:
+            
+            potential_sources = overweight_locations
+            potential_destinations = starving_locations
+            
+        else:
+            
+            potential_sources = []
+            potential_destinations = []
+            
+        
+        if len( potential_sources ) > 0 and len( potential_destinations ) > 0:
+            
+            source_base_location = potential_sources.pop( 0 )
+            destination_base_location = potential_destinations.pop( 0 )
             
             random.shuffle( file_prefixes )
             
@@ -797,10 +834,10 @@ class ClientFilesManager( object ):
                 
                 base_location = subfolder.base_location
                 
-                if base_location == overweight_location:
+                if base_location == source_base_location:
                     
-                    overweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( file_prefix, overweight_location )
-                    underweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( file_prefix, underweight_location )
+                    overweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( file_prefix, source_base_location )
+                    underweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( file_prefix, destination_base_location )
                     
                     return ( overweight_subfolder, underweight_subfolder )
                     

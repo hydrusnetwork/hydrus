@@ -3478,6 +3478,40 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( boned_stats, dict( expected_data ) )
         
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'boned_stats' )
+        
+        file_search_context = kwargs[ 'file_search_context' ]
+        
+        self.assertEqual( len( file_search_context.GetPredicates() ), 0 )
+        
+        #
+        
+        HG.test_controller.SetRead( 'boned_stats', expected_data )
+        
+        path = '/manage_database/mr_bones?tags={}'.format( urllib.parse.quote( json.dumps( [ 'skirt', 'blue_eyes' ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        boned_stats = d[ 'boned_stats' ]
+        
+        self.assertEqual( boned_stats, dict( expected_data ) )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'boned_stats' )
+        
+        file_search_context = kwargs[ 'file_search_context' ]
+        
+        self.assertEqual( len( file_search_context.GetPredicates() ), 2 )
+        
     
     def _test_manage_duplicates( self, connection, set_up_permissions ):
         

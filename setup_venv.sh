@@ -2,10 +2,35 @@
 
 pushd "$(dirname "$0")" || exit 1
 
+echo "   r::::::::::::::::::::::::::::::::::r"
+echo "   :                                  :"
+echo "   :               :PP.               :"
+echo "   :               vBBr               :"
+echo "   :               7BB:               :"
+echo "   :               rBB:               :"
+echo "   :      :DQRE:   rBB:   :gMBb:      :"
+echo "   :       :BBBi   rBB:   7BBB.       :"
+echo "   :        KBB:   rBB:   rBBI        :"
+echo "   :        qBB:   rBB:   rQBU        :"
+echo "   :        qBB:   rBB:   iBBS        :"
+echo "   :        qBB:   iBB:   7BBj        :"
+echo "   :        iBBY   iBB.   2BB.        :"
+echo "   :         SBQq  iBQ:  EBBY         :"
+echo "   :          :MQBZMBBDRBBP.          :"
+echo "   :              .YBB7               :"
+echo "   :               :BB.               :"
+echo "   :               7BBi               :"
+echo "   :               rBB:               :"
+echo "   :                                  :"
+echo "   r::::::::::::::::::::::::::::::::::r"
+echo
+echo "                  hydrus"
+echo
+
 py_command=python3
 
 if ! type -P $py_command >/dev/null 2>&1; then
-    echo "No python3 found, using python."
+    echo "No \"python3\" found, using \"python\"."
     py_command=python
 fi
 
@@ -19,7 +44,8 @@ else
     read -r
 fi
 
-echo "Users on older OSes need the advanced install."
+echo "--------"
+echo "Users on older OSes or Python >=3.11 need the advanced install."
 echo
 echo "Your Python version is:"
 $py_command --version
@@ -31,10 +57,13 @@ read -r install_type
 if [ "$install_type" = "s" ]; then
     :
 elif [ "$install_type" = "a" ]; then
+    echo "--------"
+    echo "We are now going to choose which versions of some larger libraries we are going to use. If something doesn't install, or hydrus won't boot, just run this script again and it will delete everything and start over."
     echo
-    echo "Qt is the User Interface library. We are now on Qt6."
-    echo "If you are <=Ubuntu 18.04 or equivalent, choose 5."
-    echo "If you cannot boot with the normal Qt6, try the (o)lder build on Python ^<=3.10 or (m)iddle on Python ^>=3.11."
+    echo "Qt - User Interface"
+    echo "Most people want \"6\"."
+    echo "If you are <=Ubuntu 18.04 or equivalent, choose \"5\"."
+    echo "If you cannot boot with the normal Qt6, try \"o\" on Python ^<=3.10 or \"m\" on Python ^>=3.11."
     echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, Qt6 (m)iddle or (t)est? "
     read -r qt
     if [ "$qt" = "5" ]; then
@@ -52,9 +81,12 @@ elif [ "$install_type" = "a" ]; then
         exit 1
     fi
 
+    echo "--------"
+    echo "mpv - audio and video playback"
     echo
-    echo "mpv is the main way to play audio and video. We need to tell hydrus how to talk to your existing mpv install."
-    echo "Try the n first. If it doesn't work, fall back to o."
+    echo "We need to tell hydrus how to talk to your existing mpv install."
+    echo "Most people want \"n\"."
+    echo "If it doesn't work, fall back to \"o\"."
     echo "Do you want (o)ld mpv, (n)ew mpv, or (t)est mpv? "
     read -r mpv
     if [ "$mpv" = "o" ]; then
@@ -69,9 +101,28 @@ elif [ "$install_type" = "a" ]; then
         exit 1
     fi
 
+    echo "--------"
+    echo "Pillow - Images"
     echo
-    echo "OpenCV is the main image processing library."
-    echo "Try the n first. If it doesn't work, fall back to o. Very new python versions might need t."
+    echo "Most people want \"n\"."
+    echo "If you are Python 3.7 or earlier, choose \"o\""
+    echo "Do you want (o)ld pillow or (n)ew pillow? "
+    read -r pillow
+    if [ "$pillow" = "o" ]; then
+        :
+    elif [ "$pillow" = "n" ]; then
+        :
+    else
+        echo "Sorry, did not understand that input!"
+        popd || exit 1
+        exit 1
+    fi
+
+    echo "--------"
+    echo "OpenCV - Images"
+    echo
+    echo "Most people want \"n\"."
+    echo "If it doesn't work, fall back to \"o\". Python >=3.11 might need \"t\"."
     echo "Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
     read -r opencv
     if [ "$opencv" = "o" ]; then
@@ -91,6 +142,7 @@ else
     exit 1
 fi
 
+echo "--------"
 echo "Creating new venv..."
 $py_command -m venv venv
 
@@ -129,6 +181,12 @@ elif [ "$install_type" = "a" ]; then
         python -m pip install -r static/requirements/advanced/requirements_mpv_test.txt
     fi
 
+    if [ "$pillow" = "o" ]; then
+        python -m pip install -r static/requirements/advanced/requirements_pillow_old.txt
+    elif [ "$pillow" = "n" ]; then
+        python -m pip install -r static/requirements/advanced/requirements_pillow_new.txt
+    fi
+
     if [ "$opencv" = "o" ]; then
         python -m pip install -r static/requirements/advanced/requirements_opencv_old.txt
     elif [ "$opencv" = "n" ]; then
@@ -140,6 +198,7 @@ fi
 
 deactivate
 
+echo "--------"
 echo "Done!"
 
 popd || exit

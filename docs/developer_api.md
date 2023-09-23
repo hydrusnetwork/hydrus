@@ -46,7 +46,7 @@ In general, the API deals with standard UTF-8 JSON. POST requests and 200 OK res
     ```
     
 
-On 200 OK, the API returns JSON for everything except actual file/thumbnail requests. On 4XX and 5XX, assume it will return plain text, which may be a raw traceback that I'd be interested in seeing. You'll typically get 400 for a missing parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.
+The API returns JSON for everything except actual file/thumbnail requests. For errors, you'll typically get 400 for a missing/invalid parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.
 
 !!! note
     For any request sent to the API, the total size of the initial request line (this includes the URL and any parameters) and the headers must not be larger than 2 megabytes.
@@ -353,11 +353,11 @@ Arguments:
         *   7 - Edit File Notes
         *   8 - Edit File Relationships
         *   9 - Edit File Ratings
-
+    
     ``` title="Example request"
     /request_new_permissions?name=my%20import%20script&basic_permissions=[0,1]
     ```
-        
+    
 Response: 
 :   Some JSON with your access key, which is 64 characters of hex. This will not be valid until the user approves the request in the client ui.
 ```json title="Example response"
@@ -2769,7 +2769,16 @@ _Get the data from help->how boned am I?. This is a simple Object of numbers jus
 Restricted access:
 :   YES. Manage Database permission needed.
 
-Arguments: None
+Arguments (in percent-encoded JSON):
+:   
+    *   `tags`: (optional, a list of tags you wish to search for)
+    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to 'all my files')
+    
+    ``` title="Example requests"
+    /manage_database/mr_bones
+    /manage_database/mr_bones?tags=%5B%22blonde_hair%22%2C%20%22blue_eyes%22%5D
+    ```
 
 ```json title="Example response"
 {
@@ -2788,3 +2797,5 @@ Arguments: None
   }
 }
 ```
+
+The arguments here are the same as for [GET /get\_files/search\_files](#get_files_search_files). You can set any or none of them to set a search domain like in the dialog.

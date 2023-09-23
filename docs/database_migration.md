@@ -2,6 +2,9 @@
 title: Database Migration
 ---
 
+!!! warning
+    I am working on this system right now and will be moving the 'move files now' action to a more granular, always-on background migration. This document will update to reflect those changes!
+
 # database migration
 
 ## the hydrus database { id="intro" }
@@ -38,19 +41,39 @@ Backing such an arrangement up is obviously more complicated, and the internal c
 !!! danger
     **As always, I recommend creating a backup before you try any of this, just in case it goes wrong.**
 
-If you would like to move your files and thumbnails to new locations, I generally recommend you not move their folders around yourself--the database has an internal knowledge of where it thinks its file and thumbnail folders are, and if you move them while it is closed, it will become confused and you will have to manually relocate what is missing on the next boot via a repair dialog. This is not impossible to figure out, but if the program's 'client files' folder confuses you at all, I'd recommend you stay away. Instead, you can simply do it through the gui:
+If you would like to move your files and thumbnails to new locations, I generally recommend you not move their folders around yourself--the database has an internal knowledge of where it thinks its file and thumbnail folders are, and if you move them while it is closed, it will become confused.
+
+??? note "Missing Locations"
+    If your folders are in the wrong locations on a client boot, a repair dialog appears, and you can manually update the client's internal understanding. This is not impossible to figure out, _and in some tricky storage situations doing this on purpose can be faster than letting the client migrate things itself_, but generally it is best and safest to do everything through the dialog.
 
 Go _database->migrate database_, giving you this dialog:
 
 ![](images/db_migration.png)
 
-To move your files somewhere else, add the new location, empty/remove the old location, and then click 'move files now'.
+The buttons let you add more locations and remove old ones. The operations on this dialog are simple and atomic--at no point is your db ever invalid.
 
-**Portable** means that the path is beneath the main db dir and so is stored as a relative path. Portable paths will still function if the database changes location between boots (for instance, if you run the client from a USB drive and it mounts under a different location).
+**Beneath db?** means that the path is beneath the main db dir and so is stored internally as a relative path. Portable paths will still function if the database changes location between boots (for instance, if you run the client from a USB drive and it mounts under a different location).
 
 **Weight** means the relative amount of media you would like to store in that location. It only matters if you are spreading your files across multiple locations. If location A has a weight of 1 and B has a weight of 2, A will get approximately one third of your files and B will get approximately two thirds.
 
-The operations on this dialog are simple and atomic--at no point is your db ever invalid. Once you have the locations and ideal usage set how you like, hit the 'move files now' button to actually shuffle your files around. It will take some time to finish, but you can pause and resume it later if the job is large or you want to undo or alter something.
+**Max Size** means the max total size of files the client will want to store in that location. Again, it only matters if you are spreading your files across multiple locations, but it is a simple way to ensure you don't go over a particular smaller hard drive's size. One location must always be limitless. This is not precise, so give it some padding. When one location is maxed out, the remaining locations will distribute the remainder of the files according to their respective weights. _For the meantime, this will not update by itself. If you import many files, the location may go over its limit and you will have to revisit 'migrate database' to rebalance your files again. Bear with me--I will fix this soon with the background migrate._ 
+
+Let's set up an example move:
+
+![](images/db_migration_move_pending.png)
+
+I made several changes:
+
+* Added `C:\hydrus_files` to store files.
+* Added `D:\hydrus_files` to store files, with a max size of 128MB.
+* Set `C:\hydrus_thumbs` as the location to store thumbnails.
+* Removed the original `C:\Hydrus Network\db\client_files` location.
+
+While the ideal usage has changed significantly, note that the current usage remains the same. Nothing moves until you click 'move files now'. Moving files will take some time to finish. Once done, it looks like this:
+
+![](images/db_migration_move_done.png)
+
+The current and ideal usages line up, and the defunct `C:\Hydrus Network\db\client_files` location, which no longer stores anything, is removed from the list.
 
 ## informing the software that the SQLite database is not in the default location { id="launch_parameter" }
 
@@ -72,7 +95,7 @@ Rather than typing the path out in a terminal every time you want to launch your
 
 Note that an install with an 'external' database no longer needs access to write to its own path, so you can store it anywhere you like, including protected read-only locations (e.g. in 'Program Files'). Just double-check your shortcuts are good.
 
-## finally { id="finally" }
+## backups { id="finally" }
 
 If your database now lives in one or more new locations, make sure to update your backup routine to follow them!
 
@@ -91,15 +114,15 @@ Specifically:
 * Create two empty folders on your SSD with names like 'hydrus\_db' and 'hydrus\_thumbnails'.
 * Set the 'thumbnail location override' to 'hydrus_thumbnails'. You should get that new location in the list, currently empty but prepared to take all your thumbs.
 * Hit 'move files now' to actually move the thumbnails. Since this involves moving a lot of individual files from a high-latency source, it will take a long time to finish. The hydrus client may hang periodically as it works, but you can just leave it to work on its own--it will get there in the end. You can also watch it do its disk work under Task Manager.
-* Now hit 'add location' and select your new 'hydrus\_files'. 'hydrus\_files' should be added and willing to take 50% of the files.
-* Select the old location (probably 'install\_dir/db/client\_files') and hit 'decrease weight' until it has weight 0 and you are prompted to remove it completely. 'hydrus_files' should now be willing to take all the files from the old location.
+* Now hit 'add location' and select your new 'hydrus\_files'. 'hydrus\_files' should be appear and be willing to take 50% of the files.
+* Select the old location (probably 'install\_dir/db/client\_files') and hit 'remove location' or 'decrease weight' until it has weight 0 and you are prompted to remove it completely. 'hydrus_files' should now be willing to take all 100% of the files from the old location.
 * Hit 'move files now' again to make this happen. This should be fast since it is just moving a bunch of folders across the same partition.
 * With everything now 'non-portable' and hence decoupled from the db, you can now easily migrate the install and db to 'hydrus_db' simply by shutting the client down and moving the install folder in a file explorer.
 * Update your shortcut to the new hydrus_client.exe location and try to boot.
 * Update your backup scheme to match your new locations.
 * Enjoy a much faster client.
 
-You should now have _something_ like this:
+You should now have _something_ like this (let's say the D drive is the fast SSD, and E is the high capacity HDD):
 
 ![](images/db_migration_example.png)
 
