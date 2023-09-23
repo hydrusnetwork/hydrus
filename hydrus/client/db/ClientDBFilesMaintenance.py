@@ -180,6 +180,10 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         if self.modules_similar_files.FileIsInSystem( hash_id ):
                             
                             self.modules_similar_files.StopSearchingFile( hash_id )
+
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL or job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
+
+                    self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH )
                             
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH:
 

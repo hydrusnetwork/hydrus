@@ -1683,6 +1683,8 @@ class ClientFilesManager( object ):
             
             self._AddThumbnailFromBytes( hash, thumbnail_bytes )
             
+        return True
+    
     
     def RegenerateThumbnailIfWrongSize( self, media ):
         
@@ -2399,7 +2401,8 @@ class FilesMaintenanceManager( object ):
         
         try:
             
-            self._controller.client_files_manager.RegenerateThumbnail( media_result )
+            return self._controller.client_files_manager.RegenerateThumbnail( media_result )
+        
             
         except HydrusExceptions.FileMissingException:
             
@@ -2591,11 +2594,13 @@ class FilesMaintenanceManager( object ):
                             
                         elif job_type == REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
                             
-                            self._RegenFileThumbnailForce( media_result )
+                            additional_data = self._RegenFileThumbnailForce( media_result )
                             
                         elif job_type == REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
                             
                             was_regenerated = self._RegenFileThumbnailRefit( media_result )
+
+                            additional_data = was_regenerated
                             
                             if was_regenerated:
                                 
