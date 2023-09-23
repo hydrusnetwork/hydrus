@@ -78,6 +78,8 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         ClientCachesBase.CacheableObject.__init__( self )
         
         self._numpy_image = None
+        self._render_failed = False
+        self._is_ready = False
         
         self._hash = media.GetHash()
         self._mime = media.GetMime()
@@ -235,28 +237,38 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
             
         except Exception as e:
             
-            HydrusData.ShowText( 'Problem rendering image at "{}"! Error follows:'.format( self._path ) )
+            self._numpy_image = self._InitialiseErrorImage( e )
             
-            HydrusData.ShowException( e )
+            self._render_failed = True
             
+            HydrusData.Print( 'Problem rendering image at "{}"! Error follows:'.format( self._path ) )
+            
+            HydrusData.PrintException( e, do_wait = False )
+            
+        
+        self._is_ready = True
         
         if not self._this_is_for_metadata_alone:
             
-            if self._numpy_image is None:
-                
-                m = 'There was a problem rendering the image with hash {}! It may be damaged.'.format(
-                    self._hash.hex()
-                )
-                
-                m += os.linesep * 2
-                m += 'Jobs to check its integrity and metadata have been scheduled. If it is damaged, it may be redownloaded or removed from the client completely. If it is not damaged, it may be fixed automatically or further action may be required.'
-                
-                HydrusData.ShowText( m )
-                
-                HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
-                HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-                
-            else:
+            # TODO: Move this error code to a nice button or something
+            # old recovery code, before the ErrorImage
+            # I think move to show a nice 'check integrity' button when a file errors, so the user can kick it off, and we avoid the popup spam
+            '''
+            # (if image failed to render)
+            m = 'There was a problem rendering the image with hash {}! It may be damaged.'.format(
+                self._hash.hex()
+            )
+            
+            m += os.linesep * 2
+            m += 'Jobs to check its integrity and metadata have been scheduled. If it is damaged, it may be redownloaded or removed from the client completely. If it is not damaged, it may be fixed automatically or further action may be required.'
+            
+            HydrusData.ShowText( m )
+            
+            HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
+            HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+            '''
+            
+            if not self._render_failed:
                 
                 my_resolution_size = QC.QSize( self._resolution[0], self._resolution[1] )
                 my_numpy_size = QC.QSize( self._numpy_image.shape[1], self._numpy_image.shape[0] )
@@ -278,6 +290,48 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                     
                 
             
+        
+    
+    def _InitialiseErrorImage( self, e: Exception ):
+        
+        ( width, height ) = self._resolution
+        
+        qt_image = QG.QImage( width, height, QG.QImage.Format_RGB888 )
+        
+        painter = QG.QPainter( qt_image )
+        
+        painter.setBackground( QG.QBrush( QC.Qt.white ) )
+        
+        painter.eraseRect( painter.viewport() )
+        
+        pen = QG.QPen( QG.QColor( 20, 20, 20 ) )
+        
+        pen.setWidth( 5 )
+        
+        painter.setPen( pen )
+        painter.setBrush( QC.Qt.NoBrush )
+        
+        painter.drawRect( 0, 0, width - 1, height - 1 )
+        
+        from hydrus.client.gui import ClientGUIFunctions
+        
+        font = painter.font()
+        
+        font.setPixelSize( height // 20 )
+        
+        painter.setFont( font )
+        
+        text = 'Image failed to render:'
+        text += '\n'
+        text += str( e )
+        text += '\n'
+        text += 'Full info written to the log.'
+        
+        painter.drawText( QC.QRectF( 0, 0, width, height ), QC.Qt.AlignCenter, text )
+        
+        del painter
+        
+        return ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
         
     
     def GetEstimatedMemoryFootprint( self ):
@@ -415,9 +469,15 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
     
     def IsReady( self ):
         
-        return self._numpy_image is not None
+        return self._is_ready
         
     
+    def RenderFailed( self ):
+        
+        return self._render_failed
+        
+    
+
 class ImageTile( ClientCachesBase.CacheableObject ):
     
     def __init__( self, hash: bytes, clip_rect: QC.QRect, qt_pixmap: QG.QPixmap ):

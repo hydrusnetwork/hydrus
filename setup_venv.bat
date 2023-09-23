@@ -2,6 +2,31 @@
 
 pushd "%~dp0"
 
+ECHO   r::::::::::::::::::::::::::::::::::r
+ECHO   :                                  :
+ECHO   :               :PP.               :
+ECHO   :               vBBr               :
+ECHO   :               7BB:               :
+ECHO   :               rBB:               :
+ECHO   :      :DQRE:   rBB:   :gMBb:      :
+ECHO   :       :BBBi   rBB:   7BBB.       :
+ECHO   :        KBB:   rBB:   rBBI        :
+ECHO   :        qBB:   rBB:   rQBU        :
+ECHO   :        qBB:   rBB:   iBBS        :
+ECHO   :        qBB:   iBB:   7BBj        :
+ECHO   :        iBBY   iBB.   2BB.        :
+ECHO   :         SBQq  iBQ:  EBBY         :
+ECHO   :          :MQBZMBBDRBBP.          :
+ECHO   :              .YBB7               :
+ECHO   :               :BB.               :
+ECHO   :               7BBi               :
+ECHO   :               rBB:               :
+ECHO   :                                  :
+ECHO   r::::::::::::::::::::::::::::::::::r
+ECHO:
+ECHO                  hydrus
+ECHO:
+
 where /q python
 IF ERRORLEVEL 1 (
 
@@ -29,8 +54,8 @@ IF EXIST "venv\" (
 
 :questions
 
-ECHO:
-ECHO Users on older Windows need the advanced install.
+ECHO --------
+ECHO Users on older Windows or Python ^>=3.11 need the advanced install.
 ECHO:
 ECHO Your Python version is:
 python --version
@@ -44,10 +69,15 @@ goto :parse_fail
 
 :question_qt
 
+ECHO --------
+ECHO We are now going to choose which versions of some larger libraries we are going to use. If something doesn't install, or hydrus won't boot, just run this script again and it will delete everything and start over.
 ECHO:
-ECHO Qt is the User Interface library. We are now on Qt6.
-ECHO If you are on Windows ^<=8.1, choose 5.
-ECHO If you have multi-monitor menu position bugs with the normal Qt6, try the (o)lder build on Python ^<=3.10 or (m)iddle on Python ^>=3.11.
+
+ECHO Qt - User Interface
+ECHO:
+ECHO Most people want "6".
+ECHO If you are on Windows ^<=8.1, choose "5".
+ECHO If you have multi-monitor menu position bugs with the normal Qt6, try "o" on Python ^<=3.10 or "m" on Python ^>=3.11.
 SET /P qt="Do you want Qt(5), Qt(6), Qt6 (o)lder, Qt6 (m)iddle or (t)est? "
 
 IF "%qt%" == "5" goto :question_mpv
@@ -59,21 +89,39 @@ goto :parse_fail
 
 :question_mpv
 
+ECHO --------
+ECHO mpv - audio and video playback
 ECHO:
-ECHO mpv is the main way to play audio and video. We need to tell hydrus how to talk to your mpv dll.
-ECHO Try the n first. If it doesn't work, fall back to o.
+ECHO We need to tell hydrus how to talk to your mpv dll.
+ECHO Most people want "n".
+ECHO If it doesn't work, fall back to "o".
 SET /P mpv="Do you want (o)ld mpv, (n)ew mpv, or (t)est mpv? "
 
-IF "%mpv%" == "o" goto :question_opencv
-IF "%mpv%" == "n" goto :question_opencv
-IF "%mpv%" == "t" goto :question_opencv
+IF "%mpv%" == "o" goto :question_pillow
+IF "%mpv%" == "n" goto :question_pillow
+IF "%mpv%" == "t" goto :question_pillow
+goto :parse_fail
+
+:question_pillow
+
+ECHO --------
+ECHO Pillow - Images
+ECHO:
+ECHO Most people want "n".
+ECHO If you are Python 3.7 or earlier, choose "o".
+SET /P pillow="Do you want (o)ld pillow or (n)ew pillow? "
+
+IF "%pillow%" == "o" goto :question_opencv
+IF "%pillow%" == "n" goto :question_opencv
 goto :parse_fail
 
 :question_opencv
 
+ECHO --------
+ECHO OpenCV - Images
 ECHO:
-ECHO OpenCV is the main image processing library.
-ECHO Try the n first. If it doesn't work, fall back to o. Very new python versions might need t.
+ECHO Most people want "n".
+ECHO If it doesn't work, fall back to "o". Python ^>=3.11 might need "t".
 SET /P opencv="Do you want (o)ld OpenCV, (n)ew OpenCV, or (t)est OpenCV? "
 
 IF "%opencv%" == "o" goto :create
@@ -83,6 +131,7 @@ goto :parse_fail
 
 :create
 
+ECHO --------
 echo Creating new venv...
 
 python -m venv venv
@@ -118,6 +167,7 @@ IF "%install_type%" == "d" (
     python -m pip install pyside2
     python -m pip install PyQtChart PyQt5
     python -m pip install PyQt6-Charts PyQt6
+    python -m pip install -r static\requirements\advanced\requirements_pillow_new.txt
     python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
     python -m pip install -r static\requirements\advanced\requirements_opencv_test.txt
     python -m pip install -r static\requirements\hydev\requirements_windows_build.txt
@@ -135,6 +185,9 @@ IF "%install_type%" == "a" (
     IF "%qt%" == "m" python -m pip install -r static\requirements\advanced\requirements_qt6_middle.txt
     IF "%qt%" == "t" python -m pip install -r static\requirements\advanced\requirements_qt6_test.txt
 
+    IF "%pillow%" == "o" python -m pip install -r static\requirements\advanced\requirements_pillow_old.txt
+    IF "%pillow%" == "n" python -m pip install -r static\requirements\advanced\requirements_pillow_new.txt
+
     IF "%mpv%" == "o" python -m pip install -r static\requirements\advanced\requirements_mpv_old.txt
     IF "%mpv%" == "n" python -m pip install -r static\requirements\advanced\requirements_mpv_new.txt
     IF "%mpv%" == "t" python -m pip install -r static\requirements\advanced\requirements_mpv_test.txt
@@ -147,6 +200,7 @@ IF "%install_type%" == "a" (
 
 CALL venv\Scripts\deactivate.bat
 
+ECHO --------
 SET /P done="Done!"
 
 popd
@@ -155,6 +209,7 @@ EXIT /B 0
 
 :parse_fail
 
+ECHO --------
 SET /P done="Sorry, did not understand that input!"
 
 popd
