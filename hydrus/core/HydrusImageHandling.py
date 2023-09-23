@@ -561,7 +561,7 @@ def GeneratePNGBytesNumPy( numpy_image ) -> bytes:
 
 def GetEXIFDict( pil_image: PILImage.Image ) -> typing.Optional[ dict ]:
     
-    if pil_image.format in ( 'JPEG', 'TIFF', 'PNG', 'WEBP', 'HEIF', 'AVIF' ):
+    if pil_image.format in ( 'JPEG', 'TIFF', 'PNG', 'WEBP', 'HEIF', 'AVIF', 'MPO' ):
         
         try:
             
