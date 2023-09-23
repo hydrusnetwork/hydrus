@@ -746,7 +746,7 @@ class ThumbnailCache( object ):
             
             self._special_thumbs = {}
             
-            names = [ 'hydrus', 'pdf', 'psd', 'clip', 'sai', 'krita', 'xcf', 'svg', 'audio', 'video', 'zip' ]
+            names = [ 'hydrus', 'pdf', 'psd', 'clip', 'sai', 'krita', 'xcf', 'svg', 'audio', 'video', 'zip', 'epub' ]
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
@@ -861,6 +861,7 @@ class ThumbnailCache( object ):
             elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
             elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
             elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
+            elif mime == HC.APPLICATION_EPUB: return self._special_thumbs[ 'epub' ]
             elif mime == HC.APPLICATION_PSD: return self._special_thumbs[ 'psd' ]
             elif mime == HC.APPLICATION_SAI2: return self._special_thumbs[ 'sai' ]
             elif mime == HC.APPLICATION_KRITA: return self._special_thumbs[ 'krita' ]

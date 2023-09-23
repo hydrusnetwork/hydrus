@@ -6,7 +6,6 @@ import re
 
 KRITA_FILE_THUMB = "preview.png"
 KRITA_FILE_MERGED = "mergedimage.png"
-KRITA_MIMETYPE = 'mimetype'
 
 def ExtractZippedImageToPath( path_to_zip, temp_path_file ):
     
@@ -63,29 +62,11 @@ def GetKraProperties( path ):
                     if width is not None and height is not None:
                         
                         break
-                        
+
                     
-                
-            
-        
     except KeyError:
         
         raise HydrusExceptions.NoResolutionFileException( f'This krita file had no {DOCUMENT_INFO_FILE}!' )
         
     
     return ( width, height )
-    
-
-def ZipLooksLikeAKrita( path ):
-    
-    try:
-        
-        mimetype_data = HydrusArchiveHandling.ReadSingleFileFromZip( path, KRITA_MIMETYPE )
-        
-        return b'application/x-krita' in mimetype_data
-        
-    except KeyError:
-        
-        return False
-        
-    

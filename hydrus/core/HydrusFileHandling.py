@@ -5,6 +5,7 @@ from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusClipHandling
+from hydrus.core import HydrusArchiveHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
@@ -75,6 +76,8 @@ headers_and_mime.extend( [
     ( ( ( 42, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/master/data/freedesktop.org.xml.in#L2829
     ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
     ( ( ( 63, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
+    ( ( ( 38, b'application/epub+zip' ), ), HC.APPLICATION_EPUB ), 
+    ( ( ( 43, b'application/epub+zip' ), ), HC.APPLICATION_EPUB ),
     ( ( ( 0, b'PK\x03\x04' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x05\x06' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x07\x08' ), ), HC.APPLICATION_ZIP ),
@@ -620,19 +623,18 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         if it_passes:
             
             if mime == HC.APPLICATION_ZIP:
+
+                opendoc_mime = HydrusArchiveHandling.MimeFromOpenDocument( path )
+
+                if opendoc_mime is not None:
+
+                    return opendoc_mime
                 
-                # TODO: since we'll be expanding this to other zip-likes, we should make the zipfile object up here and pass that to various checkers downstream
-                if HydrusKritaHandling.ZipLooksLikeAKrita( path ):
-                    
-                    return HC.APPLICATION_KRITA
-                
-                elif HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
+                if HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
 
                     return HC.APPLICATION_PROCREATE
                     
-                else:
-                    
-                    return HC.APPLICATION_ZIP
+                return HC.APPLICATION_ZIP
                     
                 
             if mime in ( HC.UNDETERMINED_WM, HC.UNDETERMINED_MP4 ):
