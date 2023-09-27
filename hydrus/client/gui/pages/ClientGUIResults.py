@@ -1947,6 +1947,19 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
         
     
+    def _ShowSelectionInNewDuplicateFilterPage( self ):
+        
+        hashes = self._GetSelectedHashes( ordered = True )
+        
+        activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
+        
+        predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( hashes ), 'sha256' ) ) ]
+        
+        page_name = 'duplicates'
+        
+        HG.client_controller.pub( 'new_page_duplicates', self._location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+        
+    
     def _ShowSelectionInNewPage( self ):
         
         hashes = self._GetSelectedHashes( ordered = True )
@@ -4093,6 +4106,7 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenuItem( regen_menu, 'file metadata', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'similar files data', 'Regenerated the selected files\' perceptual hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'duplicate pixel data', 'Regenerated the selected files\' pixel hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
+            ClientGUIMenus.AppendMenuItem( regen_menu, 'blurhash', 'Regenerated the selected files\' blurhashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'full presence check', 'Check file presence and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD )
             ClientGUIMenus.AppendMenuItem( regen_menu, 'full integrity check', 'Check file integrity and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
             
@@ -4230,12 +4244,17 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 similar_menu = ClientGUIMenus.GenerateMenu( open_menu )
                 
+                ClientGUIMenus.AppendMenuItem( similar_menu, 'in a new duplicate filter page', 'Make a new duplicate filter page that searches for these files specifically.', self._ShowSelectionInNewDuplicateFilterPage )
+                
+                ClientGUIMenus.AppendSeparator( similar_menu )
+                
+                ClientGUIMenus.AppendMenuLabel( similar_menu, 'search for similar-looking files:' )
                 ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', self._GetSimilarTo, CC.HAMMING_EXACT_MATCH )
                 ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', self._GetSimilarTo, CC.HAMMING_VERY_SIMILAR )
                 ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like those selected.', self._GetSimilarTo, CC.HAMMING_SIMILAR )
                 ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', self._GetSimilarTo, CC.HAMMING_SPECULATIVE )
                 
-                ClientGUIMenus.AppendMenu( open_menu, similar_menu, 'similar-looking files' )
+                ClientGUIMenus.AppendMenu( open_menu, similar_menu, 'similar files' )
                 
             
             ClientGUIMenus.AppendSeparator( open_menu )
@@ -4277,6 +4296,18 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected file\'s SHA1 hash to the clipboard.', self._CopyHashToClipboard, 'sha1' )
                     ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected file\'s SHA512 hash to the clipboard.', self._CopyHashToClipboard, 'sha512' )
                     
+                    file_info_manager = focus_singleton.GetFileInfoManager()
+                    
+                    if file_info_manager.blurhash is not None:
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({file_info_manager.blurhash})', 'Copy this file\'s blurhash.', self._CopyHashToClipboard, 'blurhash' )
+                        
+                    
+                    if file_info_manager.pixel_hash is not None:
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel ({file_info_manager.pixel_hash.hex()})', 'Copy this file\'s pixel hash.', self._CopyHashToClipboard, 'pixel_hash' )
+                        
+                    
                 
                 ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
                 
@@ -4288,6 +4319,8 @@ class MediaPanelThumbnails( MediaPanel ):
                     ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy the selected files\' MD5 hashes to the clipboard.', self._CopyHashesToClipboard, 'md5' )
                     ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy the selected files\' SHA1 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha1' )
                     ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy the selected files\' SHA512 hashes to the clipboard.', self._CopyHashesToClipboard, 'sha512' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'blurhash', 'Copy the selected files\' blurhashes to the clipboard.', self._CopyHashesToClipboard, 'blurhash' )
+                    ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'pixel', 'Copy the selected files\' pixel hashes to the clipboard.', self._CopyHashesToClipboard, 'pixel_hash' )
                     
                     ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hashes' )
                     

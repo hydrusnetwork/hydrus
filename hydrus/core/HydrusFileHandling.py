@@ -74,9 +74,9 @@ headers_and_mime.extend( [
     ( ( ( 0, b'gimp xcf ' ), ), HC.APPLICATION_XCF ),
     ( ( ( 38, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
     ( ( ( 42, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/master/data/freedesktop.org.xml.in#L2829
-    ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
-    ( ( ( 63, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), 
-    ( ( ( 38, b'application/epub+zip' ), ), HC.APPLICATION_EPUB ), 
+    ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ),
+    ( ( ( 63, b'application/x-krita' ), ), HC.APPLICATION_KRITA ),
+    ( ( ( 38, b'application/epub+zip' ), ), HC.APPLICATION_EPUB ),
     ( ( ( 43, b'application/epub+zip' ), ), HC.APPLICATION_EPUB ),
     ( ( ( 0, b'PK\x03\x04' ), ), HC.APPLICATION_ZIP ),
     ( ( ( 0, b'PK\x05\x06' ), ), HC.APPLICATION_ZIP ),
@@ -121,9 +121,11 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
     
     thumbnail_numpy = GenerateThumbnailNumPy(path, target_resolution, mime, duration, num_frames, clip_rect, percentage_in )
 
-    return HydrusImageHandling.GenerateThumbnailBytesNumPy(thumbnail_numpy)
+    return HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
+    
 
 def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames, clip_rect = None, percentage_in = 35 ):
+    
     if target_resolution == ( 0, 0 ):
         
         target_resolution = ( 128, 128 )
@@ -202,6 +204,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
+        
     elif mime == HC.APPLICATION_PROCREATE:
         
         ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
@@ -623,19 +626,20 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         if it_passes:
             
             if mime == HC.APPLICATION_ZIP:
-
+                
                 opendoc_mime = HydrusArchiveHandling.MimeFromOpenDocument( path )
 
                 if opendoc_mime is not None:
-
+                    
                     return opendoc_mime
+                    
                 
                 if HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
-
+                    
                     return HC.APPLICATION_PROCREATE
                     
+                
                 return HC.APPLICATION_ZIP
-                    
                 
             if mime in ( HC.UNDETERMINED_WM, HC.UNDETERMINED_MP4 ):
                 

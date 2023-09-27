@@ -619,6 +619,11 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         return searched_distances_to_count
         
     
+    def GetHashIdsToPixelHashes( self, hash_ids_table_name: str ):
+        
+        return dict( self._Execute( f'SELECT {hash_ids_table_name}.hash_id, hash FROM {hash_ids_table_name} CROSS JOIN pixel_hash_map ON ( {hash_ids_table_name}.hash_id = pixel_hash_map.hash_id ) CROSS JOIN hashes ON ( pixel_hash_map.pixel_hash_id = hashes.hash_id );' ) )
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         if content_type == HC.CONTENT_TYPE_HASH:

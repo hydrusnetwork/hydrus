@@ -48,7 +48,11 @@ def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tupl
     
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
-    return HydrusImageHandling.GenerateNumPyImageFromPILImage(thumbnail_pil_image)
+    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage(thumbnail_pil_image)
+    
+    numpy_image = HydrusImageHandling.DequantizeNumPyImage( numpy_image )
+    
+    return numpy_image
     
 
 def GetPSDResolution( path: str ):

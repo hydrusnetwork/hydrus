@@ -61,7 +61,8 @@ class FileInfoManager( object ):
         if mime is None:
             
             mime = HC.APPLICATION_UNKNOWN
-                
+            
+        
         self.hash_id = hash_id
         self.hash = hash
         self.size = size
@@ -77,6 +78,7 @@ class FileInfoManager( object ):
         self.has_human_readable_embedded_metadata = False
         self.has_icc_profile = False
         self.blurhash = None
+        self.pixel_hash = None
         
     
     def Duplicate( self ):

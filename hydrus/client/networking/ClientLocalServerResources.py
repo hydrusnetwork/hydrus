@@ -1420,7 +1420,7 @@ class HydrusResourceClientAPIRestricted( HydrusResourceClientAPI ):
                     
                 except:
                     
-                    raise Exception( 'Problem parsing {}!'.format( name_of_key ) )
+                    raise HydrusExceptions.BadRequestException( 'Problem parsing {}!'.format( name_of_key ) )
                     
                 
             
@@ -2995,7 +2995,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
             
         elif only_return_basic_information:
             
-            file_info_managers = HG.client_controller.Read( 'file_info_managers_from_ids', hash_ids, blurhash = include_blurhash )
+            file_info_managers = HG.client_controller.Read( 'file_info_managers_from_ids', hash_ids )
             
             hashes_to_file_info_managers = { file_info_manager.hash : file_info_manager for file_info_manager in file_info_managers }
             
@@ -3022,8 +3022,9 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     }
 
                     if include_blurhash:
-
-                        metadata_row['blurhash'] = file_info_manager.blurhash
+                        
+                        metadata_row[ 'blurhash' ] = file_info_manager.blurhash
+                        
                     
                     metadata.append( metadata_row )
                     
@@ -3078,7 +3079,8 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'num_frames' : file_info_manager.num_frames,
                         'num_words' : file_info_manager.num_words,
                         'has_audio' : file_info_manager.has_audio,
-                        'blurhash' : file_info_manager.blurhash
+                        'blurhash' : file_info_manager.blurhash,
+                        'pixel_hash' : None if file_info_manager.pixel_hash is None else file_info_manager.pixel_hash.hex()
                     }
                     
                     if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:
@@ -3095,6 +3097,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     if include_notes:
                         
                         metadata_row[ 'notes' ] = media_result.GetNotesManager().GetNamesToNotes()
+                        
                     
                     locations_manager = media_result.GetLocationsManager()
                     

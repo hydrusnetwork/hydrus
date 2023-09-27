@@ -879,7 +879,7 @@ class HydrusResource( Resource ):
                 
                 HydrusData.DebugPrint( failure.getTraceback() )
                 
-                error_summary = f'The "{self._service.GetName()}" encountered an error it could not handle!\n\nHere is a dump of what happened, which will also be written to your log. If it persists, please forward it to hydrus.admin@gmail.com:\n\n' + failure.getTraceback()
+                error_summary = f'The "{self._service.GetName()}" encountered an error it could not handle!\n\nHere is a full traceback of what happened. If you are using the hydrus client, it will be saved to your log. Please forward it to hydrus.admin@gmail.com:\n\n' + failure.getTraceback()
                 
             
             # TODO: maybe pull the cbor stuff down to hydrus core here and respond with Dumps( blah, requested_mime ) instead
@@ -1269,16 +1269,18 @@ class ResponseContext( object ):
         if cookies is None:
             
             cookies = []
-
-        if max_age is None:
-
-            if body is not None:
-
-                max_age = 4
             
+        
+        if max_age is None:
+            
+            if body is not None:
+                
+                max_age = 4
+                
             elif path is not None:
-
+                
                 max_age = 86400 * 365
+                
             
         
         self._status_code = status_code

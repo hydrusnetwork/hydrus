@@ -34,6 +34,7 @@ class UnknownException( HydrusException ): pass
 
 class CantRenderWithCVException( HydrusException ): pass
 class DataMissing( HydrusException ): pass
+class TooComplicatedM8( HydrusException ): pass
 
 class DBException( HydrusException ):
     

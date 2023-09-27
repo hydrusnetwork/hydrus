@@ -4708,6 +4708,9 @@ class TestClientAPI( unittest.TestCase ):
             file_info_manager.has_exif = True
             file_info_manager.has_icc_profile = True
             
+            file_info_manager.blurhash = 'UBECh1xtFg-X-qxvxZ$*4mD%n3s*M_I9IVNG'
+            file_info_manager.pixel_hash = os.urandom( 32 )
+            
             file_info_managers.append( file_info_manager )
             
             service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
@@ -4780,10 +4783,9 @@ class TestClientAPI( unittest.TestCase ):
         detailed_known_urls_metadata = []
         with_notes_metadata = []
         only_return_basic_information_metadata = []
+        only_return_basic_information_metadata_but_blurhash_too = []
         
         services_manager = HG.client_controller.services_manager
-        
-        service_keys_to_names = {}
         
         for media_result in media_results:
             
@@ -4806,6 +4808,10 @@ class TestClientAPI( unittest.TestCase ):
             }
             
             only_return_basic_information_metadata.append( dict( metadata_row ) )
+            
+            metadata_row[ 'blurhash' ] = file_info_manager.blurhash
+            
+            only_return_basic_information_metadata_but_blurhash_too.append( dict( metadata_row ) )
             
             if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:
                 
@@ -4851,7 +4857,8 @@ class TestClientAPI( unittest.TestCase ):
                 'has_exif' : True,
                 'has_human_readable_embedded_metadata' : False,
                 'has_icc_profile' : True,
-                'known_urls' : list( sorted_urls )
+                'known_urls' : list( sorted_urls ),
+                'pixel_hash' : file_info_manager.pixel_hash.hex()
             } )
             
             locations_manager = media_result.GetLocationsManager()
@@ -4937,6 +4944,7 @@ class TestClientAPI( unittest.TestCase ):
         expected_detailed_known_urls_metadata_result = { 'metadata' : detailed_known_urls_metadata, 'services' : GetExampleServicesDict() }
         expected_notes_metadata_result = { 'metadata' : with_notes_metadata, 'services' : GetExampleServicesDict() }
         expected_only_return_basic_information_result = { 'metadata' : only_return_basic_information_metadata, 'services' : GetExampleServicesDict() }
+        expected_only_return_basic_information_but_blurhash_too_result = { 'metadata' : only_return_basic_information_metadata_but_blurhash_too, 'services' : GetExampleServicesDict() }
         
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results', media_results )
@@ -5011,6 +5019,26 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         self.assertEqual( d, expected_only_return_basic_information_result )
+        
+        # basic metadata with blurhash
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        
+        path = '/get_files/file_metadata?file_ids={}&only_return_basic_information=true&include_blurhash=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d, expected_only_return_basic_information_but_blurhash_too_result )
         
         # same but diff order
         

@@ -39,7 +39,7 @@ def FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, has
     return filtered_service_keys_to_content_updates
     
 
-def FlattenMedia( media_list ):
+def FlattenMedia( media_list ) -> typing.List[ "MediaSingleton" ]:
     
     flat_media = []
     
@@ -1660,6 +1660,11 @@ class MediaSingleton( Media ):
     def GetEarliestHashId( self ):
         
         return self._media_result.GetFileInfoManager().hash_id
+        
+    
+    def GetFileInfoManager( self ):
+        
+        return self._media_result.GetFileInfoManager()
         
     
     def GetFileViewingStatsManager( self ):

@@ -2340,28 +2340,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def work_callable( args ):
             
-            job_key = ClientThreading.JobKey()
-            
-            job_key.SetStatusText( 'Loading File History' + HC.UNICODE_ELLIPSIS )
-            
-            HG.client_controller.pub( 'message', job_key )
-            
-            num_steps = 7680
-            
-            file_history = HG.client_controller.Read( 'file_history', num_steps )
-            
-            return ( job_key, file_history )
+            return 1
             
         
         def publish_callable( result ):
             
-            ( job_key, file_history ) = result
-            
-            job_key.Delete()
-            
             frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'file history', frame_key = 'file_history_chart' )
             
-            panel = ClientGUIScrolledPanelsReview.ReviewFileHistory( frame, file_history )
+            panel = ClientGUIScrolledPanelsReview.ReviewFileHistory( frame )
             
             frame.SetPanel( panel )
             
@@ -3319,6 +3305,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         report_modes = ClientGUIMenus.GenerateMenu( debug )
         
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'blurhash mode', 'Draw blurhashes instead of thumbnails.', HG.blurhash_mode, self._SwitchBoolean, 'blurhash_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'cache report mode', 'Have the image and thumb caches report their operation.', HG.cache_report_mode, self._SwitchBoolean, 'cache_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'callto report mode', 'Report whenever the thread pool is given a task.', HG.callto_report_mode, self._SwitchBoolean, 'callto_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'canvas tile borders mode', 'Draw tile borders.', HG.canvas_tile_outline_mode, self._SwitchBoolean, 'canvas_tile_outline_mode' )
@@ -6597,6 +6584,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if name == 'autocomplete_delay_mode':
             
             HG.autocomplete_delay_mode = not HG.autocomplete_delay_mode
+            
+        elif name == 'blurhash_mode':
+            
+            HG.blurhash_mode = not HG.blurhash_mode
+            
+            self._controller.pub( 'reset_thumbnail_cache' )
             
         elif name == 'cache_report_mode':
             

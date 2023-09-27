@@ -24,6 +24,17 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         self.modules_hashes_local_cache = modules_hashes_local_cache
         
     
+    def _GetInitialIndexGenerationDict( self ) -> dict:
+        
+        index_generation_dict = {}
+        
+        index_generation_dict[ 'external_caches.file_maintenance_jobs' ] = [
+            ( [ 'job_type' ], False, 545 )
+        ]
+        
+        return index_generation_dict
+        
+    
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
@@ -79,7 +90,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         
         if job_types is None:
             
-            possible_job_types = ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER
+            possible_job_types = ClientFiles.ALL_REGEN_JOBS_IN_RUN_ORDER
             
         else:
             
@@ -104,7 +115,7 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
                 
                 hashes_to_job_types = {}
                 
-                sort_index = { job_type : index for ( index, job_type ) in enumerate( ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER ) }
+                sort_index = { job_type : index for ( index, job_type ) in enumerate( ClientFiles.ALL_REGEN_JOBS_IN_RUN_ORDER ) }
                 
                 for ( hash_id, job_types ) in hash_ids_to_job_types.items():
                     

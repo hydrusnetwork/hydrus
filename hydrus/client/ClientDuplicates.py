@@ -21,7 +21,6 @@ from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientTags
 
 hashes_to_jpeg_quality = {}
-hashes_to_pixel_hashes = {}
 
 def GetDuplicateComparisonScore( shown_media, comparison_media ):
     
@@ -72,39 +71,30 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     if s_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and c_mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH and shown_media.GetResolution() == comparison_media.GetResolution():
         
-        global hashes_to_pixel_hashes
+        s_pixel_hash = shown_media.GetFileInfoManager().pixel_hash
+        c_pixel_hash = comparison_media.GetFileInfoManager().pixel_hash
         
-        if s_hash not in hashes_to_pixel_hashes:
+        if s_pixel_hash is None or c_pixel_hash is None:
             
-            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+            statement = 'could not determine if files were pixel-for-pixel duplicates!'
+            score = 0
             
-            hashes_to_pixel_hashes[ s_hash ] = HydrusImageHandling.GetImagePixelHash( path, s_mime )
+            statements_and_scores[ 'pixel_duplicates' ] = ( statement, score )
             
-        
-        if c_hash not in hashes_to_pixel_hashes:
+        elif s_pixel_hash == c_pixel_hash:
             
-            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
-            
-            hashes_to_pixel_hashes[ c_hash ] = HydrusImageHandling.GetImagePixelHash( path, c_mime )
-            
-        
-        s_pixel_hash = hashes_to_pixel_hashes[ s_hash ]
-        c_pixel_hash = hashes_to_pixel_hashes[ c_hash ]
-        
-        # this is not appropriate for, say, PSD files
-        other_file_is_pixel_png_appropriate_filetypes = {
-            HC.IMAGE_JPEG,
-            HC.IMAGE_GIF,
-            HC.IMAGE_WEBP
-        }
-        
-        if s_pixel_hash == c_pixel_hash:
+            # this is not appropriate for, say, PSD files
+            other_file_is_pixel_png_appropriate_filetypes = {
+                HC.IMAGE_JPEG,
+                HC.IMAGE_GIF,
+                HC.IMAGE_WEBP
+            }
             
             is_a_pixel_dupe = True
             
             if s_mime == HC.IMAGE_PNG and c_mime in other_file_is_pixel_png_appropriate_filetypes:
                 
-                statement = 'this is a pixel-for-pixel duplicate png!'
+                statement = 'this is a pixel-for-pixel duplicate png! it is a waste of space!'
                 
                 score = -100
                 

@@ -36,7 +36,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
             'main.has_exif' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
             'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
-            'main.blurhash' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, blurhash TEXT );', 545 ),
+            'external_master.blurhashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, blurhash TEXT );', 545 ),
         }
         
     
@@ -53,6 +53,67 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         
         # hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words
         self._ExecuteMany( insert_phrase + ' files_info ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ? );', rows )
+        
+    
+    def GetBlurhash( self, hash_id: int ) -> str:
+        
+        result = self._Execute( 'SELECT blurhash FROM blurhashes WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        if result is None:
+            
+            raise HydrusExceptions.DataMissing( 'Did not have blurhash information for that file!' )
+            
+        
+        ( blurhash, ) = result
+        
+        return blurhash
+        
+    
+    def GetHasEXIF( self, hash_id: int ):
+        
+        result = self._Execute( 'SELECT hash_id FROM has_exif WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def GetHasEXIFHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+        
+        has_exif_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_exif USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        
+        return has_exif_hash_ids
+        
+    
+    def GetHasHumanReadableEmbeddedMetadata( self, hash_id: int ):
+        
+        result = self._Execute( 'SELECT hash_id FROM has_human_readable_embedded_metadata WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def GetHasHumanReadableEmbeddedMetadataHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+        
+        has_human_readable_embedded_metadata_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_human_readable_embedded_metadata USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        
+        return has_human_readable_embedded_metadata_hash_ids
+        
+    
+    def GetHashIdsToBlurhashes( self, hash_ids_table_name: str ):
+        
+        return dict( self._Execute( 'SELECT hash_id, blurhash FROM {} CROSS JOIN blurhashes USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        
+    
+    def GetHasICCProfile( self, hash_id: int ):
+        
+        result = self._Execute( 'SELECT hash_id FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def GetHasICCProfileHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+        
+        has_icc_profile_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_icc_profile USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        
+        return has_icc_profile_hash_ids
         
     
     def GetMime( self, hash_id: int ) -> int:
@@ -109,7 +170,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
                 ( 'has_exif', 'hash_id' ),
                 ( 'has_human_readable_embedded_metadata', 'hash_id' ),
                 ( 'has_icc_profile', 'hash_id' ),
-                ( 'blurhash', 'hash_id' )
+                ( 'blurhashes', 'hash_id' )
             ]
             
         
@@ -140,48 +201,6 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         ( total_size, ) = result
         
         return total_size
-        
-    
-    def GetHasEXIF( self, hash_id: int ):
-        
-        result = self._Execute( 'SELECT hash_id FROM has_exif WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        return result is not None
-        
-    
-    def GetHasEXIFHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
-        
-        has_exif_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_exif USING ( hash_id );'.format( hash_ids_table_name ) ) )
-        
-        return has_exif_hash_ids
-        
-    
-    def GetHasHumanReadableEmbeddedMetadata( self, hash_id: int ):
-        
-        result = self._Execute( 'SELECT hash_id FROM has_human_readable_embedded_metadata WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        return result is not None
-        
-    
-    def GetHasHumanReadableEmbeddedMetadataHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
-        
-        has_human_readable_embedded_metadata_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_human_readable_embedded_metadata USING ( hash_id );'.format( hash_ids_table_name ) ) )
-        
-        return has_human_readable_embedded_metadata_hash_ids
-        
-    
-    def GetHasICCProfile( self, hash_id: int ):
-        
-        result = self._Execute( 'SELECT hash_id FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
-        
-        return result is not None
-        
-    
-    def GetHasICCProfileHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
-        
-        has_icc_profile_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_icc_profile USING ( hash_id );'.format( hash_ids_table_name ) ) )
-        
-        return has_icc_profile_hash_ids
         
     
     def SetHasEXIF( self, hash_id: int, has_exif: bool ):
@@ -217,31 +236,10 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         else:
             
             self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
-
-    def SetBlurHash( self, hash_id: int, blurhash: str ):
-
-        # TODO blurhash db stuff
-
-        self._Execute('INSERT OR REPLACE INTO blurhash ( hash_id, blurhash ) VALUES ( ?, ?);', (hash_id, blurhash))
-
-            
-    def GetBlurHash( self, hash_id: int ) -> str:
         
-        result = self._Execute( 'SELECT blurhash FROM blurhash WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+    
+    def SetBlurhash( self, hash_id: int, blurhash: str ):
         
-        # TODO blurhash db stuff
-
-        if result is None:
-            
-            raise HydrusExceptions.DataMissing( 'Did not have blurhash information for that file!' )
-            
-        
-        ( blurhash, ) = result
-        
-        return blurhash
-        
-    def GetHashIdsToBlurHash( self, hash_ids_table_name: str ):
-
-        return dict( self._Execute( 'SELECT hash_id, blurhash FROM {} CROSS JOIN blurhash USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        self._Execute('INSERT OR REPLACE INTO blurhashes ( hash_id, blurhash ) VALUES ( ?, ?);', ( hash_id, blurhash ) )
         
     

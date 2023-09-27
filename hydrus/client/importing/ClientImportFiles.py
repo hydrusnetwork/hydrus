@@ -357,15 +357,16 @@ class FileImportJob( object ):
             thumbnail_numpy = HydrusFileHandling.GenerateThumbnailNumPy(self._temp_path, target_resolution, mime, duration, num_frames, clip_rect = clip_rect, percentage_in = percentage_in)
 
             # this guy handles almost all his own exceptions now, so no need for clever catching. if it fails, we are prob talking an I/O failure, which is not a 'thumbnail failed' error
-            self._thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesNumPy( thumbnail_numpy )
+            self._thumbnail_bytes = HydrusImageHandling.GenerateThumbnailBytesFromNumPy( thumbnail_numpy )
             
             try:
-            
-                self._blurhash = HydrusImageHandling.GetImageBlurHashNumPy( thumbnail_numpy )
-
+                
+                self._blurhash = HydrusImageHandling.GetBlurhashFromNumPy( thumbnail_numpy )
+                
             except:
-
+                
                 pass
+                
             
 
         
@@ -515,9 +516,10 @@ class FileImportJob( object ):
     def HasICCProfile( self ) -> bool:
         
         return self._has_icc_profile
+        
     
     def GetBlurhash( self ) -> str:
-
+        
         return self._blurhash
         
     
@@ -532,3 +534,4 @@ class FileImportJob( object ):
             HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
             
         
+    

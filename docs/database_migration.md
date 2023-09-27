@@ -19,7 +19,7 @@ A hydrus client consists of three components:
     
 2.  **the actual SQLite database**
     
-    The client stores all its preferences and current state and knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and so on--in a handful of SQLite database files, defaulting to _install_dir/db_. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.
+    The client stores all its preferences and current state and knowledge _about_ files--like file size and resolution, tags, ratings, inbox status, and so on and on--in a handful of SQLite database files, defaulting to _install_dir/db_. Depending on the size of your client, these might total 1MB in size or be as much as 10GB.
     
     In order to perform a search or to fetch or process tags, the client has to interact with these files in many small bursts, which means it is best if these files are on a drive with low latency. An SSD is ideal, but a regularly-defragged HDD with a reasonable amount of free space also works well.
     
@@ -84,10 +84,17 @@ To tell it about the new database location, pass it a `-d` or `--db_dir` command
 *   `hydrus_client -d="D:\media\my_hydrus_database"`
 *   _--or--_
 *   `hydrus_client --db_dir="G:\misc documents\New Folder (3)\DO NOT ENTER"`
+*   _--or, from source--_
+*   `python hydrus_client.py -d="D:\media\my_hydrus_database"`
 *   _--or, for macOS--_
 *   `open -n -a "Hydrus Network.app" --args -d="/path/to/db"`
 
-And it will instead use the given path. If no database is found, it will similarly create a new empty one at that location. You can use any path that is valid in your system, but I would not advise using network locations and so on, as the database works best with some clever device locking calls these interfaces may not provide.
+And it will instead use the given path. If no database is found, it will similarly create a new empty one at that location. You can use any path that is valid in your system.
+
+!!! danger "Bad Locations"
+    **Do not run a SQLite database on a network location!** The database relies on clever hardware-level exclusive file locks, which network interfaces often fake. While the program may work, I cannot guarantee the database will stay non-corrupt.
+    
+    **Do not run a SQLite database on a location with filesystem-level compression enabled!** In the best case (BTRFS), the database can suddenly get extremely slow when it hits a certain size; in the worst (NTFS), a &gt;50GB database will encounter I/O errors and receive sporadic corruption!
 
 Rather than typing the path out in a terminal every time you want to launch your external database, create a new shortcut with the argument in. Something like this:
 

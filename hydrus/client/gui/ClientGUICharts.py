@@ -188,6 +188,8 @@ try:
                 max_num_files = max( self._max_num_files_deleted, max_num_files )
                 
             
+            max_num_files = max( max_num_files, 1 )
+            
             self._y_value_axis.setRange( 0, max_num_files )
             
             self._y_value_axis.applyNiceNumbers()

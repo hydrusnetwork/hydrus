@@ -2399,27 +2399,179 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
 class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, file_history ):
+    def __init__( self, parent ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        file_history_chart = ClientGUICharts.FileHistory( self, file_history )
+        self._job_key = ClientThreading.JobKey()
         
-        file_history_chart.setMinimumSize( 720, 480 )
+        #
         
-        vbox = QP.VBoxLayout()
+        self._search_panel = QW.QWidget( self )
         
-        flip_deleted = QW.QCheckBox( 'show deleted', self )
+        # TODO: ok add 'num_steps' as a control, and a date range
         
-        flip_deleted.setChecked( True )
+        panel_vbox = QP.VBoxLayout()
         
-        flip_deleted.clicked.connect( file_history_chart.FlipDeletedVisible )
+        file_search_context = ClientSearch.FileSearchContext(
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        )
         
-        QP.AddToLayout( vbox, flip_deleted, CC.FLAGS_CENTER )
+        page_key = b'mr bones placeholder'
         
-        QP.AddToLayout( vbox, file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsRead(
+            self._search_panel,
+            page_key,
+            file_search_context,
+            allow_all_known_files = False,
+            force_system_everything = True,
+            fixed_results_list_height = 8
+        )
         
-        self.widget().setLayout( vbox )
+        self._loading_text = ClientGUICommon.BetterStaticText( self._search_panel )
+        self._loading_text.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
+        
+        self._cancel_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().stop, self._CancelCurrentSearch )
+        self._refresh_button = ClientGUICommon.BetterBitmapButton( self._search_panel, CC.global_pixmaps().refresh, self._RefreshSearch )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._loading_text, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._cancel_button, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._refresh_button, CC.FLAGS_CENTER )
+        
+        QP.AddToLayout( panel_vbox, self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( panel_vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        
+        panel_vbox.addStretch( 1 )
+        
+        self._search_panel.setLayout( panel_vbox )
+        
+        #
+        
+        self._file_history_chart_panel = QW.QWidget( self )
+        
+        self._file_history_vbox = QP.VBoxLayout()
+        
+        self._status_st = ClientGUICommon.BetterStaticText( self._file_history_chart_panel, label = f'loading{HC.UNICODE_ELLIPSIS}' )
+        
+        self._flip_deleted = QW.QCheckBox( 'show deleted', self._file_history_chart_panel )
+        
+        self._flip_deleted.setChecked( True )
+        
+        self._file_history_chart = QW.QWidget( self._file_history_chart_panel )
+        
+        QP.AddToLayout( self._file_history_vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( self._file_history_vbox, self._flip_deleted, CC.FLAGS_CENTER )
+        QP.AddToLayout( self._file_history_vbox, self._file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._file_history_chart_panel.setLayout( self._file_history_vbox )
+        
+        #
+        
+        self._hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( self._hbox, self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( self._hbox, self._file_history_chart_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( self._hbox )
+        
+        self._tag_autocomplete.searchChanged.connect( self._RefreshSearch )
+        
+        self._RefreshSearch()
+        
+    
+    def _CancelCurrentSearch( self ):
+        
+        self._job_key.Cancel()
+        
+        self._cancel_button.setEnabled( False )
+        
+    
+    def _RefreshSearch( self ):
+        
+        def work_callable():
+            
+            try:
+                
+                file_history = HG.client_controller.Read( 'file_history', num_steps, file_search_context = file_search_context, job_key = job_key )
+                
+            except HydrusExceptions.DBException as e:
+                
+                if isinstance( e.db_e, HydrusExceptions.TooComplicatedM8 ):
+                    
+                    return -1
+                    
+                
+                raise
+                
+            
+            return file_history
+            
+        
+        def publish_callable( file_history ):
+            
+            try:
+                
+                if file_history == -1:
+                    
+                    self._status_st.setText( 'Sorry, this domain is too complicated to calculate for now, try something simpler!' )
+                    
+                    return
+                    
+                elif job_key.IsCancelled():
+                    
+                    self._status_st.setText( 'Cancelled!' )
+                    
+                    return
+                    
+                
+                self._file_history_vbox.removeWidget( self._file_history_chart )
+                
+                # TODO: presumably the thing here is to have SetValue on this widget so we can simply clear/set it rather than the mickey-mouse replace
+                self._file_history_chart = ClientGUICharts.FileHistory( self._file_history_chart_panel, file_history )
+                
+                self._file_history_chart.setMinimumSize( 720, 480 )
+                
+                self._flip_deleted.clicked.connect( self._file_history_chart.FlipDeletedVisible )
+                
+                QP.AddToLayout( self._file_history_vbox, self._file_history_chart, CC.FLAGS_EXPAND_BOTH_WAYS )
+                
+                self._status_st.setVisible( False )
+                self._flip_deleted.setVisible( True )
+                
+            finally:
+                
+                self._cancel_button.setEnabled( False )
+                self._refresh_button.setEnabled( True )
+                
+            
+        
+        if not self._tag_autocomplete.IsSynchronised():
+            
+            self._refresh_button.setEnabled( False )
+            
+            return
+            
+        
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
+        
+        num_steps = 7680
+        
+        self._status_st.setVisible( True )
+        
+        self._flip_deleted.setVisible( False )
+        self._file_history_chart.setVisible( False )
+        
+        self._job_key.Cancel()
+        
+        job_key = ClientThreading.JobKey()
+        
+        self._job_key = job_key
+        
+        self._update_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        self._update_job.start()
         
     
 class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
@@ -2505,7 +2657,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._action_selector = ClientGUICommon.BetterChoice( self._action_panel )
         
-        for job_type in ClientFiles.ALL_REGEN_JOBS_IN_PREFERRED_ORDER:
+        for job_type in ClientFiles.ALL_REGEN_JOBS_IN_HUMAN_ORDER:
             
             self._action_selector.addItem( ClientFiles.regen_file_enum_to_str_lookup[ job_type ], job_type )
             
@@ -2847,10 +2999,6 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        # refresh button
-        # search tab
-        # update function, reset/loading.../set
-        
         self._update_job = None
         self._job_key = ClientThreading.JobKey()
         
@@ -2871,10 +3019,11 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
+        self._search_panel = QW.QWidget( self )
+        
         self._files_panel = QW.QWidget( self._notebook )
         self._views_panel = QW.QWidget( self._notebook )
         self._duplicates_panel = QW.QWidget( self._notebook )
-        self._search_panel = QW.QWidget( self._notebook )
         
         self._notebook.addTab( self._files_panel, 'files' )
         self._notebook.addTab( self._views_panel, 'views' )

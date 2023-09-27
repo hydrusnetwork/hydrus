@@ -1536,6 +1536,7 @@ Response:
       "ipfs_multihashes" : {},
       "has_audio" : false,
       "blurhash" : "U6PZfSi_.AyE_3t7t7R**0o#DgR4_3R*D%xt",
+      "pixel_hash" : "2519e40f8105599fcb26187d39656b1b46f651786d0e32fff2dc5a9bc277b5bb",
       "num_frames" : null,
       "num_words" : null,
       "is_inbox" : false,
@@ -1608,6 +1609,7 @@ Response:
       },
       "has_audio" : true,
       "blurhash" : "UHF5?xYk^6#M@-5b,1J5@[or[k6.};FxngOZ",
+      "pixel_hash" : "1dd9625ce589eee05c22798a9a201602288a1667c59e5cd1fb2251a6261fbd68",
       "num_frames" : 102,
       "num_words" : null,
       "is_inbox" : false,
@@ -1728,7 +1730,7 @@ Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 
 The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get\_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
 
-`blurhash` gives a base 83 encoded string of a [blurhash](https://blurha.sh/) generated from the file's thumbnail if the file has a thumbnail.
+If the file has a thumbnail, `blurhash` gives a base 83 encoded string of its [blurhash](https://blurha.sh/). `pixel_hash` is an SHA256 of the image's pixel data and should exactly match for pixel-identical files (it is used in the duplicate system for 'must be pixel duplicates').
 
 #### tags
 

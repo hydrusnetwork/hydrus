@@ -588,10 +588,12 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
             
             fsc = self._file_seed_cache
             
-            if presentation_import_options is None:
-                
-                presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
-                
+            fio = self._file_import_options
+            
+        
+        if presentation_import_options is None:
+            
+            presentation_import_options = FileImportOptions.GetRealPresentationImportOptions( fio, FileImportOptions.IMPORT_TYPE_LOUD )
             
         
         return fsc.GetPresentedHashes( presentation_import_options )

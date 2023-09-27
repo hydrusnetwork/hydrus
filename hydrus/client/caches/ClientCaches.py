@@ -456,16 +456,51 @@ class ThumbnailCache( object ):
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
+    def _GetBestRecoveryThumbnailHydrusBitmap( self, display_media ):
+        
+        blurhash = display_media.GetFileInfoManager().blurhash
+        
+        if blurhash is not None:
+            
+            try:
+                
+                ( media_width, media_height ) = display_media.GetResolution()
+                
+                bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+                thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
+                thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+                
+                ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+                
+                numpy_image = HydrusImageHandling.GetNumpyFromBlurhash( blurhash, expected_width, expected_height )
+                
+                hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
+                
+                return hydrus_bitmap
+                
+            except:
+                
+                pass
+                
+            
+        
+        return self._special_thumbs[ 'hydrus' ]
+        
+    
     def _GetThumbnailHydrusBitmap( self, display_media ):
         
+        if HG.blurhash_mode:
+            
+            return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
+            
+        
         hash = display_media.GetHash()
-        mime = display_media.GetMime()
         
         locations_manager = display_media.GetLocationsManager()
         
         try:
             
-            path = self._controller.client_files_manager.GetThumbnailPath( display_media )
+            thumbnail_path = self._controller.client_files_manager.GetThumbnailPath( display_media )
             
         except HydrusExceptions.FileMissingException as e:
             
@@ -476,16 +511,16 @@ class ThumbnailCache( object ):
                 self._HandleThumbnailException( hash, e, summary )
                 
             
-            return self._special_thumbs[ 'hydrus' ]
+            return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
             
         
         thumbnail_mime = HC.IMAGE_JPEG
         
         try:
             
-            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( path )
+            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
             
-            numpy_image = ClientImageHandling.GenerateNumPyImage( path, thumbnail_mime )
+            numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
             
         except Exception as e:
             
@@ -500,12 +535,12 @@ class ThumbnailCache( object ):
                 
                 self._HandleThumbnailException( hash, e, summary )
                 
-                return self._special_thumbs[ 'hydrus' ]
+                return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
                 
             
             try:
                 
-                numpy_image = ClientImageHandling.GenerateNumPyImage( path, thumbnail_mime )
+                numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
                 
             except Exception as e:
                 
@@ -513,7 +548,7 @@ class ThumbnailCache( object ):
                 
                 self._HandleThumbnailException( hash, e, summary )
                 
-                return self._special_thumbs[ 'hydrus' ]
+                return self._GetBestRecoveryThumbnailHydrusBitmap( display_media )
                 
             
         
@@ -710,7 +745,11 @@ class ThumbnailCache( object ):
         
         locations_manager = media.GetLocationsManager()
         
-        return locations_manager.IsLocal() or not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
+        we_have_file = locations_manager.IsLocal()
+        we_should_have_thumb = not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
+        we_have_blurhash = media.GetFileInfoManager().blurhash is not None
+        
+        return we_have_file or we_should_have_thumb or we_have_blurhash
         
     
     def CancelWaterfall( self, page_key: bytes, medias: list ):

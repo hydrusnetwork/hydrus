@@ -112,6 +112,8 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         self.modules_files_metadata_basic.SetHasEXIF( hash_id, has_exif )
                         
                     
+                    new_file_info.add( ( hash_id, hash ) )
+                    
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA:
                     
                     previous_has_human_readable_embedded_metadata = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadata( hash_id )
@@ -122,6 +124,8 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         
                         self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, has_human_readable_embedded_metadata )
                         
+                    
+                    new_file_info.add( ( hash_id, hash ) )
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE:
                     
@@ -139,6 +143,8 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                             
                         
                     
+                    new_file_info.add( ( hash_id, hash ) )
+                    
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH:
                     
                     pixel_hash = additional_data
@@ -146,6 +152,8 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     pixel_hash_id = self.modules_hashes.GetHashId( pixel_hash )
                     
                     self.modules_similar_files.SetPixelHash( hash_id, pixel_hash_id )
+                    
+                    new_file_info.add( ( hash_id, hash ) )
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP:
                     
@@ -180,16 +188,32 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         if self.modules_similar_files.FileIsInSystem( hash_id ):
                             
                             self.modules_similar_files.StopSearchingFile( hash_id )
-
-                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL or job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
-
-                    self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH )
                             
+                        
+                    
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL or job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL:
+                    
+                    if job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL:
+                        
+                        was_regenerated = True
+                        
+                    else:
+                        
+                        was_regenerated = additional_data
+                        
+                    
+                    if was_regenerated:
+                        
+                        self.modules_files_maintenance_queue.AddJobs( ( hash_id, ), ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH )
+                        
+                    
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH:
-
+                    
                     blurhash: str = additional_data
-
-                    self.modules_files_metadata_basic.SetBlurHash( hash_id, blurhash )
+                    
+                    self.modules_files_metadata_basic.SetBlurhash( hash_id, blurhash )
+                    
+                    new_file_info.add( ( hash_id, hash ) )
                     
                 
             

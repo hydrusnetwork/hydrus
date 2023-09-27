@@ -2511,7 +2511,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if do_not_need_to_search:
                     
-                    files_table_name = db_location_context.GetSingleFilesTableName()
+                    current_files_table_name = db_location_context.GetSingleFilesTableName()
                     
                 else:
                     
@@ -2528,7 +2528,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._ExecuteMany( f'INSERT OR IGNORE INTO {temp_table_name} ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
                     
-                    files_table_name = temp_table_name
+                    current_files_table_name = temp_table_name
                     
                 
                 hacks_going_to_work = location_context.IsOneDomain()
@@ -2580,8 +2580,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 return self._GetBonedStatsFromTable(
-                    db_location_context,
-                    files_table_name,
+                    current_files_table_name,
                     current_timestamps_table_name,
                     deleted_files_table_name,
                     deleted_timestamps_table_name,
@@ -2593,8 +2592,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _GetBonedStatsFromTable(
         self,
-        db_location_context: ClientDBFilesStorage.DBLocationContext,
-        files_table_name: str,
+        current_files_table_name: str,
         current_timestamps_table_name: typing.Optional[ str ],
         deleted_files_table_name: typing.Optional[ str ],
         deleted_timestamps_table_name: typing.Optional[ str ],
@@ -2608,8 +2606,8 @@ class DB( HydrusDB.HydrusDB ):
         
         boned_stats = {}
         
-        ( num_total, size_total ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {files_table_name} CROSS JOIN files_info USING ( hash_id );' ).fetchone()
-        ( num_inbox, size_inbox ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {files_table_name} CROSS JOIN file_inbox USING ( hash_id ) CROSS JOIN files_info USING ( hash_id );' ).fetchone()
+        ( num_total, size_total ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {current_files_table_name} CROSS JOIN files_info USING ( hash_id );' ).fetchone()
+        ( num_inbox, size_inbox ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {current_files_table_name} CROSS JOIN file_inbox USING ( hash_id ) CROSS JOIN files_info USING ( hash_id );' ).fetchone()
         
         if size_total is None:
             
@@ -2653,13 +2651,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if current_timestamps_table_name is not None:
             
-            if files_table_name != current_timestamps_table_name:
+            if current_files_table_name != current_timestamps_table_name:
                 
-                table_join = f'{files_table_name} CROSS JOIN {current_timestamps_table_name} USING ( hash_id )'
+                table_join = f'{current_files_table_name} CROSS JOIN {current_timestamps_table_name} USING ( hash_id )'
                 
             else:
                 
-                table_join = files_table_name
+                table_join = current_files_table_name
                 
             
             result = self._Execute( f'SELECT MIN( timestamp ) FROM {table_join};' ).fetchone()
@@ -2713,7 +2711,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        canvas_types_to_total_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM {files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
+        canvas_types_to_total_viewtimes = { canvas_type : ( views, viewtime ) for ( canvas_type, views, viewtime ) in self._Execute( f'SELECT canvas_type, SUM( views ), SUM( viewtime ) FROM {current_files_table_name} CROSS JOIN file_viewing_stats USING ( hash_id ) GROUP BY canvas_type;' ) }
         
         if deleted_files_table_name is not None:
             
@@ -2740,7 +2738,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM {files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) CROSS JOIN alternate_file_group_members USING ( media_id ) GROUP BY alternates_group_id;' ) if count > 1 ) )
+        total_alternate_files = sum( ( count for ( alternates_group_id, count ) in self._Execute( f'SELECT alternates_group_id, COUNT( * ) FROM {current_files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) CROSS JOIN alternate_file_group_members USING ( media_id ) GROUP BY alternates_group_id;' ) if count > 1 ) )
         
         boned_stats[ 'total_alternate_files' ] = total_alternate_files
         
@@ -2749,7 +2747,7 @@ class DB( HydrusDB.HydrusDB ):
             return boned_stats
             
         
-        total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( f'SELECT media_id, COUNT( * ) FROM {files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) GROUP BY media_id;' ) if count > 1 ) )
+        total_duplicate_files = sum( ( count for ( media_id, count ) in self._Execute( f'SELECT media_id, COUNT( * ) FROM {current_files_table_name} CROSS JOIN duplicate_file_members USING ( hash_id ) GROUP BY media_id;' ) if count > 1 ) )
         
         boned_stats[ 'total_duplicate_files' ] = total_duplicate_files
         
@@ -2761,7 +2759,7 @@ class DB( HydrusDB.HydrusDB ):
         return boned_stats
         
         # TODO: fix this, it takes ages sometimes IRL
-        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, files_table_name, CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
+        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, current_files_table_name, CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
         
         ( total_potential_pairs, ) = self._Execute( f'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {table_join} );' ).fetchone()
         
@@ -2775,7 +2773,365 @@ class DB( HydrusDB.HydrusDB ):
         return boned_stats
         
     
-    def _GetFileInfoManagers( self, hash_ids: typing.Collection[ int ], sorted = False, blurhash = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+    def _GetFileHistory( self, num_steps: int, file_search_context: ClientSearch.FileSearchContext = None, job_key = None ):
+        
+        # TODO: clean this up. it is a mess cribbed from the boned work, and I'm piping similar nonsense down to the db tables
+        # don't supply deleted timestamps for 'all files deleted' and all that gubbins, it is a mess
+        
+        if job_key is None:
+            
+            job_key = ClientThreading.JobKey()
+            
+        
+        if file_search_context is None:
+            
+            file_search_context = ClientSearch.FileSearchContext(
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            )
+            
+        
+        current_timestamps_table_name = None
+        deleted_files_table_name = None
+        deleted_timestamps_table_name = None
+        
+        location_context = file_search_context.GetLocationContext()
+        
+        db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+        
+        do_not_need_to_search = file_search_context.IsJustSystemEverything() or file_search_context.HasNoPredicates()
+        
+        with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name:
+            
+            with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as deleted_temp_table_name:
+                
+                if do_not_need_to_search:
+                    
+                    current_files_table_name = db_location_context.GetSingleFilesTableName()
+                    
+                else:
+                    
+                    hash_ids = self.modules_files_query.GetHashIdsFromQuery(
+                        file_search_context = file_search_context,
+                        apply_implicit_limit = False,
+                        job_key = job_key
+                    )
+                    
+                    if job_key.IsCancelled():
+                        
+                        return {}
+                        
+                    
+                    self._ExecuteMany( f'INSERT OR IGNORE INTO {temp_table_name} ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
+                    
+                    current_files_table_name = temp_table_name
+                    
+                
+                hacks_going_to_work = location_context.IsOneDomain()
+                deleted_logic_makes_sense = location_context.IncludesCurrent() and not location_context.IncludesDeleted()
+                current_domains_have_inverse = CC.TRASH_SERVICE_KEY not in location_context.current_service_keys and CC.COMBINED_FILE_SERVICE_KEY not in location_context.current_service_keys
+                
+                if hacks_going_to_work and deleted_logic_makes_sense and current_domains_have_inverse:
+                    
+                    # note I can't currently support two _complicated_ db location contexts in one query since their mickey mouse temp table has a fixed name
+                    # therefore leave this as IsOneDomain for now
+                    # TODO: plug the DBLocationContext into a manager for temp table names and then come back here
+                    
+                    db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+                    
+                    # special IsOneDomain hack
+                    current_timestamps_table_name = db_location_context.GetSingleFilesTableName()
+                    
+                    deleted_location_context = location_context.GetDeletedInverse()
+                    
+                    deleted_db_location_context = self.modules_files_storage.GetDBLocationContext( deleted_location_context )
+                    
+                    # special IsOneDomain hack
+                    deleted_timestamps_table_name = deleted_db_location_context.GetSingleFilesTableName()
+                    
+                    if do_not_need_to_search:
+                        
+                        deleted_files_table_name = deleted_db_location_context.GetSingleFilesTableName()
+                        
+                    else:
+                        
+                        deleted_file_search_context = file_search_context.Duplicate()
+                        deleted_file_search_context.SetLocationContext( deleted_location_context )
+                        
+                        hash_ids = self.modules_files_query.GetHashIdsFromQuery(
+                            file_search_context = deleted_file_search_context,
+                            apply_implicit_limit = False,
+                            job_key = job_key
+                        )
+                        
+                        if job_key.IsCancelled():
+                            
+                            return {}
+                            
+                        
+                        self._ExecuteMany( f'INSERT OR IGNORE INTO {deleted_temp_table_name} ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
+                        
+                        deleted_files_table_name = deleted_temp_table_name
+                        
+                    
+                
+                if current_timestamps_table_name is None or deleted_files_table_name is None or deleted_timestamps_table_name is None:
+                    
+                    raise HydrusExceptions.TooComplicatedM8()
+                    
+                
+                return self._GetFileHistoryFromTable(
+                    num_steps,
+                    current_files_table_name,
+                    current_timestamps_table_name,
+                    deleted_files_table_name,
+                    deleted_timestamps_table_name,
+                    job_key
+                )
+                
+            
+        
+    
+    def _GetFileHistoryFromTable(
+        self,
+        num_steps: int,
+        current_files_table_name: str,
+        current_timestamps_table_name: str,
+        deleted_files_table_name: str,
+        deleted_timestamps_table_name: str,
+        job_key = None
+    ):
+        
+        # get all sorts of stats and present them in ( timestamp, cumulative_num ) tuple pairs
+        
+        file_history = {}
+        
+        # first let's do current files. we increment when added, decrement when we know removed
+        
+        if current_files_table_name == current_timestamps_table_name:
+            
+            current_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {current_timestamps_table_name} WHERE timestamp IS NOT NULL;' ) )
+            
+        else:
+            
+            current_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {current_files_table_name} CROSS JOIN {current_timestamps_table_name} USING ( hash_id ) WHERE timestamp IS NOT NULL;' ) )
+            
+        
+        if job_key.IsCancelled():
+            
+            return file_history
+            
+        
+        if deleted_files_table_name == deleted_timestamps_table_name:
+            
+            since_deleted = self._STL( self._Execute( f'SELECT original_timestamp FROM {deleted_timestamps_table_name} WHERE original_timestamp IS NOT NULL;' ) )
+            
+        else:
+            
+            since_deleted = self._STL( self._Execute( f'SELECT original_timestamp FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id ) WHERE original_timestamp IS NOT NULL;' ) )
+            
+        
+        if job_key.IsCancelled():
+            
+            return file_history
+            
+        
+        all_known_import_timestamps = list( current_timestamps )
+        
+        all_known_import_timestamps.extend( since_deleted )
+        
+        all_known_import_timestamps.sort()
+        
+        if deleted_files_table_name == deleted_timestamps_table_name:
+            
+            deleted_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {deleted_timestamps_table_name} WHERE timestamp IS NOT NULL ORDER BY timestamp ASC;' ) )
+            
+            ( total_deleted_files, ) = self._Execute( f'SELECT COUNT( * ) FROM {deleted_timestamps_table_name} WHERE timestamp IS NULL;' ).fetchone()
+            
+        else:
+            
+            deleted_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id ) WHERE timestamp IS NOT NULL ORDER BY timestamp ASC;' ) )
+            
+            ( total_deleted_files, ) = self._Execute( f'SELECT COUNT( * ) FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id ) WHERE timestamp IS NULL;' ).fetchone()
+            
+        
+        if job_key.IsCancelled():
+            
+            return file_history
+            
+        
+        combined_timestamps_with_delta = [ ( timestamp, 1 ) for timestamp in all_known_import_timestamps ]
+        combined_timestamps_with_delta.extend( ( ( timestamp, -1 ) for timestamp in deleted_timestamps ) )
+        
+        combined_timestamps_with_delta.sort()
+        
+        current_file_history = []
+        
+        if len( combined_timestamps_with_delta ) > 0:
+            
+            # set 0 on first file import time
+            current_file_history.append( ( combined_timestamps_with_delta[0][0], 0 ) )
+            
+            if len( combined_timestamps_with_delta ) < 2:
+                
+                step_gap = 1
+                
+            else:
+                
+                step_gap = max( ( combined_timestamps_with_delta[-1][0] - combined_timestamps_with_delta[0][0] ) // num_steps, 1 )
+                
+            
+            total_current_files = 0
+            step_timestamp = combined_timestamps_with_delta[0][0]
+            
+            for ( timestamp, delta ) in combined_timestamps_with_delta:
+                
+                while timestamp > step_timestamp + step_gap:
+                    
+                    current_file_history.append( ( step_timestamp, total_current_files ) )
+                    
+                    step_timestamp += step_gap
+                    
+                
+                total_current_files += delta
+                
+            
+        
+        file_history[ 'current' ] = current_file_history
+        
+        if job_key.IsCancelled():
+            
+            return file_history
+            
+        
+        deleted_file_history = []
+        
+        if len( deleted_timestamps ) > 0:
+            
+            if len( deleted_timestamps ) < 2:
+                
+                step_gap = 1
+                
+            else:
+                
+                step_gap = max( ( deleted_timestamps[-1] - deleted_timestamps[0] ) // num_steps, 1 )
+                
+            
+            step_timestamp = deleted_timestamps[0]
+            
+            for deleted_timestamp in deleted_timestamps:
+                
+                while deleted_timestamp > step_timestamp + step_gap:
+                    
+                    deleted_file_history.append( ( step_timestamp, total_deleted_files ) )
+                    
+                    step_timestamp += step_gap
+                    
+                
+                total_deleted_files += 1
+                
+            
+        
+        file_history[ 'deleted' ] = deleted_file_history
+        
+        # and inbox, which will work backwards since we have numbers for archiving. several subtle differences here
+        # we know the inbox now and the recent history of archives and file changes
+        # working backwards in time (which reverses increment/decrement):
+        # - an archive increments
+        # - a file import decrements
+        # note that we archive right before we delete a file, so file deletes shouldn't change anything for inbox count. all deletes are on archived files, so the increment will already be counted
+        # UPDATE: and now we add archived, which is mostly the same deal but we subtract from current files to start and don't care about file imports since they are always inbox but do care about file deletes
+        
+        inbox_file_history = []
+        archive_file_history = []
+        
+        if current_files_table_name == ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT ):
+            
+            ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
+            
+            if job_key.IsCancelled():
+                
+                return file_history
+                
+            
+            # note also that we do not scrub archived time on a file delete, so this upcoming fetch is for all files ever. this is useful, so don't undo it m8
+            archive_timestamps = self._STL( self._Execute( 'SELECT archived_timestamp FROM archive_timestamps ORDER BY archived_timestamp ASC;' ) )
+            
+        else:
+            
+            ( total_inbox_files, ) = self._Execute( f'SELECT COUNT( * ) FROM {current_files_table_name} CROSS JOIN file_inbox USING ( hash_id );' ).fetchone()
+            
+            if job_key.IsCancelled():
+                
+                return file_history
+                
+            
+            # note also that we do not scrub archived time on a file delete, so this upcoming fetch is for all files ever. this is useful, so don't undo it m8
+            archive_timestamps = self._STL( self._Execute( f'SELECT archived_timestamp FROM {current_files_table_name} CROSS JOIN archive_timestamps USING ( hash_id ) ORDER BY archived_timestamp ASC;' ) )
+            
+        
+        if job_key.IsCancelled():
+            
+            return file_history
+            
+        
+        total_current_files = len( current_timestamps )
+        
+        # I now exclude updates and trash my searching 'all my files'
+        total_update_files = 0 #self.modules_files_storage.GetCurrentFilesCount( self.modules_services.local_update_service_id, HC.CONTENT_STATUS_CURRENT )
+        total_trash_files = 0 #self.modules_files_storage.GetCurrentFilesCount( self.modules_services.trash_service_id, HC.CONTENT_STATUS_CURRENT )
+        
+        total_archive_files = ( total_current_files - total_update_files - total_trash_files ) - total_inbox_files
+        
+        if len( archive_timestamps ) > 0:
+            
+            first_archive_time = archive_timestamps[0]
+            
+            combined_timestamps_with_deltas = [ ( timestamp, 1, -1 ) for timestamp in archive_timestamps ]
+            combined_timestamps_with_deltas.extend( ( ( timestamp, -1, 0 ) for timestamp in all_known_import_timestamps if timestamp >= first_archive_time ) )
+            combined_timestamps_with_deltas.extend( ( ( timestamp, 0, 1 ) for timestamp in deleted_timestamps if timestamp >= first_archive_time ) )
+            
+            combined_timestamps_with_deltas.sort( reverse = True )
+            
+            if len( combined_timestamps_with_deltas ) > 0:
+                
+                if len( combined_timestamps_with_deltas ) < 2:
+                    
+                    step_gap = 1
+                    
+                else:
+                    
+                    # reversed, so first minus last
+                    step_gap = max( ( combined_timestamps_with_deltas[0][0] - combined_timestamps_with_deltas[-1][0] ) // num_steps, 1 )
+                    
+                
+                step_timestamp = combined_timestamps_with_deltas[0][0]
+                
+                for ( archived_timestamp, inbox_delta, archive_delta ) in combined_timestamps_with_deltas:
+                    
+                    while archived_timestamp < step_timestamp - step_gap:
+                        
+                        inbox_file_history.append( ( archived_timestamp, total_inbox_files ) )
+                        archive_file_history.append( ( archived_timestamp, total_archive_files ) )
+                        
+                        step_timestamp -= step_gap
+                        
+                    
+                    total_inbox_files += inbox_delta
+                    total_archive_files += archive_delta
+                    
+                
+                inbox_file_history.reverse()
+                archive_file_history.reverse()
+                
+            
+        
+        file_history[ 'inbox' ] = inbox_file_history
+        file_history[ 'archive' ] = archive_file_history
+        
+        return file_history
+        
+    
+    def _GetFileInfoManagers( self, hash_ids: typing.Collection[ int ], sorted = False ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
         
         ( cached_media_results, missing_hash_ids ) = self._weakref_media_result_cache.GetMediaResultsAndMissing( hash_ids )
         
@@ -2790,9 +3146,8 @@ class DB( HydrusDB.HydrusDB ):
                 # temp hashes to metadata
                 hash_ids_to_info = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, missing_hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_table_name ) ) }
                 
-                if blurhash:
-
-                    hash_ids_to_blurhash = self.modules_files_metadata_basic.GetHashIdsToBlurHash( temp_table_name )
+                hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( temp_table_name )
+                
             
             # build it
             
@@ -2801,10 +3156,6 @@ class DB( HydrusDB.HydrusDB ):
                 if hash_id in hash_ids_to_info:
                     
                     file_info_manager = hash_ids_to_info[ hash_id ]
-
-                    if blurhash and hash_id in hash_ids_to_blurhash:
-                    
-                        file_info_manager.blurhash = hash_ids_to_blurhash[hash_id]
                     
                 else:
                     
@@ -2812,6 +3163,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                     file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
                     
+                
+                file_info_manager.blurhash = hash_ids_to_blurhashes.get( hash_id, None )
                 
                 file_info_managers.append( file_info_manager )
                 
@@ -3302,8 +3655,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 hash_ids_to_tags_managers = self._GetForceRefreshTagsManagersWithTableHashIds( missing_hash_ids, temp_table_name, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
                 
-                hash_ids_to_blurhash = self.modules_files_metadata_basic.GetHashIdsToBlurHash( temp_table_name )
-
+                hash_ids_to_pixel_hashes = self.modules_similar_files.GetHashIdsToPixelHashes( temp_table_name )
+                hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( temp_table_name )
+                
                 has_exif_hash_ids = self.modules_files_metadata_basic.GetHasEXIFHashIds( temp_table_name )
                 has_human_readable_embedded_metadata_hash_ids = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadataHashIds( temp_table_name )
                 has_icc_profile_hash_ids = self.modules_files_metadata_basic.GetHasICCProfileHashIds( temp_table_name )
@@ -3352,14 +3706,7 @@ class DB( HydrusDB.HydrusDB ):
                 timestamps_manager.SetDeletedTimestamps( deleted_file_service_keys_to_timestamps )
                 timestamps_manager.SetPreviouslyImportedTimestamps( deleted_file_service_keys_to_previously_imported_timestamps )
                 
-                if hash_id in hash_ids_to_local_file_deletion_reasons:
-                    
-                    local_file_deletion_reason = hash_ids_to_local_file_deletion_reasons[ hash_id ]
-                    
-                else:
-                    
-                    local_file_deletion_reason = None
-                    
+                local_file_deletion_reason = hash_ids_to_local_file_deletion_reasons.get( hash_id, None )
                 
                 locations_manager = ClientMediaManagers.LocationsManager(
                     set( current_file_service_keys_to_timestamps.keys() ),
@@ -3421,10 +3768,8 @@ class DB( HydrusDB.HydrusDB ):
                 file_info_manager.has_exif = hash_id in has_exif_hash_ids
                 file_info_manager.has_human_readable_embedded_metadata = hash_id in has_human_readable_embedded_metadata_hash_ids
                 file_info_manager.has_icc_profile = hash_id in has_icc_profile_hash_ids
-
-                if hash_id in hash_ids_to_blurhash:
-                    
-                    file_info_manager.blurhash = hash_ids_to_blurhash[hash_id]
+                file_info_manager.pixel_hash = hash_ids_to_pixel_hashes.get( hash_id, None )
+                file_info_manager.blurhash = hash_ids_to_blurhashes.get( hash_id, None )
                 
                 missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
                 
@@ -4626,9 +4971,8 @@ class DB( HydrusDB.HydrusDB ):
             self.modules_files_metadata_basic.SetHasEXIF( hash_id, file_import_job.HasEXIF() )
             self.modules_files_metadata_basic.SetHasHumanReadableEmbeddedMetadata( hash_id, file_import_job.HasHumanReadableEmbeddedMetadata() )
             self.modules_files_metadata_basic.SetHasICCProfile( hash_id, file_import_job.HasICCProfile() )
+            self.modules_files_metadata_basic.SetBlurhash( hash_id, file_import_job.GetBlurhash() )
             
-            self.modules_files_metadata_basic.SetBlurHash( hash_id, file_import_job.GetBlurhash())
-
             #
             
             file_modified_timestamp = file_import_job.GetFileModifiedTimestamp()
@@ -6494,7 +6838,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_duplicate_hashes': result = self.modules_files_duplicates.GetFileHashesByDuplicateType( *args, **kwargs )
         elif action == 'file_duplicate_info': result = self.modules_files_duplicates.GetFileDuplicateInfo( *args, **kwargs )
         elif action == 'file_hashes': result = self.modules_hashes.GetFileHashes( *args, **kwargs )
-        elif action == 'file_history': result = self.modules_files_metadata_rich.GetFileHistory( *args, **kwargs )
+        elif action == 'file_history': result = self._GetFileHistory( *args, **kwargs )
         elif action == 'file_info_managers': result = self._GetFileInfoManagersFromHashes( *args, **kwargs )
         elif action == 'file_info_managers_from_ids': result = self._GetFileInfoManagers( *args, **kwargs )
         elif action == 'file_maintenance_get_job_counts': result = self.modules_files_maintenance_queue.GetJobCounts( *args, **kwargs )
@@ -9789,6 +10133,32 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Some file updates failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 544:
+            
+            self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
+            
+            all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+            
+            with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                
+                if not self._TableExists( 'external_master.blurhashes' ):
+                    
+                    self._Execute( 'CREATE TABLE IF NOT EXISTS external_master.blurhashes ( hash_id INTEGER PRIMARY KEY, blurhash TEXT );' )
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {HydrusData.SplayListForDB( HC.MIMES_WITH_THUMBNAILS )};' ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH )
+                    
+                
+                hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime = ?;', ( HC.APPLICATION_ZIP, ) ) )
+                self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                
+            
+            if not self._IdealIndexExists( 'external_caches.file_maintenance_jobs', [ 'job_type' ] ):
+                
+                self._CreateIndex( 'external_caches.file_maintenance_jobs', [ 'job_type' ], False )
                 
             
         

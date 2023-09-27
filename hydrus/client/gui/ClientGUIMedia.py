@@ -23,16 +23,37 @@ from hydrus.client.media import ClientMedia
 
 def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Sequence[ ClientMedia.Media ] ):
     
-    sha256_hashes = list( itertools.chain.from_iterable( ( media.GetHashes( ordered = True ) for media in medias ) ) )
+    hex_it = True
     
-    if hash_type == 'sha256':
+    desired_hashes = []
+    
+    flat_media = ClientMedia.FlattenMedia( medias )
+    
+    sha256_hashes = [ media.GetHash() for media in flat_media ]
+    
+    if hash_type in ( 'pixel_hash', 'blurhash' ):
+        
+        file_info_managers = [ media.GetFileInfoManager() for media in flat_media ]
+        
+        if hash_type == 'pixel_hash':
+            
+            desired_hashes = [ fim.pixel_hash for fim in file_info_managers if fim.pixel_hash is not None ]
+            
+        elif hash_type == 'blurhash':
+            
+            desired_hashes = [ fim.blurhash for fim in file_info_managers if fim.blurhash is not None ]
+            
+            hex_it = False
+            
+        
+    elif hash_type == 'sha256':
         
         desired_hashes = sha256_hashes
         
     else:
         
         num_hashes = len( sha256_hashes )
-        num_remote_sha256_hashes = len( [ itertools.chain.from_iterable( ( media.GetHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL, ordered = True ) for media in medias ) ) ] )
+        num_remote_medias = len( [ not media.GetLocationsManager().IsLocal() for media in flat_media ] )
         
         source_to_desired = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
         
@@ -51,12 +72,12 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
                 message = 'Unfortunately, {} of the {} hashes could not be found.'.format( HydrusData.ToHumanInt( num_missing ), hash_type )
                 
             
-            if num_remote_sha256_hashes > 0:
+            if num_remote_medias > 0:
                 
-                message += ' {} of the files you wanted are not currently in this client. If they have never visited this client, the lookup is impossible.'.format( HydrusData.ToHumanInt( num_remote_sha256_hashes ) )
+                message += ' {} of the files you wanted are not currently in this client. If they have never visited this client, the lookup is impossible.'.format( HydrusData.ToHumanInt( num_remote_medias ) )
                 
             
-            if num_remote_sha256_hashes < num_hashes:
+            if num_remote_medias < num_hashes:
                 
                 message += ' It could be that some of the local files are currently missing this information in the hydrus database. A file maintenance job (under the database menu) can repopulate this data.'
                 
@@ -67,7 +88,14 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
     
     if len( desired_hashes ) > 0:
         
-        text_lines = [ desired_hash.hex() for desired_hash in desired_hashes ]
+        if hex_it:
+            
+            text_lines = [ desired_hash.hex() for desired_hash in desired_hashes ]
+            
+        else:
+            
+            text_lines = desired_hashes
+            
         
         if HG.client_controller.new_options.GetBoolean( 'prefix_hash_when_copying' ):
             

@@ -72,8 +72,10 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 By default, hydrus stores all its data—options, files, subscriptions, _everything_—entirely inside its own directory. You can extract it to a usb stick, move it from one place to another, have multiple installs for multiple purposes, wrap it all up inside a truecrypt volume, whatever you like. The .exe installer writes some unavoidable uninstall registry stuff to Windows, but the 'installed' client itself will run fine if you manually move it.
 
-!!! warning "Network Install"
-    Unless you are an expert, do not install your client to a network location (i.e. on a different computer's hard drive)! The database is sensitive to interruption and requires good file locking, which network storage often fakes. There are [ways of splitting your client up](database_migration.md) so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.
+!!! danger "Bad Locations"
+    **Do not install to a network location!** (i.e. on a different computer's hard drive) The SQLite database is sensitive to interruption and requires good file locking, which network interfaces often fake. There are [ways of splitting your client up](database_migration.md) so the database is on a local SSD but the files are on a network--this is fine--but you really should not put the database on a remote machine unless you know what you are doing and have a backup in case things go wrong.
+    
+    **Do not install to a location with filesystem-level compression enabled!** It may work ok to start, but when the SQLite database grows to large size, this can cause extreme access latency and I/O errors and corruption.
 
 !!! info "For macOS users"
     The Hydrus App is **non-portable** and puts your database in `~/Library/Hydrus` (i.e. `/Users/[You]/Library/Hydrus`). You can update simply by replacing the old App with the new, but if you wish to backup, you should be looking at `~/Library/Hydrus`, not the App itself.

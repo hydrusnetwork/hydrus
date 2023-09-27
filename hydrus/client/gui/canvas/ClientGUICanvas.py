@@ -1558,6 +1558,18 @@ class CanvasPanel( Canvas ):
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash.', self._CopyHashToClipboard, 'sha1' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash.', self._CopyHashToClipboard, 'sha512' )
             
+            file_info_manager = self._current_media.GetFileInfoManager()
+            
+            if file_info_manager.blurhash is not None:
+                
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({file_info_manager.blurhash})', 'Copy this file\'s blurhash.', self._CopyHashToClipboard, 'blurhash' )
+                
+            
+            if file_info_manager.pixel_hash is not None:
+                
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel ({file_info_manager.pixel_hash.hex()})', 'Copy this file\'s pixel hash.', self._CopyHashToClipboard, 'pixel_hash' )
+                
+            
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             
             if advanced_mode:
@@ -3186,7 +3198,6 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
         
         ClientDuplicates.hashes_to_jpeg_quality = {} # clear the cache
-        ClientDuplicates.hashes_to_pixel_hashes = {} # clear the cache
         
         CanvasWithHovers.CleanBeforeDestroy( self )
         
@@ -4563,6 +4574,18 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard.', self._CopyHashToClipboard, 'md5' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard.', self._CopyHashToClipboard, 'sha1' )
             ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard.', self._CopyHashToClipboard, 'sha512' )
+            
+            file_info_manager = self._current_media.GetFileInfoManager()
+            
+            if file_info_manager.blurhash is not None:
+                
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({file_info_manager.blurhash})', 'Copy this file\'s blurhash.', self._CopyHashToClipboard, 'blurhash' )
+                
+            
+            if file_info_manager.pixel_hash is not None:
+                
+                ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel ({file_info_manager.pixel_hash.hex()})', 'Copy this file\'s pixel hash.', self._CopyHashToClipboard, 'pixel_hash' )
+                
             
             ClientGUIMenus.AppendMenu( copy_menu, copy_hash_menu, 'hash' )
             

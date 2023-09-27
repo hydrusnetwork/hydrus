@@ -91,7 +91,7 @@ def blurhash_components(blurhash):
     Decodes and returns the number of x and y components in the given blurhash.
     """
     if len(blurhash) < 6:
-        raise ValueError("BlurHash must be at least 6 characters long.")
+        raise ValueError("Blurhash must be at least 6 characters long.")
     
     # Decode metadata
     size_info = base83_decode(blurhash[0])
@@ -116,7 +116,7 @@ def blurhash_decode(blurhash, width, height, punch = 1.0, linear = False):
     basically looks the same anyways.
     """
     if len(blurhash) < 6:
-        raise ValueError("BlurHash must be at least 6 characters long.")
+        raise ValueError("Blurhash must be at least 6 characters long.")
     
     # Decode metadata
     size_info = base83_decode(blurhash[0])
@@ -128,7 +128,7 @@ def blurhash_decode(blurhash, width, height, punch = 1.0, linear = False):
     
     # Make sure we at least have the right number of characters
     if len(blurhash) != 4 + 2 * size_x * size_y:
-        raise ValueError("Invalid BlurHash length.")
+        raise ValueError("Invalid Blurhash length.")
         
     # Decode DC component
     dc_value = base83_decode(blurhash[2:6])
