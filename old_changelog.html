@@ -35,6 +35,48 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_545"><a href="#version_545">version 545</a></h2>
+                    <ul>
+                        <li><h3>blurhash</h3></li>
+                        <li>thanks to a user's work, hydrus now calculates the [blurhash](https://blurha.sh/) of files with a thumbnail! (issue #394)</li>
+                        <li>if a file has no thumbnail but does have a blurhash (e.g. missing files, or files you previously deleted and are looking at in a clever view), it now presents a thumbnail generated from that blurhash</li>
+                        <li>all existing thumbnail-having files are scheduled for a blurhash calculation (this is a new job in the file maintenance system). if you have hundreds of thousands of files, expect it to take a couple of weeks/months to clear. if you need to hurry this along, the queue is under _database->file maintenance_</li>
+                        <li>any time a file's thumbnail changes, the blurhash is scheduled for a regen</li>
+                        <li>for this first version, the blurhash is very small and simple, either 15 or 16 cells for ~34 bytes. if we end up using it a lot somewhere, I'd be open to making a size setting so you can set 8x8 or higher grids for actually decent blur-thumbs</li>
+                        <li>a new _help->debug_ report mode switches to blurhashes instead of normal thumbs</li>
+                        <li><h3>file history search</h3></li>
+                        <li>I did to the file history chart (_help->view file history_) what I did to mr bones a couple weeks ago. you can now search your history of imports, archives, and deletes for creator x, filetype y, or any other search you can think of</li>
+                        <li>I hacked this all together right at the end of my week, so please bear with me if there are bugs or dumb permitted domains/results. the default action when you first open it up should all work the same way as before, no worries™, but let me know how you get on and I'll fix it!</li>
+                        <li>there's more to do here. we'll want a hideable search panel, a widget to control the resolution of the chart (currently fixed at 7680 to look good blown up on a 4k), and it'd be nice to have a selectable date range</li>
+                        <li>in the longer term future, it'd be nice to have more lines of data and that chart tech you see on financial sites where it shows you the current value where your mouse is</li>
+                        <li><h3>client api</h3></li>
+                        <li>the `file_metadata` call now says the new blurhash. if you pipe it into a blurhash library and blow it up to an appopriate ratio canvas, it _should_ just work. the typical use is as a placeholder while you wait for thumbs/files to download</li>
+                        <li>a new `include_blurhash` parameter will include the blurhash when `only_return_basic_information` is true</li>
+                        <li>`file_metadata` also shows the file's `pixel_hash` now. the algorithm here is proprietary to hydrus, but you can throw it into 'system:similar files' to find pixel dupes. I expect to add perceptual hashes too</li>
+                        <li>the help is updated to talk about this</li>
+                        <li>I updated the unit tests to deal with this</li>
+                        <li>the error when the api fails to parse the client api header is now a properly handled 400 (previously it was falling to the 500 backstop)</li>
+                        <li>the client api version is now 53</li>
+                        <li><h3>misc</h3></li>
+                        <li>I'm sorry to say I'm removing the Deviant Art artist search and login script for all new users, since they are both broken. DA have been killing their nice old API in pieces, and they finally took down the old artist gallery fetch. :(. there may be a way to finagle-parse their new phone-friendly, live-loading, cloud-deployed engine, but when I look at it, it seems like a much bigger mess than hydrus's parsing system can happily handle atm. the 'correct' way to programatically parse DA is through their new OAuth API, which we simply do not support. individual page URLs seem to still work, but I expect them to go soon too. Sorry folks, try gallery-dl for now--they have a robust OAuth solution</li>
+                        <li>thanks to a user, we now have 'epub' ebook support! no 'num_words' support yet, but it looks like epubs are really just zips with some weird metadata files and a bunch of html inside, so I think this'll be doable with a future hacky parser. all your existing zip files wil be scheduled for a metadata rescan to see if they are actually epubs (this'll capture any secret kritas and procreates, too, I think)</li>
+                        <li>the main UI-level media object is now aware of a file's pixel hash. this is now used in the duplicate filter's 'these are pixel duplicates' statements to save CPU. the jank old on-the-fly calculation code is all removed now, and if these values are missing from the media object, a message will now be shown saying the pixel dupe status could not be determined. we have had multiple rounds of regen over the past year and thus almost all clients have full database data here, so fingers crossed we won't see this error state much if at all, but let me know if you do and I'll figure out a button to accelerate the fix</li>
+                        <li>the thumbnail _right-click->open->similar files_ menu now has an entry for 'open the selection in a new duplicate filter page', letting you quickly resolve the duplicates that involve the selected files</li>
+                        <li>pixel hash and blurhash are now listed, with the actual hash value, in the _share->copy->hash_ thumbnail right-click menu</li>
+                        <li>thanks to a user, 'MPO' jpegs (some weird multi-picture jpeg that we can't page through yet) now parse their EXIF correctly and should rotate on a metadata-reparse. since these are rare, I'm not going to schedule a rescan over everyone's jpegs, but if you see a jpeg that is rotated wrong, try hitting _manage->regenerate->file metadata_ on its thumbnail menu</li>
+                        <li>I may have fixed a rare hang when highlighting a downloader/watcher during very busy network time that involves that includes that importer</li>
+                        <li>added a warning to the 'getting started with installing' and 'database migration' help about running the SQLite database off a compressed filesystem--don't do it!</li>
+                        <li>fixed thumbnail generation for greyspace PSDs (and perhaps some others)</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>I cleaned some code and added some tests around the new blurhash tech and thumbs in general</li>
+                        <li>a variety of metadata changes such as 'has exif', 'has icc profile' now trigger a live update on thumbnails currently loaded into the UI</li>
+                        <li>cleaned up some old file metadata loading code</li>
+                        <li>re-sorted the job list dropdown in the file maintenance dialog</li>
+                        <li>some file maintenance database work should be a bit faster</li>
+                        <li>fixed some behind the scenes stuff when the file history chart has no file info to show</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_544"><a href="#version_544">version 544</a></h2>
                     <ul>
                         <li><h3>webp vulnerability</h3></li>
@@ -46,12 +88,12 @@
                         <li>the `migrate database` dialog now allows you to set a 'max size' for all but one of your media locations. if you have a 500GB drive you want to store some stuff on, you no longer have to balance the weights in your head--just set a max size of 450GB and hydrus will figure it out for you. it is not super precise (and it isn't healthy to fill drives up to 98% anyway), so make sure you leave some padding</li>
                         <li>also, please note that this will not automatically rebalance _yet_. right now, the only way files move between locations is through the 'move files now' button on the dialog, so if you have a location that is full up according to its max size rule and then spend a month importing many files, it will go over its limit until and unless you revisit 'migrate database' and move files again. I hope to have automatic background rebalancing in the near future</li>
                         <li>updated the 'database migration' help to talk about this and added a new migration example</li>
+                        <li>the 'edit num bytes' widget now supports terabytes (TB)</li>
                         <li>I fleshed out the logic and fixed several bugs in the migration code, mostly to do with the new max size stuff and distributing weights appropriately in various situations</li>
                         <li><h3>misc</h3></li>
                         <li>when an image file fails to render in the media viewer, it now draws a bordered box with a brief 'failed to render' note. previously, it janked with a second of lag, made some popups, and left the display on eternal blank hang. now it finishes its job cleanly and returns a 'nah m8' 'image' result</li>
                         <li>I reworked the Mr Bones layout a bit. the search is now on the left, and the rows of the main count table are separated for readability</li>
                         <li>it turns out that bitmap (.bmp) files can support ICC Profiles, so I've told hydrus to look for them in new bitmaps and retroactively scan all your existing ones</li>
-                        <li>the 'edit num bytes' widget now supports terabytes (TB)</li>
                         <li>fixed an issue with the recent PSD code updates that was breaking boot for clients running from source without the psd-tools library (this affected the Docker build)</li>
                         <li>updated all the 'setup_venv' scripts. all the formatting and text has had a pass, and there is now a question on (n)ew or (old) Pillow</li>
                         <li>to stop FFMPEG's false positives where it can think a txt file is an mpeg, the main hydrus filetype scanning routine will no longer send files with common text extensions to ffmpeg. if you do have an mp3 called music.txt, rename it before import!</li>
