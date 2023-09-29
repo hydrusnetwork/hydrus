@@ -44,11 +44,10 @@ def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tupl
     if clip_rect is not None:
         
         pil_image = HydrusImageHandling.ClipPILImage( pil_image, clip_rect )
-        
-    
-    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
 
-    thumbnail_pil_image = HydrusImageHandling.DequantizePILImage( thumbnail_pil_image )
+    pil_image = HydrusImageHandling.DequantizePILImage( pil_image )
+        
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
     numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage(thumbnail_pil_image)
     
