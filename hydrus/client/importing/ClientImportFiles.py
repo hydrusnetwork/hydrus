@@ -1,13 +1,14 @@
-import typing
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusBlurhash
+from hydrus.core.images import HydrusImageHandling
+from hydrus.core.images import HydrusImageMetadata
+from hydrus.core.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
@@ -361,7 +362,7 @@ class FileImportJob( object ):
             
             try:
                 
-                self._blurhash = HydrusImageHandling.GetBlurhashFromNumPy( thumbnail_numpy )
+                self._blurhash = HydrusBlurhash.GetBlurhashFromNumPy( thumbnail_numpy )
                 
             except:
                 
@@ -406,11 +407,18 @@ class FileImportJob( object ):
         
         has_exif = False
         
+        raw_pil_image = None
+        
         if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
             
             try:
                 
-                has_exif = HydrusImageHandling.HasEXIF( self._temp_path )
+                if raw_pil_image is None:
+                    
+                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path )
+                    
+                
+                has_exif = HydrusImageMetadata.HasEXIF( raw_pil_image )
                 
             except:
                 
@@ -429,14 +437,18 @@ class FileImportJob( object ):
             try:
                 
                 if mime == HC.APPLICATION_PSD:
-
-                    has_icc_profile = HydrusPSDHandling.PSDHasICCProfile( self._temp_path )
-
-                else:
-                
-                    pil_image = HydrusImageHandling.RawOpenPILImage( self._temp_path )
                     
-                    has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
+                    has_icc_profile = HydrusPSDHandling.PSDHasICCProfile( self._temp_path )
+                    
+                else:
+                    
+                    if raw_pil_image is None:
+                        
+                        raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path )
+                        
+                    
+                    has_icc_profile = HydrusImageMetadata.HasICCProfile( raw_pil_image )
+                    
                 
             except:
                 

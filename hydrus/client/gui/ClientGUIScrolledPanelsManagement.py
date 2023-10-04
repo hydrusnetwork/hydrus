@@ -12,12 +12,11 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -4530,6 +4529,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( self, min=1, max=99 )
             self._thumbnail_visibility_scroll_percent.setToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
             
+            self._allow_blurhash_fallback = QW.QCheckBox( self )
+            
+            tt = 'If hydrus does not have a thumbnail for a file (e.g. you are looking at a deleted file, or one unexpectedly missing), but it does know its blurhash, it will generate a blurry thumbnail based off that blurhash. Turning this behaviour off here will make it always show the default "hydrus" thumbnail.'
+            
+            self._allow_blurhash_fallback.setToolTip( tt )
+            
             self._focus_preview_on_ctrl_click = QW.QCheckBox( self )
             self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( self )
             self._focus_preview_on_shift_click = QW.QCheckBox( self )
@@ -4553,6 +4558,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_dpr_percentage.setValue( self._new_options.GetInteger( 'thumbnail_dpr_percent' ) )
             
             self._video_thumbnail_percentage_in.setValue( self._new_options.GetInteger( 'video_thumbnail_percentage_in' ) )
+            
+            self._allow_blurhash_fallback.setChecked( self._new_options.GetBoolean( 'allow_blurhash_fallback' ) )
             
             self._focus_preview_on_ctrl_click.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click' ) )
             self._focus_preview_on_ctrl_click_only_static.setChecked( self._new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ) )
@@ -4585,6 +4592,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'On shift-click, focus thumbnails in the preview window: ', self._focus_preview_on_shift_click ) )
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
             rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
+            rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )
@@ -4624,6 +4632,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'focus_preview_on_ctrl_click_only_static', self._focus_preview_on_ctrl_click_only_static.isChecked() )
             self._new_options.SetBoolean( 'focus_preview_on_shift_click', self._focus_preview_on_shift_click.isChecked() )
             self._new_options.SetBoolean( 'focus_preview_on_shift_click_only_static', self._focus_preview_on_shift_click_only_static.isChecked() )
+            
+            self._new_options.SetBoolean( 'allow_blurhash_fallback', self._allow_blurhash_fallback.isChecked() )
             
             try:
                 

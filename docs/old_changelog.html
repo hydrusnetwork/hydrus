@@ -35,6 +35,34 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_546"><a href="#version_546">version 546</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed the recent messed up colours in PSD thumbnail generation. I enthusiastically 'fixed' a problem with greyscale PSD thumbs at the last minute last week and accidentally swapped the RGB colour channels on coloured ones. I changed the badly named method that caused this mixup, and all existing PSD thumbs will be regenerated (issue #1448)</li>
+                        <li>fixed up some borked button-enabling and status-displaying logic in the file history chart. the cancel process should work properly on repeat now</li>
+                        <li>made two logical fixes to the archive count in the new file history chart when you have a specific search--archive times for files you deleted are now included properly, and files that are not eligible for archiving are discluded from the initial count. this _should_ make the inbox and archive lines, which were often way too high during specific searches, a little better behaved. let me know what you see!</li>
+                        <li>added a checkbox to _options->thumbnails_ to turn off the new blurhash thumbnail fallback</li>
+                        <li>'this has exif data, the other does not' statements are now calculated from cached knowledge--loading pairs in the duplicate filter should be faster now</li>
+                        <li>some larger image files with clever metadata should import just a little faster now</li>
+                        <li>if the process isn't explicitly frozen into an executable or a macOS App, it is now considered 'running from source'. various unusual 'running from source' modes (e.g. booting from various scripts that mess with argv) should now be recognised better</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>moved 'recent tags' code to a new client db module</li>
+                        <li>moved ratings code to a new client db module</li>
+                        <li>moved some db integrity checking code to the db maintenance module</li>
+                        <li>moved the orphan table checking code to the db maintenance module</li>
+                        <li>fixed the orphan table checking code, which was under-detecting orphan tables</li>
+                        <li>moved some final references to sibling/parent tables from main db method to sibling and parent modules</li>
+                        <li>moved most of the image metadata functions (exif, icc profile, human-readable, subsampling, quantization quality estimate) to a new `HydrusImageMetadata` file</li>
+                        <li>moved the new blurhash methods to a new `HydrusBlurhash` file</li>
+                        <li>moved various normalisation routines to a new `HydrusImageNormalisation` file</li>
+                        <li>moved various channel scanning and adjusting code to a new `HydrusImageColours` file</li>
+                        <li>moved the hydrus image files to the new 'hydrus.core.images' module</li>
+                        <li>cleaned up some image loading code</li>
+                        <li>deleted ancient and no-longer-used client db code regarding imageboard definitions, status texts, and more</li>
+                        <li>removed the ancient `OPENCV_OK` fallback code, which was only used, superfluously, in a couple of final places. OpenCV is not optional to run hydrus, server or client</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_545"><a href="#version_545">version 545</a></h2>
                     <ul>
                         <li><h3>blurhash</h3></li>

@@ -7,9 +7,8 @@ import cv2
 
 from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusImageHandling
 
 cv_interpolation_enum_lookup = {}
 

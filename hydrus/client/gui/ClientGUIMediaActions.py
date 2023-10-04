@@ -8,10 +8,12 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusImageHandling
+from hydrus.core.images import HydrusImageMetadata
+from hydrus.core.images import HydrusImageOpening
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -697,23 +699,23 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
         
     else:
         
-        pil_image = HydrusImageHandling.RawOpenPILImage( path )
+        raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
         
         if mime in HC.FILES_THAT_CAN_HAVE_EXIF:
             
-            exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+            exif_dict = HydrusImageMetadata.GetEXIFDict( raw_pil_image )
             
         
         if mime in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
             
-            file_text = HydrusImageHandling.GetEmbeddedFileText( pil_image )
+            file_text = HydrusImageMetadata.GetEmbeddedFileText( raw_pil_image )
             
         
         if mime == HC.IMAGE_JPEG:
             
-            extra_rows.append( ( 'progressive', 'yes' if 'progression' in pil_image.info else 'no' ) )
+            extra_rows.append( ( 'progressive', 'yes' if 'progression' in raw_pil_image.info else 'no' ) )
             
-            extra_rows.append( ( 'subsampling', HydrusImageHandling.GetJpegSubsampling( pil_image ) ) )
+            extra_rows.append( ( 'subsampling', HydrusImageMetadata.GetJpegSubsampling( raw_pil_image )) )
             
         
     

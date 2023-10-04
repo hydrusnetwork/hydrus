@@ -4,7 +4,7 @@ import typing
 from PIL import Image as PILImage
 
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusImageHandling
+from hydrus.core.images import HydrusImageHandling
 
 try:
     
@@ -34,7 +34,9 @@ def MergedPILImageFromPSD( path: str ) -> PILImage:
         raise HydrusExceptions.UnsupportedFileException( 'psd_tools unavailable' )
         
     
-    return HydrusPSDTools.MergedPILImageFromPSD( path )
+    pil_image = HydrusPSDTools.MergedPILImageFromPSD( path )
+    
+    return pil_image
     
 
 def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
@@ -44,12 +46,11 @@ def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tupl
     if clip_rect is not None:
         
         pil_image = HydrusImageHandling.ClipPILImage( pil_image, clip_rect )
-
-    pil_image = HydrusImageHandling.DequantizePILImage( pil_image )
         
+    
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
-    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage(thumbnail_pil_image)
+    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
     
     return numpy_image
     

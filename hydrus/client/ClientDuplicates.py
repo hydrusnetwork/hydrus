@@ -7,10 +7,12 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusImageHandling
+from hydrus.core.images import HydrusImageMetadata
+from hydrus.core.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
@@ -425,14 +427,36 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
             path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
             
-            hashes_to_jpeg_quality[ s_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+            try:
+                
+                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                
+                result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
+                
+            except:
+                
+                result = ( 'unknown', None )
+                
+            
+            hashes_to_jpeg_quality[ s_hash ] = result
             
         
         if c_hash not in hashes_to_jpeg_quality:
             
             path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
             
-            hashes_to_jpeg_quality[ c_hash ] = HydrusImageHandling.GetJPEGQuantizationQualityEstimate( path )
+            try:
+                
+                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                
+                result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
+                
+            except:
+                
+                result = ( 'unknown', None )
+                
+            
+            hashes_to_jpeg_quality[ c_hash ] = result
             
         
         ( s_label, s_jpeg_quality ) = hashes_to_jpeg_quality[ s_hash ]
@@ -489,9 +513,9 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
             path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
             
-            pil_image = HydrusImageHandling.RawOpenPILImage( path )
+            raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
             
-            exif_dict = HydrusImageHandling.GetEXIFDict( pil_image )
+            exif_dict = HydrusImageMetadata.GetEXIFDict( raw_pil_image )
             
             if exif_dict is None:
                 
@@ -506,8 +530,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         
     
-    s_has_exif = has_exif( shown_media )
-    c_has_exif = has_exif( comparison_media )
+    s_has_exif = shown_media.GetFileInfoManager().has_exif
+    c_has_exif = comparison_media.GetFileInfoManager().has_exif
     
     if s_has_exif ^ c_has_exif:
         
@@ -523,8 +547,8 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         statements_and_scores[ 'exif_data' ] = ( exif_statement, 0 )
         
     
-    s_has_human_readable_embedded_metadata = shown_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
-    c_has_human_readable_embedded_metadata = comparison_media.GetMediaResult().GetFileInfoManager().has_human_readable_embedded_metadata
+    s_has_human_readable_embedded_metadata = shown_media.GetFileInfoManager().has_human_readable_embedded_metadata
+    c_has_human_readable_embedded_metadata = comparison_media.GetFileInfoManager().has_human_readable_embedded_metadata
     
     if s_has_human_readable_embedded_metadata ^ c_has_human_readable_embedded_metadata:
         

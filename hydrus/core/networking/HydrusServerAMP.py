@@ -1,22 +1,3 @@
-import collections
-import os
-import random
-import traceback
-
-from twisted.internet import reactor, defer
-from twisted.internet.threads import deferToThread
-from twisted.protocols import amp
-
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
-from hydrus.core import HydrusDocumentHandling
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
-from hydrus.core import HydrusFlashHandling
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
-from hydrus.core.networking import HydrusServerResources
-
 # this is all just some old experiment for non-http network comms, never used
 '''
 class HydrusAMPCommand( amp.Command ):

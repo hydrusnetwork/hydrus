@@ -56,8 +56,11 @@ elif PLATFORM_LINUX:
 elif PLATFORM_HAIKU:
     NICE_PLATFORM_STRING = 'Haiku'
 
-RUNNING_FROM_SOURCE = sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
 RUNNING_FROM_MACOS_APP = os.path.exists( os.path.join( BASE_DIR, 'running_from_app' ) )
+
+# I used to check argv[0], but it is unreliable
+# sys.argv[0].endswith( '.py' ) or sys.argv[0].endswith( '.pyw' )
+RUNNING_FROM_SOURCE = not ( RUNNING_FROM_FROZEN_BUILD or RUNNING_FROM_MACOS_APP )
 
 if RUNNING_FROM_SOURCE:
     NICE_RUNNING_AS_STRING = 'from source'
@@ -100,7 +103,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 545
+SOFTWARE_VERSION = 546
 CLIENT_API_VERSION = 53
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )

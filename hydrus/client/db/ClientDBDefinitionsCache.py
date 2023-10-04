@@ -234,6 +234,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
         
     
+
 class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True

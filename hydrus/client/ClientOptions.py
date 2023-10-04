@@ -8,7 +8,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
@@ -295,6 +294,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'hide_uninteresting_local_import_time' ] = True
         self._dictionary[ 'booleans' ][ 'hide_uninteresting_modified_time' ] = True
         
+        self._dictionary[ 'booleans' ][ 'allow_blurhash_fallback' ] = True
+        
         from hydrus.client.gui.canvas import ClientGUIMPV
         
         self._dictionary[ 'booleans' ][ 'mpv_available_at_start' ] = ClientGUIMPV.MPV_IS_AVAILABLE
@@ -438,7 +439,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'max_connection_attempts_allowed' ] = 5
         self._dictionary[ 'integers' ][ 'max_request_attempts_allowed_get' ] = 5
         
-        from hydrus.core import HydrusImageHandling
+        from hydrus.core.images import HydrusImageHandling
         
         self._dictionary[ 'integers' ][ 'thumbnail_scale_type' ] = HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY
         

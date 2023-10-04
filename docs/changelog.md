@@ -7,6 +7,35 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 546](https://github.com/hydrusnetwork/hydrus/releases/tag/v546)
+
+### misc
+
+* fixed the recent messed up colours in PSD thumbnail generation. I enthusiastically 'fixed' a problem with greyscale PSD thumbs at the last minute last week and accidentally swapped the RGB colour channels on coloured ones. I changed the badly named method that caused this mixup, and all existing PSD thumbs will be regenerated (issue #1448)
+* fixed up some borked button-enabling and status-displaying logic in the file history chart. the cancel process should work properly on repeat now
+* made two logical fixes to the archive count in the new file history chart when you have a specific search--archive times for files you deleted are now included properly, and files that are not eligible for archiving are discluded from the initial count. this _should_ make the inbox and archive lines, which were often way too high during specific searches, a little better behaved. let me know what you see!
+* added a checkbox to _options->thumbnails_ to turn off the new blurhash thumbnail fallback
+* 'this has exif data, the other does not' statements are now calculated from cached knowledge--loading pairs in the duplicate filter should be faster now
+* some larger image files with clever metadata should import just a little faster now
+* if the process isn't explicitly frozen into an executable or a macOS App, it is now considered 'running from source'. various unusual 'running from source' modes (e.g. booting from various scripts that mess with argv) should now be recognised better
+
+### boring code cleanup
+
+* moved 'recent tags' code to a new client db module
+* moved ratings code to a new client db module
+* moved some db integrity checking code to the db maintenance module
+* moved the orphan table checking code to the db maintenance module
+* fixed the orphan table checking code, which was under-detecting orphan tables
+* moved some final references to sibling/parent tables from main db method to sibling and parent modules
+* moved most of the image metadata functions (exif, icc profile, human-readable, subsampling, quantization quality estimate) to a new `HydrusImageMetadata` file
+* moved the new blurhash methods to a new `HydrusBlurhash` file
+* moved various normalisation routines to a new `HydrusImageNormalisation` file
+* moved various channel scanning and adjusting code to a new `HydrusImageColours` file
+* moved the hydrus image files to the new 'hydrus.core.images' module
+* cleaned up some image loading code
+* deleted ancient and no-longer-used client db code regarding imageboard definitions, status texts, and more
+* removed the ancient `OPENCV_OK` fallback code, which was only used, superfluously, in a couple of final places. OpenCV is not optional to run hydrus, server or client
+
 ## [Version 545](https://github.com/hydrusnetwork/hydrus/releases/tag/v545)
 
 ### blurhash
@@ -382,37 +411,3 @@ title: Changelog
 * silenced the long time logspam that oftens happens when generating flash thumbnails
 * fixed a stupid typo error in the routine that schedules downloading files from file repositories
 * `nose`, `six`, and `zope` are no longer in any of the requirements.txts. I think these were needed a million years ago as PyInstaller hacks, but the situation is much better these days
-
-## [Version 536](https://github.com/hydrusnetwork/hydrus/releases/tag/v536)
-
-### more new filetypes
-
-* thanks to a user, we have XCF and gzip filetype support!
-* I rejiggered the new SVG support so there is a firmer server/client split. the new tech needs Qt, which broke the headless Docker server last week at the last minute--now the server has some sensible stubs that safely revert to the default svg thumb and give unknown resolution, and the client patches in full support dynamically
-* the new SVG code now supports the 'scale to fill' thumbnail option
-
-### misc
-
-* I fixed the issue that was causing tags to stay in the tag autocomplete lookup despite going to 0 count. it should not happen for new cases, and **on update, a database routine will run to remove all your existing orphans. if you have ever synced with the PTR, it will take several minutes to run!**
-* sending the command to set a file as the best in its duplicate group now presents a yes/no dialog to confirm
-* hitting the shortcut for 'set the focused file as better than the other(s)' when you only have one file now asks if you just want to set that file as the best of its group
-* fixed an erroneous 'cannot show the best quality file of this file's group here' label in the file relationships menu--a count was off
-* fixed the 'set up a hydrus.desktop file' setup script to point to the new hydrus_client.sh startup script name
-* thanks to a user, a situation where certain unhandled URLs that deliver JSON were parsing as mpegs by ffmpeg and causing a weird loop is now caught and stopped. more investigation is needed to fix it properly
-
-### boring stuff
-
-* when a problem or file maintenance job causes a new file maintenance job to be queued (e.g. if the client in a metadata scan discovers the resolution of a file was not as expected, let's say it now recognises EXIF rotation, and starts a secondary thumbnail regen job), it now wakes the file maintenance manager immediately, which should help clear out and update for these jobs quickly when you are looking at the problem thumbnails
-* if you have an image type set to show as an 'open externally' button in the media viewer, then it is now no longer prefetched in the rendering system!
-* I added a very simple .editorconfig file for the project. since we have a variety of weird files in the directory tree, I've made it cautious and python-specific to start with. we'll expand as needed
-* I moved the similar files search tree and maintenance tracker from client.caches.db to client.db. while the former table is regeneratable, it isn't a cache or precomputation store, _per se_, so I finally agreed to move it to the main db. if you have a giganto database, it may take an extra minute to update
-* added a 'requirements_server.txt' to the advanced requirements.txts directory, just for future reference, and trimmed the Server Dockerfile down to reflect it
-
-### client api
-
-* thanks to a user, fixed a really stupid typo in the Client API when sending the 'file_id' parameter to set the file
-* wrote unit tests for file_id and file_ids parameters to stop this sort mistake in future
-* if you attempt to delete a file over the Client API when one of the given files is delete-locked (this is an advanced option that stops deletion of any archived file), the request now returns a 409 Conflict response, saying which hashes were bad, and does not delete anything
-* wrote a unit test to catch the new delete lock test
-* deleted the old-and-deprecated-in-one-week 'pair_rows' parameter-handling code in the set_file_relationships command
-* the client api version is now 49

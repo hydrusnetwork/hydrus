@@ -10,12 +10,15 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusBlurhash
+from hydrus.core.images import HydrusImageHandling
+from hydrus.core.images import HydrusImageMetadata
+from hydrus.core.images import HydrusImageOpening
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
@@ -1740,7 +1743,7 @@ class ClientFilesManager( object ):
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
             thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
-            ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+            ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( (media_width, media_height), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
             if current_width != expected_width or current_height != expected_height:
                 
@@ -1812,7 +1815,16 @@ def HasHumanReadableEmbeddedMetadata( path, mime ):
         
     else:
         
-        has_human_readable_embedded_metadata = HydrusImageHandling.HasHumanReadableEmbeddedMetadata( path )
+        try:
+            
+            pil_image = HydrusImageOpening.RawOpenPILImage( path )
+            
+        except:
+            
+            return False
+            
+        
+        has_human_readable_embedded_metadata = HydrusImageMetadata.HasHumanReadableEmbeddedMetadata( pil_image )
         
     
     return has_human_readable_embedded_metadata
@@ -2213,7 +2225,16 @@ class FilesMaintenanceManager( object ):
             
             path = self._controller.client_files_manager.GetFilePath( hash, mime )
             
-            has_exif = HydrusImageHandling.HasEXIF( path )
+            try:
+                
+                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                
+                has_exif = HydrusImageMetadata.HasEXIF( path )
+                
+            except:
+                
+                has_exif = False
+                
             
             additional_data = has_exif
             
@@ -2259,34 +2280,35 @@ class FilesMaintenanceManager( object ):
         if mime not in HC.FILES_THAT_CAN_HAVE_ICC_PROFILE:
             
             return False
+            
         
         try:
             
             path = self._controller.client_files_manager.GetFilePath( hash, mime )
             
             if mime == HC.APPLICATION_PSD:
-
+            
                 try:
-
-                    has_icc_profile = HydrusPSDHandling.PSDHasICCProfile(path)
-
+                    
+                    has_icc_profile = HydrusPSDHandling.PSDHasICCProfile( path )
+                    
                 except:
-
+                    
                     return None
-                
+                    
             else:
-
+                
                 try:
                     
-                    pil_image = HydrusImageHandling.RawOpenPILImage( path )
+                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
                     
                 except:
                     
                     return None
+                    
                 
-            
-                has_icc_profile = HydrusImageHandling.HasICCProfile( pil_image )
-            
+                has_icc_profile = HydrusImageMetadata.HasICCProfile( raw_pil_image )
+                
             
             additional_data = has_icc_profile
             
@@ -2494,7 +2516,7 @@ class FilesMaintenanceManager( object ):
             
             numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
             
-            return HydrusImageHandling.GetBlurhashFromNumPy( numpy_image )
+            return HydrusBlurhash.GetBlurhashFromNumPy( numpy_image )
             
         except:
             

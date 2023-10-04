@@ -10,9 +10,7 @@ from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
-from hydrus.core import HydrusVideoHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC

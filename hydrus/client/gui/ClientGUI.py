@@ -1,5 +1,3 @@
-import collections
-import gc
 import hashlib
 import os
 import random
@@ -15,8 +13,6 @@ import cv2
 import PIL
 import sqlite3
 
-import qtpy
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -28,7 +24,6 @@ from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusMemory
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProfiling
@@ -39,6 +34,7 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
 from hydrus.core import HydrusPSDHandling
+from hydrus.core.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
@@ -54,7 +50,6 @@ from hydrus.client import ClientTime
 from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
-from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -86,13 +81,10 @@ from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.exporting import ClientGUIExport
-from hydrus.client.gui.importing import ClientGUIImport
 from hydrus.client.gui.importing import ClientGUIImportFolders
-from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIManagementController
-from hydrus.client.gui.pages import ClientGUIManagementPanels
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.gui.parsing import ClientGUIParsing
@@ -102,7 +94,6 @@ from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
 

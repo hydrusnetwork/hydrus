@@ -2558,6 +2558,10 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         num_steps = 7680
         
+        self._cancel_button.setEnabled( True )
+        self._refresh_button.setEnabled( False )
+        
+        self._status_st.setText( 'loading' + HC.UNICODE_ELLIPSIS )
         self._status_st.setVisible( True )
         
         self._flip_deleted.setVisible( False )

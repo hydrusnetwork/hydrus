@@ -16,10 +16,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
@@ -33,7 +33,6 @@ from hydrus.client.networking import ClientLocalServer
 from hydrus.client.networking import ClientLocalServerResources
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.search import ClientSearch
-from hydrus.client.search import ClientSearchParseSystemPredicates
 
 from hydrus.test import HelperFunctions
 

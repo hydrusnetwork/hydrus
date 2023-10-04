@@ -1,12 +1,10 @@
-import numpy.core.multiarray # important this comes before cv!
-
 import cv2
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
-from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusImageHandling
+from hydrus.core.images import HydrusImageNormalisation
 
 if cv2.__version__.startswith( '2' ):
     
@@ -26,6 +24,7 @@ else:
     CAP_PROP_CONVERT_RGB = cv2.CAP_PROP_CONVERT_RGB
     CAP_PROP_POS_FRAMES = cv2.CAP_PROP_POS_FRAMES
     
+
 def GetCVVideoProperties( path ):
     
     capture = cv2.VideoCapture( path )
@@ -92,7 +91,7 @@ class GIFRenderer( object ):
             
         else:
             
-            current_frame = HydrusImageHandling.DequantizePILImage( self._pil_image )
+            current_frame = HydrusImageNormalisation.DequantizePILImage( self._pil_image )
             
             if current_frame.mode == 'RGBA':
                 

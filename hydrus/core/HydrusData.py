@@ -956,6 +956,7 @@ def RestartProcess():
     
     time.sleep( 1 ) # time for ports to unmap
     
+    # note argv is unreliable in weird script-launching situations, but there we go
     exe = sys.executable
     me = sys.argv[0]
     

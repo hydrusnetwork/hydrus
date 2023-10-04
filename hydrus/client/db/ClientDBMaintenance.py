@@ -7,6 +7,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
+from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
@@ -15,13 +16,14 @@ from hydrus.client.db import ClientDBModule
 
 class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: typing.Collection[ str ], cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
+    def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: typing.Collection[ str ], cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules: typing.List[ HydrusDBModule.HydrusDBModule ] ):
         
         ClientDBModule.ClientDBModule.__init__( self, 'client db maintenance', cursor )
         
         self._db_dir = db_dir
         self._db_filenames = db_filenames
         self._cursor_transaction_wrapper = cursor_transaction_wrapper
+        self._modules = modules
         
     
     def _DropTable( self, deletee_table_name: str ):
@@ -301,6 +303,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
     def AnalyzeTable( self, name ):
         
+        num_rows = 0
+        
         do_it = True
         
         result = self._Execute( 'SELECT num_rows FROM analyze_timestamps WHERE name = ?;', ( name, ) ).fetchone()
@@ -326,6 +330,106 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
         
         self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusTime.GetNow() ) )
+        
+    
+    def CheckDBIntegrity( self ):
+        
+        prefix_string = 'checking db integrity: '
+        
+        job_key = ClientThreading.JobKey( cancellable = True )
+        
+        num_errors = 0
+        
+        try:
+            
+            job_key.SetStatusTitle( prefix_string + 'preparing' )
+            
+            HG.client_controller.pub( 'modal_message', job_key )
+            
+            job_key.SetStatusTitle( prefix_string + 'running' )
+            job_key.SetStatusText( 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
+            
+            db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
+            
+            for db_name in db_names:
+                
+                for ( text, ) in self._Execute( 'PRAGMA ' + db_name + '.integrity_check;' ):
+                    
+                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    
+                    if should_quit:
+                        
+                        job_key.SetStatusTitle( prefix_string + 'cancelled' )
+                        job_key.SetStatusText( 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
+                        
+                        return
+                        
+                    
+                    if text != 'ok':
+                        
+                        if num_errors == 0:
+                            
+                            HydrusData.Print( 'During a db integrity check, these errors were discovered:' )
+                            
+                        
+                        HydrusData.Print( text )
+                        
+                        num_errors += 1
+                        
+                    
+                    job_key.SetStatusText( 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
+                    
+                
+            
+        finally:
+            
+            job_key.SetStatusTitle( prefix_string + 'completed' )
+            job_key.SetStatusText( 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
+            
+            HydrusData.Print( job_key.ToString() )
+            
+            job_key.Finish()
+            
+        
+    
+    def ClearOrphanTables( self ):
+        
+        all_table_names = set()
+        
+        db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
+        
+        for db_name in db_names:
+            
+            table_names = self._STS( self._Execute( 'SELECT name FROM {}.sqlite_master WHERE type = ?;'.format( db_name ), ( 'table', ) ) )
+            
+            if db_name != 'main':
+                
+                table_names = { f'{db_name}.{table_name}' for table_name in table_names }
+                
+            
+            all_table_names.update( table_names )
+            
+        
+        all_surplus_table_names = set()
+        
+        for module in self._modules:
+            
+            surplus_table_names = module.GetSurplusServiceTableNames( all_table_names )
+            
+            all_surplus_table_names.update( surplus_table_names )
+            
+        
+        if len( all_surplus_table_names ) == 0:
+            
+            HydrusData.ShowText( 'No orphan tables!' )
+            
+        
+        for table_name in all_surplus_table_names:
+            
+            HydrusData.ShowText( f'Dropping {table_name}' )
+            
+            self._Execute( f'DROP table {table_name};' )
+            
         
     
     def DeferredDropTable( self, table_name: str ):

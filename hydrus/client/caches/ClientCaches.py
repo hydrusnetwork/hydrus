@@ -3,16 +3,16 @@ import json
 import os
 import threading
 import time
-import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusBlurhash
+from hydrus.core.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
@@ -443,6 +443,8 @@ class ThumbnailCache( object ):
         self._delayed_regeneration_queue_quick = set()
         self._delayed_regeneration_queue = []
         
+        self._allow_blurhash_fallback = self._controller.new_options.GetBoolean( 'allow_blurhash_fallback' )
+        
         self._waterfall_event = threading.Event()
         
         self._special_thumbs = {}
@@ -458,29 +460,32 @@ class ThumbnailCache( object ):
     
     def _GetBestRecoveryThumbnailHydrusBitmap( self, display_media ):
         
-        blurhash = display_media.GetFileInfoManager().blurhash
-        
-        if blurhash is not None:
+        if self._allow_blurhash_fallback:
             
-            try:
+            blurhash = display_media.GetFileInfoManager().blurhash
+            
+            if blurhash is not None:
                 
-                ( media_width, media_height ) = display_media.GetResolution()
-                
-                bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
-                thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
-                thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
-                
-                ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
-                
-                numpy_image = HydrusImageHandling.GetNumpyFromBlurhash( blurhash, expected_width, expected_height )
-                
-                hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
-                
-                return hydrus_bitmap
-                
-            except:
-                
-                pass
+                try:
+                    
+                    ( media_width, media_height ) = display_media.GetResolution()
+                    
+                    bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
+                    thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
+                    thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+                    
+                    ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+                    
+                    numpy_image = HydrusBlurhash.GetNumpyFromBlurhash( blurhash, expected_width, expected_height )
+                    
+                    hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
+                    
+                    return hydrus_bitmap
+                    
+                except:
+                    
+                    pass
+                    
                 
             
         
@@ -952,6 +957,15 @@ class ThumbnailCache( object ):
         cache_timeout = self._controller.new_options.GetInteger( 'thumbnail_cache_timeout' )
         
         self._data_cache.SetCacheSizeAndTimeout( cache_size, cache_timeout )
+        
+        allow_blurhash_fallback = self._controller.new_options.GetBoolean( 'allow_blurhash_fallback' )
+        
+        if allow_blurhash_fallback != self._allow_blurhash_fallback:
+            
+            self._allow_blurhash_fallback = allow_blurhash_fallback
+            
+            self.Clear()
+            
         
     
     def Waterfall( self, page_key, medias ):

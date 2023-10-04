@@ -581,6 +581,20 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return self._service_ids_to_interested_service_ids[ tag_service_id ]
         
     
+    def GetPendingSiblingsCount( self, service_id: int ):
+        
+        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchone()
+        
+        return info
+        
+    
+    def GetPetitionedSiblingsCount( self, service_id: int ):
+        
+        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchone()
+        
+        return info
+        
+    
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         if content_type == HC.CONTENT_TYPE_TAG:

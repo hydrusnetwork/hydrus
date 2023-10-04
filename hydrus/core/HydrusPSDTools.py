@@ -1,11 +1,12 @@
 from PIL import Image as PILImage
 
-from hydrus.core import HydrusExceptions
-
 from psd_tools import PSDImage
-from psd_tools.constants import Resource, ColorMode, Resource
+from psd_tools.constants import Resource, ColorMode
 from psd_tools.api.numpy_io import has_transparency, get_transparency_index
 from psd_tools.api.pil_io import get_pil_mode, get_pil_channels, _create_image
+
+from hydrus.core import HydrusExceptions
+from hydrus.core.images import HydrusImageNormalisation
 
 def PSDHasICCProfile( path: str ):
     
@@ -20,25 +21,15 @@ def MergedPILImageFromPSD( path: str ) -> PILImage:
     
     #pil_image = psd.topil( apply_icc = False )
 
-    if psd.has_preview():
-        
-        pil_image = convert_image_data_to_pil(psd)
-        
-    else:
+    if not psd.has_preview():
         
         raise HydrusExceptions.UnsupportedFileException('PSD file has no embedded preview!')
         
     
-    if Resource.ICC_PROFILE in psd.image_resources:
-        
-        icc = psd.image_resources.get_data( Resource.ICC_PROFILE )
-        
-        pil_image.info[ 'icc_profile' ] = icc
-        
+    pil_image = convert_image_data_to_pil( psd )
     
     return pil_image
     
-
 
 def GetPSDResolution( path: str ):
     
@@ -89,7 +80,18 @@ def convert_image_data_to_pil( psd: PSDImage ):
         return None
         
 
-    return post_process(image, alpha)
+    pil_image = post_process(image, alpha)
+    
+    if Resource.ICC_PROFILE in psd.image_resources:
+        
+        icc = psd.image_resources.get_data( Resource.ICC_PROFILE )
+        
+        pil_image.info[ 'icc_profile' ] = icc
+        
+    
+    pil_image = HydrusImageNormalisation.DequantizePILImage( pil_image )
+    
+    return pil_image
     
 
 def post_process(image, alpha):

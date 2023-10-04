@@ -7,7 +7,8 @@ from PIL import Image as PILImage
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusImageHandling
+from hydrus.core.images import HydrusImageHandling
+from hydrus.core.images import HydrusImageOpening
 
 def GetAnimationProperties( path, mime ):
     
@@ -200,7 +201,7 @@ def GetAPNGDurationAndNumFrames( path ):
 
 def GetFrameDurationsPILAnimation( path ):
     
-    pil_image = HydrusImageHandling.RawOpenPILImage( path )
+    pil_image = HydrusImageOpening.RawOpenPILImage( path )
     
     times_to_play = GetTimesToPlayPILAnimationFromPIL( pil_image )
     
@@ -265,7 +266,7 @@ def GetTimesToPlayPILAnimation( path ) -> int:
     
     try:
         
-        pil_image = HydrusImageHandling.RawOpenPILImage( path )
+        pil_image = HydrusImageOpening.RawOpenPILImage( path )
         
     except HydrusExceptions.UnsupportedFileException:
         

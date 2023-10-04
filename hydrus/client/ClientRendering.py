@@ -5,17 +5,16 @@ import time
 import typing
 
 from qtpy import QtCore as QC
-from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 from hydrus.core import HydrusVideoHandling
+from hydrus.core.images import HydrusImageColours
+from hydrus.core.images import HydrusImageHandling
 
 from hydrus.client import ClientFiles
 from hydrus.client import ClientImageHandling
@@ -464,7 +463,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
             raise Exception( 'I cannot know this yet--the image is not ready!' )
             
         
-        return HydrusImageHandling.NumPyImageHasAlphaChannel( self._numpy_image )
+        return HydrusImageColours.NumPyImageHasAlphaChannel( self._numpy_image )
         
     
     def IsReady( self ):

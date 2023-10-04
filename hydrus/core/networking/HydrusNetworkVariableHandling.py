@@ -16,8 +16,8 @@ except:
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFileHandling
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusSerialisable
+from hydrus.core.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
 INT_PARAMS = { 'expires', 'num', 'since', 'content_type', 'action', 'status' }

@@ -2,7 +2,6 @@ import collections
 import cv2
 import numpy
 import os
-import shutil
 import struct
 
 from qtpy import QtCore as QC
@@ -12,15 +11,13 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
-from hydrus.core import HydrusTime
+from hydrus.core.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import QtPorting as QP
 
 # ok, the serialised png format is:
 
@@ -268,7 +265,7 @@ def LoadFromPNG( path ):
             
             try:
                 
-                # dequantize = False because we don't want to convert to RGB
+                # dequantize = False because we don't want to convert our greyscale bytes to RGB
                 
                 pil_image = HydrusImageHandling.GeneratePILImage( temp_path, dequantize = False )
                 

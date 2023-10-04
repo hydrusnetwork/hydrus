@@ -2,7 +2,6 @@ import hashlib
 import os
 
 from hydrus.core import HydrusAnimationHandling
-from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusArchiveHandling
@@ -11,7 +10,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFlashHandling
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusKritaHandling
 from hydrus.core import HydrusProcreateHandling
 from hydrus.core import HydrusPaths
@@ -21,6 +19,7 @@ from hydrus.core import HydrusPDFHandling
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusVideoHandling
+from hydrus.core.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
 try:

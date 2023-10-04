@@ -22,8 +22,8 @@ from qtpy import QtCore as QC
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusImageHandling
 from hydrus.core import HydrusPDFHandling
+from hydrus.core.images import HydrusImageHandling
 
 from hydrus.client.gui import ClientGUIFunctions
 
