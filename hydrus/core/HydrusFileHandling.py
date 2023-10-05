@@ -66,6 +66,7 @@ headers_and_mime = [
     ( ( ( [0], [b'gimp xcf '] ), ), HC.APPLICATION_XCF ),
     ( ( ( [38, 42, 58, 63],[ b'application/x-krita'] ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
     ( ( ( [38, 43],[ b'application/epub+zip'] ), ), HC.APPLICATION_EPUB ),
+    ( ( ( [4], [b'FORM'] ), ( [12], [b'DJVU', b'DJVM', b'PM44', b'BM44', b'SDJV'] ), ), HC.APPLICATION_DJVU ),
     ( ( ( [0], [b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08'] ), ), HC.APPLICATION_ZIP ),
     ( ( ( [0], [b'7z\xBC\xAF\x27\x1C'] ), ), HC.APPLICATION_7Z ),
     ( ( ( [0], [b'\x52\x61\x72\x21\x1A\x07\x00', b'\x52\x61\x72\x21\x1A\x07\x01\x00'] ), ), HC.APPLICATION_RAR ),
