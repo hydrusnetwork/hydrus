@@ -48,11 +48,10 @@ headers_and_mime_thumbnails = [
     ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG )
 ]
 
-headers_and_mime = list( headers_and_mime_thumbnails )
-
-headers_and_mime.extend( [
-    ( ( ( [0], [b'GIF87a', b'GIF89a'] ), ), HC.UNDETERMINED_GIF ),
+headers_and_mime = [
+    ( ( ( [0], [b'\xff\xd8'] ), ), HC.IMAGE_JPEG ),
     ( ( ( [0], [b'\x89PNG'] ), ), HC.UNDETERMINED_PNG ),
+    ( ( ( [0], [b'GIF87a', b'GIF89a'] ), ), HC.UNDETERMINED_GIF ),
     ( ( ( [8], [b'WEBP'] ), ), HC.IMAGE_WEBP ),
     ( ( ( [0], [b'II*\x00', b'MM\x00*'] ), ), HC.IMAGE_TIFF ),
     ( ( ( [0], [b'BM'] ), ), HC.IMAGE_BMP ),
@@ -87,7 +86,7 @@ headers_and_mime.extend( [
     ( ( ( [8], [b'AVI '] ), ), HC.VIDEO_AVI ),
     ( ( ( [0], [b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'] ), ), HC.UNDETERMINED_WM ),
     ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE )
-] )
+]
 
 def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
@@ -131,7 +130,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     for ( offsets_and_headers, mime ) in headers_and_mime:
         
-        it_passes = False not in ( ((first_bytes_of_file[ offset: ].startswith( header ) for offset in offsets) for header in headers) for ( offsets, headers ) in offsets_and_headers )
+        it_passes = False not in ( True in ( True in (first_bytes_of_file[ offset: ].startswith( header ) for offset in offsets) for header in headers) for ( offsets, headers ) in offsets_and_headers )
         
         if it_passes:
             
