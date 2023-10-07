@@ -7,6 +7,7 @@ import re
 import io
 
 from PIL import Image as PILImage
+import xml.etree.ElementTree as ET
 
 KRITA_FILE_THUMB = "preview.png"
 KRITA_FILE_MERGED = "mergedimage.png"
@@ -50,39 +51,21 @@ def MergedPILImageFromKRA(path):
 def GetKraProperties( path ):
     
     DOCUMENT_INFO_FILE = "maindoc.xml"
-    
-    # TODO: probably actually parse the xml instead of using regex
-    FIND_KEY_VALUE = re.compile(r"([a-z\-_]+)\s*=\s*['\"]([^'\"]+)", re.IGNORECASE)
-    
-    width = None 
-    height = None
-    
-    try:
-        
-        with HydrusArchiveHandling.GetZipAsPath( path, DOCUMENT_INFO_FILE ).open('r') as reader:
-            
-            for line in reader:
-                
-                for match in FIND_KEY_VALUE.findall( line ):
-                    
-                    key, value = match 
-                    
-                    if key == "width" and value.isdigit():
-                        
-                        width = int(value)
-                        
-                    if key == "height" and value.isdigit():
-                        
-                        height = int(value)
-                        
-                    if width is not None and height is not None:
-                        
-                        break
 
-                    
-    except KeyError:
+    try:
+
+        data_str = HydrusArchiveHandling.ReadSingleFileFromZip( path, DOCUMENT_INFO_FILE )
         
-        raise HydrusExceptions.NoResolutionFileException( f'This krita file had no {DOCUMENT_INFO_FILE}!' )
+        root = ET.fromstring(data_str)
+
+        image_tag = root.find('{http://www.calligra.org/DTD/krita}IMAGE')
+
+        width = int(image_tag.attrib['width'])
         
-    
-    return ( width, height )
+        height = int(image_tag.attrib['height'])
+        
+        return ( width, height )
+
+    except:
+        
+        raise HydrusExceptions.NoResolutionFileException( f'This krita file had no {DOCUMENT_INFO_FILE} or it contains no resolution!' )
