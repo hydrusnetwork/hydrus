@@ -41,80 +41,6 @@ except Exception as e:
     SPEEDCOPY_OK = False
     
 
-# Mime
-
-headers_and_mime_thumbnails = [
-    ( ( ( 0, b'\xff\xd8' ), ), HC.IMAGE_JPEG ),
-    ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG )
-]
-
-headers_and_mime = list( headers_and_mime_thumbnails )
-
-headers_and_mime.extend( [
-    ( ( ( 0, b'GIF87a' ), ), HC.UNDETERMINED_GIF ),
-    ( ( ( 0, b'GIF89a' ), ), HC.UNDETERMINED_GIF ),
-    ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG ),
-    ( ( ( 8, b'WEBP' ), ), HC.IMAGE_WEBP ),
-    ( ( ( 0, b'II*\x00' ), ), HC.IMAGE_TIFF ),
-    ( ( ( 0, b'MM\x00*' ), ), HC.IMAGE_TIFF ),
-    ( ( ( 0, b'BM' ), ), HC.IMAGE_BMP ),
-    ( ( ( 0, b'\x00\x00\x01\x00' ), ), HC.IMAGE_ICON ),
-    ( ( ( 0, b'\x00\x00\x02\x00' ), ), HC.IMAGE_ICON ),
-    ( ( ( 0, b'qoif' ), ), HC.IMAGE_QOI ),
-    ( ( ( 0, b'CWS' ), ), HC.APPLICATION_FLASH ),
-    ( ( ( 0, b'FWS' ), ), HC.APPLICATION_FLASH ),
-    ( ( ( 0, b'ZWS' ), ), HC.APPLICATION_FLASH ),
-    ( ( ( 0, b'FLV' ), ), HC.VIDEO_FLV ),
-    ( ( ( 0, b'%PDF' ), ), HC.APPLICATION_PDF ),
-    ( ( ( 0, b'8BPS\x00\x01' ), ), HC.APPLICATION_PSD ),
-    ( ( ( 0, b'8BPS\x00\x02' ), ), HC.APPLICATION_PSD ), # PSB, which is basically PSD v2 and does giganto resolution
-    ( ( ( 0, b'CSFCHUNK' ), ), HC.APPLICATION_CLIP ),
-    ( ( ( 0, b'SAI-CANVAS' ), ), HC.APPLICATION_SAI2 ),
-    ( ( ( 0, b'gimp xcf ' ), ), HC.APPLICATION_XCF ),
-    ( ( ( 38, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
-    ( ( ( 42, b'application/x-krita' ), ), HC.APPLICATION_KRITA ), # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/master/data/freedesktop.org.xml.in#L2829
-    ( ( ( 58, b'application/x-krita' ), ), HC.APPLICATION_KRITA ),
-    ( ( ( 63, b'application/x-krita' ), ), HC.APPLICATION_KRITA ),
-    ( ( ( 38, b'application/epub+zip' ), ), HC.APPLICATION_EPUB ),
-    ( ( ( 43, b'application/epub+zip' ), ), HC.APPLICATION_EPUB ),
-    ( ( ( 0, b'PK\x03\x04' ), ), HC.APPLICATION_ZIP ),
-    ( ( ( 0, b'PK\x05\x06' ), ), HC.APPLICATION_ZIP ),
-    ( ( ( 0, b'PK\x07\x08' ), ), HC.APPLICATION_ZIP ),
-    ( ( ( 0, b'7z\xBC\xAF\x27\x1C' ), ), HC.APPLICATION_7Z ),
-    ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x00' ), ), HC.APPLICATION_RAR ),
-    ( ( ( 0, b'\x52\x61\x72\x21\x1A\x07\x01\x00' ), ), HC.APPLICATION_RAR ),
-    ( ( ( 0, b'\x1f\x8b' ), ), HC.APPLICATION_GZIP ),
-    ( ( ( 0, b'hydrus encrypted zip' ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( ( ( 4, b'ftypavif' ), ), HC.IMAGE_AVIF ),
-    ( ( ( 4, b'ftypavis' ), ), HC.IMAGE_AVIF_SEQUENCE ),
-    ( ( ( 4, b'ftypmif1' ), ( 16, b'avif' ), ), HC.IMAGE_AVIF ),
-    ( ( ( 4, b'ftypmif1' ), ( 20, b'avif' ), ), HC.IMAGE_AVIF ),
-    ( ( ( 4, b'ftypmif1' ), ( 24, b'avif' ), ), HC.IMAGE_AVIF ),
-    ( ( ( 4, b'ftypheic' ), ), HC.IMAGE_HEIC ),
-    ( ( ( 4, b'ftypheix' ), ), HC.IMAGE_HEIC ),
-    ( ( ( 4, b'ftypheim' ), ), HC.IMAGE_HEIC ),
-    ( ( ( 4, b'ftypheis' ), ), HC.IMAGE_HEIC ),
-    ( ( ( 4, b'ftyphevc' ), ), HC.IMAGE_HEIC_SEQUENCE ),
-    ( ( ( 4, b'ftyphevx' ), ), HC.IMAGE_HEIC_SEQUENCE ),
-    ( ( ( 4, b'ftyphevm' ), ), HC.IMAGE_HEIC_SEQUENCE ),
-    ( ( ( 4, b'ftyphevs' ), ), HC.IMAGE_HEIC_SEQUENCE ),
-    ( ( ( 4, b'ftypmif1' ), ), HC.IMAGE_HEIF ),
-    ( ( ( 4, b'ftypmsf1' ), ), HC.IMAGE_HEIF_SEQUENCE ),
-    ( ( ( 4, b'ftypmp4' ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( 4, b'ftypisom' ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( 4, b'ftypM4V' ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( 4, b'ftypMSNV' ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( 4, b'ftypavc1' ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( 4, b'ftypFACE' ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( 4, b'ftypdash' ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( 4, b'ftypqt' ), ), HC.VIDEO_MOV ),
-    ( ( ( 0, b'fLaC' ), ), HC.AUDIO_FLAC ),
-    ( ( ( 0, b'RIFF' ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
-    ( ( ( 0, b'wvpk' ), ), HC.AUDIO_WAVPACK ),
-    ( ( ( 8, b'AVI ' ), ), HC.VIDEO_AVI ),
-    ( ( ( 0, b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C' ), ), HC.UNDETERMINED_WM ),
-    ( ( ( 0, b'\x4D\x5A\x90\x00\x03', ), ), HC.APPLICATION_WINDOWS_EXE )
-] )
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, clip_rect = None, percentage_in = 35 ):
     
@@ -578,6 +504,48 @@ def GetHashFromPath( path ):
     return h.digest()
     
 
+headers_and_mime = [
+    ( ( ( [0], [b'\xff\xd8'] ), ), HC.IMAGE_JPEG ),
+    ( ( ( [0], [b'\x89PNG'] ), ), HC.UNDETERMINED_PNG ),
+    ( ( ( [0], [b'GIF87a', b'GIF89a'] ), ), HC.UNDETERMINED_GIF ),
+    ( ( ( [8], [b'WEBP'] ), ), HC.IMAGE_WEBP ),
+    ( ( ( [0], [b'II*\x00', b'MM\x00*'] ), ), HC.IMAGE_TIFF ),
+    ( ( ( [0], [b'BM'] ), ), HC.IMAGE_BMP ),
+    ( ( ( [0], [b'\x00\x00\x01\x00', b'\x00\x00\x02\x00'] ), ), HC.IMAGE_ICON ),
+    ( ( ( [0], [b'qoif'] ), ), HC.IMAGE_QOI ),
+    ( ( ( [0], [b'CWS', b'FWS', b'ZWS'] ), ), HC.APPLICATION_FLASH ),
+    ( ( ( [0], [b'FLV'] ), ), HC.VIDEO_FLV ),
+    ( ( ( [0], [b'%PDF'] ), ), HC.APPLICATION_PDF ),
+    ( ( ( [0], [b'8BPS\x00\x01', b'8BPS\x00\x02'] ), ), HC.APPLICATION_PSD ),
+    ( ( ( [0], [b'CSFCHUNK'] ), ), HC.APPLICATION_CLIP ),
+    ( ( ( [0], [b'SAI-CANVAS'] ), ), HC.APPLICATION_SAI2 ),
+    ( ( ( [0], [b'gimp xcf '] ), ), HC.APPLICATION_XCF ),
+    ( ( ( [38, 42, 58, 63],[ b'application/x-krita'] ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
+    ( ( ( [38, 43],[ b'application/epub+zip'] ), ), HC.APPLICATION_EPUB ),
+    ( ( ( [4], [b'FORM'] ), ( [12], [b'DJVU', b'DJVM', b'PM44', b'BM44', b'SDJV'] ), ), HC.APPLICATION_DJVU ),
+    ( ( ( [0], [b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08'] ), ), HC.APPLICATION_ZIP ),
+    ( ( ( [0], [b'7z\xBC\xAF\x27\x1C'] ), ), HC.APPLICATION_7Z ),
+    ( ( ( [0], [b'\x52\x61\x72\x21\x1A\x07\x00', b'\x52\x61\x72\x21\x1A\x07\x01\x00'] ), ), HC.APPLICATION_RAR ),
+    ( ( ( [0], [b'\x1f\x8b'] ), ), HC.APPLICATION_GZIP ),
+    ( ( ( [0], [b'hydrus encrypted zip'] ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( ( ( [4], [b'ftypavif'] ), ), HC.IMAGE_AVIF ),
+    ( ( ( [4], [b'ftypavis'] ), ), HC.IMAGE_AVIF_SEQUENCE ),
+    ( ( ( [4], [b'ftypmif1'] ), ( [16, 20, 24], [b'avif'] ), ), HC.IMAGE_AVIF ),
+    ( ( ( [4], [b'ftypheic', b'ftypheix', b'ftypheim', b'ftypheis'] ), ), HC.IMAGE_HEIC ),
+    ( ( ( [4], [b'ftyphevc', b'ftyphevx', b'ftyphevm', b'ftyphevs'] ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( [4], [b'ftypmif1'] ), ), HC.IMAGE_HEIF ),
+    ( ( ( [4], [b'ftypmsf1'] ), ), HC.IMAGE_HEIF_SEQUENCE ),
+    ( ( ( [4], [b'ftypmp4', b'ftypisom', b'ftypM4V', b'ftypMSNV', b'ftypavc1', b'ftypavc1', b'ftypFACE', b'ftypdash'] ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( [4], [b'ftypqt'] ), ), HC.VIDEO_MOV ),
+    ( ( ( [0], [b'fLaC'] ), ), HC.AUDIO_FLAC ),
+    ( ( ( [0], [b'RIFF'] ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
+    ( ( ( [0], [b'wvpk'] ), ), HC.AUDIO_WAVPACK ),
+    ( ( ( [8], [b'AVI '] ), ), HC.VIDEO_AVI ),
+    ( ( ( [0], [b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'] ), ), HC.UNDETERMINED_WM ),
+    ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE )
+]
+
+
 def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     size = os.path.getsize( path )
@@ -620,7 +588,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     for ( offsets_and_headers, mime ) in headers_and_mime:
         
-        it_passes = False not in ( first_bytes_of_file[ offset: ].startswith( header ) for ( offset, header ) in offsets_and_headers )
+        it_passes = False not in ( True in ( True in (first_bytes_of_file[ offset: ].startswith( header ) for offset in offsets) for header in headers) for ( offsets, headers ) in offsets_and_headers )
         
         if it_passes:
             
@@ -726,7 +694,14 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
         
     
     return HC.APPLICATION_UNKNOWN
-    
+
+
+headers_and_mime_thumbnails = [
+    ( ( ( 0, b'\xff\xd8' ), ), HC.IMAGE_JPEG ),
+    ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG )
+]
+
+
 def GetThumbnailMime( path ):
     
     with open( path, 'rb' ) as f:
@@ -745,4 +720,3 @@ def GetThumbnailMime( path ):
         
     
     return HC.APPLICATION_OCTET_STREAM
-    
