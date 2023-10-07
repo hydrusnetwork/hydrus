@@ -41,222 +41,6 @@ except Exception as e:
     SPEEDCOPY_OK = False
     
 
-# Mime
-
-headers_and_mime_thumbnails = [
-    ( ( ( 0, b'\xff\xd8' ), ), HC.IMAGE_JPEG ),
-    ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG )
-]
-
-headers_and_mime = [
-    ( ( ( [0], [b'\xff\xd8'] ), ), HC.IMAGE_JPEG ),
-    ( ( ( [0], [b'\x89PNG'] ), ), HC.UNDETERMINED_PNG ),
-    ( ( ( [0], [b'GIF87a', b'GIF89a'] ), ), HC.UNDETERMINED_GIF ),
-    ( ( ( [8], [b'WEBP'] ), ), HC.IMAGE_WEBP ),
-    ( ( ( [0], [b'II*\x00', b'MM\x00*'] ), ), HC.IMAGE_TIFF ),
-    ( ( ( [0], [b'BM'] ), ), HC.IMAGE_BMP ),
-    ( ( ( [0], [b'\x00\x00\x01\x00', b'\x00\x00\x02\x00'] ), ), HC.IMAGE_ICON ),
-    ( ( ( [0], [b'qoif'] ), ), HC.IMAGE_QOI ),
-    ( ( ( [0], [b'CWS', b'FWS', b'ZWS'] ), ), HC.APPLICATION_FLASH ),
-    ( ( ( [0], [b'FLV'] ), ), HC.VIDEO_FLV ),
-    ( ( ( [0], [b'%PDF'] ), ), HC.APPLICATION_PDF ),
-    ( ( ( [0], [b'8BPS\x00\x01', b'8BPS\x00\x02'] ), ), HC.APPLICATION_PSD ),
-    ( ( ( [0], [b'CSFCHUNK'] ), ), HC.APPLICATION_CLIP ),
-    ( ( ( [0], [b'SAI-CANVAS'] ), ), HC.APPLICATION_SAI2 ),
-    ( ( ( [0], [b'gimp xcf '] ), ), HC.APPLICATION_XCF ),
-    ( ( ( [38, 42, 58, 63],[ b'application/x-krita'] ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
-    ( ( ( [38, 43],[ b'application/epub+zip'] ), ), HC.APPLICATION_EPUB ),
-    ( ( ( [4], [b'FORM'] ), ( [12], [b'DJVU', b'DJVM', b'PM44', b'BM44', b'SDJV'] ), ), HC.APPLICATION_DJVU ),
-    ( ( ( [0], [b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08'] ), ), HC.APPLICATION_ZIP ),
-    ( ( ( [0], [b'7z\xBC\xAF\x27\x1C'] ), ), HC.APPLICATION_7Z ),
-    ( ( ( [0], [b'\x52\x61\x72\x21\x1A\x07\x00', b'\x52\x61\x72\x21\x1A\x07\x01\x00'] ), ), HC.APPLICATION_RAR ),
-    ( ( ( [0], [b'\x1f\x8b'] ), ), HC.APPLICATION_GZIP ),
-    ( ( ( [0], [b'hydrus encrypted zip'] ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
-    ( ( ( [4], [b'ftypavif'] ), ), HC.IMAGE_AVIF ),
-    ( ( ( [4], [b'ftypavis'] ), ), HC.IMAGE_AVIF_SEQUENCE ),
-    ( ( ( [4], [b'ftypmif1'] ), ( [16, 20, 24], [b'avif'] ), ), HC.IMAGE_AVIF ),
-    ( ( ( [4], [b'ftypheic', b'ftypheix', b'ftypheim', b'ftypheis'] ), ), HC.IMAGE_HEIC ),
-    ( ( ( [4], [b'ftyphevc', b'ftyphevx', b'ftyphevm', b'ftyphevs'] ), ), HC.IMAGE_HEIC_SEQUENCE ),
-    ( ( ( [4], [b'ftypmif1'] ), ), HC.IMAGE_HEIF ),
-    ( ( ( [4], [b'ftypmsf1'] ), ), HC.IMAGE_HEIF_SEQUENCE ),
-    ( ( ( [4], [b'ftypmp4', b'ftypisom', b'ftypM4V', b'ftypMSNV', b'ftypavc1', b'ftypavc1', b'ftypFACE', b'ftypdash'] ), ), HC.UNDETERMINED_MP4 ),
-    ( ( ( [4], [b'ftypqt'] ), ), HC.VIDEO_MOV ),
-    ( ( ( [0], [b'fLaC'] ), ), HC.AUDIO_FLAC ),
-    ( ( ( [0], [b'RIFF'] ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
-    ( ( ( [0], [b'wvpk'] ), ), HC.AUDIO_WAVPACK ),
-    ( ( ( [8], [b'AVI '] ), ), HC.VIDEO_AVI ),
-    ( ( ( [0], [b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'] ), ), HC.UNDETERMINED_WM ),
-    ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE )
-]
-
-def GetMime( path, ok_to_look_for_hydrus_updates = False ):
-    
-    size = os.path.getsize( path )
-    
-    if size == 0:
-        
-        raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
-        
-    
-    if ok_to_look_for_hydrus_updates and size < 64 * 1024 * 1024:
-        
-        with open( path, 'rb' ) as f:
-            
-            update_network_bytes = f.read()
-            
-        
-        try:
-            
-            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
-            
-            if isinstance( update, HydrusNetwork.ContentUpdate ):
-                
-                return HC.APPLICATION_HYDRUS_UPDATE_CONTENT
-                
-            elif isinstance( update, HydrusNetwork.DefinitionsUpdate ):
-                
-                return HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
-                
-            
-        except:
-            
-            pass
-            
-        
-    
-    with open( path, 'rb' ) as f:
-        
-        first_bytes_of_file = f.read( 256 )
-        
-    
-    for ( offsets_and_headers, mime ) in headers_and_mime:
-        
-        it_passes = False not in ( True in ( True in (first_bytes_of_file[ offset: ].startswith( header ) for offset in offsets) for header in headers) for ( offsets, headers ) in offsets_and_headers )
-        
-        if it_passes:
-            
-            if mime == HC.APPLICATION_ZIP:
-                
-                opendoc_mime = HydrusArchiveHandling.MimeFromOpenDocument( path )
-
-                if opendoc_mime is not None:
-                    
-                    return opendoc_mime
-                    
-                
-                if HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
-                    
-                    return HC.APPLICATION_PROCREATE
-                    
-                
-                return HC.APPLICATION_ZIP
-                
-            if mime in ( HC.UNDETERMINED_WM, HC.UNDETERMINED_MP4 ):
-                
-                return HydrusVideoHandling.GetMime( path )
-                
-            elif mime == HC.UNDETERMINED_PNG:
-                
-                if HydrusAnimationHandling.IsPNGAnimated( first_bytes_of_file ):
-                    
-                    return HC.ANIMATION_APNG
-                    
-                else:
-                    
-                    return HC.IMAGE_PNG
-                    
-                
-            elif mime == HC.UNDETERMINED_GIF:
-                
-                if HydrusAnimationHandling.PILAnimationHasDuration( path ):
-                    
-                    return HC.ANIMATION_GIF
-                    
-                else:
-                    
-                    return HC.IMAGE_GIF
-                    
-                
-            else:
-                
-                return mime
-                
-            
-        
-    
-    # If the file starts with '{' it is probably JSON
-    # but we can't know for sure so we send it over to be checked
-    if first_bytes_of_file.startswith( b'{' ) or first_bytes_of_file.startswith( b'[' ):
-        
-        with open( path, 'rb' ) as f:
-            
-            potential_json_document_bytes = f.read()
-            
-            if HydrusText.LooksLikeJSON( potential_json_document_bytes ):
-                
-                return HC.APPLICATION_JSON
-                
-            
-        
-    
-    if HydrusText.LooksLikeHTML( first_bytes_of_file ):
-        
-        return HC.TEXT_HTML
-        
-    
-    if HydrusText.LooksLikeSVG( first_bytes_of_file ): 
-        
-        return HC.IMAGE_SVG
-        
-    
-    # it is important this goes at the end, because ffmpeg has a billion false positives! and it takes CPU to true negative
-    # for instance, it once thought some hydrus update files were mpegs
-    # it also thinks txt files can be mpegs
-    likely_to_false_positive = True in ( path.endswith( ext ) for ext in ( '.txt', '.log', '.json' ) )
-    
-    if not likely_to_false_positive:
-        
-        try:
-            
-            mime = HydrusVideoHandling.GetMime( path )
-            
-            if mime != HC.APPLICATION_UNKNOWN:
-                
-                return mime
-                
-            
-        except HydrusExceptions.UnsupportedFileException:
-            
-            pass
-            
-        except Exception as e:
-            
-            HydrusData.Print( 'FFMPEG had trouble with: ' + path )
-            HydrusData.PrintException( e, do_wait = False )
-            
-        
-    
-    return HC.APPLICATION_UNKNOWN
-    
-def GetThumbnailMime( path ):
-    
-    with open( path, 'rb' ) as f:
-        
-        bit_to_check = f.read( 256 )
-        
-    
-    for ( offsets_and_headers, mime ) in headers_and_mime_thumbnails:
-        
-        it_passes = False not in ( bit_to_check[ offset: ].startswith( header ) for ( offset, header ) in offsets_and_headers )
-        
-        if it_passes:
-            
-            return mime
-            
-        
-    
-    return HC.APPLICATION_OCTET_STREAM
-
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, clip_rect = None, percentage_in = 35 ):
     
@@ -720,3 +504,216 @@ def GetHashFromPath( path ):
     return h.digest()
     
 
+headers_and_mime = [
+    ( ( ( [0], [b'\xff\xd8'] ), ), HC.IMAGE_JPEG ),
+    ( ( ( [0], [b'\x89PNG'] ), ), HC.UNDETERMINED_PNG ),
+    ( ( ( [0], [b'GIF87a', b'GIF89a'] ), ), HC.UNDETERMINED_GIF ),
+    ( ( ( [8], [b'WEBP'] ), ), HC.IMAGE_WEBP ),
+    ( ( ( [0], [b'II*\x00', b'MM\x00*'] ), ), HC.IMAGE_TIFF ),
+    ( ( ( [0], [b'BM'] ), ), HC.IMAGE_BMP ),
+    ( ( ( [0], [b'\x00\x00\x01\x00', b'\x00\x00\x02\x00'] ), ), HC.IMAGE_ICON ),
+    ( ( ( [0], [b'qoif'] ), ), HC.IMAGE_QOI ),
+    ( ( ( [0], [b'CWS', b'FWS', b'ZWS'] ), ), HC.APPLICATION_FLASH ),
+    ( ( ( [0], [b'FLV'] ), ), HC.VIDEO_FLV ),
+    ( ( ( [0], [b'%PDF'] ), ), HC.APPLICATION_PDF ),
+    ( ( ( [0], [b'8BPS\x00\x01', b'8BPS\x00\x02'] ), ), HC.APPLICATION_PSD ),
+    ( ( ( [0], [b'CSFCHUNK'] ), ), HC.APPLICATION_CLIP ),
+    ( ( ( [0], [b'SAI-CANVAS'] ), ), HC.APPLICATION_SAI2 ),
+    ( ( ( [0], [b'gimp xcf '] ), ), HC.APPLICATION_XCF ),
+    ( ( ( [38, 42, 58, 63],[ b'application/x-krita'] ), ), HC.APPLICATION_KRITA ), # important this comes before zip files because this is also a zip file
+    ( ( ( [38, 43],[ b'application/epub+zip'] ), ), HC.APPLICATION_EPUB ),
+    ( ( ( [4], [b'FORM'] ), ( [12], [b'DJVU', b'DJVM', b'PM44', b'BM44', b'SDJV'] ), ), HC.APPLICATION_DJVU ),
+    ( ( ( [0], [b'PK\x03\x04', b'PK\x05\x06', b'PK\x07\x08'] ), ), HC.APPLICATION_ZIP ),
+    ( ( ( [0], [b'7z\xBC\xAF\x27\x1C'] ), ), HC.APPLICATION_7Z ),
+    ( ( ( [0], [b'\x52\x61\x72\x21\x1A\x07\x00', b'\x52\x61\x72\x21\x1A\x07\x01\x00'] ), ), HC.APPLICATION_RAR ),
+    ( ( ( [0], [b'\x1f\x8b'] ), ), HC.APPLICATION_GZIP ),
+    ( ( ( [0], [b'hydrus encrypted zip'] ), ), HC.APPLICATION_HYDRUS_ENCRYPTED_ZIP ),
+    ( ( ( [4], [b'ftypavif'] ), ), HC.IMAGE_AVIF ),
+    ( ( ( [4], [b'ftypavis'] ), ), HC.IMAGE_AVIF_SEQUENCE ),
+    ( ( ( [4], [b'ftypmif1'] ), ( [16, 20, 24], [b'avif'] ), ), HC.IMAGE_AVIF ),
+    ( ( ( [4], [b'ftypheic', b'ftypheix', b'ftypheim', b'ftypheis'] ), ), HC.IMAGE_HEIC ),
+    ( ( ( [4], [b'ftyphevc', b'ftyphevx', b'ftyphevm', b'ftyphevs'] ), ), HC.IMAGE_HEIC_SEQUENCE ),
+    ( ( ( [4], [b'ftypmif1'] ), ), HC.IMAGE_HEIF ),
+    ( ( ( [4], [b'ftypmsf1'] ), ), HC.IMAGE_HEIF_SEQUENCE ),
+    ( ( ( [4], [b'ftypmp4', b'ftypisom', b'ftypM4V', b'ftypMSNV', b'ftypavc1', b'ftypavc1', b'ftypFACE', b'ftypdash'] ), ), HC.UNDETERMINED_MP4 ),
+    ( ( ( [4], [b'ftypqt'] ), ), HC.VIDEO_MOV ),
+    ( ( ( [0], [b'fLaC'] ), ), HC.AUDIO_FLAC ),
+    ( ( ( [0], [b'RIFF'] ), ( 8, b'WAVE' ) ), HC.AUDIO_WAVE ),
+    ( ( ( [0], [b'wvpk'] ), ), HC.AUDIO_WAVPACK ),
+    ( ( ( [8], [b'AVI '] ), ), HC.VIDEO_AVI ),
+    ( ( ( [0], [b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'] ), ), HC.UNDETERMINED_WM ),
+    ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE )
+]
+
+def GetMime( path, ok_to_look_for_hydrus_updates = False ):
+    
+    size = os.path.getsize( path )
+    
+    if size == 0:
+        
+        raise HydrusExceptions.ZeroSizeFileException( 'File is of zero length!' )
+        
+    
+    if ok_to_look_for_hydrus_updates and size < 64 * 1024 * 1024:
+        
+        with open( path, 'rb' ) as f:
+            
+            update_network_bytes = f.read()
+            
+        
+        try:
+            
+            update = HydrusSerialisable.CreateFromNetworkBytes( update_network_bytes )
+            
+            if isinstance( update, HydrusNetwork.ContentUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_CONTENT
+                
+            elif isinstance( update, HydrusNetwork.DefinitionsUpdate ):
+                
+                return HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS
+                
+            
+        except:
+            
+            pass
+            
+        
+    
+    with open( path, 'rb' ) as f:
+        
+        first_bytes_of_file = f.read( 256 )
+        
+    
+    for ( offsets_and_headers, mime ) in headers_and_mime:
+        
+        it_passes = False not in ( True in ( True in (first_bytes_of_file[ offset: ].startswith( header ) for offset in offsets) for header in headers) for ( offsets, headers ) in offsets_and_headers )
+        
+        if it_passes:
+            
+            if mime == HC.APPLICATION_ZIP:
+                
+                opendoc_mime = HydrusArchiveHandling.MimeFromOpenDocument( path )
+
+                if opendoc_mime is not None:
+                    
+                    return opendoc_mime
+                    
+                
+                if HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
+                    
+                    return HC.APPLICATION_PROCREATE
+                    
+                
+                return HC.APPLICATION_ZIP
+                
+            if mime in ( HC.UNDETERMINED_WM, HC.UNDETERMINED_MP4 ):
+                
+                return HydrusVideoHandling.GetMime( path )
+                
+            elif mime == HC.UNDETERMINED_PNG:
+                
+                if HydrusAnimationHandling.IsPNGAnimated( first_bytes_of_file ):
+                    
+                    return HC.ANIMATION_APNG
+                    
+                else:
+                    
+                    return HC.IMAGE_PNG
+                    
+                
+            elif mime == HC.UNDETERMINED_GIF:
+                
+                if HydrusAnimationHandling.PILAnimationHasDuration( path ):
+                    
+                    return HC.ANIMATION_GIF
+                    
+                else:
+                    
+                    return HC.IMAGE_GIF
+                    
+                
+            else:
+                
+                return mime
+                
+            
+        
+    
+    # If the file starts with '{' it is probably JSON
+    # but we can't know for sure so we send it over to be checked
+    if first_bytes_of_file.startswith( b'{' ) or first_bytes_of_file.startswith( b'[' ):
+        
+        with open( path, 'rb' ) as f:
+            
+            potential_json_document_bytes = f.read()
+            
+            if HydrusText.LooksLikeJSON( potential_json_document_bytes ):
+                
+                return HC.APPLICATION_JSON
+                
+            
+        
+    
+    if HydrusText.LooksLikeHTML( first_bytes_of_file ):
+        
+        return HC.TEXT_HTML
+        
+    
+    if HydrusText.LooksLikeSVG( first_bytes_of_file ): 
+        
+        return HC.IMAGE_SVG
+        
+    
+    # it is important this goes at the end, because ffmpeg has a billion false positives! and it takes CPU to true negative
+    # for instance, it once thought some hydrus update files were mpegs
+    # it also thinks txt files can be mpegs
+    likely_to_false_positive = True in ( path.endswith( ext ) for ext in ( '.txt', '.log', '.json' ) )
+    
+    if not likely_to_false_positive:
+        
+        try:
+            
+            mime = HydrusVideoHandling.GetMime( path )
+            
+            if mime != HC.APPLICATION_UNKNOWN:
+                
+                return mime
+                
+            
+        except HydrusExceptions.UnsupportedFileException:
+            
+            pass
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'FFMPEG had trouble with: ' + path )
+            HydrusData.PrintException( e, do_wait = False )
+            
+        
+    
+    return HC.APPLICATION_UNKNOWN
+
+headers_and_mime_thumbnails = [
+    ( ( ( 0, b'\xff\xd8' ), ), HC.IMAGE_JPEG ),
+    ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG )
+]
+    
+def GetThumbnailMime( path ):
+    
+    with open( path, 'rb' ) as f:
+        
+        bit_to_check = f.read( 256 )
+        
+    
+    for ( offsets_and_headers, mime ) in headers_and_mime_thumbnails:
+        
+        it_passes = False not in ( bit_to_check[ offset: ].startswith( header ) for ( offset, header ) in offsets_and_headers )
+        
+        if it_passes:
+            
+            return mime
+            
+        
+    
+    return HC.APPLICATION_OCTET_STREAM
