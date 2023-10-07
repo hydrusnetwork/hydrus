@@ -545,6 +545,7 @@ headers_and_mime = [
     ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE )
 ]
 
+
 def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     size = os.path.getsize( path )
@@ -694,11 +695,13 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
     
     return HC.APPLICATION_UNKNOWN
 
+
 headers_and_mime_thumbnails = [
     ( ( ( 0, b'\xff\xd8' ), ), HC.IMAGE_JPEG ),
     ( ( ( 0, b'\x89PNG' ), ), HC.UNDETERMINED_PNG )
 ]
-    
+
+
 def GetThumbnailMime( path ):
     
     with open( path, 'rb' ) as f:
