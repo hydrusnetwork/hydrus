@@ -54,9 +54,9 @@ def GetKraProperties( path ):
 
     try:
 
-        data_str = HydrusArchiveHandling.ReadSingleFileFromZip( path, DOCUMENT_INFO_FILE )
-        
-        root = ET.fromstring(data_str)
+        data_file = HydrusArchiveHandling.GetZipAsPath( path, DOCUMENT_INFO_FILE ).open('rb')
+
+        root = ET.parse(data_file)
 
         image_tag = root.find('{http://www.calligra.org/DTD/krita}IMAGE')
 
