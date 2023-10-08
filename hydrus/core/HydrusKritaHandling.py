@@ -1,40 +1,18 @@
+import typing
+
 from hydrus.core import HydrusArchiveHandling
 from hydrus.core import HydrusExceptions
 from hydrus.core.images import HydrusImageHandling
-from hydrus.core import HydrusTemp
-
-import re 
-import io
 
 from PIL import Image as PILImage
 import xml.etree.ElementTree as ET
 
+
 KRITA_FILE_THUMB = "preview.png"
 KRITA_FILE_MERGED = "mergedimage.png"
 
-def ExtractZippedImageToPath( path_to_zip, temp_path_file ):
-    
-    try:
-        
-        HydrusArchiveHandling.ExtractSingleFileFromZip( path_to_zip, KRITA_FILE_MERGED, temp_path_file )
-        
-        return
-        
-    except KeyError:
-        
-        pass
-        
-    
-    try:
-        
-        HydrusArchiveHandling.ExtractSingleFileFromZip( path_to_zip, KRITA_FILE_THUMB, temp_path_file )
-        
-    except KeyError:
-        
-        raise HydrusExceptions.NoThumbnailFileException( f'This krita file had no {KRITA_FILE_MERGED} or {KRITA_FILE_THUMB}!' )
-        
 
-def MergedPILImageFromKRA(path):
+def MergedPILImageFromKra(path):
 
     try:
 
@@ -45,6 +23,40 @@ def MergedPILImageFromKRA(path):
     except FileNotFoundError:
         
         raise HydrusExceptions.UnsupportedFileException( f'Could not read {KRITA_FILE_MERGED} from this Krita file' )
+
+
+def ThumbnailPILImageFromKra(path):
+
+    try:
+
+        file_obj = HydrusArchiveHandling.GetZipAsPath( path, KRITA_FILE_THUMB ).open('rb')
+
+        return HydrusImageHandling.GeneratePILImage( file_obj )
+        
+    except FileNotFoundError:
+        
+        raise HydrusExceptions.NoThumbnailFileException( f'Could not read {KRITA_FILE_THUMB} from this Krita file' )
+
+
+def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+
+    try:
+
+        pil_image = MergedPILImageFromKra( path )
+
+    except:
+
+        pil_image = ThumbnailPILImageFromKra( path )
+
+    if clip_rect is not None:
+        
+        pil_image = HydrusImageHandling.ClipPILImage( pil_image, clip_rect )
+        
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
+    
+    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
+    
+    return numpy_image
     
 
 # TODO: animation and frame stuff which is also in the maindoc.xml
