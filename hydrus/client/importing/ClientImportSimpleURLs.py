@@ -1007,6 +1007,11 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+    def _EmptyFileSeedCache( self, status=CC.STATUS_UNKNOWN ):
+
+        self._file_seed_cache.RemoveFileSeeds( self._file_seed_cache.GetFileSeeds( status ) )
+            
+        time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
     
     def _WorkOnFiles( self ):
         
@@ -1241,6 +1246,20 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
             
             self._SerialisableChangeMade()
             
+
+    def AbortImport( self ):
+        
+        if self.CurrentlyWorking():
+            
+            self.PausePlay()
+            
+        self._EmptyFileSeedCache( CC.STATUS_UNKNOWN )
+        
+        self._paused = False
+
+        with self._lock:
+            
+            self._files_status = 'aborted'
         
     
     def PendURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):
