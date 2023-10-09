@@ -173,9 +173,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
-    def _EmptyFileSeedCache( self, status=CC.STATUS_UNKNOWN ):
+    def _EmptyFileSeedCache( self, status: typing.Collection[int] = (CC.STATUS_UNKNOWN,) ):
 
-        self._file_seed_cache.RemoveFileSeeds( self._file_seed_cache.GetFileSeeds( status ) )
+        self._file_seed_cache.RemoveFileSeedsByStatus( status )
             
         time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
             
@@ -378,7 +378,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             self.PausePlay()
             
-        self._EmptyFileSeedCache( CC.STATUS_UNKNOWN )
+        self._EmptyFileSeedCache()
         
         self._paused = False
 
