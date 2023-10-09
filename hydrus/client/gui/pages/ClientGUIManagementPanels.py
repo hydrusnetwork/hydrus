@@ -57,6 +57,7 @@ from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportWatchers
+from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.media import ClientMedia
@@ -1170,8 +1171,12 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play imports' )
+
+        self._abort_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().stop, self.Abort )
+        self._abort_button.setToolTip( 'abort imports' )
         
-        self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
+
+        self._hdd_import: ClientImportLocal.HDDImport = self._management_controller.GetVariable( 'hdd_import' )
         
         file_import_options = self._hdd_import.GetFileImportOptions()
         
@@ -1192,6 +1197,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._current_action, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( hbox, self._abort_button, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -1237,7 +1243,11 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
             
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
             
+    def Abort( self ):
         
+        self._hdd_import.AbortImport()
+        
+        self._UpdateImportStatus()
     
     def Pause( self ):
         
