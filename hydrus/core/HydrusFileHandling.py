@@ -547,25 +547,29 @@ headers_and_mime = [
     ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE )
 ]
 
+def passes_offsets_and_headers_pair( offsets, headers, first_bytes_of_file ) -> bool:
+    # TODO: rewrite this garbage
+    
+    for offset in offsets:
+        
+        for header in headers:
+            
+            if first_bytes_of_file[ offset : offset + len( header ) ] == header:
+                
+                return True
+                
+            
+        
+    
+    return False
+    
+
 def passes_offsets_and_headers( offsets_and_headers, first_bytes_of_file ) -> bool:
     
-    # ok for every group here, we need at least one match
+    # ok we need to match every pair here
     for ( offsets, headers ) in offsets_and_headers:
         
-        found_it = False
-        
-        for offset in offsets:
-            
-            for header in headers:
-                
-                if first_bytes_of_file[ offset : offset + len( header ) ] == header:
-                    
-                    found_it = True
-                    
-                
-            
-        
-        if not found_it:
+        if not passes_offsets_and_headers_pair( offsets, headers, first_bytes_of_file ):
             
             return False
             
