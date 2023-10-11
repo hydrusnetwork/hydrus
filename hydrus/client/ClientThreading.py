@@ -337,7 +337,14 @@ class JobKey( object ):
     
     def SetFiles( self, hashes, label ):
         
-        self.SetVariable( 'attached_files', ( list( hashes ), label ) )
+        if len( hashes ) == 0:
+            
+            self.DeleteFiles()
+            
+        else:
+            
+            self.SetVariable( 'attached_files', ( list( hashes ), label ) )
+            
         
     
     def SetNetworkJob( self, network_job ):

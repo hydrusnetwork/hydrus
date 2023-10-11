@@ -1863,11 +1863,11 @@ class Controller( HydrusController.HydrusController ):
                             
                             if allow_non_local_connections:
                                 
-                                interface = '::1'
+                                interface = '::'
                                 
                             else:
                                 
-                                interface = '::'
+                                interface = '::1'
                                 
                             
                             if use_https:

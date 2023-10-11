@@ -116,7 +116,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'Session Manager'
     SERIALISABLE_VERSION = 1
     
-    SESSION_TIMEOUT = 60 * 60
+    SESSION_TIMEOUT = 45 * 60
     
     def __init__( self ):
         

@@ -41,7 +41,7 @@ You do not need to run the 'regenerate thumbnail' jobs--the client does that aut
 
 If you restored an older file storage backup to a newer database, these would be files that were deleted after the backup was made. If you restored an older database backup to a newer file storage, then these would be files that were imported after the backup was made. In either case, they are files in your file structure that the database does not know about, and we want to collect them together to A) delete them or B) reimport them.
 
-Run _database->db maintenance->clear orphan files_. Choose a location for the files to go to, and then wait for it to finish. Browse through them to verify what you are looking at, and then either delete them or reimport them.
+Run _database->file maintenance->clear orphan files_. Choose a location for the files to go to, and then wait for it to finish. Browse through them to verify what you are looking at, and then either delete them or reimport them.
 
 
 *** Repository Update Files ***

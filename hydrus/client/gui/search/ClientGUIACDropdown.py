@@ -13,6 +13,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -809,6 +810,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._float_mode = use_float_mode
         self._temporary_focus_widget = None
+        self._time_results_last_set = 0
         
         self._text_input_panel = QW.QWidget( self )
         
@@ -1002,6 +1004,19 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
+    def _DueAutoRefresh( self ):
+        
+        if self._schedule_results_refresh_job is not None:
+            
+            if not self._schedule_results_refresh_job.IsWorkComplete():
+                
+                return False
+                
+            
+        
+        return HydrusTime.TimeHasPassed( self._time_results_last_set + 300 )
+        
+    
     def _HandleEscape( self ):
         
         if self._text_ctrl.text() != '':
@@ -1072,7 +1087,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _SetResultsToList( self, results, parsed_autocomplete_text ):
         
-        raise NotImplementedError()
+        self._time_results_last_set = HydrusTime.GetNow()
         
     
     def _ShouldShow( self ):
@@ -1418,6 +1433,15 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
+    def REPEATINGPageUpdate( self ):
+        
+        # we could do _GetParsedAutocompleteText to be neat here, but the IsEmpty test is just this, so let's optimise for this frequently-consulted method
+        if self._DueAutoRefresh() and self._text_ctrl.text() == '':
+            
+            self._ScheduleResultsRefresh( 0.0 )
+            
+        
+    
     def ParentWasScrolled( self ):
         
         self._DropdownHideShow()
@@ -1617,6 +1641,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
     
     def _SetResultsToList( self, results, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, preserve_single_selection = False ):
+        
+        AutoCompleteDropdown._SetResultsToList( self, results, parsed_autocomplete_text )
         
         self._search_results_list.SetPredicates( results, preserve_single_selection = preserve_single_selection )
         
@@ -2499,13 +2525,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
             
             AutoCompleteDropdownTags.SetFetchedResults( self, job_key, parsed_autocomplete_text, results_cache, results )
-            
-            if parsed_autocomplete_text.IsEmpty():
-                
-                # refresh system preds after five mins
-                
-                self._ScheduleResultsRefresh( 300 )
-                
             
         
     

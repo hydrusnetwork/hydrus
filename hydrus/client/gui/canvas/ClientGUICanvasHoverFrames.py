@@ -353,6 +353,9 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
 # Note that I go setFocusPolicy( QC.Qt.TabFocus ) on all the icon buttons in the hover windows
 # this means that a user can click a button and not give it focus, allowing the arrow keys and space to still propagate up to the main canvas
 
+TOP_HOVER_PROPORTION = 0.6
+SIDE_HOVER_PROPORTIONS = ( 1 - TOP_HOVER_PROPORTION ) / 2
+
 class CanvasHoverFrame( QW.QFrame ):
     
     hoverResizedOrMoved = QC.Signal()
@@ -716,14 +719,14 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        my_ideal_width = max( int( parent_width * 0.6 ), self.sizeHint().width() )
+        my_ideal_width = max( int( parent_width * TOP_HOVER_PROPORTION ), self.sizeHint().width() )
         
         my_ideal_height = self.sizeHint().height()
         
         should_resize = my_ideal_width != my_width or my_ideal_height != my_height
         
         ideal_size = QC.QSize( my_ideal_width, my_ideal_height )
-        ideal_position = QC.QPoint( int( parent_width * 0.2 ), 0 )
+        ideal_position = QC.QPoint( int( parent_width * SIDE_HOVER_PROPORTIONS ), 0 )
         
         return ( should_resize, ideal_size, ideal_position )
         
@@ -1631,7 +1634,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         my_width = my_size.width()
         my_height = my_size.height()
         
-        my_ideal_width = self.sizeHint().width()
+        my_ideal_width = min( self.sizeHint().width(), parent_width * SIDE_HOVER_PROPORTIONS )
         
         ideal_position = QC.QPoint( parent_width - my_width, 0 )
         
@@ -1779,6 +1782,8 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             else:
                 
                 self._ResetNotes()
+                
+                self._position_initialised = False
                 
             
         

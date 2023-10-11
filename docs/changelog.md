@@ -7,6 +7,33 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 547](https://github.com/hydrusnetwork/hydrus/releases/tag/v547)
+
+### mpv crash fixes
+
+* tl;dr: mpv less crashy now
+* if mpv fails to load a file but not in an outright 'error' manner (this appears to mean a file using a rare format that a submodule of mpv can't handle), the client now recognises this has happened, either right after the first load, or, if the error takes longer to occur, a subsequent status interrogation, and makes several new steps to restore program stability: disconnecting the mpv window from all commands, freezing the scanbar, loading the default hydrus.png as emergency backstop, and making a popup to let the user know what just happened. previously, Qt would get rapidly unhappy as it asked things to draw on screen over the null-state player, particularly if you show/hid the scanbar several times, and it would, if not removed promptly from screen, typically lead to a program crash
+* furthermore, the scanbar now never interrogates the mpv window during its paint event. a mysterious interaction of C++ level objects during error state was causing the underlying instability here, and now I cannot reproduce this even if I try
+* I also hardened the mpv window's 'no-media' state. now, rather than showing 'nothing' when media is unloaded, each mpv player now actually idles on a black png lol
+* this tech will kick in for more extreme file failures, too, which have a different handler but seem to give the same detectable dump-out state
+* fixed a silent-but-for-debug-mode error while destroying damaged mpv windows right when the program is terminating
+
+### misc
+
+* thanks to a user, we now have import support for 'djvu' files. basically an open source PDF style format
+* fixed pasting an image into 'system:similar files', which I missed updating in last week's code cleanup!
+* a light but spammy legacy job that refreshed every search page's empty autocomplete every five minutes (to get updated system predicates/numbers) now only occurs to autocompletes on the current page. relatedly, when you switch to a search page you haven't looked at in five minutes, it triggers the same update immediately. this should save a tiny bit of idle CPU time and, more importantly, clear out the background job queue on larger-session clients
+* I _think_ I fixed some instances of the media viewer notes window initialising with a gigantic width on some OSes. if you often get a super wide notes window when you first open the media viewer, with it fixing itself when you cycle to a different file and back, let me know if things are any better
+* when you have a popup message that has a 'show x files' button, usually from a subscription, that routine now excludes files that have been deleted since the button was created. it updates its existing file count on a click, also, to how many files it actually will generate. if you click one of these buttons, delete some files, and then click it again, it should no longer produce ghost files in the new search page. I'm going to add some more tech to optionally handle the system:hash predicate in a page in similar ways, 'locking' it to the current page content and preserving file sort so it works nice with 'remove files' etc..
+* fixed a stupid typo that was swapping the 'allow non-local connections' server setting when making the interface for IPv6 hosts. there is a secondary check of all client IPs on every request, so I am confident this was not enabling non-local connections when undesired on IPv6, but it was disabling them by deploying the loopback interface when they should have been allowed! sorry for the trouble, and well done to the person who noticed this
+* while pursing an odd and rare problem where a download job can start even though it should be waiting on a login process, I cleaned some of the login code and logic, lowering the timeout for session cookie expiring from 60 to 45 minutes and smoothing out some confusing status-checking in the pre-login stage. I could never reproduce the problem, though, so if you have had this issue, please let me know more and I'll see if I can reproduce this reliably
+
+### simple cleanup
+
+* cleaned up some filetype parsing code that was getting a little messy, also reduced some overhead
+* unified the thumbnail/file filetype parsing a little, with better fallback states when a hydrus thumbnail happens for some reason not to be a jpeg or png
+* fixed an out of date menu reference in the 'help my media files are broke.txt' document. 'clear orphan files' is under 'file maintenance' now, not 'db maintenance'
+
 ## [Version 546](https://github.com/hydrusnetwork/hydrus/releases/tag/v546)
 
 ### misc
@@ -379,35 +406,3 @@ title: Changelog
 * to deal with the deferred delete system clashing with SQLite not allowing index renames, I moved the database index testing and creation system to a dynamic name format. it works but is a little hacky, so maybe we'll move to direct sqlite_master interrogation in future
 * unfortunately, the table shrink method I had planned to employ was not feasible (I wanted to do 'delete n rows', but it turns out that isn't compiled by default in all normal SQLite releases wew). I then experimented with several other strategies and settled on the KISS of 'select n, delete these n' in two queries, which worked out far better than my cleverer attempts anyway. the thing doesn't use much CPU time, and it cautiously autothrottles itself, and I've tested it in a bunch of situations, and I'm super happy with the performance, but if you do happen to get noticeable bumps of lag, most likely in PTR removal when the current_mappings giga-table is shrunk, turn off all database maintenance under the menu, for both idle and normal time, and let me know, and we'll figure it out
 * refactored APNG parsing code to the new 'HydrusAnimationHandling.py' and took out the ffmpeg code. now OpenCV/PIL figures out the resolution
-
-## [Version 537](https://github.com/hydrusnetwork/hydrus/releases/tag/v537)
-
-### new filetype selector
-
-* I rewrote the expanding checkbox list that selects filetypes in 'system:filetype' and File Import Options into a more normal tree view with checkboxes. it is more compact and scrolls neatly, letting us stack it with all these new filetypes we've been adding and more in future. the 'clicking a category selects all children' logic is preserved
-* I re-ordered the actual filetypes in each sublist here. I tried to put the most common filetypes at the top and listed the rest in alphabetical order below, going for the best of both worlds. you don't want to scroll down to find webm, but you don't want to hunt through a giant hydev-written 'popularity' list to find realmedia either. let's see how it works out
-* I split all the archive types away from 'applications' into a new 'archives' group
-* and I did the same for the 'image project files' like krita and xcf. svg and psd may be significantly more renderable soon, so this category may get further shake-up
-* this leaves 'applications' as just flash and pdf for now
-* it isn't a big deal, but these new groups are reflected in _options->media_ too
-* all file import options and filetype system predicates that previously said 'all applications' _should_ now say 'all applications, image project files, or archives'
-
-### fast database delete
-
-* I have long planned a fix for 'the PTR takes ages to delete' problem. today marks the first step in this
-* deleting a huge service like the PTR and deleting/resetting/regeneratting a variety of other large data stores are now essentially instant. the old tables are not deleted instantly, but renamed and moved to a deferred delete zone
-* the maintenance task that actually does the deferred background delete is not yet ready, so for now these jobs sit in the landing zone taking up their original hard disk space. I expect to have it done for next week, so bear with me if you need to delete a lot this week
-* as this system gets fleshed out, the new UI under _database>db maintenance->review deferred delete table data_ will finish up too
-
-### misc
-
-* fixed a bitrot issue in the v534 update code related to the file maintenance manager not existing at the time of db update. if you got the 'some exif scanning failed to schedule!' popup on update, don't worry about it. everything actually worked ok, it was just a final unimportant reporting step that failed (issue #1414)
-* fixed the grid layout on 'migrate tags', which at some point in the recent past went completely bananas
-* tightened up some of the code that calculates and schedules deferred physical file delete. it now catches a couple of cases it wasn't and skips some work it should've
-* reduced some overhead in the hover window show/hide logic. in very-heavy-session clients, this was causing significant (7ms multiple times a second) lag
-* when you ok the 'manage login scripts' dialog, it no longer re-links new entries for all those scripts into the 'manage logins' system. this now only happens once on database initialisation
-* the manage login scripts test routine no longer spams test errors to popup dialogs. they are still written to log if you need more data
-* silenced a bit of PIL warning logspam when a file with unusual or broken EXIF data is loaded
-* silenced the long time logspam that oftens happens when generating flash thumbnails
-* fixed a stupid typo error in the routine that schedules downloading files from file repositories
-* `nose`, `six`, and `zope` are no longer in any of the requirements.txts. I think these were needed a million years ago as PyInstaller hacks, but the situation is much better these days
