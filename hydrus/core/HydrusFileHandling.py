@@ -505,6 +505,7 @@ def GetHashFromPath( path ):
     
 
 # TODO: replace this with a FileTypeChecker class or something that tucks all this messy data away more neatly
+# do this the next time you visit this place
 headers_and_mime = [
     ( ( ( [0], [b'\xff\xd8'] ), ), HC.IMAGE_JPEG ),
     ( ( ( [0], [b'\x89PNG'] ), ), HC.UNDETERMINED_PNG ),
@@ -548,7 +549,10 @@ headers_and_mime = [
 
 def passes_offsets_and_headers( offsets_and_headers, first_bytes_of_file ) -> bool:
     
+    # ok for every group here, we need at least one match
     for ( offsets, headers ) in offsets_and_headers:
+        
+        found_it = False
         
         for offset in offsets:
             
@@ -556,13 +560,18 @@ def passes_offsets_and_headers( offsets_and_headers, first_bytes_of_file ) -> bo
                 
                 if first_bytes_of_file[ offset : offset + len( header ) ] == header:
                     
-                    return True
+                    found_it = True
                     
                 
             
         
+        if not found_it:
+            
+            return False
+            
+        
     
-    return False
+    return True
     
 
 def GetMime( path, ok_to_look_for_hydrus_updates = False ):
