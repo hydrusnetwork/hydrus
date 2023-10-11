@@ -7,7 +7,7 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 ## Images
 
 | Filetype   | Extension | MIME type      | Thumbnails | Viewable in Hydrus | Notes                                      |
-| ---------- | --------- | -------------- | :--------: | :----------------: |--------------------------------------------|
+| ---------- | --------- | -------------- | :--------: | :----------------: | ------------------------------------------ |
 | jpeg       | `.jpeg`   | `image/jpeg`   |     ✅     |         ✅         |                                            |
 | png        | `.png`    | `image/png`    |     ✅     |         ✅         |                                            |
 | static gif | `.gif`    | `image/gif`    |     ✅     |         ✅         |                                            |
@@ -67,23 +67,23 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 
 ## Applications
 
-| Filetype | Extension | MIME type                       | Thumbnails | Viewable in Hydrus | Notes |
-| -------- | --------- | ------------------------------- | :--------: | :----------------: | ----- |
-| flash    | `.swf`    | `application/x-shockwave-flash` |     ✅     |         ❌         |       |
+| Filetype | Extension | MIME type                       | Thumbnails | Viewable in Hydrus | Notes                                                             |
+| -------- | --------- | ------------------------------- | :--------: | :----------------: | ----------------------------------------------------------------- |
+| flash    | `.swf`    | `application/x-shockwave-flash` |     ✅     |         ❌         |                                                                   |
 | pdf      | `.pdf`    | `application/pdf`               |     ✅     |         ❌         | 300 DPI assumed for resolution. No thumbnails for encrypted PDFs. |
 
 
 ## Image Project Files
 
-| Filetype  | Extension    | MIME type                     | Thumbnails | Viewable in Hydrus | Notes             |
-| --------- | ------------ | ----------------------------- | :--------: | :----------------: |-------------------|
-| psd       | `.psd`       | `image/vnd.adobe.photoshop`   |     ✅     |         ✅         | Adobe Photoshop   |
-| clip      | `.clip`      | `application/clip`[^1]        |     ✅     |         ❌         | Clip Studio Paint |
-| sai2      | `.sai2`      | `application/sai2`[^1]        |     ❌     |         ❌         | PaintTool SAI2    |
-| krita     | `.kra`       | `application/x-krita`         |     ✅     |         ❌         | Krita             |
-| svg       | `.svg`       | `image/svg+xml`               |     ✅     |         ❌         |                   |
-| xcf       | `.xcf`       | `application/x-xcf`           |     ❌     |         ❌         | GIMP              |
-| procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app     |
+| Filetype  | Extension    | MIME type                     | Thumbnails | Viewable in Hydrus | Notes                                                                            |
+| --------- | ------------ | ----------------------------- | :--------: | :----------------: | -------------------------------------------------------------------------------- |
+| psd       | `.psd`       | `image/vnd.adobe.photoshop`   |     ✅     |         ✅         | Adobe Photoshop. Hydrus shows the embedded preview image if present in the file. |
+| clip      | `.clip`      | `application/clip`[^1]        |     ✅     |         ❌         | Clip Studio Paint                                                                |
+| sai2      | `.sai2`      | `application/sai2`[^1]        |     ❌     |         ❌         | PaintTool SAI2                                                                   |
+| krita     | `.kra`       | `application/x-krita`         |     ✅     |         ✅         | Krita. Hydrus shows the embedded preview image if present in the file.           |
+| svg       | `.svg`       | `image/svg+xml`               |     ✅     |         ❌         |                                                                                  |
+| xcf       | `.xcf`       | `application/x-xcf`           |     ❌     |         ❌         | GIMP                                                                             |
+| procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app                                                                    |
 
 
 ## Archives
