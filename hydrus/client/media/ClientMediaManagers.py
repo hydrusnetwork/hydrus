@@ -1109,6 +1109,14 @@ class LocationsManager( object ):
             elif action == HC.CONTENT_UPDATE_ADD:
                 
                 self._AddToService( service_key )
+
+                service_type = HG.client_controller.services_manager.GetServiceType( service_key )
+
+                if service_type == HC.IPFS:
+                    
+                    (file_info_manager, multihash) = row
+                    
+                    self._service_keys_to_filenames[service_key] = multihash
                 
             elif action == HC.CONTENT_UPDATE_DELETE:
                 
