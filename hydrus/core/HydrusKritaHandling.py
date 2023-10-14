@@ -1,72 +1,83 @@
+import typing
+
 from hydrus.core import HydrusArchiveHandling
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTemp
+from hydrus.core.images import HydrusImageHandling
 
-import re 
+from PIL import Image as PILImage
+import xml.etree.ElementTree as ET
+
 
 KRITA_FILE_THUMB = "preview.png"
 KRITA_FILE_MERGED = "mergedimage.png"
 
-def ExtractZippedImageToPath( path_to_zip, temp_path_file ):
-    
+
+def MergedPILImageFromKra(path):
+
     try:
+
+        file_obj = HydrusArchiveHandling.GetZipAsPath( path, KRITA_FILE_MERGED ).open('rb')
+
+        return HydrusImageHandling.GeneratePILImage( file_obj )
         
-        HydrusArchiveHandling.ExtractSingleFileFromZip( path_to_zip, KRITA_FILE_MERGED, temp_path_file )
+    except FileNotFoundError:
         
-        return
-        
-    except KeyError:
-        
-        pass
-        
-    
+        raise HydrusExceptions.UnsupportedFileException( f'Could not read {KRITA_FILE_MERGED} from this Krita file' )
+
+
+def ThumbnailPILImageFromKra(path):
+
     try:
+
+        file_obj = HydrusArchiveHandling.GetZipAsPath( path, KRITA_FILE_THUMB ).open('rb')
+
+        return HydrusImageHandling.GeneratePILImage( file_obj )
         
-        HydrusArchiveHandling.ExtractSingleFileFromZip( path_to_zip, KRITA_FILE_THUMB, temp_path_file )
+    except FileNotFoundError:
         
-    except KeyError:
+        raise HydrusExceptions.NoThumbnailFileException( f'Could not read {KRITA_FILE_THUMB} from this Krita file' )
+
+
+def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+
+    try:
+
+        pil_image = MergedPILImageFromKra( path )
+
+    except:
+
+        pil_image = ThumbnailPILImageFromKra( path )
+
+    if clip_rect is not None:
         
-        raise HydrusExceptions.NoThumbnailFileException( f'This krita file had no {KRITA_FILE_MERGED} or {KRITA_FILE_THUMB}!' )
+        pil_image = HydrusImageHandling.ClipPILImage( pil_image, clip_rect )
         
+    thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
+    
+    numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( thumbnail_pil_image )
+    
+    return numpy_image
     
 
 # TODO: animation and frame stuff which is also in the maindoc.xml
 def GetKraProperties( path ):
     
     DOCUMENT_INFO_FILE = "maindoc.xml"
-    
-    # TODO: probably actually parse the xml instead of using regex
-    FIND_KEY_VALUE = re.compile(r"([a-z\-_]+)\s*=\s*['\"]([^'\"]+)", re.IGNORECASE)
-    
-    width = None 
-    height = None
-    
-    try:
-        
-        with HydrusArchiveHandling.GetZipAsPath( path, DOCUMENT_INFO_FILE ).open('r') as reader:
-            
-            for line in reader:
-                
-                for match in FIND_KEY_VALUE.findall( line ):
-                    
-                    key, value = match 
-                    
-                    if key == "width" and value.isdigit():
-                        
-                        width = int(value)
-                        
-                    if key == "height" and value.isdigit():
-                        
-                        height = int(value)
-                        
-                    if width is not None and height is not None:
-                        
-                        break
 
-                    
-    except KeyError:
+    try:
+
+        data_file = HydrusArchiveHandling.GetZipAsPath( path, DOCUMENT_INFO_FILE ).open('rb')
+
+        root = ET.parse(data_file)
+
+        image_tag = root.find('{http://www.calligra.org/DTD/krita}IMAGE')
+
+        width = int(image_tag.attrib['width'])
         
-        raise HydrusExceptions.NoResolutionFileException( f'This krita file had no {DOCUMENT_INFO_FILE}!' )
+        height = int(image_tag.attrib['height'])
         
-    
-    return ( width, height )
+        return ( width, height )
+
+    except:
+        
+        raise HydrusExceptions.NoResolutionFileException( f'This krita file had no {DOCUMENT_INFO_FILE} or it contains no resolution!' )

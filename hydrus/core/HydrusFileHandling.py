@@ -111,23 +111,20 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
         
     elif mime == HC.APPLICATION_KRITA:
         
-        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
-        
         try:
             
-            HydrusKritaHandling.ExtractZippedImageToPath( path, temp_path )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
-            
+            thumbnail_numpy = HydrusKritaHandling.GenerateThumbnailNumPyFromKraPath( path, target_resolution, clip_rect = clip_rect )
+                        
         except Exception as e:
+
+            if not isinstance( e, HydrusExceptions.NoThumbnailFileException ):
+                
+                HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
+                HydrusData.PrintException( e )
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'krita.png' )
             
             thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG, clip_rect = clip_rect )
-            
-        finally:
-            
-            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     elif mime == HC.APPLICATION_PROCREATE:

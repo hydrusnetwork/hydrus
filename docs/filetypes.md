@@ -77,15 +77,15 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 
 ## Image Project Files
 
-| Filetype  | Extension    | MIME type                     | Thumbnails | Viewable in Hydrus | Notes             |
-| --------- | ------------ | ----------------------------- | :--------: | :----------------: | ----------------- |
-| psd       | `.psd`       | `image/vnd.adobe.photoshop`   |     ✅     |         ✅         | Adobe Photoshop   |
-| clip      | `.clip`      | `application/clip`[^1]        |     ✅     |         ❌         | Clip Studio Paint |
-| sai2      | `.sai2`      | `application/sai2`[^1]        |     ❌     |         ❌         | PaintTool SAI2    |
-| krita     | `.kra`       | `application/x-krita`         |     ✅     |         ❌         | Krita             |
-| svg       | `.svg`       | `image/svg+xml`               |     ✅     |         ❌         |                   |
-| xcf       | `.xcf`       | `application/x-xcf`           |     ❌     |         ❌         | GIMP              |
-| procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app     |
+| Filetype  | Extension    | MIME type                     | Thumbnails | Viewable in Hydrus | Notes                                                                            |
+| --------- | ------------ | ----------------------------- | :--------: | :----------------: | -------------------------------------------------------------------------------- |
+| psd       | `.psd`       | `image/vnd.adobe.photoshop`   |     ✅     |         ✅         | Adobe Photoshop. Hydrus shows the embedded preview image if present in the file. |
+| clip      | `.clip`      | `application/clip`[^1]        |     ✅     |         ❌         | Clip Studio Paint                                                                |
+| sai2      | `.sai2`      | `application/sai2`[^1]        |     ❌     |         ❌         | PaintTool SAI2                                                                   |
+| krita     | `.kra`       | `application/x-krita`         |     ✅     |         ✅         | Krita. Hydrus shows the embedded preview image if present in the file.           |
+| svg       | `.svg`       | `image/svg+xml`               |     ✅     |         ❌         |                                                                                  |
+| xcf       | `.xcf`       | `application/x-xcf`           |     ❌     |         ❌         | GIMP                                                                             |
+| procreate | `.procreate` | `application/x-procreate`[^1] |     ✅     |         ❌         | Procreate app                                                                    |
 
 
 ## Archives

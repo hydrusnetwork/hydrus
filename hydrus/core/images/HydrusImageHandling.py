@@ -30,6 +30,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPSDHandling
+from hydrus.core import HydrusKritaHandling
 from hydrus.core.images import HydrusImageColours
 from hydrus.core.images import HydrusImageMetadata
 from hydrus.core.images import HydrusImageNormalisation
@@ -144,6 +145,16 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
         
         return HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
         
+
+    if mime == HC.APPLICATION_KRITA:
+
+        if HG.media_load_report_mode:
+            
+            HydrusData.ShowText( 'Loading KRA' )
+
+        pil_image = HydrusKritaHandling.MergedPILImageFromKra( path )
+
+        return GenerateNumPyImageFromPILImage( pil_image )
     
     if mime in PIL_ONLY_MIMETYPES:
         
