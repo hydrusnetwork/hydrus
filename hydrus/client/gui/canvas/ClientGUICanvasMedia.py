@@ -991,6 +991,7 @@ class AnimationBar( QW.QWidget ):
         self._duration_ms = 1000
         self._num_frames = 1
         self._last_drawn_info = None
+        self._next_draw_info = None
         
         self._show_text = True
         
@@ -1002,18 +1003,11 @@ class AnimationBar( QW.QWidget ):
         
         self.setProperty( 'playing', False )
         
-        new_options = HG.client_controller.new_options
-        
         background_colour = self._colours[ 'hab_background' ]
         
         painter.setBackground( background_colour )
         
         painter.eraseRect( painter.viewport() )
-        
-    
-    def _GetAnimationBarStatus( self ):
-        
-        return self._media_window.GetAnimationBarStatus() 
         
     
     def _GetXFromFrameIndex( self, index, width_offset = 0 ):
@@ -1054,9 +1048,11 @@ class AnimationBar( QW.QWidget ):
     
     def _Redraw( self, painter ):
         
-        self._last_drawn_info = self._GetAnimationBarStatus()
+        # making an extra note here: do not under any circumstances query the mpv window during our paint event
+        # it leads to the QBackingStore::endPaint() errors when mpv is unhappy/unloaded
+        # always fetch that info and handle various error states in the TIMERAnimationUpdate and just draw cached info here
         
-        ( current_frame_index, current_timestamp_ms, paused, buffer_indices )  = self._last_drawn_info
+        ( current_frame_index, current_timestamp_ms, paused, buffer_indices )  = self._next_draw_info
         
         self.setProperty( 'playing', not paused )
         
@@ -1075,8 +1071,6 @@ class AnimationBar( QW.QWidget ):
         painter.eraseRect( painter.viewport() )
         
         #
-        
-        my_height = self.height()
         
         if buffer_indices is not None:
             
@@ -1180,6 +1174,8 @@ class AnimationBar( QW.QWidget ):
         painter.setPen( QG.QPen( self._colours[ 'hab_border' ] ) )
         
         painter.drawRect( 0, 0, my_width - 1, my_height - 1 )
+        
+        self._last_drawn_info = self._next_draw_info
         
     
     def _ScanToCurrentMousePos( self ):
@@ -1292,7 +1288,7 @@ class AnimationBar( QW.QWidget ):
         
         painter = QG.QPainter( self )
         
-        if self._CurrentMediaWindowIsBad():
+        if self._CurrentMediaWindowIsBad() or self._next_draw_info is None:
             
             self._DrawBlank( painter )
             
@@ -1318,12 +1314,12 @@ class AnimationBar( QW.QWidget ):
             self._num_frames = max( num_frames, 1 )
             
         
-        self._last_drawn_info = None
-        
         self._currently_in_a_drag = False
         self._it_was_playing_before_drag = False
         
         HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+        
+        self._next_draw_info = None
         
         self.update()
         
@@ -1347,7 +1343,12 @@ class AnimationBar( QW.QWidget ):
             return
             
         
-        if self._last_drawn_info != self._GetAnimationBarStatus():
+        # we must never call this method in the paintEvent
+        current_animation_bar_status = self._media_window.GetAnimationBarStatus()
+        
+        if self._last_drawn_info != current_animation_bar_status:
+            
+            self._next_draw_info = current_animation_bar_status
             
             self.update()
             

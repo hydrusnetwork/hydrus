@@ -35,6 +35,30 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_547"><a href="#version_547">version 547</a></h2>
+                    <ul>
+                        <li><h3>mpv crash fixes</h3></li>
+                        <li>tl;dr: mpv less crashy now</li>
+                        <li>if mpv fails to load a file but not in an outright 'error' manner (this appears to mean a file using a rare format that a submodule of mpv can't handle), the client now recognises this has happened, either right after the first load, or, if the error takes longer to occur, a subsequent status interrogation, and makes several new steps to restore program stability: disconnecting the mpv window from all commands, freezing the scanbar, loading the default hydrus.png as emergency backstop, and making a popup to let the user know what just happened. previously, Qt would get rapidly unhappy as it asked things to draw on screen over the null-state player, particularly if you show/hid the scanbar several times, and it would, if not removed promptly from screen, typically lead to a program crash</li>
+                        <li>furthermore, the scanbar now never interrogates the mpv window during its paint event. a mysterious interaction of C++ level objects during error state was causing the underlying instability here, and now I cannot reproduce this even if I try</li>
+                        <li>I also hardened the mpv window's 'no-media' state. now, rather than showing 'nothing' when media is unloaded, each mpv player now actually idles on a black png lol</li>
+                        <li>this tech will kick in for more extreme file failures, too, which have a different handler but seem to give the same detectable dump-out state</li>
+                        <li>fixed a silent-but-for-debug-mode error while destroying damaged mpv windows right when the program is terminating</li>
+                        <li><h3>misc</h3></li>
+                        <li>thanks to a user, we now have import support for 'djvu' files. basically an open source PDF style format</li>
+                        <li>fixed pasting an image into 'system:similar files', which I missed updating in last week's code cleanup!</li>
+                        <li>a light but spammy legacy job that refreshed every search page's empty autocomplete every five minutes (to get updated system predicates/numbers) now only occurs to autocompletes on the current page. relatedly, when you switch to a search page you haven't looked at in five minutes, it triggers the same update immediately. this should save a tiny bit of idle CPU time and, more importantly, clear out the background job queue on larger-session clients</li>
+                        <li>I _think_ I fixed some instances of the media viewer notes window initialising with a gigantic width on some OSes. if you often get a super wide notes window when you first open the media viewer, with it fixing itself when you cycle to a different file and back, let me know if things are any better</li>
+                        <li>when you have a popup message that has a 'show x files' button, usually from a subscription, that routine now excludes files that have been deleted since the button was created. it updates its existing file count on a click, also, to how many files it actually will generate. if you click one of these buttons, delete some files, and then click it again, it should no longer produce ghost files in the new search page. I'm going to add some more tech to optionally handle the system:hash predicate in a page in similar ways, 'locking' it to the current page content and preserving file sort so it works nice with 'remove files' etc..</li>
+                        <li>fixed a stupid typo that was swapping the 'allow non-local connections' server setting when making the interface for IPv6 hosts. there is a secondary check of all client IPs on every request, so I am confident this was not enabling non-local connections when undesired on IPv6, but it was disabling them by deploying the loopback interface when they should have been allowed! sorry for the trouble, and well done to the person who noticed this</li>
+                        <li>while pursing an odd and rare problem where a download job can start even though it should be waiting on a login process, I cleaned some of the login code and logic, lowering the timeout for session cookie expiring from 60 to 45 minutes and smoothing out some confusing status-checking in the pre-login stage. I could never reproduce the problem, though, so if you have had this issue, please let me know more and I'll see if I can reproduce this reliably</li>
+                        <li><h3>simple cleanup</h3></li>
+                        <li>cleaned up some filetype parsing code that was getting a little messy, also reduced some overhead</li>
+                        <li>unified the thumbnail/file filetype parsing a little, with better fallback states when a hydrus thumbnail happens for some reason not to be a jpeg or png</li>
+                        <li>fixed an out of date menu reference in the 'help my media files are broke.txt' document. 'clear orphan files' is under 'file maintenance' now, not 'db maintenance'</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_546"><a href="#version_546">version 546</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

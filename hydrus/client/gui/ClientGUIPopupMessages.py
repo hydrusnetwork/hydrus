@@ -14,6 +14,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -306,7 +307,41 @@ class PopupMessage( PopupWindow ):
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
-            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = attached_files_label )
+            self._show_files_button.setEnabled( False )
+            
+            def work_callable():
+                
+                presented_hashes = HG.client_controller.Read( 'filter_hashes', location_context, hashes )
+                
+                return presented_hashes
+                
+            
+            def publish_callable( presented_hashes ):
+                
+                if len( presented_hashes ) != len( hashes ):
+                    
+                    self._job_key.SetFiles( presented_hashes, attached_files_label )
+                    
+                
+                if len( presented_hashes ) > 0:
+                    
+                    HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = presented_hashes, page_name = attached_files_label )
+                    
+                
+                self._show_files_button.setEnabled( True )
+                
+            
+            def errback_callable( etype, value, tb ):
+                
+                HydrusData.ShowText( 'Sorry, unable to show those files:' )
+                HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+                
+                self._show_files_button.setEnabled( True )
+                
+            
+            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+            
+            job.start()
             
         
     

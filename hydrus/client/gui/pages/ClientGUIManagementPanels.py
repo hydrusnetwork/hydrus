@@ -1099,6 +1099,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             self._RefreshDuplicateCounts()
             
         
+        self._tag_autocomplete_1.REPEATINGPageUpdate()
+        self._tag_autocomplete_2.REPEATINGPageUpdate()
+        
     
     def Search1Changed( self, file_search_context: ClientSearch.FileSearchContext ):
         
@@ -5785,6 +5788,11 @@ class ManagementPanelQuery( ManagementPanel ):
     def REPEATINGPageUpdate( self ):
         
         self._UpdateCancelButton()
+        
+        if self._search_enabled:
+            
+            self._tag_autocomplete.REPEATINGPageUpdate()
+            
         
     
 management_panel_types_to_classes[ ClientGUIManagementController.MANAGEMENT_TYPE_QUERY ] = ManagementPanelQuery

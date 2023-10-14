@@ -3589,7 +3589,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         for ( i, page ) in enumerate( self._GetPages() ):
             
-            if isinstance( page, QW.QTabWidget ) and page.HasPage( showee ):
+            if isinstance( page, PagesNotebook ) and page.HasPage( showee ):
                 
                 self.setCurrentIndex( i )
                 

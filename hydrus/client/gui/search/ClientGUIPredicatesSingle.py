@@ -11,6 +11,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusFileHandling
 from hydrus.core.images import HydrusImageHandling
+from hydrus.core.images import HydrusImageNormalisation
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
@@ -2137,7 +2138,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
                 numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
                 
-                numpy_image = HydrusImageHandling.StripOutAnyUselessAlphaChannel( numpy_image )
+                numpy_image = HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
                 
                 pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
                 

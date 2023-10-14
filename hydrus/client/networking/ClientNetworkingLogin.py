@@ -114,7 +114,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = self._domains_to_login_info[ login_domain ]
                 
-                if active or login_access_type == LOGIN_ACCESS_TYPE_EVERYTHING:
+                if active:
                     
                     login_expected = True
                     
@@ -1126,11 +1126,9 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         cookies = session.cookies
         
-        cookies.clear_expired_cookies()
-        
         search_domain = network_context.context_data
         
-        for ( cookie_name_string_match, value_string_match ) in list(self._required_cookies_info.items()):
+        for ( cookie_name_string_match, value_string_match ) in self._required_cookies_info.items():
             
             try:
                 
