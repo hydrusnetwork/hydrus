@@ -57,6 +57,8 @@ from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportWatchers
+from hydrus.client.importing import ClientImportLocal
+from hydrus.client.importing import ClientImportSimpleURLs
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.media import ClientMedia
@@ -1173,8 +1175,12 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play imports' )
+
+        self._abort_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().stop, self.Abort )
+        self._abort_button.setToolTip( 'abort imports' )
         
-        self._hdd_import = self._management_controller.GetVariable( 'hdd_import' )
+
+        self._hdd_import: ClientImportLocal.HDDImport = self._management_controller.GetVariable( 'hdd_import' )
         
         file_import_options = self._hdd_import.GetFileImportOptions()
         
@@ -1196,6 +1202,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         QP.AddToLayout( hbox, self._current_action, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._abort_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1240,7 +1247,11 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
             
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
             
+    def Abort( self ):
         
+        self._hdd_import.AbortImport()
+        
+        self._UpdateImportStatus()
     
     def Pause( self ):
         
@@ -3197,7 +3208,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         ManagementPanelImporter.__init__( self, parent, page, controller, management_controller )
         
-        self._simple_downloader_import = self._management_controller.GetVariable( 'simple_downloader_import' )
+        self._simple_downloader_import: ClientImportSimpleURLs.SimpleDownloaderImport = self._management_controller.GetVariable( 'simple_downloader_import' )
         
         #
         
@@ -3209,7 +3220,6 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
         self._pause_files_button.setToolTip( 'pause/play files' )
-        
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
@@ -3672,10 +3682,13 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play files' )
+
+        self._abort_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().stop, self.Abort)
+        self._abort_button.setToolTip( 'abort files' )
         
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
         
-        self._urls_import = self._management_controller.GetVariable( 'urls_import' )
+        self._urls_import: ClientImportSimpleURLs.URLsImport = self._management_controller.GetVariable( 'urls_import' )
         
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, page_key = self._page_key )
         
@@ -3707,8 +3720,12 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._import_options_button.SetNoteImportOptions( note_import_options )
         
         #
+        hbox = QP.HBoxLayout()
         
-        self._import_queue_panel.Add( self._pause_button, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_ON_RIGHT )
+        QP.AddToLayout( hbox, self._abort_button, CC.FLAGS_ON_RIGHT )
+
+        self._import_queue_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_download_control, CC.FLAGS_EXPAND_PERPENDICULAR )
         
@@ -3810,6 +3827,11 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
             
         
+    def Abort( self ):
+        
+        self._urls_import.AbortImport()
+        
+        self._UpdateImportStatus()
     
     def Pause( self ):
         
