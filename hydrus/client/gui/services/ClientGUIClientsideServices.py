@@ -1600,7 +1600,7 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
             
             portable_hydrus_path = HydrusPaths.ConvertAbsPathToPortablePath( hydrus_path )
             
-            portable_dict[ portable_hydrus_path ] = ipfs_path
+            portable_dict[ portable_hydrus_path ] = os.path.expanduser(ipfs_path)
             
         
         dictionary_part[ 'nocopy_abs_path_translations' ] = portable_dict
