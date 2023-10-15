@@ -449,6 +449,9 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         raise HydrusExceptions.UnsupportedFileException( 'Sorry, you need the pillow-heif library to support this filetype ({})! Please rebuild your venv.'.format( HC.mime_string_lookup[ mime ] ) )
         
+    if mime == HC.IMAGE_JXL and not HydrusImageHandling.JXL_OK:
+        
+        raise HydrusExceptions.UnsupportedFileException( 'Sorry, you need the pillow-jxl-plugin library to support this filetype ({})! Please rebuild your venv.'.format( HC.mime_string_lookup[ mime ] ) )
     
     width = None
     height = None
@@ -677,7 +680,7 @@ headers_and_mime = [
     ( ( ( [0], [b'BM'] ), ), HC.IMAGE_BMP ),
     ( ( ( [0], [b'\x00\x00\x01\x00', b'\x00\x00\x02\x00'] ), ), HC.IMAGE_ICON ),
     ( ( ( [0], [b'qoif'] ), ), HC.IMAGE_QOI ),
-    ( ( ( [8], [b'\xFF\x0A', b'\0\0\0\x0CJXL \x0D\x0A\x87\x0A'] ), ), HC.IMAGE_JXL ),
+    ( ( ( [0], [b'\xFF\x0A', b'\0\0\0\x0CJXL \x0D\x0A\x87\x0A'] ), ), HC.IMAGE_JXL ),
     ( ( ( [0], [b'CWS', b'FWS', b'ZWS'] ), ), HC.APPLICATION_FLASH ),
     ( ( ( [0], [b'FLV'] ), ), HC.VIDEO_FLV ),
     ( ( ( [0], [b'%PDF'] ), ), HC.APPLICATION_PDF ),

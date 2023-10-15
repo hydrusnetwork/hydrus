@@ -14,6 +14,7 @@ numpy>=1.16.0,<2.0.0
 olefile>=0.47
 Pillow>=10.0.1
 pillow-heif>=0.12.0
+pillow-jxl-plugin>=1.0.0
 psd-tools>=1.9.28
 psutil>=5.0.0
 pyOpenSSL>=19.1.0

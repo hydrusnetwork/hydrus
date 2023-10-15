@@ -26,6 +26,16 @@ except:
     
     HEIF_OK = False
     
+try:
+    
+    import pillow_jxl
+    
+    JXL_OK = True
+    
+except:
+    
+    JXL_OK = False
+    
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -83,7 +93,7 @@ CV_IMREAD_FLAGS_WEIRD = CV_IMREAD_FLAGS_PNG
 CV_JPEG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_JPEG_QUALITY, 92 ]
 CV_PNG_THUMBNAIL_ENCODE_PARAMS = [ cv2.IMWRITE_PNG_COMPRESSION, 9 ]
 
-PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI, HC.IMAGE_BMP, HC.ANIMATION_WEBP }.union( HC.PIL_HEIF_MIMES )
+PIL_ONLY_MIMETYPES = { HC.ANIMATION_GIF, HC.IMAGE_ICON, HC.IMAGE_WEBP, HC.IMAGE_QOI, HC.IMAGE_BMP, HC.ANIMATION_WEBP, HC.IMAGE_JXL }.union( HC.PIL_HEIF_MIMES )
 
 def MakeClipRectFit( image_resolution, clip_rect ):
     
