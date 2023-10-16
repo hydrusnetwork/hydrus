@@ -134,6 +134,12 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_headers.putChild( b'get_headers', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesGetHeaders( self._service, self._client_requests_domain ) )
         manage_headers.putChild( b'set_headers', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageCookiesSetHeaders( self._service, self._client_requests_domain ) )
         
+        manage_options = NoResource()
+
+        root.putChild( b'manage_options', manage_options )
+
+        manage_options.putChild( b'get_client_options', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageOptionsGetClientOptions( self._service, self._client_requests_domain ) )
+
         manage_pages = NoResource()
         
         root.putChild( b'manage_pages', manage_pages )

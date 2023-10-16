@@ -1079,6 +1079,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetAllBooleans( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'booleans' ]
+            
+        
+    
     def GetDefaultCollect( self ):
         
         with self._lock:
@@ -1099,6 +1107,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             ( r, g, b ) = self._dictionary[ 'colours' ][ colourset ][ colour_type ]
             
             return QG.QColor( r, g, b )
+            
+        
+    
+    def GetAllColours( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'colours' ]
             
         
     
@@ -1276,12 +1292,28 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             return self._dictionary[ 'integers' ][ name ]
             
         
+
+    def GetAllIntegers( self):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'integers' ]
+
+        
     
     def GetKey( self, name ):
         
         with self._lock:
             
             return bytes.fromhex( self._dictionary[ 'keys' ][ name ] )
+            
+        
+    
+    def GetAllKeysHex( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'keys' ]
             
         
     
@@ -1374,11 +1406,27 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetAllNoneableIntegers( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'noneable_integers' ]
+            
+        
+    
     def GetNoneableString( self, name ):
         
         with self._lock:
             
             return self._dictionary[ 'noneable_strings' ][ name ]
+            
+        
+    
+    def GetAllNoneableStrings( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'noneable_strings' ]
             
         
     
@@ -1474,6 +1522,14 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def GetAllStrings( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'strings' ]
+            
+        
+    
     def GetStringList( self, name ):
         
         with self._lock:
@@ -1497,6 +1553,15 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             else:
                 
                 return set()
+                
+            
+        
+    
+    def GetAllSuggestedTagsFavourites( self ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'suggested_tags' ][ 'favourites' ]
                 
             
         
