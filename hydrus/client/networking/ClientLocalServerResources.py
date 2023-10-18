@@ -4134,11 +4134,86 @@ class HydrusResourceClientAPIRestrictedManageOptionsGetClientOptions( HydrusReso
             'default_tag_sort' : new_options.GetDefaultTagSort().ToDictForAPI(),
             'fallback_sort' : new_options.GetFallbackSort().ToDictForAPI(),
             'suggested_tags_favourites' : new_options.GetAllSuggestedTagsFavourites(),
-            'default_local_location_context' : new_options.GetDefaultLocalLocationContext().ToDictForAPI(),
+            'default_local_location_context' : new_options.GetDefaultLocalLocationContext().ToDictForAPI()
         }
 
         body_dict = {
             'old_options' : old_options,
+            'options' : options_dict,
+            'services' : GetServicesDict()
+        }
+
+                
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+
+    
+
+class HydrusResourceClientAPIRestrictedManageOptionsGetClientOptionsSimple( HydrusResourceClientAPIRestrictedManageOptions ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+                
+        old_options = HG.client_controller.options
+
+        new_options: ClientOptions.ClientOptions = HG.client_controller.new_options
+
+        options_dict = {
+            'namespace_colours' : old_options[ 'namespace_colours' ],
+            'thumbnail_dimensions' : old_options[ 'thumbnail_dimensions' ],
+            'advanced_mode' : new_options.GetBoolean( 'advanced_mode' ),
+            'load_images_with_pil' : new_options.GetBoolean( 'load_images_with_pil' ),
+            'show_namespaces' : new_options.GetBoolean( 'show_namespaces' ),
+            'show_number_namespaces' : new_options.GetBoolean( 'show_number_namespaces' ),
+            'replace_tag_underscores_with_spaces' : new_options.GetBoolean( 'show_number_namespaces' ),
+            'always_show_iso_time' : new_options.GetBoolean( 'always_show_iso_time' ),
+            'global_audio_mute' : new_options.GetBoolean( 'global_audio_mute' ),
+            'media_viewer_audio_mute' : new_options.GetBoolean( 'media_viewer_audio_mute' ),
+            'media_viewer_uses_its_own_audio_volume' : new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ),
+            'preview_audio_mute' : new_options.GetBoolean( 'preview_audio_mute' ),
+            'preview_uses_its_own_audio_volume' : new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ),
+            'always_loop_gifs' : new_options.GetBoolean( 'always_loop_gifs' ),
+            'delete_lock_for_archived_files' : new_options.GetBoolean( 'delete_lock_for_archived_files' ),
+            'fade_sibling_connector' : new_options.GetBoolean( 'fade_sibling_connector' ),
+            'use_custom_sibling_connector_colour' : new_options.GetBoolean( 'use_custom_sibling_connector_colour' ),
+            'hide_uninteresting_local_import_time' : new_options.GetBoolean( 'hide_uninteresting_local_import_time' ),
+            'hide_uninteresting_modified_time' : new_options.GetBoolean( 'hide_uninteresting_modified_time' ),
+            'app_display_name' : new_options.GetString( 'app_display_name' ),
+            'namespace_connector' : new_options.GetString( 'namespace_connector' ),
+            'sibling_connector' : new_options.GetString( 'sibling_connector' ),
+            'or_connector' : new_options.GetString( 'or_connector' ),
+            'export_phrase' : new_options.GetString( 'export_phrase' ),
+            'has_audio_label' : new_options.GetString( 'has_audio_label' ),
+            'has_duration_label' : new_options.GetString( 'has_duration_label' ),
+            'suggested_tags_layout' : new_options.GetNoneableString( 'suggested_tags_layout' ),
+            'sibling_connector_custom_namespace_colour' : new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' ),
+            'or_connector_custom_namespace_colour' : new_options.GetNoneableString( 'or_connector_custom_namespace_colour' ),
+            'max_page_name_chars' : new_options.GetInteger( 'max_page_name_chars' ),
+            'page_file_count_display' : new_options.GetInteger( 'page_file_count_display' ),
+            'media_viewer_zoom_center' : new_options.GetInteger( 'media_viewer_zoom_center' ),
+            'thumbnail_scale_type' : new_options.GetInteger( 'thumbnail_scale_type' ),
+            'video_thumbnail_percentage_in' : new_options.GetInteger( 'video_thumbnail_percentage_in' ),
+            'global_audio_volume' : new_options.GetInteger( 'global_audio_volume' ),
+            'media_viewer_audio_volume' : new_options.GetInteger( 'media_viewer_audio_volume' ),
+            'preview_audio_volume' : new_options.GetInteger( 'preview_audio_volume' ),
+            'thumbnail_border' : new_options.GetInteger( 'thumbnail_border' ),
+            'thumbnail_margin' : new_options.GetInteger( 'thumbnail_margin' ),
+            'thumbnail_dpr_percent' : new_options.GetInteger( 'thumbnail_dpr_percent' ),
+            'human_bytes_sig_figs' : new_options.GetInteger( 'human_bytes_sig_figs' ),
+            'forced_search_limit' : new_options.GetNoneableInteger( 'forced_search_limit' ),
+            'num_recent_tags' : new_options.GetNoneableInteger( 'num_recent_tags' ),
+            'default_tag_service_tab' : new_options.GetKeyHex( 'default_tag_service_tab' ),
+            'default_tag_service_search_page' : new_options.GetKeyHex( 'default_tag_service_search_page' ),
+            'default_sort' : new_options.GetDefaultSort().ToDictForAPI(),
+            'default_tag_sort' : new_options.GetDefaultTagSort().ToDictForAPI(),
+            'fallback_sort' : new_options.GetFallbackSort().ToDictForAPI(),
+            'suggested_tags_favourites' : new_options.GetAllSuggestedTagsFavourites(),
+            'default_local_location_context' : new_options.GetDefaultLocalLocationContext().ToDictForAPI()
+        }
+
+        body_dict = {
             'options' : options_dict,
             'services' : GetServicesDict()
         }

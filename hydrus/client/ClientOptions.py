@@ -1146,7 +1146,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultFileImportOptions( self, options_type ):
+    def GetDefaultFileImportOptions( self, options_type ) -> FileImportOptions.FileImportOptions:
         
         with self._lock:
             
@@ -1301,11 +1301,19 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
 
         
     
+    def GetKeyHex( self, name ):
+        
+        with self._lock:
+            
+            return self._dictionary[ 'keys' ][ name ]
+            
+        
+    
     def GetKey( self, name ):
         
         with self._lock:
             
-            return bytes.fromhex( self._dictionary[ 'keys' ][ name ] )
+            return bytes.fromhex( self.GetKeyHex( name ) )
             
         
     
