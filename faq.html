@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.5">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.6">
     
     
       
@@ -28,7 +28,7 @@
       
     
     
-      <link rel="stylesheet" href="assets/stylesheets/main.6a10b989.min.css">
+      <link rel="stylesheet" href="assets/stylesheets/main.35e1ed30.min.css">
       
         
         <link rel="stylesheet" href="assets/stylesheets/palette.356b1318.min.css">
@@ -2276,7 +2276,7 @@
 <p>Hydrus splits its different abilities and domains (e.g. the list of files on your disk, or the tag mappings in 'my tags', or your files' notes) into separate <em>services</em>. You can see these in <em>review services</em> and <em>manage services</em>. Although the services of the same type may interact (e.g. deleting a file from one service might send that file to the 'trash' service, or adding tag parents to one tag service might implicate tags on another), those of different types are generally completely independent. Your tags don't care where the files they map to are.</p>
 <p>So, when you delete a file from 'my files', none of its tag mappings in 'my tags' change--they remain attached to the 'ghost' of the deleted file. Your notes, ratings, and known URLs are the same (URLs is important, since it lets the client skip URLs for files you previously deleted). If you re-import the file, it will have everything it did before, with only a couple of pertinent changes like, obviously, <em>import time</em>.</p>
 <p>This is an important part of how the PTR works--when you sync with the PTR, your client downloads a couple billion mappings for files you do not have yet. Then, when you happen to import one of those files, it appears in your importer with its PTR tags 'apparently' already set--in truth, it always had them.</p>
-<p>When you feel like playing with some more advanced concepts, turn on <em>help-&gt;advanced mode</em> and open a new search page. Change the file domain from 'my files' to 'all known files' or 'deleted from my files' and start typing a common tag--you'll get autocomplete results with counts! You can even run the search, and you'll get a ton of 'non-local' and therefore non-viewable files that are typically given a default hydrus thumbnail. These are files that your client is aware of, but does not currently have. You can run the <em>manage x</em> dialogs and edit the metadata of these ghost files just as you can your real ones.</p>
+<p>When you feel like playing with some more advanced concepts, turn on <em>help-&gt;advanced mode</em> and open a new search page. Change the file domain from 'my files' to 'all known files' or 'deleted from my files' and start typing a common tag--you'll get autocomplete results with counts! You can even run the search, and you'll get a ton of 'non-local' and therefore non-viewable files that are typically given a default hydrus thumbnail. These are files that your client is aware of, but does not currently have. You can run the <em>manage x</em> dialogs and edit the metadata of these ghost files just as you can your real ones. The only thing hydrus ever needs to attach metadata to a file is the file's SHA256 hash.</p>
 <p>If you really want to delete the tags or other data for some files you deleted, then:</p>
 <ul>
 <li>If the job is small, do a search for the files inside 'deleted from my local files' (or 'all known files' if you did not leave a deletion record) and then hit <code>Ctrl+A-&gt;manage tags</code> and manually delete the tags there.</li>
@@ -2300,7 +2300,7 @@
   <small>
     
       Last update:
-      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 6, 2023</span>
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 18, 2023</span>
       
     
   </small>

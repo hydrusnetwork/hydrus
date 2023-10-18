@@ -35,6 +35,39 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_548"><a href="#version_548">version 548</a></h2>
+                    <ul>
+                        <li><h3>user contributions</h3></li>
+                        <li>thanks to a user, krita files are now renderable! we've got the defaults set like psds for now, where the preview viewer will show 'open externally', but the media viewer tries to load the full thing. let's see how it goes, and as always, if you have one that doesn't work, please send it in! note that krita are now eligible for the similar files system, so I've queued them up to get entered into it</li>
+                        <li>thanks to a user, setting an IPFS 'nocopy' path including your home directory (~) should now expand correctly (issue #1320)</li>
+                        <li>thanks to a user, newly-IPFS-pinned files are properly aware of their multihashes now (previously you needed a client restart or media reload after a delay) (issue #1328)</li>
+                        <li>thanks to a user, the url and hdd downloaders now have 'stop/abort' buttons, which will stop current work and cancel the rest of the queue. I added a yes/no dialog where you can choose to skip or delete the remainder of the queue and a couple of bells and whistles like disabling the button when the current queue has no remaining work</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an issue with successive drag and drop file exports that gave different files the same filename. previously, the successive files were being replaced with the first instance with the shared name (basically the original files were not being 'overwritten'), but it should be fixed now!</li>
+                        <li>various places that were sorting services pseudorandomly now do so alphabetically (the F9 new page selector was doing this with local file domains (the first buttons in 'file search'), if you had multiple set up. sorry if I mess with your muscle memory here, but things should be more reliable here going forward!)</li>
+                        <li>added a first version of an auto-update script, `auto_update_installer.bat`, to the main install directory. it will download the latest Windows exe installer using winget and install it to the current location. if you use the installer, you might want to experiment with it (make a backup first!) as an easy hands-free update solution. let me know how it goes, and if there are no problems in a couple of weeks, I'll add it to the help</li>
+                        <li>added some more mpv error handling. if the mainloop behind your mpv window halts (which happens on various internal problems), we now detect it and more gracefully disable the viewer and its commands (previously it would escalate to error popups and try to keep working)</li>
+                        <li>fixed an issue in the newer 'missing file storage recovery' code if there is more than one base location missing</li>
+                        <li><h3>thumbnail shortcuts</h3></li>
+                        <li>I converted all the old hardcoded thumbnail keyboard shortcuts (thumbnail focus movement, open-media-viewer, and select-files) to the newer user-editable system under _file->shortcuts_, under a new set called 'thumbnails'. there are some new file-filters too, so you can set up 'select inbox' and similar beyond the default ctrl+a to 'select all' and escape to 'select none'</li>
+                        <li>I don't expect many people will want to even touch the giganto list of (shift+)(numpad)left/right/up/down/page up/page down/home/end selection combinations, but if you want to, you can!</li>
+                        <li>the thumbnails set also now allows 'launch the archive/delete filter', which had an odd home in 'media' before. new users now start with F12 set up in 'thumbnails', not 'media'</li>
+                        <li>I removed the jank semi-secret 'ctrl+space' hardcoded 'deselect current focused thumbnail' shortcut. that tech will probably return when I figure out more sensible logic and user settings around shift+ and ctrl+ behaviour</li>
+                        <li>this cleanup reduces three different shortcut handling routines down to one, and it particularly clears the last place where I was using ancient grandfathered wx-based 'accelerator table' tech. it should be easier to update the thumbnail shortcuts in future, and I hope to plug the mouse into it also, so you can edit middle-click to launch media etc..</li>
+                        <li><h3>client api</h3></li>
+                        <li>after much discussion and personal vacillating, I have decided to include the `version` and `hydrus_version` in every JSON Client API response. CBOR responses are not affected. if you need to hook into these numbers for a completely stateless interface, it is now super convenient. I'm not delighted with the spamminess of this, but it is just a handful of characters and it adds value for several situations, so I'm willing to try it out</li>
+                        <li>updated the documentation and unit tests regarding this</li>
+                        <li>the client api version is now 54</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>file filter objects are now serialisable</li>
+                        <li>application commands can now hold serialisable objects in their 'simple data' slot</li>
+                        <li>I made a new 'slightly more than simple' application command to hold a 'thumbnail move' that has both a direction and a selection status. I expect it will be expanded in future to handle ctrl+ selection and other logic preferences</li>
+                        <li>I made a new application command to hold the file filter. I just pre-populate the UI with a dropdown with commond choices for now, but in future it could hold a customisable file filter, once, ha ha, I have some UI to actually edit one!</li>
+                        <li>cleaned up various shortcut code</li>
+                        <li>misc linting cleanup</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_547"><a href="#version_547">version 547</a></h2>
                     <ul>
                         <li><h3>mpv crash fixes</h3></li>
