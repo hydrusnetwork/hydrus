@@ -394,11 +394,11 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
                     
-                    with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
+                    with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg_2:
                         
-                        if dlg.exec() == QW.QDialog.Accepted:
+                        if dlg_2.exec() == QW.QDialog.Accepted:
                             
-                            login_access_text = dlg.GetValue()
+                            login_access_text = dlg_2.GetValue()
                             
                         else:
                             

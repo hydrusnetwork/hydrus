@@ -114,13 +114,14 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
         try:
             
             thumbnail_numpy = HydrusKritaHandling.GenerateThumbnailNumPyFromKraPath( path, target_resolution, clip_rect = clip_rect )
-                        
+            
         except Exception as e:
-
+            
             if not isinstance( e, HydrusExceptions.NoThumbnailFileException ):
                 
                 HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
                 HydrusData.PrintException( e )
+                
             
             thumb_path = os.path.join( HC.STATIC_DIR, 'krita.png' )
             

@@ -44,6 +44,15 @@ try:
 except:
     pass
 
+def wash_example_json_response( obj ):
+    
+    if isinstance( obj, dict ):
+        
+        obj[ 'version' ] = HC.CLIENT_API_VERSION
+        obj[ 'hydrus_version' ] = HC.SOFTWARE_VERSION
+        
+    
+
 def GetExampleServicesDict():
     
     services_dict = {
@@ -211,13 +220,17 @@ class TestClientAPI( unittest.TestCase ):
         url = 'http://safebooru.org/index.php?page=post&s=view&id=2753608'
         normalised_url = 'https://safebooru.org/index.php?id=2753608&page=post&s=view'
         
-        expected_answer = {}
+        expected_result = {}
         
-        expected_answer[ 'normalised_url' ] = normalised_url
-        expected_answer[ 'url_type' ] = HC.URL_TYPE_POST
-        expected_answer[ 'url_type_string' ] = 'post url'
-        expected_answer[ 'match_name' ] = 'safebooru file page'
-        expected_answer[ 'can_parse' ] = True
+        expected_result[ 'normalised_url' ] = normalised_url
+        expected_result[ 'url_type' ] = HC.URL_TYPE_POST
+        expected_result[ 'url_type_string' ] = 'post url'
+        expected_result[ 'match_name' ] = 'safebooru file page'
+        expected_result[ 'can_parse' ] = True
+        
+        cbor_expected_result = dict( expected_result )
+        
+        wash_example_json_response( expected_result )
         
         hash = os.urandom( 32 )
         
@@ -238,7 +251,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        self.assertEqual( d, expected_answer )
+        self.assertEqual( d, expected_result )
         
         # explicit GET cbor by arg
         
@@ -255,7 +268,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = cbor2.loads( data )
         
-        self.assertEqual( d, expected_answer )
+        self.assertEqual( d, cbor_expected_result )
         
         # explicit GET json by Accept
         
@@ -274,7 +287,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        self.assertEqual( d, expected_answer )
+        self.assertEqual( d, expected_result )
         
         # explicit GET cbor by Accept
         
@@ -291,7 +304,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = cbor2.loads( data )
         
-        self.assertEqual( d, expected_answer )
+        self.assertEqual( d, cbor_expected_result )
         
     
     def _test_client_api_basics( self, connection ):
@@ -722,7 +735,7 @@ class TestClientAPI( unittest.TestCase ):
         should_work = { set_up_permissions[ 'everything' ], set_up_permissions[ 'add_files' ], set_up_permissions[ 'add_tags' ], set_up_permissions[ 'manage_pages' ], set_up_permissions[ 'search_all_files' ], set_up_permissions[ 'search_green_files' ] }
         should_break = { set_up_permissions[ 'add_urls' ], set_up_permissions[ 'manage_headers' ] }
         
-        expected_answer = {
+        expected_result = {
             'local_tags' : [
                 {
                     'name' : 'my tags',
@@ -811,6 +824,8 @@ class TestClientAPI( unittest.TestCase ):
             'services' : GetExampleServicesDict()
         }
         
+        wash_example_json_response( expected_result )
+        
         get_service_expected_result = {
             'service' : {
                 'name' : 'repository updates',
@@ -819,6 +834,8 @@ class TestClientAPI( unittest.TestCase ):
                 'type_pretty': 'local update file domain'
             }
         }
+        
+        wash_example_json_response( get_service_expected_result )
         
         for api_permissions in should_work.union( should_break ):
             
@@ -844,7 +861,7 @@ class TestClientAPI( unittest.TestCase ):
                 
                 d = json.loads( text )
                 
-                self.assertEqual( d, expected_answer )
+                self.assertEqual( d, expected_result )
                 
             else:
                 
@@ -979,6 +996,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : hash.hex() , 'note' : 'test note' }
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( response_json, expected_result )
         
         # do hydrus png as path
@@ -1011,6 +1030,8 @@ class TestClientAPI( unittest.TestCase ):
         response_json = json.loads( text )
         
         expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : hash.hex() , 'note' : 'test note' }
+        
+        wash_example_json_response( expected_result )
         
         self.assertEqual( response_json, expected_result )
         
@@ -1975,15 +1996,17 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {}
+        expected_result = {}
         
         clean_tags = [ "bikini", "blue eyes", "character:samus aran", "::)", "10", "11", "9", "wew", "flower" ]
         
         clean_tags = HydrusTags.SortNumericTags( clean_tags )
         
-        expected_answer[ 'tags' ] = clean_tags
+        expected_result[ 'tags' ] = clean_tags
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
         # add tags
         
@@ -2274,7 +2297,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {
+        expected_result = {
             'services' : GetExampleServicesDict(),
             'tags' : {}
         }
@@ -2293,10 +2316,12 @@ class TestClientAPI( unittest.TestCase ):
                 }
                 
             
-            expected_answer[ 'tags' ][ tag ] = tag_dict
+            expected_result[ 'tags' ][ tag ] = tag_dict
             
         
-        self.assertEqual( expected_answer, d )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
     
     def _test_add_tags_search_tags( self, connection, set_up_permissions ):
@@ -2332,7 +2357,7 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {
+        expected_result = {
             'tags' : [
                 {
                     'value' : 'green',
@@ -2341,7 +2366,9 @@ class TestClientAPI( unittest.TestCase ):
             ]
         }
         
-        self.assertEqual( expected_answer, d )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( expected_result, d )
         
         #
         
@@ -2367,11 +2394,13 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {
+        expected_result = {
             'tags' : []
         }
         
-        self.assertEqual( expected_answer, d )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( expected_result, d )
         
         ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
         
@@ -2394,7 +2423,7 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         # note this also tests sort
-        expected_answer = {
+        expected_result = {
             'tags' : [
                 {
                     'value' : 'green car',
@@ -2407,7 +2436,9 @@ class TestClientAPI( unittest.TestCase ):
             ]
         }
         
-        self.assertEqual( expected_answer, d )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( expected_result, d )
         
         ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
         
@@ -2430,7 +2461,7 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         # note this also tests sort
-        expected_answer = {
+        expected_result = {
             'tags' : [
                 {
                     'value' : 'green car',
@@ -2443,7 +2474,9 @@ class TestClientAPI( unittest.TestCase ):
             ]
         }
         
-        self.assertEqual( expected_answer, d )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( expected_result, d )
         
         ( args, kwargs ) = HG.test_controller.GetRead( 'autocomplete_predicates' )[-1]
         
@@ -2467,11 +2500,13 @@ class TestClientAPI( unittest.TestCase ):
         d = json.loads( text )
         
         # note this also tests sort
-        expected_answer = {
+        expected_result = {
             'tags' : []
         }
         
-        self.assertEqual( expected_answer, d )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( expected_result, d )
         
     
     def _test_add_urls( self, connection, set_up_permissions ):
@@ -2504,12 +2539,14 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {}
+        expected_result = {}
         
-        expected_answer[ 'normalised_url' ] = url
-        expected_answer[ 'url_file_statuses' ] = []
+        expected_result[ 'normalised_url' ] = url
+        expected_result[ 'url_file_statuses' ] = []
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
         # some
         
@@ -2537,12 +2574,14 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {}
+        expected_result = {}
         
-        expected_answer[ 'normalised_url' ] = normalised_url
-        expected_answer[ 'url_file_statuses' ] = json_url_file_statuses
+        expected_result[ 'normalised_url' ] = normalised_url
+        expected_result[ 'url_file_statuses' ] = json_url_file_statuses
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
         # get url info
         
@@ -2570,16 +2609,18 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {}
+        expected_result = {}
         
-        expected_answer[ 'normalised_url' ] = url
-        expected_answer[ 'url_type' ] = HC.URL_TYPE_UNKNOWN
-        expected_answer[ 'url_type_string' ] = 'unknown url'
-        expected_answer[ 'match_name' ] = 'unknown url'
-        expected_answer[ 'can_parse' ] = False
-        expected_answer[ 'cannot_parse_reason' ] = 'unknown url class'
+        expected_result[ 'normalised_url' ] = url
+        expected_result[ 'url_type' ] = HC.URL_TYPE_UNKNOWN
+        expected_result[ 'url_type_string' ] = 'unknown url'
+        expected_result[ 'match_name' ] = 'unknown url'
+        expected_result[ 'can_parse' ] = False
+        expected_result[ 'cannot_parse_reason' ] = 'unknown url class'
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
         # known
         
@@ -2601,15 +2642,17 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {}
+        expected_result = {}
         
-        expected_answer[ 'normalised_url' ] = normalised_url
-        expected_answer[ 'url_type' ] = HC.URL_TYPE_WATCHABLE
-        expected_answer[ 'url_type_string' ] = 'watchable url'
-        expected_answer[ 'match_name' ] = '8chan thread'
-        expected_answer[ 'can_parse' ] = True
+        expected_result[ 'normalised_url' ] = normalised_url
+        expected_result[ 'url_type' ] = HC.URL_TYPE_WATCHABLE
+        expected_result[ 'url_type_string' ] = 'watchable url'
+        expected_result[ 'match_name' ] = '8chan thread'
+        expected_result[ 'can_parse' ] = True
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
         # known post url
         
@@ -2632,15 +2675,17 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {}
+        expected_result = {}
         
-        expected_answer[ 'normalised_url' ] = normalised_url
-        expected_answer[ 'url_type' ] = HC.URL_TYPE_POST
-        expected_answer[ 'url_type_string' ] = 'post url'
-        expected_answer[ 'match_name' ] = 'safebooru file page'
-        expected_answer[ 'can_parse' ] = True
+        expected_result[ 'normalised_url' ] = normalised_url
+        expected_result[ 'url_type' ] = HC.URL_TYPE_POST
+        expected_result[ 'url_type_string' ] = 'post url'
+        expected_result[ 'match_name' ] = 'safebooru file page'
+        expected_result[ 'can_parse' ] = True
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
         # add url
         
@@ -3124,6 +3169,8 @@ class TestClientAPI( unittest.TestCase ):
             }
         }
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         #
@@ -3178,6 +3225,8 @@ class TestClientAPI( unittest.TestCase ):
                 }
             }
         }
+        
+        wash_example_json_response( expected_result )
         
         self.assertEqual( d, expected_result )
         
@@ -3234,6 +3283,8 @@ class TestClientAPI( unittest.TestCase ):
             }
         }
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         #
@@ -3263,6 +3314,8 @@ class TestClientAPI( unittest.TestCase ):
             },
             'headers' : {}
         }
+        
+        wash_example_json_response( expected_result )
         
         self.assertEqual( d, expected_result )
         
@@ -3310,6 +3363,8 @@ class TestClientAPI( unittest.TestCase ):
             }
         }
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         #
@@ -3356,6 +3411,8 @@ class TestClientAPI( unittest.TestCase ):
             }
         }
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         #
@@ -3399,6 +3456,8 @@ class TestClientAPI( unittest.TestCase ):
             },
             'headers' : {}
         }
+        
+        wash_example_json_response( expected_result )
         
         self.assertEqual( d, expected_result )
         
@@ -4077,9 +4136,11 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = { 'file_ids' : list( sample_hash_ids ) }
+        expected_result = { 'file_ids' : list( sample_hash_ids ) }
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
         [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
         
@@ -4633,13 +4694,15 @@ class TestClientAPI( unittest.TestCase ):
         
         d = json.loads( text )
         
-        expected_answer = {
+        expected_result = {
             'hashes' : {
                 md5_hash.hex() : sha256_hash.hex()
             }
         }
         
-        self.assertEqual( d, expected_answer )
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
         
     
     def _test_file_metadata( self, connection, set_up_permissions ):
@@ -4669,6 +4732,8 @@ class TestClientAPI( unittest.TestCase ):
             
         
         expected_identifier_result = { 'metadata' : metadata, 'services' : GetExampleServicesDict() }
+        
+        wash_example_json_response( expected_identifier_result )
         
         media_results = []
         file_info_managers = []
@@ -4945,6 +5010,12 @@ class TestClientAPI( unittest.TestCase ):
         expected_only_return_basic_information_result = { 'metadata' : only_return_basic_information_metadata, 'services' : GetExampleServicesDict() }
         expected_only_return_basic_information_but_blurhash_too_result = { 'metadata' : only_return_basic_information_metadata_but_blurhash_too, 'services' : GetExampleServicesDict() }
         
+        wash_example_json_response( expected_metadata_result )
+        wash_example_json_response( expected_detailed_known_urls_metadata_result )
+        wash_example_json_response( expected_notes_metadata_result )
+        wash_example_json_response( expected_only_return_basic_information_result )
+        wash_example_json_response( expected_only_return_basic_information_but_blurhash_too_result )
+        
         HG.test_controller.SetRead( 'hash_ids_to_hashes', file_ids_to_hashes )
         HG.test_controller.SetRead( 'media_results', media_results )
         HG.test_controller.SetRead( 'media_results_from_ids', media_results )
@@ -5063,6 +5134,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         # metadata from file_ids
@@ -5155,6 +5228,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         for ( row_a, row_b ) in zip( d[ 'metadata' ], expected_result[ 'metadata' ] ):
@@ -5215,6 +5290,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         # basic metadata from hashes
@@ -5257,6 +5334,8 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
         
+        wash_example_json_response( expected_result )
+        
         self.assertEqual( d, expected_result )
         
         # metadata from hashes
@@ -5296,6 +5375,8 @@ class TestClientAPI( unittest.TestCase ):
         expected_result = { 'metadata' : list( expected_metadata_result[ 'metadata' ] ), 'services' : GetExampleServicesDict() }
         
         expected_result[ 'metadata' ].sort( key = lambda basic: expected_order.index( basic[ 'file_id' ] ) )
+        
+        wash_example_json_response( expected_result )
         
         self.assertEqual( d, expected_result )
         
@@ -5393,6 +5474,8 @@ class TestClientAPI( unittest.TestCase ):
         random.shuffle( hashes_in_test )
         
         expected_result[ 'metadata' ].sort( key = lambda m_dict: hashes_in_test.index( bytes.fromhex( m_dict[ 'hash' ] ) ) )
+        
+        wash_example_json_response( expected_result )
         
         path = '/get_files/file_metadata?hashes={}&include_services_object=false'.format( urllib.parse.quote( json.dumps( [ hash.hex() for hash in hashes_in_test ] ) ) )
         

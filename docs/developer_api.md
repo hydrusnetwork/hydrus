@@ -46,7 +46,7 @@ In general, the API deals with standard UTF-8 JSON. POST requests and 200 OK res
     ```
     
 
-The API returns JSON for everything except actual file/thumbnail requests. For errors, you'll typically get 400 for a missing/invalid parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.
+The API returns JSON for everything except actual file/thumbnail requests. Every JSON response includes the `version` of the Client API and `hydrus_version` of the Client hosting it (for brevity, these values are not included in the example responses in this help). For errors, you'll typically get 400 for a missing/invalid parameter, 401/403/419 for missing/insufficient/expired access, and 500 for a real deal serverside error.
 
 !!! note
     For any request sent to the API, the total size of the initial request line (this includes the URL and any parameters) and the headers must not be larger than 2 megabytes.
@@ -309,7 +309,7 @@ Note: If you need to do some quick testing, you should be able to copy the `serv
 
 ### **GET `/api_version`** { id="api_version" }
 
-_Gets the current API version. I will increment this every time I alter the API._
+_Gets the current API version. This increments every time I alter the API._
 
 Restricted access: NO.
     
@@ -319,7 +319,10 @@ Arguments: n/a
     
 Response:
 : Some simple JSON describing the current api version (and hydrus client version, if you are interested).
-: Note that this is mostly obselete now, since the 'Server' header of every response (and a duplicated 'Hydrus-Server' one, if you have a complicated proxy situation that overwrites 'Server') are now in the form "client api/{client_api_version} ({software_version})", e.g. "client api/32 (497)". 
+: Note that this is not very useful any more, for two reasons:
+
+: 1. The 'Server' header of every response (and a duplicated 'Hydrus-Server' one, if you have a complicated proxy situation that overwrites 'Server') are now in the form "client api/{client_api_version} ({software_version})", e.g. "client api/32 (497)".
+: 2. **Every JSON response explicitly includes this now.**
 
 ```json title="Example response"
 {

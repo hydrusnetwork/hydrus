@@ -11,6 +11,14 @@ def ExtractSingleFileFromZip( path_to_zip, filename_to_extract, extract_into_fil
             with open( extract_into_file_path, "wb" ) as writer:
                 
                 writer.write( reader.read() )
+                
+            
+        
+    
+
+def GetSingleFileFromZipBytes( path_to_zip, path_in_zip ):
+    
+    return GetZipAsPath( path_to_zip, path_in_zip = path_in_zip ).read_bytes()
     
 
 def GetZipAsPath( path_to_zip, path_in_zip="" ):

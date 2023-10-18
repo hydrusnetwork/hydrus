@@ -808,7 +808,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
             
             def filter_func( count ):
                 
-                return lower_bound < count and count < upper_bound
+                return lower_bound < count < upper_bound
                 
             
         elif operator == '<':

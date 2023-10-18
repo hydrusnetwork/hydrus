@@ -32,7 +32,7 @@ def GetProcreatePlist( path ):
     
     with HydrusArchiveHandling.GetZipAsPath( path, PROCREATE_DOCUMENT_ARCHIVE ).open('rb') as document:
         
-        return plistlib.load(document)
+        return plistlib.load( document )
         
     
 

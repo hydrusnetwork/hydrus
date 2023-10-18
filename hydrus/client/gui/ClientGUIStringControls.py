@@ -454,11 +454,11 @@ class StringToStringDictControl( QW.QWidget ):
                     return
                     
                 
-                with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._value_name, allow_blank = True ) as dlg:
+                with ClientGUIDialogs.DialogTextEntry( self, 'enter the ' + self._value_name, allow_blank = True ) as dlg_2:
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg_2.exec() == QW.QDialog.Accepted:
                         
-                        value = dlg.GetValue()
+                        value = dlg_2.GetValue()
                         
                         data = ( key, value )
                         
@@ -622,15 +622,15 @@ class StringToStringMatchDictControl( QW.QWidget ):
                     return
                     
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
+                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg_2:
                     
                     string_match = ClientStrings.StringMatch()
                     
-                    panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, string_match )
+                    panel = ClientGUIStringPanels.EditStringMatchPanel( dlg_2, string_match )
                     
-                    dlg.SetPanel( panel )
+                    dlg_2.SetPanel( panel )
                     
-                    if dlg.exec() == QW.QDialog.Accepted:
+                    if dlg_2.exec() == QW.QDialog.Accepted:
                         
                         string_match = panel.GetValue()
                         

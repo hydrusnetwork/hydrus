@@ -173,12 +173,6 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             return ( 3, new_serialisable_info )
             
         
-    def _EmptyFileSeedCache( self, status: typing.Collection[int] = (CC.STATUS_UNKNOWN,) ):
-
-        self._file_seed_cache.RemoveFileSeedsByStatus( status )
-            
-        time.sleep( ClientImporting.DID_SUBSTANTIAL_FILE_WORK_MINIMUM_SLEEP_TIME )
-            
     
     def _WorkOnFiles( self ):
         
@@ -372,20 +366,31 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             self._SerialisableChangeMade()
             
-    def AbortImport( self ):
         
-        if self.CurrentlyWorking():
-            
-            self.PausePlay()
-            
-        self._EmptyFileSeedCache()
+    
+    def AbortImport( self, do_delete = False ):
         
-        self._paused = False
-
+        if do_delete:
+            
+            self._file_seed_cache.RemoveFileSeedsByStatus( ( CC.STATUS_UNKNOWN, ) )
+            
+        else:
+            
+            file_seeds = self._file_seed_cache.GetFileSeeds( CC.STATUS_UNKNOWN )
+            
+            for file_seed in file_seeds:
+                
+                file_seed.SetStatus( CC.STATUS_SKIPPED, note = 'import abandoned by user' )
+                
+            
+            self._file_seed_cache.NotifyFileSeedsUpdated( file_seeds )
+            
+        
         with self._lock:
             
             self._files_status = 'aborted'
-
+            
+            self._SerialisableChangeMade()
             
         
     

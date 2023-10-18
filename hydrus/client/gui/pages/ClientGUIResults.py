@@ -100,7 +100,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         self._had_changes_to_tag_presentation_while_hidden = False
         
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media' ] )
+        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'media', 'thumbnails' ] )
         
         self.setWidget( self._InnerWidget( self ) )
         self.setWidgetResizable( True )
@@ -835,7 +835,6 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
                 self._SetFocusedMedia( None )
                 self._EndShiftSelect()
-                
                 
             
         else:
@@ -2382,6 +2381,10 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 self._GetSimilarTo( CC.HAMMING_SPECULATIVE )
                 
+            elif action == CAC.SIMPLE_LAUNCH_MEDIA_VIEWER:
+                
+                self._LaunchMediaViewer()
+                
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
                 self._OpenExternally()
@@ -2620,11 +2623,7 @@ class MediaPanelThumbnails( MediaPanel ):
         # there's a job in qt to-do to sort all this out and fix other scroll issues
         self._widget_event_filter.EVT_SIZE( self.EventResize )
         
-        self._widget_event_filter.EVT_KEY_DOWN( self.EventKeyDown )
-        
         self.widget().setMinimumSize( 50, 50 )
-        
-        self.RefreshAcceleratorTable()
         
         self._UpdateScrollBars()
         
@@ -2633,7 +2632,6 @@ class MediaPanelThumbnails( MediaPanel ):
         HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
         HG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
         HG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
-        HG.client_controller.sub( self, 'RefreshAcceleratorTable', 'notify_new_options' )
         HG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
     
@@ -3018,7 +3016,7 @@ class MediaPanelThumbnails( MediaPanel ):
         return True
         
     
-    def _MoveFocusedThumbnail( self, rows, columns, shift ):
+    def _MoveThumbnailFocus( self, rows, columns, shift ):
         
         if self._last_hit_media is not None:
             
@@ -3334,6 +3332,62 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
+    def contextMenuEvent( self, event ):
+        
+        if event.reason() == QG.QContextMenuEvent.Keyboard:
+            
+            self.ShowMenu()
+            
+        
+    
+    def EventMouseFullScreen( self, event ):
+        
+        t = self._GetThumbnailUnderMouse( event )
+        
+        if t is not None:
+            
+            locations_manager = t.GetLocationsManager()
+            
+            if locations_manager.IsLocal():
+                
+                self._LaunchMediaViewer( t )
+                
+            else:
+                
+                can_download = not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetRemoteFileServiceKeys() )
+                
+                if can_download:
+                    
+                    self._DownloadHashes( t.GetHashes() )
+                    
+                
+            
+        
+    
+    def EventResize( self, event ):
+        
+        self._ReinitialisePageCacheIfNeeded()
+        
+        self._RecalculateVirtualSize( called_from_resize_event = True )
+        
+        self._last_size = QP.ScrollAreaVisibleRect( self ).size()
+        
+    
+    def GetTotalFileSize( self ):
+        
+        return sum( ( m.GetSize() for m in self._sorted_media ) )
+        
+    
+    def MaintainPageCache( self ):
+        
+        if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
+            
+            self._DirtyAllPages()
+            
+        
+        self._DeleteAllDirtyPages()
+        
+    
     def mouseMoveEvent( self, event ):
         
         if event.buttons() & QC.Qt.LeftButton:
@@ -3389,81 +3443,6 @@ class MediaPanelThumbnails( MediaPanel ):
         event.ignore()
         
     
-    def EventKeyDown( self, event ):
-        
-        # accelerator tables can't handle escape key in windows, gg
-        
-        if event.key() == QC.Qt.Key_Escape:
-            
-            self._Select( ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ) )
-            
-        elif event.key() in ( QC.Qt.Key_PageUp, QC.Qt.Key_PageDown ):
-            
-            if event.key() == QC.Qt.Key_PageUp:
-                
-                direction = -1
-                
-            elif event.key() == QC.Qt.Key_PageDown:
-                
-                direction = 1
-                
-            
-            shift = event.modifiers() & QC.Qt.ShiftModifier
-            
-            self._MoveFocusedThumbnail( self._num_rows_per_actual_page * direction, 0, shift )
-            
-        else:
-            
-            return True # was: event.ignore()
-            
-        
-    
-    def EventMouseFullScreen( self, event ):
-        
-        t = self._GetThumbnailUnderMouse( event )
-        
-        if t is not None:
-            
-            locations_manager = t.GetLocationsManager()
-            
-            if locations_manager.IsLocal():
-                
-                self._LaunchMediaViewer( t )
-                
-            else:
-                
-                can_download = not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetRemoteFileServiceKeys() )
-                
-                if can_download:
-                    
-                    self._DownloadHashes( t.GetHashes() )
-                    
-                
-            
-        
-    
-    def showEvent( self, event ):
-        
-        self._UpdateScrollBars()
-        
-    
-    def EventResize( self, event ):
-        
-        self._ReinitialisePageCacheIfNeeded()
-        
-        self._RecalculateVirtualSize( called_from_resize_event = True )
-        
-        self._last_size = QP.ScrollAreaVisibleRect( self ).size()
-        
-    
-    def contextMenuEvent( self, event ):
-        
-        if event.reason() == QG.QContextMenuEvent.Keyboard:
-            
-            self.ShowMenu()
-            
-        
-    
     def mouseReleaseEvent( self, event ):
         
         if event.button() != QC.Qt.RightButton:
@@ -3474,21 +3453,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         self.ShowMenu()
-        
-    
-    def GetTotalFileSize( self ):
-        
-        return sum( ( m.GetSize() for m in self._sorted_media ) )
-        
-    
-    def MaintainPageCache( self ):
-        
-        if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
-            
-            self._DirtyAllPages()
-            
-        
-        self._DeleteAllDirtyPages()
         
     
     def NewThumbnails( self, hashes ):
@@ -3529,6 +3493,96 @@ class MediaPanelThumbnails( MediaPanel ):
         HG.client_controller.CallToThread( do_it, self, do_it, affected_hashes )
         
     
+    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
+        
+        command_processed = True
+        
+        if command.IsSimpleCommand():
+            
+            action = command.GetSimpleAction()
+            
+            if action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS:
+                
+                ( move_direction, selection_status ) = command.GetSimpleData()
+                
+                shift = selection_status == CAC.SELECTION_STATUS_SHIFT
+                
+                if move_direction in ( CAC.MOVE_HOME, CAC.MOVE_END ):
+                    
+                    if move_direction == CAC.MOVE_HOME:
+                        
+                        self._ScrollHome( shift )
+                        
+                    else: # MOVE_END
+                        
+                        self._ScrollEnd( shift )
+                        
+                    
+                elif move_direction in ( CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ):
+                    
+                    if move_direction == CAC.MOVE_PAGE_UP:
+                        
+                        direction = -1
+                        
+                    else: # MOVE_PAGE_DOWN
+                        
+                        direction = 1
+                        
+                    
+                    self._MoveThumbnailFocus( self._num_rows_per_actual_page * direction, 0, shift )
+                    
+                else:
+                    
+                    if move_direction == CAC.MOVE_LEFT:
+                        
+                        rows = 0
+                        columns = -1
+                        
+                    elif move_direction == CAC.MOVE_RIGHT:
+                        
+                        rows = 0
+                        columns = 1
+                        
+                    elif move_direction == CAC.MOVE_UP:
+                        
+                        rows = -1
+                        columns = 0
+                        
+                    else: # MOVE_DOWN
+                        
+                        rows = 1
+                        columns = 0
+                        
+                    
+                    self._MoveThumbnailFocus( rows, columns, shift )
+                    
+                
+            elif action == CAC.SIMPLE_SELECT_FILES:
+                
+                file_filter = command.GetSimpleData()
+                
+                self._Select( file_filter )
+                
+            else:
+                
+                command_processed = False
+                
+            
+        else:
+            
+            command_processed = False
+            
+        
+        if not command_processed:
+            
+            return MediaPanel.ProcessApplicationCommand( self, command )
+            
+        else:
+            
+            return command_processed
+            
+        
+    
     def RedrawAllThumbnails( self ):
         
         self._DirtyAllPages()
@@ -3544,60 +3598,6 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
         self.widget().update()
-        
-    
-    def RefreshAcceleratorTable( self ):
-        
-        if not self or not QP.isValid( self ):
-            
-            return
-        
-        # Remove old shortcuts
-        for child in self.children():
-            
-            if isinstance( child, QW.QShortcut ):
-                
-                child.setParent( None )
-                child.deleteLater()
-                
-            
-        
-        def ctrl_space_callback( self ):
-            
-            if self._focused_media is not None:
-                
-                self._HitMedia( self._focused_media, True, False )
-                
-            
-        
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Home, self._ScrollHome, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_End, self._ScrollEnd, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Return, self._LaunchMediaViewer )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Enter, self._LaunchMediaViewer )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, False )
-        QP.AddShortcut( self, QC.Qt.NoModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, False )
-        QP.AddShortcut( self, QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, False )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Home, self._ScrollHome, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Home, self._ScrollHome, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_End, self._ScrollEnd, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_End, self._ScrollEnd, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Up, self._MoveFocusedThumbnail, -1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Down, self._MoveFocusedThumbnail, 1, 0, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Left, self._MoveFocusedThumbnail, 0, -1, True )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True  )
-        QP.AddShortcut( self, QC.Qt.ShiftModifier | QC.Qt.KeypadModifier, QC.Qt.Key_Right, self._MoveFocusedThumbnail, 0, 1, True )
-        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_A, self._Select, ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL ) )
-        QP.AddShortcut( self, QC.Qt.ControlModifier, QC.Qt.Key_Space, ctrl_space_callback, self )
         
     
     def SetFocusedMedia( self, media ):
@@ -3623,6 +3623,11 @@ class MediaPanelThumbnails( MediaPanel ):
                 pass
                 
             
+        
+    
+    def showEvent( self, event ):
+        
+        self._UpdateScrollBars()
         
     
     def ShowMenu( self, do_not_show_just_return = False ):
@@ -4720,23 +4725,23 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
         
         if 0 < selected_count < file_filter_all.GetCount( win, filter_counts ):
             
-            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_selected.ToString( win, filter_counts ), 'Remove all the selected files from the current view.', win._Remove, file_filter_selected )
+            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_selected.ToStringWithCount( win, filter_counts ), 'Remove all the selected files from the current view.', win._Remove, file_filter_selected )
             
         
         if file_filter_all.GetCount( win, filter_counts ) > 0:
             
             ClientGUIMenus.AppendSeparator( remove_menu )
             
-            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_all.ToString( win, filter_counts ), 'Remove all the files from the current view.', win._Remove, file_filter_all )
+            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_all.ToStringWithCount( win, filter_counts ), 'Remove all the files from the current view.', win._Remove, file_filter_all )
             
         
         if file_filter_inbox.GetCount( win, filter_counts ) > 0 and file_filter_archive.GetCount( win, filter_counts ) > 0:
             
             ClientGUIMenus.AppendSeparator( remove_menu )
             
-            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_inbox.ToString( win, filter_counts ), 'Remove all the inbox files from the current view.', win._Remove, file_filter_inbox )
+            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_inbox.ToStringWithCount( win, filter_counts ), 'Remove all the inbox files from the current view.', win._Remove, file_filter_inbox )
             
-            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_archive.ToString( win, filter_counts ), 'Remove all the archived files from the current view.', win._Remove, file_filter_archive )
+            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_archive.ToStringWithCount( win, filter_counts ), 'Remove all the archived files from the current view.', win._Remove, file_filter_archive )
             
         
         if len( all_specific_file_domains ) > 1:
@@ -4751,7 +4756,7 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
                 
                 file_filter = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_FILE_SERVICE, file_service_key )
                 
-                ClientGUIMenus.AppendMenuItem( remove_menu, file_filter.ToString( win, filter_counts ), 'Remove all the files that are in this file domain.', win._Remove, file_filter )
+                ClientGUIMenus.AppendMenuItem( remove_menu, file_filter.ToStringWithCount( win, filter_counts ), 'Remove all the files that are in this file domain.', win._Remove, file_filter )
                 
             
         
@@ -4762,8 +4767,8 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( remove_menu )
             
-            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_local.ToString( win, filter_counts ), 'Remove all the files that are in this client.', win._Remove, file_filter_local )
-            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_remote.ToString( win, filter_counts ), 'Remove all the files that are not in this client.', win._Remove, file_filter_remote )
+            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_local.ToStringWithCount( win, filter_counts ), 'Remove all the files that are in this client.', win._Remove, file_filter_local )
+            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_remote.ToStringWithCount( win, filter_counts ), 'Remove all the files that are not in this client.', win._Remove, file_filter_remote )
             
         
         not_selected_count = file_filter_not_selected.GetCount( win, filter_counts )
@@ -4772,7 +4777,7 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( remove_menu )
             
-            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_not_selected.ToString( win, filter_counts ), 'Remove all the not selected files from the current view.', win._Remove, file_filter_not_selected )
+            ClientGUIMenus.AppendMenuItem( remove_menu, file_filter_not_selected.ToStringWithCount( win, filter_counts ), 'Remove all the not selected files from the current view.', win._Remove, file_filter_not_selected )
             
         
         ClientGUIMenus.AppendMenu( menu, remove_menu, 'remove' )
@@ -4802,16 +4807,16 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_all.ToString( win, filter_counts ), 'Select all the files in the current view.', win._Select, file_filter_all )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_all.ToStringWithCount( win, filter_counts ), 'Select all the files in the current view.', win._Select, file_filter_all )
             
         
         if file_filter_inbox.GetCount( win, filter_counts ) > 0 and file_filter_archive.GetCount( win, filter_counts ) > 0:
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_inbox.ToString( win, filter_counts ), 'Select all the inbox files in the current view.', win._Select, file_filter_inbox )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_inbox.ToStringWithCount( win, filter_counts ), 'Select all the inbox files in the current view.', win._Select, file_filter_inbox )
             
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_archive.ToString( win, filter_counts ), 'Select all the archived files in the current view.', win._Select, file_filter_archive )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_archive.ToStringWithCount( win, filter_counts ), 'Select all the archived files in the current view.', win._Select, file_filter_archive )
             
         
         if len( all_specific_file_domains ) > 1:
@@ -4826,7 +4831,7 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
                 
                 file_filter = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_FILE_SERVICE, file_service_key )
                 
-                ClientGUIMenus.AppendMenuItem( select_menu, file_filter.ToString( win, filter_counts ), 'Select all the files in this file domain.', win._Select, file_filter )
+                ClientGUIMenus.AppendMenuItem( select_menu, file_filter.ToStringWithCount( win, filter_counts ), 'Select all the files in this file domain.', win._Select, file_filter )
                 
             
         
@@ -4837,8 +4842,8 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_local.ToString( win, filter_counts ), 'Remove all the files that are in this client.', win._Select, file_filter_local )
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_remote.ToString( win, filter_counts ), 'Remove all the files that are not in this client.', win._Select, file_filter_remote )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_local.ToStringWithCount( win, filter_counts ), 'Remove all the files that are in this client.', win._Select, file_filter_local )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_remote.ToStringWithCount( win, filter_counts ), 'Remove all the files that are not in this client.', win._Select, file_filter_remote )
             
         
         file_filter_selected = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_SELECTED )
@@ -4852,12 +4857,12 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
                 
                 ClientGUIMenus.AppendSeparator( select_menu )
                 
-                ClientGUIMenus.AppendMenuItem( select_menu, file_filter_not_selected.ToString( win, filter_counts ), 'Swap what is and is not selected.', win._Select, file_filter_not_selected )
+                ClientGUIMenus.AppendMenuItem( select_menu, file_filter_not_selected.ToStringWithCount( win, filter_counts ), 'Swap what is and is not selected.', win._Select, file_filter_not_selected )
                 
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_none.ToString( win, filter_counts ), 'Deselect everything selected.', win._Select, file_filter_none )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_none.ToStringWithCount( win, filter_counts ), 'Deselect everything selected.', win._Select, file_filter_none )
             
         
         ClientGUIMenus.AppendMenu( menu, select_menu, 'select' )

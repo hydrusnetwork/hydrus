@@ -93,8 +93,21 @@ def Dumps( data, mime ):
             
         
         return cbor2.dumps( data )
-    
+        
     else:
+        
+        if isinstance( data, dict ):
+            
+            if 'version' not in data:
+                
+                data[ 'version' ] = HC.CLIENT_API_VERSION
+                
+            
+            if 'hydrus_version' not in data:
+                
+                data[ 'hydrus_version' ] = HC.SOFTWARE_VERSION
+                
+            
         
         return json.dumps( data )
         
@@ -1667,6 +1680,7 @@ class HydrusResourceClientAPIRestrictedAddFiles( HydrusResourceClientAPIRestrict
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_FILES )
         
     
+
 class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIRestrictedAddFiles ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2670,6 +2684,7 @@ class HydrusResourceClientAPIRestrictedGetFiles( HydrusResourceClientAPIRestrict
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_SEARCH_FILES )
         
     
+
 class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClientAPIRestrictedGetFiles ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
