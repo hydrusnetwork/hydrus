@@ -219,12 +219,13 @@ shortcut_names_to_pretty_names = {
     'main_gui' : 'the main window',
     'tags_autocomplete' : 'tag autocomplete',
     'media' : 'media actions, either thumbnails or the viewer',
+    'thumbnails' : 'thumbnails',
     'media_viewer' : 'media viewers - all',
     'media_viewer_browser' : 'media viewers - \'normal\' browser',
     'archive_delete_filter' : 'media viewers - archive/delete filter',
     'duplicate_filter' : 'media viewers - duplicate filter',
     'preview_media_window' : 'the actual media in a preview window (mouse only)',
-    'media_viewer_media_window' : 'the actual media in a media viewer (mouse only)'
+    'media_viewer_media_window' : 'the actual media in a media viewer (mouse only)',
 }
 
 shortcut_names_sorted = [
@@ -232,6 +233,7 @@ shortcut_names_sorted = [
     'main_gui',
     'tags_autocomplete',
     'media',
+    'thumbnails',
     'media_viewer',
     'media_viewer_browser',
     'archive_delete_filter',
@@ -245,6 +247,7 @@ shortcut_names_to_descriptions = {
     'archive_delete_filter' : 'Navigation actions for the media viewer during an archive/delete filter. Mouse shortcuts should work.',
     'duplicate_filter' : 'Navigation actions for the media viewer during a duplicate filter. Mouse shortcuts should work.',
     'media' : 'Actions to alter metadata for media in the media viewer or the thumbnail grid.',
+    'thumbnails' : 'Actions that interact with the grid of thumbnails in a normal file page.',
     'main_gui' : 'Actions to control pages in the main window of the program.',
     'tags_autocomplete' : 'Actions to control tag autocomplete when its input text box is focused.',
     'media_viewer_browser' : 'Navigation actions for the regular browsable media viewer.',
@@ -255,7 +258,7 @@ shortcut_names_to_descriptions = {
 
 # shortcut commands
 
-SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'tags_autocomplete', 'main_gui', 'media_viewer_browser', 'media_viewer', 'media_viewer_media_window', 'preview_media_window' ]
+SHORTCUTS_RESERVED_NAMES = [ 'global', 'archive_delete_filter', 'duplicate_filter', 'media', 'thumbnails', 'tags_autocomplete', 'main_gui', 'media_viewer_browser', 'media_viewer', 'media_viewer_media_window', 'preview_media_window' ]
 
 SHORTCUTS_GLOBAL_ACTIONS = [
     CAC.SIMPLE_GLOBAL_AUDIO_MUTE,
@@ -430,6 +433,15 @@ SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS = [
     CAC.SIMPLE_LAUNCH_MEDIA_VIEWER
 ]
 
+SHORTCUTS_THUMBNAILS_ACTIONS = [
+    CAC.SIMPLE_LAUNCH_MEDIA_VIEWER,
+    CAC.SIMPLE_LAUNCH_THE_ARCHIVE_DELETE_FILTER,
+    CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM,
+    CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER,
+    CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS,
+    CAC.SIMPLE_SELECT_FILES
+]
+
 simple_shortcut_name_to_action_lookup = {
     'global' : SHORTCUTS_GLOBAL_ACTIONS,
     'media' : SHORTCUTS_MEDIA_ACTIONS,
@@ -441,6 +453,7 @@ simple_shortcut_name_to_action_lookup = {
     'archive_delete_filter' : SHORTCUTS_ARCHIVE_DELETE_FILTER_ACTIONS,
     'media_viewer_media_window' : SHORTCUTS_MEDIA_VIEWER_VIDEO_AUDIO_PLAYER_ACTIONS,
     'preview_media_window' : SHORTCUTS_PREVIEW_VIDEO_AUDIO_PLAYER_ACTIONS,
+    'thumbnails' : SHORTCUTS_THUMBNAILS_ACTIONS,
     'custom' : SHORTCUTS_MEDIA_ACTIONS + SHORTCUTS_MEDIA_VIEWER_ACTIONS
 }
 

@@ -605,14 +605,15 @@ class HydrusResource( Resource ):
             
             content_disposition_type = 'inline'
             
+        
         max_age = response_context.GetMaxAge()
 
         if max_age is not None:
-
+            
             request.setHeader( 'Expires', time.strftime( '%a, %d %b %Y %H:%M:%S GMT', time.gmtime( time.time() + max_age ) ) )
             
             request.setHeader( 'Cache-Control', 'max-age={}'.format( max_age ) )
-        
+            
         if response_context.HasPath():
             
             path = response_context.GetPath()
@@ -889,7 +890,9 @@ class HydrusResource( Resource ):
             body_dict = {
                 'error' : error_summary,
                 'exception_type' : str( type( e ).__name__ ),
-                'status_code' : status_code
+                'status_code' : status_code,
+                'version' : HC.CLIENT_API_VERSION,
+                'hydrus_version' : HC.SOFTWARE_VERSION
             }
             
             body = json.dumps( body_dict )

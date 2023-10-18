@@ -190,15 +190,15 @@ def MergeCounts( min_a: int, max_a: int, min_b: int, max_b: int ):
     
 def OrdIsSensibleASCII( o ):
     
-    return 32 <= o and o <= 127
+    return 32 <= o <= 127
     
 def OrdIsAlphaLower( o ):
     
-    return 97 <= o and o <= 122
+    return 97 <= o <= 122
     
 def OrdIsAlphaUpper( o ):
     
-    return 65 <= o and o <= 90
+    return 65 <= o <= 90
     
 def OrdIsAlpha( o ):
     
@@ -206,7 +206,7 @@ def OrdIsAlpha( o ):
     
 def OrdIsNumber( o ):
     
-    return 48 <= o and o <= 57
+    return 48 <= o <= 57
     
 def ShowExceptionClient( e, do_wait = True ):
     

@@ -1,8 +1,9 @@
+import typing
 from PIL import Image as PILImage
 
 from hydrus.core import HydrusExceptions
 
-def RawOpenPILImage( path ) -> PILImage.Image:
+def RawOpenPILImage( path: typing.Union[ str, typing.BinaryIO ] ) -> PILImage.Image:
     
     try:
         

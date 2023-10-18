@@ -603,7 +603,7 @@ class RasterContainerVideo( RasterContainer ):
         
         max_streaming_buffer_size = max( 48, int( num_frames_in_video / ( duration / 3.0 ) ) ) # 48 or 3 seconds
         
-        if max_streaming_buffer_size < frame_buffer_length and frame_buffer_length < num_frames_in_video:
+        if max_streaming_buffer_size < frame_buffer_length < num_frames_in_video:
             
             frame_buffer_length = max_streaming_buffer_size
             

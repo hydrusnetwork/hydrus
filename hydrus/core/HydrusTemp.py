@@ -125,6 +125,13 @@ def SetEnvTempDir( path ):
     tempfile.tempdir = path
     
 
+def GetSubTempDir( prefix = '' ):
+    
+    global HYDRUS_TEMP_DIR
+    
+    return tempfile.mkdtemp( prefix = prefix, dir = HYDRUS_TEMP_DIR )
+    
+
 def GetTempPath( suffix = '', dir = None ):
     
     global HYDRUS_TEMP_DIR

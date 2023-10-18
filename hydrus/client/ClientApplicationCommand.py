@@ -1,9 +1,13 @@
+import typing
+
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
+
+from hydrus.client import ClientConstants as CC
 
 SIMPLE_ARCHIVE_DELETE_FILTER_BACK = 0
 SIMPLE_ARCHIVE_DELETE_FILTER_DELETE = 1
@@ -153,6 +157,36 @@ SIMPLE_SHOW_DUPLICATES = 144
 SIMPLE_MANAGE_FILE_TIMESTAMPS = 145
 SIMPLE_OPEN_FILE_IN_FILE_EXPLORER = 146
 SIMPLE_COPY_LITTLE_BMP = 147
+SIMPLE_MOVE_THUMBNAIL_FOCUS = 148
+SIMPLE_SELECT_FILES = 149
+
+MOVE_HOME = 0
+MOVE_END = 1
+MOVE_LEFT = 2
+MOVE_RIGHT = 3
+MOVE_UP = 4
+MOVE_DOWN = 5
+MOVE_PAGE_UP = 6
+MOVE_PAGE_DOWN = 7
+
+move_enum_to_str_lookup = {
+    MOVE_HOME : 'home',
+    MOVE_END : 'end',
+    MOVE_LEFT : 'left',
+    MOVE_RIGHT : 'right',
+    MOVE_UP : 'up',
+    MOVE_DOWN : 'down',
+    MOVE_PAGE_UP : 'page up',
+    MOVE_PAGE_DOWN : 'page down'
+}
+
+SELECTION_STATUS_NORMAL = 0
+SELECTION_STATUS_SHIFT = 1
+
+selection_status_enum_to_str_lookup = {
+    SELECTION_STATUS_NORMAL : 'move',
+    SELECTION_STATUS_SHIFT : 'shift-select'
+}
 
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
@@ -302,7 +336,9 @@ simple_enum_to_str_lookup = {
     SIMPLE_MEDIA_SEEK_DELTA : 'seek media',
     SIMPLE_GLOBAL_PROFILE_MODE_FLIP : 'flip profile mode on/off',
     SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW : 'force the animation scanbar to show (flip on/off)',
-    SIMPLE_OPEN_COMMAND_PALETTE : 'open the command palette'
+    SIMPLE_OPEN_COMMAND_PALETTE : 'open the command palette',
+    SIMPLE_MOVE_THUMBNAIL_FOCUS : 'move the thumbnail focus',
+    SIMPLE_SELECT_FILES : 'select files'
     }
 
 legacy_simple_str_to_enum_lookup = {
@@ -419,7 +455,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
     SERIALISABLE_NAME = 'Application Command'
-    SERIALISABLE_VERSION = 4
+    SERIALISABLE_VERSION = 5
     
     def __init__( self, command_type = None, data = None ):
         
@@ -458,9 +494,21 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
+        # TODO: I recently moved to the data_dict here so the simple type could have serialisables in its 'simple_data', let's move the content command type to this too
+        # I don't _think_ this was an overcomplicated mistake, but it is a little ugly atm
+        # it'll be better when all working on the same system. perhaps command_type too
+        # and maybe ditch the object's self._data variable too, which is crushed as anything. maybe just have a serialisable dict mate
+        
         if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
             
-            serialisable_data = self._data
+            ( simple_action, simple_data ) = self._data
+            
+            data_dict = HydrusSerialisable.SerialisableDictionary()
+            
+            data_dict[ 'simple_action' ] = simple_action
+            data_dict[ 'simple_data' ] = simple_data
+            
+            serialisable_data = data_dict.GetSerialisableTuple()
             
         elif self._command_type == APPLICATION_COMMAND_TYPE_CONTENT:
             
@@ -487,7 +535,10 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         
         if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
             
-            ( simple_action, simple_data ) = serialisable_data
+            data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+            
+            simple_action = data_dict[ 'simple_action' ]
+            simple_data = data_dict[ 'simple_data' ]
             
             if isinstance( simple_data, list ):
                 
@@ -574,6 +625,27 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             return ( 4, new_serialisable_info )
             
         
+        if version == 4:
+            
+            ( command_type, serialisable_data ) = old_serialisable_info
+            
+            if command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
+                
+                ( simple_action, simple_data ) = serialisable_data
+                
+                data_dict = HydrusSerialisable.SerialisableDictionary()
+                
+                data_dict[ 'simple_action' ] = simple_action
+                data_dict[ 'simple_data' ] = simple_data
+                
+                serialisable_data = data_dict.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( command_type, serialisable_data )
+            
+            return ( 5, new_serialisable_info )
+            
+        
     
     def GetCommandType( self ):
         
@@ -592,7 +664,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return simple_action
         
     
-    def GetSimpleData( self ):
+    def GetSimpleData( self ) -> typing.Any:
         
         if self._command_type != APPLICATION_COMMAND_TYPE_SIMPLE:
             
@@ -662,19 +734,29 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 duplicate_type = self.GetSimpleData()
                 
-                s = '{} {}'.format( s, HC.duplicate_type_string_lookup[ duplicate_type ] )
+                s = f'{s} {HC.duplicate_type_string_lookup[ duplicate_type ]}'
                 
             elif action == SIMPLE_MEDIA_SEEK_DELTA:
                 
-                data = self.GetSimpleData()
-                
-                ( direction, ms ) = data
+                ( direction, ms ) = self.GetSimpleData()
                 
                 direction_s = 'back' if direction == -1 else 'forwards'
                 
                 ms_s = HydrusTime.TimeDeltaToPrettyTimeDelta( ms / 1000 )
                 
-                s = '{} ({} {})'.format( s, direction_s, ms_s )
+                s = f'{s} ({direction_s} {ms_s})'
+                
+            elif action == SIMPLE_MOVE_THUMBNAIL_FOCUS:
+                
+                ( move_direction, selection_status ) = self.GetSimpleData()
+                
+                s = f'{s} ({selection_status_enum_to_str_lookup[selection_status]} {move_enum_to_str_lookup[move_direction]})'
+                
+            elif action == SIMPLE_SELECT_FILES:
+                
+                file_filter = self.GetSimpleData()
+                
+                s = f'{s} ({file_filter.ToString()})'
                 
             
             return s
@@ -770,6 +852,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         return ApplicationCommand( APPLICATION_COMMAND_TYPE_SIMPLE, ( simple_action, simple_data ) )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND ] = ApplicationCommand
 
 class ApplicationCommandProcessorMixin( object ):

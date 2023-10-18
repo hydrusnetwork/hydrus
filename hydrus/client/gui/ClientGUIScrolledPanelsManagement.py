@@ -4311,17 +4311,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         return
                         
                     
-                    with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'set weight' ) as dlg:
+                    with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'set weight' ) as dlg_2:
                         
-                        panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                        panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_2 )
                         
                         control = ClientGUICommon.BetterSpinBox( panel, initial = 100, min = 0, max = 10000 )
                         
                         panel.SetControl( control )
                         
-                        dlg.SetPanel( panel )
+                        dlg_2.SetPanel( panel )
                         
-                        if dlg.exec() == QW.QDialog.Accepted:
+                        if dlg_2.exec() == QW.QDialog.Accepted:
                             
                             weight = control.value()
                             

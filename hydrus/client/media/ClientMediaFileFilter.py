@@ -5,6 +5,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusText
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
@@ -39,9 +40,15 @@ file_filter_str_lookup = {
 
 quick_inverse_lookups = {}
 
-class FileFilter( object ):
+class FileFilter( HydrusSerialisable.SerialisableBase ):
     
-    def __init__( self, filter_type, filter_data = None ):
+    SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER
+    SERIALISABLE_NAME = 'File Filter'
+    SERIALISABLE_VERSION = 1
+    
+    def __init__( self, filter_type = None, filter_data = None ):
+        
+        HydrusSerialisable.SerialisableBase.__init__( self )
         
         self.filter_type = filter_type
         self.filter_data = filter_data
@@ -66,6 +73,54 @@ class FileFilter( object ):
         else:
             
             return ( self.filter_type, self.filter_data ).__hash__()
+            
+        
+    
+    def _GetSerialisableInfo( self ):
+        
+        if self.filter_type == FILE_FILTER_FILE_SERVICE:
+            
+            file_service_key = self.filter_data
+            
+            serialisable_filter_data = file_service_key.hex()
+            
+        elif self.filter_type == FILE_FILTER_TAGS:
+            
+            ( tag_service_key, and_or_or, select_tags ) = self.filter_data
+            
+            serialisable_filter_data = ( tag_service_key.hex(), and_or_or, select_tags )
+            
+        else:
+            
+            serialisable_filter_data = self.filter_data
+            
+        
+        return ( self.filter_type, serialisable_filter_data )
+        
+    
+    def _InitialiseFromSerialisableInfo( self, serialisable_info ):
+        
+        ( self.filter_type, serialisable_filter_data ) = serialisable_info
+        
+        if self.filter_type == FILE_FILTER_FILE_SERVICE:
+            
+            serialisable_file_service_key = serialisable_filter_data
+            
+            file_service_key = bytes.fromhex( serialisable_file_service_key )
+            
+            self.filter_data = file_service_key
+            
+        elif self.filter_type == FILE_FILTER_TAGS:
+            
+            ( serialisable_tag_service_key, and_or_or, select_tags ) = serialisable_filter_data
+            
+            tag_service_key = bytes.fromhex( serialisable_tag_service_key )
+            
+            self.filter_data = ( tag_service_key, and_or_or, select_tags )
+            
+        else:
+            
+            self.filter_data = serialisable_filter_data
             
         
     
@@ -324,7 +379,7 @@ class FileFilter( object ):
         return filter_counts[ self ]
         
     
-    def ToString( self, media_list: ClientMedia.MediaList, filter_counts: dict ):
+    def ToString( self ):
         
         if self.filter_type == FILE_FILTER_FILE_SERVICE:
             
@@ -355,6 +410,13 @@ class FileFilter( object ):
             
             s = file_filter_str_lookup[ self.filter_type ]
             
+        
+        return s
+        
+    
+    def ToStringWithCount( self, media_list: ClientMedia.MediaList, filter_counts: dict ):
+        
+        s = self.ToString()
         
         self.PopulateFilterCounts( media_list, filter_counts )
         
@@ -390,6 +452,8 @@ class FileFilter( object ):
         return s
         
     
+
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_FILTER ] = FileFilter
 
 quick_inverse_lookups.update( {
     FileFilter( FILE_FILTER_INBOX ) : FileFilter( FILE_FILTER_ARCHIVE ),

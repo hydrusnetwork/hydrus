@@ -1114,9 +1114,10 @@ class LocationsManager( object ):
 
                 if service_type == HC.IPFS:
                     
-                    (file_info_manager, multihash) = row
+                    ( file_info_manager, multihash ) = row
                     
-                    self._service_keys_to_filenames[service_key] = multihash
+                    self._service_keys_to_filenames[ service_key ] = multihash
+                    
                 
             elif action == HC.CONTENT_UPDATE_DELETE:
                 

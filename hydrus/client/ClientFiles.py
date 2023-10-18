@@ -156,7 +156,7 @@ regen_file_enum_to_job_weight_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD : 100,
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 100,
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 25,
-    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 20,
+    REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 1,
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 100,
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 10,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 25,
@@ -1094,7 +1094,7 @@ class ClientFilesManager( object ):
                 
                 missing_dict = HydrusData.BuildKeyToListDict( [ ( subfolder.base_location, subfolder.prefix ) for subfolder in self._missing_subfolders ] )
                 
-                missing_base_locations = sorted( missing_dict.keys() )
+                missing_base_locations = sorted( missing_dict.keys(), key = lambda b_l: b_l.path )
                 
                 missing_string = ''
                 

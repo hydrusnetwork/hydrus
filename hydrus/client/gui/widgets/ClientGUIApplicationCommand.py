@@ -13,6 +13,7 @@ from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.media import ClientMediaFileFilter
 
 class LocalFilesSubPanel( QW.QWidget ):
     
@@ -428,6 +429,14 @@ class SimpleSubPanel( QW.QWidget ):
         
         #
         
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._duplicate_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._duplicates_type_panel.setLayout( vbox )
+        
+        #
+        
         self._seek_panel = QW.QWidget( self )
         
         choices = [
@@ -449,14 +458,6 @@ class SimpleSubPanel( QW.QWidget ):
         
         #
         
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._duplicate_type, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._duplicates_type_panel.setLayout( vbox )
-        
-        #
-        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._seek_direction, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -469,11 +470,65 @@ class SimpleSubPanel( QW.QWidget ):
         
         #
         
+        self._thumbnail_move_panel = QW.QWidget( self )
+        
+        choices = [ ( CAC.selection_status_enum_to_str_lookup[ s ], s ) for s in [ CAC.SELECTION_STATUS_NORMAL, CAC.SELECTION_STATUS_SHIFT ] ]
+        
+        self._selection_status = ClientGUICommon.BetterRadioBox( self._thumbnail_move_panel, choices = choices )
+        
+        self._selection_status.SetValue( CAC.SELECTION_STATUS_NORMAL )
+        
+        self._move_direction = ClientGUICommon.BetterChoice( self._thumbnail_move_panel )
+        
+        for m in [ CAC.MOVE_LEFT, CAC.MOVE_RIGHT, CAC.MOVE_UP, CAC.MOVE_DOWN, CAC.MOVE_HOME, CAC.MOVE_END, CAC.MOVE_PAGE_UP, CAC.MOVE_PAGE_DOWN ]:
+            
+            self._move_direction.addItem( CAC.move_enum_to_str_lookup[ m ], m )
+            
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._selection_status, CC.FLAGS_CENTER )
+        QP.AddToLayout( hbox, self._move_direction, CC.FLAGS_CENTER )
+        
+        self._thumbnail_move_panel.setLayout( hbox )
+        
+        #
+        
+        self._file_filter_panel = QW.QWidget( self )
+        
+        self._file_filter = ClientGUICommon.BetterChoice( self._file_filter_panel )
+        
+        for file_filter in [
+            ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL ),
+            ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_NONE ),
+            ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_INBOX ),
+            ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ARCHIVE ),
+            ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_LOCAL ),
+            ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_FILE_SERVICE, filter_data = CC.TRASH_SERVICE_KEY )
+        ]:
+            
+            self._file_filter.addItem( file_filter.ToString(), file_filter )
+            
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, self._file_filter, CC.FLAGS_CENTER )
+        
+        self._file_filter_panel.setLayout( hbox )
+        
+        #
+        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._simple_actions, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._duplicates_type_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._seek_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._thumbnail_move_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._file_filter_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
         
@@ -488,6 +543,8 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_SHOW_DUPLICATES )
         self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
+        self._thumbnail_move_panel.setVisible( action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS )
+        self._file_filter_panel.setVisible( action == CAC.SIMPLE_SELECT_FILES )
         
     
     def GetValue( self ):
@@ -514,6 +571,19 @@ class SimpleSubPanel( QW.QWidget ):
                 ms = self._seek_duration_ms.value() + ( 1000 * s )
                 
                 simple_data = ( direction, ms )
+                
+            elif action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS:
+                
+                move_direction = self._move_direction.GetValue()
+                selection_status = self._selection_status.GetValue()
+                
+                simple_data = ( move_direction, selection_status )
+                
+            elif action == CAC.SIMPLE_SELECT_FILES:
+                
+                file_filter = self._file_filter.GetValue()
+                
+                simple_data = file_filter
                 
             else:
                 
@@ -548,6 +618,19 @@ class SimpleSubPanel( QW.QWidget ):
             
             self._seek_duration_s.setValue( s )
             self._seek_duration_ms.setValue( ms )
+            
+        elif action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS:
+            
+            ( move_direction, selection_status ) = command.GetSimpleData()
+            
+            self._move_direction.SetValue( move_direction )
+            self._selection_status.SetValue( selection_status )
+            
+        elif action == CAC.SIMPLE_SELECT_FILES:
+            
+            file_filter = command.GetSimpleData()
+            
+            self._file_filter.SetValue( file_filter )
             
         
         self._UpdateControls()
