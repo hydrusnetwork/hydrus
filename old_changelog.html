@@ -35,6 +35,40 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_549"><a href="#version_549">version 549</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>optimised taglist sorting code, which is really groaning when it gets to 50k+ unique tags. the counting is more efficient now, but more work can be done</li>
+                        <li>optimised taglist internal update recalc by updating existing items in place instead of remove/replace and skipping cleanup-sort when no new items are added and/or the sort is not count-based. it should also preserve selection and focus stuff a bit better now</li>
+                        <li>thanks to a user, we have some new url classes to handle the recent change in sankaku URL format. your sank subscriptions are likely to go slightly crazy for a week as they figure out where they are caught up to, sorry!</li>
+                        <li>if a file copy into your temp directory fails due to 'Errno 28 No space left on device', the client now pops up more information about this specific problem, which is often a symptom of trying to import a 4GB drive into a ramdisk-hosted tempdir and similar. many Linux flavours relatedly have special rules about the max filesize in the tempdir!</li>
+                        <li><h3>maintenance and processing</h3></li>
+                        <li>_advanced users only, don't worry about it too much_</li>
+                        <li>the _options->maintenance and processing_ page has several advanced new settings. these are all separately hardcoded systems that I have merged into more of the same logic this week. the UI is a tower of spam, but it will serve us useful when we want to test and fine tune clients that are having various sorts of maintenance trouble</li>
+                        <li>a new section for potential duplicate search now duplicates the 'do search in idle time' setting you see in the duplicates page and has new 'work packet time' and 'rest time percentage' settings</li>
+                        <li>a new section for repository processing now exposes the similar 'work/rest' timings for 'normal', 'idle', and 'very idle' (after an hour of idle mode). **if I have been working with you on freezes or memory explosions during PTR processing, increase the rest percentages here to 50-2,000, let's see if that gives your client time to breathe and clean up old work**</li>
+                        <li>a new section for sibling/parent sync does the same, for 'idle', 'normal', and 'work hard' modes **same deal here probably**</li>
+                        <li>a new section for the deferred database table delete system does the same, for 'idle', 'normal', and 'work hard' modes</li>
+                        <li>I duplicated the 'do sibling/parent sync in idle/normal time' _tags_ menu settings to this options page. they are synced, so altering one updates the other</li>
+                        <li>if you change the 'run file maintenance jobs in idle/normal time' settings in the dialog, the _database_ menu now properly updates to reflect any changes</li>
+                        <li>the way these various systems calculate their rest time now smoothes out extreme bumps. sibling/parent display, in particular, should wait for a good amount of time after a big bump, but won't allow itself to wait for a crazy amount of time</li>
+                        <li><h3>all deleted files</h3></li>
+                        <li>fixed the various 'clear deletion record' commands to also remove from the 'all deleted files' service cache, which stores all your deleted files for all known specific file services and is used for various search tech on deleted file domains</li>
+                        <li>also wrote a command to completely regen this cache from original deletion records. it can be fired under _database->regenerate->all deleted files_. this will happen on update, to fix the above retroactively</li>
+                        <li>removed the foolish 'deleted from all deleted files' typo-entry from the advanced multiple file domain selector list. the value and use of a deletion record from a virtual combined deletion record is a complicated idea, and the entities that lurk in the shadows of the inverse sphere would strongly prefer that we not consider the matter any more</li>
+                        <li><h3>running from source stuff</h3></li>
+                        <li>**the setup_venv script has slightly different Qt questions this week, so if you have your own custom script that types the letters in for you, double-check what it is going to do before updating this week!**</li>
+                        <li>there's a new version of PySide6, 6.6.0. the `(t)est` Qt version in the 'setup_venv' now points to this. it seems fine to me on a fairly normal Win 11 machine, but if recent history is any guide, there's going to be a niggle somewhere. if you have been waiting for a fix on the menu position issue or anything else, give it a go! if things go well, I'll roll this into a larger 'future' test release and then we'll integrate it into main</li>
+                        <li>also, since Qt is the most test-heavy library we have, the 'setup_venv' scripts for all platforms now have an option to `(w)rite` your own version in!</li>
+                        <li>the program no longer needs `distutils`, and thus should now be compatible (or less incompatible, let's see, ha ha) with python 3.12. thanks for the user report and assistance here</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>rejiggered a couple of maintenance flows to spend less time aggressively chilling out doing nothing</li>
+                        <li>the hydrus timedelta widget can now handle milliseconds</li>
+                        <li>misc code cleaning</li>
+                        <li>fixed a typo in the thumbnail 'select->local/not local' descriptions/tooltips</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_548"><a href="#version_548">version 548</a></h2>
                     <ul>
                         <li><h3>user contributions</h3></li>
