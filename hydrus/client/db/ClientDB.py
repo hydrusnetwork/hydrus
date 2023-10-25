@@ -10077,7 +10077,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                self._SyncCombinedDeletedFiles( do_full_rebuild = True )
+                self._SyncCombinedDeletedFiles( do_full_rebuild = False ) # first time I wrote do_full_rebuild, it was too slow!
                 
             except Exception as e:
                 
