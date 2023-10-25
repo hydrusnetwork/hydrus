@@ -62,24 +62,45 @@ elif [ "$install_type" = "a" ]; then
     echo
     echo "Qt - User Interface"
     echo "Most people want \"6\"."
-    echo "If you are <= 10.13 (High Sierra), choose \"5\"."
-    echo "If you are <=10.15 (Catalina) or otherwise have trouble with the normal Qt6, try \"o\" on Python <=3.10 or \"m\" on Python >=3.11."
-    echo "Do you want Qt(5), Qt(6), Qt6 (o)lder, Qt6 (m)iddle or (t)est? "
+    echo "If you are <= 10.13 (High Sierra), choose \"5\". If you want a specific version, choose \"a\"."
+    echo "Do you want Qt(5), Qt(6), or (a)dvanced? "
     read -r qt
     if [ "$qt" = "5" ]; then
         :
     elif [ "$qt" = "6" ]; then
         :
-    elif [ "$qt" = "o" ]; then
-        :
-    elif [ "$qt" = "m" ]; then
-        :
-    elif [ "$qt" = "t" ]; then
+    elif [ "$qt" = "a" ]; then
         :
     else
         echo "Sorry, did not understand that input!"
-        popd || exit 1
         exit 1
+    fi
+
+    if [ "$qt" = "a" ]; then
+        echo
+        echo "If you are <=10.15 (Catalina) or otherwise have trouble with the normal Qt6, try \"o\" on Python <=3.10 or \"m\" on Python >=3.11."
+        echo "Do you want Qt6 (o)lder, Qt6 (m)iddle, Qt6 (t)est, or (w)rite your own? "
+        read -r qt
+        if [ "$qt" = "o" ]; then
+            :
+        elif [ "$qt" = "m" ]; then
+            :
+        elif [ "$qt" = "t" ]; then
+            :
+        elif [ "$qt" = "w" ]; then
+            :
+        else
+            echo "Sorry, did not understand that input!"
+            exit 1
+        fi
+    fi
+
+    if [ "$qt" = "w" ]; then
+        echo
+        echo "Enter the exact PySide6 version you want, e.g. '6.6.0': "
+        read -r qt_custom_pyside6
+        echo "Enter the exact qtpy version you want (probably '2.4.1'): "
+        read -r qt_custom_qtpy
     fi
 
     echo "--------"
@@ -158,8 +179,30 @@ python -m pip install --upgrade pip
 python -m pip install --upgrade wheel
 
 if [ "$install_type" = "s" ]; then
+
     python -m pip install -r requirements.txt
+
 elif [ "$install_type" = "a" ]; then
+
+    if [ "$qt" = "w" ]; then
+
+        python -m pip install qtpy="$qt_custom_qtpy"
+
+        if [ $? -ne 0 ]; then
+            echo "It looks like we could not find that qtpy version!"
+            popd || exit 1
+            exit 1
+        fi
+
+        python -m pip install PySide6="$qt_custom_pyside6"
+
+        if [ $? -ne 0 ]; then
+            echo "It looks like we could not find that PySide6 version!"
+            popd || exit 1
+            exit 1
+        fi
+    fi
+
     python -m pip install -r static/requirements/advanced/requirements_core.txt
 
     if [ "$qt" = "5" ]; then

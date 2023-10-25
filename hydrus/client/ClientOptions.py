@@ -521,6 +521,36 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'integers' ][ 'ms_to_wait_between_physical_file_deletes' ] = 250
         
+        self._dictionary[ 'integers' ][ 'potential_duplicates_search_work_time_ms' ] = 500
+        self._dictionary[ 'integers' ][ 'potential_duplicates_search_rest_percentage' ] = 100
+        
+        self._dictionary[ 'integers' ][ 'repository_processing_work_time_ms_very_idle' ] = 30000
+        self._dictionary[ 'integers' ][ 'repository_processing_rest_percentage_very_idle' ] = 3
+        
+        self._dictionary[ 'integers' ][ 'repository_processing_work_time_ms_idle' ] = 10000
+        self._dictionary[ 'integers' ][ 'repository_processing_rest_percentage_idle' ] = 5
+        
+        self._dictionary[ 'integers' ][ 'repository_processing_work_time_ms_normal' ] = 500
+        self._dictionary[ 'integers' ][ 'repository_processing_rest_percentage_normal' ] = 10
+        
+        self._dictionary[ 'integers' ][ 'tag_display_processing_work_time_ms_idle' ] = 15000
+        self._dictionary[ 'integers' ][ 'tag_display_processing_rest_percentage_idle' ] = 3
+        
+        self._dictionary[ 'integers' ][ 'tag_display_processing_work_time_ms_normal' ] = 100
+        self._dictionary[ 'integers' ][ 'tag_display_processing_rest_percentage_normal' ] = 9900
+        
+        self._dictionary[ 'integers' ][ 'tag_display_processing_work_time_ms_work_hard' ] = 5000
+        self._dictionary[ 'integers' ][ 'tag_display_processing_rest_percentage_work_hard' ] = 5
+        
+        self._dictionary[ 'integers' ][ 'deferred_table_delete_work_time_ms_idle' ] = 20000
+        self._dictionary[ 'integers' ][ 'deferred_table_delete_rest_percentage_idle' ] = 10
+        
+        self._dictionary[ 'integers' ][ 'deferred_table_delete_work_time_ms_normal' ] = 250
+        self._dictionary[ 'integers' ][ 'deferred_table_delete_rest_percentage_normal' ] = 1000
+        
+        self._dictionary[ 'integers' ][ 'deferred_table_delete_work_time_ms_work_hard' ] = 5000
+        self._dictionary[ 'integers' ][ 'deferred_table_delete_rest_percentage_work_hard' ] = 10
+        
         #
         
         self._dictionary[ 'keys' ] = {}

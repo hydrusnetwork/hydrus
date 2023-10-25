@@ -3889,11 +3889,11 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
     def _UpdateTerms( self, limit_to_these_tags = None ):
         
+        # TODO: optimisation here--instead of remove/add, edit the terms _in place_ with new counts, removing now empty, and then just resort
+        
         previous_selected_terms = set( self._selected_terms )
         
         if limit_to_these_tags is None:
-            
-            self._Clear()
             
             nonzero_tags = set()
             
@@ -3902,16 +3902,19 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 ) )
             if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 ) )
             
+            zero_tags = { tag for tag in ( term.GetTag() for term in self._ordered_terms ) if tag not in nonzero_tags }
+            
         else:
+            
+            if len( limit_to_these_tags ) == 0:
+                
+                return
+                
             
             if not isinstance( limit_to_these_tags, set ):
                 
                 limit_to_these_tags = set( limit_to_these_tags )
                 
-            
-            clear_terms = [ self._GenerateTermFromTag( tag ) for tag in limit_to_these_tags ]
-            
-            self._RemoveTerms( clear_terms )
             
             nonzero_tags = set()
             
@@ -3920,10 +3923,59 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             if self._show_pending: nonzero_tags.update( ( tag for ( tag, count ) in self._pending_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
             if self._show_petitioned: nonzero_tags.update( ( tag for ( tag, count ) in self._petitioned_tags_to_count.items() if count > 0 and tag in limit_to_these_tags ) )
             
+            zero_tags = { tag for tag in limit_to_these_tags if tag not in nonzero_tags }
+            
+        
+        if len( zero_tags ) + len( nonzero_tags ) == 0:
+            
+            return
+            
+        
+        removee_terms = [ self._GenerateTermFromTag( tag ) for tag in zero_tags ]
         
         nonzero_terms = [ self._GenerateTermFromTag( tag ) for tag in nonzero_tags ]
         
-        self._AppendTerms( nonzero_terms )
+        if len( removee_terms ) > len( self._ordered_terms ) / 2:
+            
+            self._Clear()
+            
+            altered_terms = []
+            new_terms = nonzero_terms
+            
+        else:
+            
+            if len( removee_terms ) > 0:
+                
+                self._RemoveTerms( removee_terms )
+                
+            
+            exists_tuple = [ ( term in self._terms_to_logical_indices, term ) for term in nonzero_terms ]
+            
+            altered_terms = [ term for ( exists, term ) in exists_tuple if exists ]
+            
+            new_terms = [ term for ( exists, term ) in exists_tuple if not exists ]
+            
+        
+        if len( altered_terms ) > 0:
+            
+            for term in altered_terms:
+                
+                actual_term = self._positional_indices_to_terms[ self._terms_to_positional_indices[ term ] ]
+                
+                actual_term.UpdateFromOtherTerm( term )
+                
+            
+        
+        sort_needed = self._tag_sort.AffectedByCount()
+        
+        if len( new_terms ) > 0:
+            
+            # TODO: if not sort_needed at this stage, it would be ideal to call an auto-sorting '_InsertTerms', if that is reasonably doable
+            
+            self._AppendTerms( new_terms )
+            
+            sort_needed = True
+            
         
         for term in previous_selected_terms:
             
@@ -3933,10 +3985,16 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
                 
             
         
-        self._Sort()
+        if sort_needed:
+            
+            self._Sort()
+            
         
     
     def _Sort( self ):
+        
+        # TODO: hey, rejigger this to cleverly and neatly not need to count tags if the sort doesn't care about counts at all!
+        # probably means converting .SortTags later into cleaner subcalls and then calling them directly here or something
         
         # I do this weird terms to count instead of tags to count because of tag vs ideal tag gubbins later on in sort
         
@@ -3949,15 +4007,34 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
             ( self._show_petitioned, self._petitioned_tags_to_count )
         ]
         
-        counts_to_include = [ c for ( show, c ) in jobs if show ]
+        counts_to_include = [ c for ( show, c ) in jobs if show and len( c ) > 0 ]
         
-        for term in self._ordered_terms:
+        # this is a CPU sensitive area, so let's compress and hardcode the faster branches
+        if len( counts_to_include ) == 1:
             
-            tag = term.GetTag()
+            ( c, ) = counts_to_include
             
-            count = sum( ( c[ tag ] for c in counts_to_include if tag in c ) )
+            terms_to_count = collections.Counter(
+                { term : c[ term.GetTag() ] for term in self._ordered_terms }
+            )
             
-            terms_to_count[ term ] = count
+        elif len( counts_to_include ) == 2:
+            
+            ( c1, c2 ) = counts_to_include
+            
+            tt_iter = ( ( term, term.GetTag() ) for term in self._ordered_terms )
+            
+            terms_to_count = collections.Counter(
+                { term : c1[ tag ] + c2[ tag ] for ( term, tag ) in tt_iter }
+            )
+            
+        else:
+            
+            tt_iter = ( ( term, term.GetTag() ) for term in self._ordered_terms )
+            
+            terms_to_count = collections.Counter(
+                { term : sum( ( c[ tag ] for c in counts_to_include ) ) for ( term, tag ) in tt_iter }
+            )
             
         
         item_to_tag_key_wrapper = lambda term: term.GetTag()

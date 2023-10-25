@@ -2206,12 +2206,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._menubar.setNativeMenuBar( False )
         
-        self._menu_updater_database = self._InitialiseMenubarGetMenuUpdaterDatabase()
         self._menu_updater_file = self._InitialiseMenubarGetMenuUpdaterFile()
+        self._menu_updater_database = self._InitialiseMenubarGetMenuUpdaterDatabase()
         self._menu_updater_network = self._InitialiseMenubarGetMenuUpdaterNetwork()
         self._menu_updater_pages = self._InitialiseMenubarGetMenuUpdaterPages()
         self._menu_updater_pending = self._InitialiseMenubarGetMenuUpdaterPending()
         self._menu_updater_services = self._InitialiseMenubarGetMenuUpdaterServices()
+        self._menu_updater_tags = self._InitialiseMenubarGetMenuUpdaterTags()
         self._menu_updater_undo = self._InitialiseMenubarGetMenuUpdaterUndo()
         
         self._menu_updater_pages_count = ClientGUIAsync.FastThreadToGUIUpdater( self, self._UpdateMenuPagesCount )
@@ -2284,6 +2285,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 ( menu, label ) = self._InitialiseMenuInfoTags()
                 
                 self.ReplaceMenu( name, menu, label )
+                
+                self._menu_updater_tags.update()
                 
             elif name == 'undo':
                 
@@ -2393,6 +2396,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             self._menubar_database_restore_backup.setVisible( all_locations_are_default )
             
             self._menubar_database_multiple_location_label.setVisible( not all_locations_are_default )
+            
+            self._menubar_database_file_maintenance_during_idle.setChecked( HG.client_controller.new_options.GetBoolean( 'file_maintenance_during_idle' ) )
+            self._menubar_database_file_maintenance_during_active.setChecked( HG.client_controller.new_options.GetBoolean( 'file_maintenance_during_active' ) )
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
@@ -2924,6 +2930,27 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
         
     
+    def _InitialiseMenubarGetMenuUpdaterTags( self ):
+        
+        def loading_callable():
+            
+            pass
+            
+        
+        def work_callable( args ):
+            
+            return 1
+            
+        
+        def publish_callable( result ):
+            
+            self._menubar_tags_tag_display_maintenance_during_idle.setChecked( HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ) )
+            self._menubar_tags_tag_display_maintenance_during_active.setChecked( HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ) )
+            
+        
+        return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
+        
+    
     def _InitialiseMenubarGetMenuUpdaterUndo( self ):
         
         def loading_callable():
@@ -3038,14 +3065,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         current_value = check_manager.GetCurrentValue()
         func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during idle time', 'Control whether file maintenance can work during idle time.', current_value, func )
+        self._menubar_database_file_maintenance_during_idle = ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during idle time', 'Control whether file maintenance can work during idle time.', current_value, func )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_active' )
         
         current_value = check_manager.GetCurrentValue()
         func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
+        self._menubar_database_file_maintenance_during_active = ClientGUIMenus.AppendMenuCheckItem( file_maintenance_menu, 'work file jobs during normal time', 'Control whether file maintenance can work during normal time.', current_value, func )
         
         ClientGUIMenus.AppendSeparator( file_maintenance_menu )
         
@@ -3118,6 +3145,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( regen_submenu )
         
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'all deleted files', 'Resynchronise the store of all known deleted files.', self._RegenerateCombinedDeletedFiles )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'local hash cache', 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
         
@@ -3676,14 +3704,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         current_value = check_manager.GetCurrentValue()
         func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during idle time', 'Control whether tag display processing can work during idle time.', current_value, func )
+        self._menubar_tags_tag_display_maintenance_during_idle = ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during idle time', 'Control whether tag display processing can work during idle time.', current_value, func )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_display_maintenance_during_active' )
         
         current_value = check_manager.GetCurrentValue()
         func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during normal time', 'Control whether tag display processing can work during normal time.', current_value, func )
+        self._menubar_tags_tag_display_maintenance_during_active = ClientGUIMenus.AppendMenuCheckItem( tag_display_maintenance_menu, 'sync tag display during normal time', 'Control whether tag display processing can work during normal time.', current_value, func )
         
         ClientGUIMenus.AppendMenu( menu, tag_display_maintenance_menu, 'sibling/parent sync' )
         
@@ -5079,6 +5107,22 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._statusbar.SetStatusText( hydrus_busy_status, 3, tooltip = hydrus_busy_tooltip )
         self._statusbar.SetStatusText( busy_status, 4, tooltip = busy_tooltip )
         self._statusbar.SetStatusText( db_status, 5, tooltip = db_tooltip )
+        
+    
+    def _RegenerateCombinedDeletedFiles( self ):
+        
+        message = 'This will resynchronise the "all deleted files" cache to the actual records in the database, ensuring that various tag searches over the deleted files domain give correct counts and file results. It isn\'t super important, but this routine fixes it if it is desynchronised.'
+        message += os.linesep * 2
+        message += 'It should not take all that long, but if you have a lot of deleted files, it can take a little while, during which the gui may hang.'
+        message += os.linesep * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'regenerate_combined_deleted_files', do_full_rebuild = True )
+            
         
     
     def _RegenerateTagCache( self ):
@@ -7563,6 +7607,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         self._menu_updater_database.update()
         self._menu_updater_services.update()
+        self._menu_updater_tags.update()
         
     
     def NotifyNewPages( self ):

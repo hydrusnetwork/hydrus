@@ -326,6 +326,8 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def AddFiles( self, service_id, insert_rows ):
         
+        # just a note, the timestamp in insert_rows can be None
+        
         ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = GenerateFilesTableNames( service_id )
         
         self._ExecuteMany( 'INSERT OR IGNORE INTO {} VALUES ( ?, ? );'.format( current_files_table_name ), ( ( hash_id, timestamp ) for ( hash_id, timestamp ) in insert_rows ) )
@@ -404,11 +406,15 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     
     def ClearLocalDeleteRecord( self, hash_ids = None ):
         
+        # Just as a side note, this guy should be accompanied by calls to SyncCombinedDeletedFiles above; this module can't do proper add/delete with mappings and stuff, so just this guy isn't enough
+        
         # we delete from everywhere, but not for files currently in the trash
         
         service_ids_to_nums_cleared = {}
         
-        local_non_trash_service_ids = self.modules_services.GetServiceIds( ( HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN ) )
+        local_non_trash_service_types = { HC.COMBINED_LOCAL_FILE, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN }
+        
+        local_non_trash_service_ids = self.modules_services.GetServiceIds( local_non_trash_service_types )
         
         if hash_ids is None:
             
@@ -890,6 +896,18 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {};'.format( deleted_files_table_name ) ) )
         
         return hash_ids
+        
+    
+    def GetDeletedHashIdsToTimestamps( self, service_id, hash_ids ):
+        
+        deleted_files_table_name = GenerateFilesTableName( service_id, HC.CONTENT_STATUS_DELETED )
+        
+        with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+            
+            rows = self._Execute( 'SELECT hash_id, timestamp, original_timestamp FROM {} CROSS JOIN {} USING ( hash_id );'.format( temp_hash_ids_table_name, deleted_files_table_name ) ).fetchall()
+            
+        
+        return { hash_id : ( timestamp, original_timestamp ) for ( hash_id, timestamp, original_timestamp ) in rows }
         
     
     def GetDeletionStatus( self, service_id, hash_id ):

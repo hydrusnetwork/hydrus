@@ -47,7 +47,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
                 name = service.GetName()
                 service_key = service.GetServiceKey()
                 
-                if service_key in ( CC.COMBINED_FILE_SERVICE_KEY, CC.TRASH_SERVICE_KEY ):
+                if service.GetServiceType() in HC.FILE_SERVICES_WITH_NO_DELETE_RECORD:
                     
                     continue
                     

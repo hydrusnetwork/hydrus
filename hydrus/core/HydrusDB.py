@@ -1,5 +1,4 @@
 import collections
-import distutils.version
 import os
 import queue
 import sqlite3
@@ -99,7 +98,7 @@ def VacuumDB( db_path ):
     
     c = db.cursor()
     
-    fast_big_transaction_wal = not distutils.version.LooseVersion( sqlite3.sqlite_version ) < distutils.version.LooseVersion( '3.11.0' )
+    fast_big_transaction_wal = not sqlite3.sqlite_version_info < ( 3, 11, 0 )
     
     if HG.db_journal_mode == 'WAL' and not fast_big_transaction_wal:
         

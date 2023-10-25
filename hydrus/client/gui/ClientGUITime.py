@@ -698,7 +698,7 @@ class TimeDeltaCtrl( QW.QWidget ):
     
     timeDeltaChanged = QC.Signal()
     
-    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, monthly_allowed = False, monthly_label = 'monthly' ):
+    def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, milliseconds = False, monthly_allowed = False, monthly_label = 'monthly' ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -707,6 +707,7 @@ class TimeDeltaCtrl( QW.QWidget ):
         self._show_hours = hours
         self._show_minutes = minutes
         self._show_seconds = seconds
+        self._show_milliseconds = milliseconds
         self._monthly_allowed = monthly_allowed
         
         hbox = QP.HBoxLayout( margin = 0 )
@@ -747,6 +748,15 @@ class TimeDeltaCtrl( QW.QWidget ):
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'seconds'), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
+        if self._show_milliseconds:
+            
+            self._milliseconds = ClientGUICommon.BetterSpinBox( self, min=0, max=999, width = 65 )
+            self._milliseconds.valueChanged.connect( self.EventChange )
+            
+            QP.AddToLayout( hbox, self._milliseconds, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'ms'), CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        
         if self._monthly_allowed:
             
             self._monthly = QW.QCheckBox( self )
@@ -763,49 +773,29 @@ class TimeDeltaCtrl( QW.QWidget ):
         
         value = self.GetValue()
         
-        if value is None:
+        if self._show_days:
             
-            if self._show_days:
-                
-                self._days.setEnabled( False )
-                
+            self._days.setEnabled( value is not None )
             
-            if self._show_hours:
-                
-                self._hours.setEnabled( False )
-                
+        
+        if self._show_hours:
             
-            if self._show_minutes:
-                
-                self._minutes.setEnabled( False )
-                
+            self._hours.setEnabled( value is not None )
             
-            if self._show_seconds:
-                
-                self._seconds.setEnabled( False )
-                
+        
+        if self._show_minutes:
             
-        else:
+            self._minutes.setEnabled( value is not None )
             
-            if self._show_days:
-                
-                self._days.setEnabled( True )
-                
+        
+        if self._show_seconds:
             
-            if self._show_hours:
-                
-                self._hours.setEnabled( True )
-                
+            self._seconds.setEnabled( value is not None )
             
-            if self._show_minutes:
-                
-                self._minutes.setEnabled( True )
-                
+        
+        if self._show_milliseconds:
             
-            if self._show_seconds:
-                
-                self._seconds.setEnabled( True )
-                
+            self._milliseconds.setEnabled( value is not None )
             
         
     
@@ -850,6 +840,11 @@ class TimeDeltaCtrl( QW.QWidget ):
         if self._show_seconds:
             
             value += self._seconds.value()
+            
+        
+        if self._show_milliseconds:
+            
+            value += self._milliseconds.value() / 1000
             
         
         return value
@@ -899,7 +894,14 @@ class TimeDeltaCtrl( QW.QWidget ):
             
             if self._show_seconds:
                 
-                self._seconds.setValue( value )
+                self._seconds.setValue( int( value ) )
+                
+                value %= 1
+                
+            
+            if self._show_milliseconds and value > 0:
+                
+                self._milliseconds.setValue( int( value * 1000 ) )
                 
             
         

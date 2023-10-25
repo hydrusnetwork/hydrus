@@ -17,7 +17,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
-from hydrus.core import HydrusTime
 
 mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: os.path.join( HC.STATIC_DIR, 'hydrus.png' ) )
 
@@ -553,8 +552,6 @@ def FileModifiedTimeIsOk( mtime: int ):
 
 def safe_copy2( source, dest ):
     
-    copy_metadata = True
-    
     mtime = os.path.getmtime( source )
     
     if FileModifiedTimeIsOk( mtime ):
@@ -567,6 +564,7 @@ def safe_copy2( source, dest ):
         shutil.copy( source, dest )
         
     
+
 def MergeFile( source, dest ):
     
     # this can merge a file, but if it is given a dir it will just straight up overwrite not merge
@@ -701,6 +699,24 @@ def MirrorFile( source, dest ):
         except Exception as e:
             
             HydrusData.ShowText( 'Trying to copy ' + source + ' to ' + dest + ' caused the following problem:' )
+            
+            from hydrus.core import HydrusTemp
+            
+            if isinstance( e, OSError ) and 'Errno 28' in str( e ) and dest.startswith( HydrusTemp.GetCurrentTempDir() ):
+                
+                message = 'It looks like I failed to copy a file into your temporary folder because I ran out of disk space!'
+                message += '\n' * 2
+                message += 'This folder is on your system drive, so either free up space on that or use the "--temp_dir" launch command to tell hydrus to use a different location for the temporary folder. (Check the advanced help for more info!)'
+                message += '\n' * 2
+                message += 'If your system drive appears to have space but your temp folder still maxed out, then there are probably special rules about how big a file we are allowed to put in there. Use --temp_dir.'
+                
+                if HC.PLATFORM_LINUX:
+                    
+                    message += ' You are also on Linux, where these temp dir rules are not uncommon!'
+                    
+                
+                HydrusData.ShowText( message )
+                
             
             HydrusData.ShowException( e )
             

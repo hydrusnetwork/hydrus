@@ -57,7 +57,7 @@ class DatabaseMaintenanceManager( object ):
         return True
         
     
-    def _GetWaitPeriod( self, still_work_to_do: bool ):
+    def _GetWaitPeriod( self, work_period: float, time_it_took: float, still_work_to_do: bool ):
         
         if not still_work_to_do:
             
@@ -66,33 +66,35 @@ class DatabaseMaintenanceManager( object ):
         
         if self._is_working_hard:
             
-            return 0.5
+            rest_ratio = HG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_work_hard' ) / 100
             
-        
-        if HG.client_controller.CurrentlyIdle():
+        elif HG.client_controller.CurrentlyIdle():
             
-            return 2.0
+            rest_ratio = HG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_idle' ) / 100
             
         else:
             
-            return 2.5
+            rest_ratio = HG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_normal' ) / 100
             
+        
+        reasonable_work_time = min( 5 * work_period, time_it_took )
+        
+        return reasonable_work_time * rest_ratio
         
     
     def _GetWorkPeriod( self ):
         
         if self._is_working_hard:
             
-            return 5.0
+            return HG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) / 1000
             
-        
-        if HG.client_controller.CurrentlyIdle():
+        elif HG.client_controller.CurrentlyIdle():
             
-            return 20.0
+            return HG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) / 1000
             
         else:
             
-            return 0.25
+            return HG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) / 1000
             
         
     
@@ -131,9 +133,13 @@ class DatabaseMaintenanceManager( object ):
                     work_period = self._GetWorkPeriod()
                     
                 
+                time_it_took = 1.0
+                
                 if able_to_work:
                     
                     time_to_stop = HydrusTime.GetNowFloat() + work_period
+                    
+                    start_time = HydrusTime.GetNowFloat()
                     
                     try:
                         
@@ -156,10 +162,12 @@ class DatabaseMaintenanceManager( object ):
                         self._controller.pub( 'notify_deferred_delete_database_maintenance_work_complete' )
                         
                     
+                    time_it_took = HydrusTime.GetNowFloat() - start_time
+                    
                 
                 with self._lock:
                     
-                    wait_period = self._GetWaitPeriod( still_work_to_do )
+                    wait_period = self._GetWaitPeriod( work_period, time_it_took, still_work_to_do )
                     
                 
                 self._wake_event.wait( wait_period )
