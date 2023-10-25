@@ -460,6 +460,8 @@ class Animation( QW.QWidget ):
         
         current_frame_image = current_frame.GetQtImage()
         
+        painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True )
+
         # note we draw to self.rect(), which is in DPR coordinates. the pixmap needs to be DPR'd by here mate, this caught us up before
         painter.drawImage( self.rect(), current_frame_image )
         
