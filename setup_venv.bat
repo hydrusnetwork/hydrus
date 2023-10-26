@@ -76,16 +76,33 @@ ECHO:
 ECHO Qt - User Interface
 ECHO:
 ECHO Most people want "6".
-ECHO If you are on Windows ^<=8.1, choose "5".
-ECHO If you have multi-monitor menu position bugs with the normal Qt6, try "o" on Python ^<=3.10 or "m" on Python ^>=3.11.
-SET /P qt="Do you want Qt(5), Qt(6), Qt6 (o)lder, Qt6 (m)iddle or (t)est? "
+ECHO If you are on Windows ^<=8.1, choose "5". If you want a specific version, choose "a".
+SET /P qt="Do you want Qt(5), Qt(6), or (a)dvanced? "
 
 IF "%qt%" == "5" goto :question_mpv
 IF "%qt%" == "6" goto :question_mpv
+IF "%qt%" == "a" goto :question_qt_advanced
+goto :parse_fail
+
+:question_qt_advanced
+
+ECHO:
+ECHO If you have multi-monitor menu position bugs with the normal Qt6, try "o" on Python ^<=3.10 or "m" on Python ^>=3.11.
+SET /P qt="Do you want Qt6 (o)lder, Qt6 (m)iddle, Qt6 (t)est, or (w)rite your own? "
+
 IF "%qt%" == "o" goto :question_mpv
 IF "%qt%" == "m" goto :question_mpv
 IF "%qt%" == "t" goto :question_mpv
+IF "%qt%" == "w" goto :question_qt_custom
 goto :parse_fail
+
+:question_qt_custom
+
+ECHO:
+SET /P qt_custom_pyside6="Enter the exact PySide6 version you want, e.g. '6.6.0': "
+SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.1'): "
+
+goto :question_mpv
 
 :question_mpv
 
@@ -175,6 +192,33 @@ IF "%install_type%" == "d" (
 )
 
 IF "%install_type%" == "a" (
+
+    IF "%qt%" == "w" (
+
+        python -m pip install QtPy==%qt_custom_qtpy%
+
+        IF ERRORLEVEL 1 (
+
+            SET /P gumpf="It looks like we could not find that qtpy version!"
+
+            popd
+
+            EXIT /B 1
+
+        )
+
+        python -m pip install PySide6==%qt_custom_pyside6%
+
+        IF ERRORLEVEL 1 (
+
+            SET /P gumpf="It looks like we could not find that PySide6 version!"
+
+            popd
+
+            EXIT /B 1
+
+        )
+    )
 
     python -m pip install -r static\requirements\advanced\requirements_core.txt
     python -m pip install -r static\requirements\advanced\requirements_windows.txt

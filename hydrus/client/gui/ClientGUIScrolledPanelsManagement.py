@@ -1812,12 +1812,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = HG.client_controller.new_options
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
-            self._file_maintenance_panel = ClientGUICommon.StaticBox( self, 'file maintenance' )
-            
-            self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
-            self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
             
             #
+            
+            self._idle_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'idle' )
             
             self._idle_normal = QW.QCheckBox( self._idle_panel )
             self._idle_normal.clicked.connect( self._EnableDisableIdleNormal )
@@ -1829,6 +1827,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._system_busy_cpu_count = ClientGUICommon.NoneableSpinCtrl( self._idle_panel, min = 1, max = 64, unit = 'cores', none_phrase = 'ignore cpu usage' )
             
             #
+            
+            self._shutdown_panel = ClientGUICommon.StaticBox( self._jobs_panel, 'shutdown' )
             
             self._idle_shutdown = ClientGUICommon.BetterChoice( self._shutdown_panel )
             
@@ -1843,6 +1843,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._shutdown_work_period = ClientGUITime.TimeDeltaButton( self._shutdown_panel, min = 60, days = True, hours = True, minutes = True )
             
             #
+            
+            self._file_maintenance_panel = ClientGUICommon.StaticBox( self, 'file maintenance' )
             
             min_unit_value = 1
             max_unit_value = 1000
@@ -1862,6 +1864,109 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._file_maintenance_idle_throttle_velocity.setToolTip( tt )
             self._file_maintenance_active_throttle_velocity.setToolTip( tt )
+            
+            #
+            
+            self._repository_processing_panel = ClientGUICommon.StaticBox( self, 'repository processing' )
+            
+            self._repository_processing_work_time_very_idle = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. Very Idle is after an hour of idle mode.'
+            self._repository_processing_work_time_very_idle.setToolTip( tt )
+            
+            self._repository_processing_rest_percentage_very_idle = ClientGUICommon.BetterSpinBox( self._repository_processing_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. Very Idle is after an hour of idle mode.'
+            self._repository_processing_rest_percentage_very_idle.setToolTip( tt )
+            
+            self._repository_processing_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
+            self._repository_processing_work_time_idle.setToolTip( tt )
+            
+            self._repository_processing_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._repository_processing_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
+            self._repository_processing_rest_percentage_idle.setToolTip( tt )
+            
+            self._repository_processing_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
+            self._repository_processing_work_time_normal.setToolTip( tt )
+            
+            self._repository_processing_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._repository_processing_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
+            self._repository_processing_rest_percentage_normal.setToolTip( tt )
+            
+            #
+            
+            self._tag_display_processing_panel = ClientGUICommon.StaticBox( self, 'sibling/parent sync processing' )
+            
+            self._tag_display_maintenance_during_idle = QW.QCheckBox( self._tag_display_processing_panel )
+            self._tag_display_maintenance_during_active = QW.QCheckBox( self._tag_display_processing_panel )
+            tt = 'This can be a real killer. If you are catching up with the PTR and notice a lot of lag bumps, sometimes several seconds long, try turning this off.'
+            self._tag_display_maintenance_during_active.setToolTip( tt )
+            
+            self._tag_display_processing_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
+            self._tag_display_processing_work_time_idle.setToolTip( tt )
+            
+            self._tag_display_processing_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._tag_display_processing_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
+            self._tag_display_processing_rest_percentage_idle.setToolTip( tt )
+            
+            self._tag_display_processing_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
+            self._tag_display_processing_work_time_normal.setToolTip( tt )
+            
+            self._tag_display_processing_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._tag_display_processing_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
+            self._tag_display_processing_rest_percentage_normal.setToolTip( tt )
+            
+            self._tag_display_processing_work_time_work_hard = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force it to work hard through the dialog.'
+            self._tag_display_processing_work_time_work_hard.setToolTip( tt )
+            
+            self._tag_display_processing_rest_percentage_work_hard = ClientGUICommon.BetterSpinBox( self._tag_display_processing_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force it to work hard through the dialog.'
+            self._tag_display_processing_rest_percentage_work_hard.setToolTip( tt )
+            
+            #
+            
+            self._duplicates_panel = ClientGUICommon.StaticBox( self, 'potential duplicates search' )
+            
+            self._maintain_similar_files_duplicate_pairs_during_idle = QW.QCheckBox( self._duplicates_panel )
+            
+            self._potential_duplicates_search_work_time = ClientGUITime.TimeDeltaCtrl( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
+            self._potential_duplicates_search_work_time.setToolTip( tt )
+            
+            self._potential_duplicates_search_rest_percentage = ClientGUICommon.BetterSpinBox( self._duplicates_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
+            self._potential_duplicates_search_rest_percentage.setToolTip( tt )
+            
+            #
+            
+            self._deferred_table_delete_panel = ClientGUICommon.StaticBox( self, 'deferred table delete' )
+            
+            self._deferred_table_delete_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
+            self._deferred_table_delete_work_time_idle.setToolTip( tt )
+            
+            self._deferred_table_delete_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._deferred_table_delete_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
+            self._deferred_table_delete_rest_percentage_idle.setToolTip( tt )
+            
+            self._deferred_table_delete_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
+            self._deferred_table_delete_work_time_normal.setToolTip( tt )
+            
+            self._deferred_table_delete_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._deferred_table_delete_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
+            self._deferred_table_delete_rest_percentage_normal.setToolTip( tt )
+            
+            self._deferred_table_delete_work_time_work_hard = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force it to work hard through the dialog.'
+            self._deferred_table_delete_work_time_work_hard.setToolTip( tt )
+            
+            self._deferred_table_delete_rest_percentage_work_hard = ClientGUICommon.BetterSpinBox( self._deferred_table_delete_panel, min = 0, max = 100000 )
+            tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force it to work hard through the dialog.'
+            self._deferred_table_delete_rest_percentage_work_hard.setToolTip( tt )
             
             #
             
@@ -1893,6 +1998,40 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             file_maintenance_active_throttle_velocity = ( file_maintenance_active_throttle_files, file_maintenance_active_throttle_time_delta )
             
             self._file_maintenance_active_throttle_velocity.SetValue( file_maintenance_active_throttle_velocity )
+            
+            self._repository_processing_work_time_very_idle.SetValue( self._new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) / 1000 )
+            self._repository_processing_rest_percentage_very_idle.setValue( self._new_options.GetInteger( 'repository_processing_rest_percentage_very_idle' ) )
+            
+            self._repository_processing_work_time_idle.SetValue( self._new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) / 1000 )
+            self._repository_processing_rest_percentage_idle.setValue( self._new_options.GetInteger( 'repository_processing_rest_percentage_idle' ) )
+            
+            self._repository_processing_work_time_normal.SetValue( self._new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) / 1000 )
+            self._repository_processing_rest_percentage_normal.setValue( self._new_options.GetInteger( 'repository_processing_rest_percentage_normal' ) )
+            
+            self._tag_display_maintenance_during_idle.setChecked( self._new_options.GetBoolean( 'tag_display_maintenance_during_idle' ) )
+            self._tag_display_maintenance_during_active.setChecked( self._new_options.GetBoolean( 'tag_display_maintenance_during_active' ) )
+            
+            self._tag_display_processing_work_time_idle.SetValue( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) / 1000 )
+            self._tag_display_processing_rest_percentage_idle.setValue( self._new_options.GetInteger( 'tag_display_processing_rest_percentage_idle' ) )
+            
+            self._tag_display_processing_work_time_normal.SetValue( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) / 1000 )
+            self._tag_display_processing_rest_percentage_normal.setValue( self._new_options.GetInteger( 'tag_display_processing_rest_percentage_normal' ) )
+            
+            self._tag_display_processing_work_time_work_hard.SetValue( self._new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) / 1000 )
+            self._tag_display_processing_rest_percentage_work_hard.setValue( self._new_options.GetInteger( 'tag_display_processing_rest_percentage_work_hard' ) )
+            
+            self._maintain_similar_files_duplicate_pairs_during_idle.setChecked( self._new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ) )
+            self._potential_duplicates_search_work_time.SetValue( self._new_options.GetInteger( 'potential_duplicates_search_work_time_ms' ) / 1000 )
+            self._potential_duplicates_search_rest_percentage.setValue( self._new_options.GetInteger( 'potential_duplicates_search_rest_percentage' ) )
+            
+            self._deferred_table_delete_work_time_idle.SetValue( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) / 1000 )
+            self._deferred_table_delete_rest_percentage_idle.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_idle' ) )
+            
+            self._deferred_table_delete_work_time_normal.SetValue( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) / 1000 )
+            self._deferred_table_delete_rest_percentage_normal.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_normal' ) )
+            
+            self._deferred_table_delete_work_time_work_hard.SetValue( self._new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) / 1000 )
+            self._deferred_table_delete_rest_percentage_work_hard.setValue( self._new_options.GetInteger( 'deferred_table_delete_rest_percentage_work_hard' ) )
             
             #
             
@@ -1975,10 +2114,89 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            message = 'Repository processing takes a lot of CPU and works best when it can rip for long periods in idle time.'
+            
+            self._repository_processing_panel.Add( ClientGUICommon.BetterStaticText( self._repository_processing_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( '"Very idle" ideal work packet time: ', self._repository_processing_work_time_very_idle ) )
+            rows.append( ( '"Very idle" rest time percentage: ', self._repository_processing_rest_percentage_very_idle ) )
+            rows.append( ( '"Idle" ideal work packet time: ', self._repository_processing_work_time_idle ) )
+            rows.append( ( '"Idle" rest time percentage: ', self._repository_processing_rest_percentage_idle ) )
+            rows.append( ( '"Normal" ideal work packet time: ', self._repository_processing_work_time_normal ) )
+            rows.append( ( '"Normal" rest time percentage: ', self._repository_processing_rest_percentage_normal ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._repository_processing_panel, rows )
+            
+            self._repository_processing_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            message = 'The database compiles sibling and parent implication calculations in the background. This can use a LOT of CPU in big bumps.'
+            
+            self._tag_display_processing_panel.Add( ClientGUICommon.BetterStaticText( self._tag_display_processing_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Do work in "idle" time: ', self._tag_display_maintenance_during_idle ) )
+            rows.append( ( '"Idle" ideal work packet time: ', self._tag_display_processing_work_time_idle ) )
+            rows.append( ( '"Idle" rest time percentage: ', self._tag_display_processing_rest_percentage_idle ) )
+            rows.append( ( 'Do work in "normal" time: ', self._tag_display_maintenance_during_active ) )
+            rows.append( ( '"Normal" ideal work packet time: ', self._tag_display_processing_work_time_normal ) )
+            rows.append( ( '"Normal" rest time percentage: ', self._tag_display_processing_rest_percentage_normal ) )
+            rows.append( ( '"Work hard" ideal work packet time: ', self._tag_display_processing_work_time_work_hard ) )
+            rows.append( ( '"Work hard" rest time percentage: ', self._tag_display_processing_rest_percentage_work_hard ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._tag_display_processing_panel, rows )
+            
+            self._tag_display_processing_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            message = 'The search for potential duplicate file pairs (as on the duplicates page) can keep up to date automatically in idle time and shutdown.'
+            
+            self._duplicates_panel.Add( ClientGUICommon.BetterStaticText( self._duplicates_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Search for potential duplicates in idle time/shutdown: ', self._maintain_similar_files_duplicate_pairs_during_idle ) )
+            rows.append( ( '"Idle" ideal work packet time: ', self._potential_duplicates_search_work_time ) )
+            rows.append( ( '"Idle" rest time percentage: ', self._potential_duplicates_search_rest_percentage ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._duplicates_panel, rows )
+            
+            self._duplicates_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
+            message = 'The database deletes old data in the background.'
+            
+            self._deferred_table_delete_panel.Add( ClientGUICommon.BetterStaticText( self._deferred_table_delete_panel, label = message ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( '"Idle" ideal work packet time: ', self._deferred_table_delete_work_time_idle ) )
+            rows.append( ( '"Idle" rest time percentage: ', self._deferred_table_delete_rest_percentage_idle ) )
+            rows.append( ( '"Normal" ideal work packet time: ', self._deferred_table_delete_work_time_normal ) )
+            rows.append( ( '"Normal" rest time percentage: ', self._deferred_table_delete_rest_percentage_normal ) )
+            rows.append( ( '"Work hard" ideal work packet time: ', self._deferred_table_delete_work_time_work_hard ) )
+            rows.append( ( '"Work hard" rest time percentage: ', self._deferred_table_delete_rest_percentage_work_hard ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self._deferred_table_delete_panel, rows )
+            
+            self._deferred_table_delete_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            #
+            
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._jobs_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._file_maintenance_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._repository_processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._tag_display_processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._duplicates_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, self._deferred_table_delete_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 1 )
             
             self.setLayout( vbox )
@@ -2049,6 +2267,40 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'file_maintenance_active_throttle_files', file_maintenance_active_throttle_files )
             self._new_options.SetInteger( 'file_maintenance_active_throttle_time_delta', file_maintenance_active_throttle_time_delta )
+            
+            self._new_options.SetInteger( 'repository_processing_work_time_ms_very_idle', int( self._repository_processing_work_time_very_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'repository_processing_rest_percentage_very_idle', self._repository_processing_rest_percentage_very_idle.value() )
+            
+            self._new_options.SetInteger( 'repository_processing_work_time_ms_idle', int( self._repository_processing_work_time_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'repository_processing_rest_percentage_idle', self._repository_processing_rest_percentage_idle.value() )
+            
+            self._new_options.SetInteger( 'repository_processing_work_time_ms_normal', int( self._repository_processing_work_time_normal.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'repository_processing_rest_percentage_normal', self._repository_processing_rest_percentage_normal.value() )
+            
+            self._new_options.SetBoolean( 'tag_display_maintenance_during_idle', self._tag_display_maintenance_during_idle.isChecked() )
+            self._new_options.SetBoolean( 'tag_display_maintenance_during_active', self._tag_display_maintenance_during_active.isChecked() )
+            
+            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_idle', int( self._tag_display_processing_work_time_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'tag_display_processing_rest_percentage_idle', self._tag_display_processing_rest_percentage_idle.value() )
+            
+            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_normal', int( self._tag_display_processing_work_time_normal.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'tag_display_processing_rest_percentage_normal', self._tag_display_processing_rest_percentage_normal.value() )
+            
+            self._new_options.SetInteger( 'tag_display_processing_work_time_ms_work_hard', int( self._tag_display_processing_work_time_work_hard.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'tag_display_processing_rest_percentage_work_hard', self._tag_display_processing_rest_percentage_work_hard.value() )
+            
+            self._new_options.SetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle', self._maintain_similar_files_duplicate_pairs_during_idle.isChecked() )
+            self._new_options.SetInteger( 'potential_duplicates_search_work_time_ms', int( self._potential_duplicates_search_work_time.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'potential_duplicates_search_rest_percentage', self._potential_duplicates_search_rest_percentage.value() )
+            
+            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_idle', int( self._deferred_table_delete_work_time_idle.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'deferred_table_delete_rest_percentage_idle', self._deferred_table_delete_rest_percentage_idle.value() )
+            
+            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_normal', int( self._deferred_table_delete_work_time_normal.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'deferred_table_delete_rest_percentage_normal', self._deferred_table_delete_rest_percentage_normal.value() )
+            
+            self._new_options.SetInteger( 'deferred_table_delete_work_time_ms_work_hard', int( self._deferred_table_delete_work_time_work_hard.GetValue() * 1000 ) )
+            self._new_options.SetInteger( 'deferred_table_delete_rest_percentage_work_hard', self._deferred_table_delete_rest_percentage_work_hard.value() )
             
         
     

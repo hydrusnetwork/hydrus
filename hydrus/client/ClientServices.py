@@ -2110,18 +2110,18 @@ class ServiceRepository( ServiceRestricted ):
                         
                         if HG.client_controller.CurrentlyVeryIdle():
                             
-                            work_time = 30
-                            break_percentage = 0.03
+                            work_time = HG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) / 1000
+                            rest_ratio = HG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_very_idle' ) / 100
                             
                         elif HG.client_controller.CurrentlyIdle():
                             
-                            work_time = 10
-                            break_percentage = 0.05
+                            work_time = HG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) / 1000
+                            rest_ratio = HG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_idle' ) / 100
                             
                         else:
                             
-                            work_time = 0.5
-                            break_percentage = 0.1
+                            work_time = HG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) / 1000
+                            rest_ratio = HG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_normal' ) / 100
                             
                         
                         start_time = HydrusTime.GetNowPrecise()
@@ -2147,7 +2147,9 @@ class ServiceRepository( ServiceRestricted ):
                             return
                             
                         
-                        time.sleep( break_percentage * time_it_took )
+                        reasonable_work_time = min( 5 * work_time, time_it_took )
+                        
+                        time.sleep( reasonable_work_time * rest_ratio )
                         
                         self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'definitions' )
                         
@@ -2258,18 +2260,18 @@ class ServiceRepository( ServiceRestricted ):
                         
                         if HG.client_controller.CurrentlyVeryIdle():
                             
-                            work_time = 30
-                            break_percentage = 0.03
+                            work_time = HG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_very_idle' ) / 1000
+                            rest_ratio = HG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_very_idle' ) / 100
                             
                         elif HG.client_controller.CurrentlyIdle():
                             
-                            work_time = 10
-                            break_percentage = 0.05
+                            work_time = HG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_idle' ) / 1000
+                            rest_ratio = HG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_idle' ) / 100
                             
                         else:
                             
-                            work_time = 0.5
-                            break_percentage = 0.1
+                            work_time = HG.client_controller.new_options.GetInteger( 'repository_processing_work_time_ms_normal' ) / 1000
+                            rest_ratio = HG.client_controller.new_options.GetInteger( 'repository_processing_rest_percentage_normal' ) / 100
                             
                         
                         start_time = HydrusTime.GetNowPrecise()
@@ -2295,7 +2297,9 @@ class ServiceRepository( ServiceRestricted ):
                             return
                             
                         
-                        time.sleep( break_percentage * time_it_took )
+                        reasonable_work_time = min( 5 * work_time, time_it_took )
+                        
+                        time.sleep( reasonable_work_time * rest_ratio )
                         
                         self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'content rows' )
                         

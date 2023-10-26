@@ -739,7 +739,11 @@ class DuplicatesManager( object ):
                 
                 start_time = HydrusTime.GetNowPrecise()
                 
-                ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key, work_time_float = 0.5 )
+                work_time_ms = HG.client_controller.new_options.GetInteger( 'potential_duplicates_search_work_time_ms' )
+                
+                work_time = work_time_ms / 1000
+                
+                ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key, work_time_float = work_time )
                 
                 time_it_took = HydrusTime.GetNowPrecise() - start_time
                 
@@ -773,7 +777,11 @@ class DuplicatesManager( object ):
                     break
                     
                 
-                time.sleep( min( 5, time_it_took ) ) # ideally 0.5s, but potentially longer
+                rest_ratio = HG.client_controller.new_options.GetInteger( 'potential_duplicates_search_rest_percentage' ) / 100
+                
+                reasonable_work_time = min( 5 * work_time, time_it_took )
+                
+                time.sleep( reasonable_work_time * rest_ratio )
                 
             
             job_key.Delete()

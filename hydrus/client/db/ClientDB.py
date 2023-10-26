@@ -1440,8 +1440,6 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE:
                 
-                now = HydrusTime.GetNow()
-                
                 rows = [ ( hash_id, now ) for hash_id in existing_hash_ids ]
                 
                 self._AddFiles( self.modules_services.combined_deleted_file_service_id, rows )
@@ -1450,8 +1448,6 @@ class DB( HydrusDB.HydrusDB ):
             # if any files are no longer in any local file services, remove from the umbrella and send them to the trash
             
             if service_id in local_file_service_ids:
-                
-                hash_ids_still_in_another_service = set()
                 
                 other_local_file_service_ids = set( local_file_service_ids )
                 other_local_file_service_ids.discard( service_id )
@@ -1496,7 +1492,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        # push the info updates, notify
+        # push the info updates
         
         self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', service_info_updates )
         
@@ -5576,11 +5572,15 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord()
                                 
+                                self._SyncCombinedDeletedFiles()
+                                
                             else:
                                 
                                 hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
                                 
                                 service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord( hash_ids )
+                                
+                                self._SyncCombinedDeletedFiles( hash_ids )
                                 
                             
                             self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ( -num_cleared, clear_service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) for ( clear_service_id, num_cleared ) in service_ids_to_nums_cleared.items() ) )
@@ -8257,6 +8257,84 @@ class DB( HydrusDB.HydrusDB ):
         self._SaveOptions( self._controller.options )
         
     
+    def _SyncCombinedDeletedFiles( self, hash_ids = None, do_full_rebuild = False ):
+        
+        combined_files_stakeholder_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE )
+        
+        hash_ids_that_are_desired = set()
+        
+        if hash_ids is None:
+            
+            for service_id in combined_files_stakeholder_service_ids:
+                
+                hash_ids_that_are_desired.update( self.modules_files_storage.GetDeletedHashIdsList( service_id ) )
+                
+            
+            existing_hash_ids = set( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_deleted_file_service_id ) )
+            
+        else:
+            
+            for service_id in combined_files_stakeholder_service_ids:
+                
+                hash_ids_that_are_desired.update( self.modules_files_storage.FilterHashIdsToStatus( service_id, hash_ids, HC.CONTENT_STATUS_DELETED ) )
+                
+            
+            existing_hash_ids = self.modules_files_storage.FilterHashIdsToStatus( self.modules_services.combined_deleted_file_service_id, hash_ids, HC.CONTENT_STATUS_CURRENT )
+            
+        
+        if do_full_rebuild:
+            
+            # this happens in the full 'regenerate' call from the UI database menu. full wipe and recalculation to get any errant timestamps
+            
+            hash_ids_to_remove = existing_hash_ids
+            hash_ids_to_add = hash_ids_that_are_desired
+            
+        else:
+            
+            hash_ids_to_remove = existing_hash_ids.difference( hash_ids_that_are_desired )
+            hash_ids_to_add = hash_ids_that_are_desired.difference( existing_hash_ids )
+            
+        
+        if len( hash_ids_to_remove ) > 0:
+            
+            self._DeleteFiles( self.modules_services.combined_deleted_file_service_id, hash_ids_to_remove, only_if_current = True )
+            
+        
+        if len( hash_ids_to_add ) > 0:
+            
+            hash_ids_to_earliest_timestamps = {}
+            
+            for service_id in combined_files_stakeholder_service_ids:
+                
+                hash_ids_to_both_timestamps = self.modules_files_storage.GetDeletedHashIdsToTimestamps( service_id, hash_ids_to_add )
+                
+                for ( hash_id, ( timestamp, original_timestamp ) ) in hash_ids_to_both_timestamps.items():
+                    
+                    if hash_id in hash_ids_to_earliest_timestamps:
+                        
+                        if timestamp is not None:
+                            
+                            existing_timestamp = hash_ids_to_earliest_timestamps[ hash_id ]
+                            
+                            if existing_timestamp is None or timestamp < existing_timestamp:
+                                
+                                hash_ids_to_earliest_timestamps[ hash_id ] = timestamp
+                                
+                            
+                        
+                    else:
+                        
+                        hash_ids_to_earliest_timestamps[ hash_id ] = timestamp
+                        
+                    
+                
+            
+            rows = list( hash_ids_to_earliest_timestamps.items() )
+            
+            self._AddFiles( self.modules_services.combined_deleted_file_service_id, rows )
+            
+        
+    
     def _UndeleteFiles( self, service_id, hash_ids ):
         
         if service_id in ( self.modules_services.combined_local_file_service_id, self.modules_services.combined_local_media_service_id, self.modules_services.trash_service_id ):
@@ -9993,6 +10071,67 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 548:
+            
+            self._controller.frame_splash_status.SetSubtext( f'fixing some old delete records' )
+            
+            try:
+                
+                self._SyncCombinedDeletedFiles( do_full_rebuild = False ) # first time I wrote do_full_rebuild, it was too slow!
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to resynchronise the deleted file cache failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+            #
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'sankaku file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'sankaku chan file page',
+                    'sankaku chan file page (old md5 format)',
+                    'sankaku chan file page (old id format)'
+                ] )
+                
+                domain_manager.DeleteURLClasses( [
+                    'sankaku chan file page (md5)'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10507,6 +10646,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'process_repository_content': result = self._ProcessRepositoryContent( *args, **kwargs )
         elif action == 'process_repository_definitions': result = self.modules_repositories.ProcessRepositoryDefinitions( *args, **kwargs )
         elif action == 'push_recent_tags': self.modules_recent_tags.PushRecentTags( *args, **kwargs )
+        elif action == 'regenerate_combined_deleted_files': self._SyncCombinedDeletedFiles( *args, **kwargs )
         elif action == 'regenerate_local_hash_cache': self._RegenerateLocalHashCache( *args, **kwargs )
         elif action == 'regenerate_local_tag_cache': self._RegenerateLocalTagCache( *args, **kwargs )
         elif action == 'regenerate_similar_files': self.modules_similar_files.RegenerateTree( *args, **kwargs )

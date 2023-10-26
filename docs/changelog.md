@@ -7,6 +7,47 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 549](https://github.com/hydrusnetwork/hydrus/releases/tag/v549)
+
+### misc
+
+* optimised taglist sorting code, which is really groaning when it gets to 50k+ unique tags. the counting is more efficient now, but more work can be done
+* optimised taglist internal update recalc by updating existing items in place instead of remove/replace and skipping cleanup-sort when no new items are added and/or the sort is not count-based. it should also preserve selection and focus stuff a bit better now
+* thanks to a user, we have some new url classes to handle the recent change in sankaku URL format. your sank subscriptions are likely to go slightly crazy for a week as they figure out where they are caught up to, sorry!
+* if a file copy into your temp directory fails due to 'Errno 28 No space left on device', the client now pops up more information about this specific problem, which is often a symptom of trying to import a 4GB drive into a ramdisk-hosted tempdir and similar. many Linux flavours relatedly have special rules about the max filesize in the tempdir!
+
+### maintenance and processing
+
+* _advanced users only, don't worry about it too much_
+* the _options->maintenance and processing_ page has several advanced new settings. these are all separately hardcoded systems that I have merged into more of the same logic this week. the UI is a tower of spam, but it will serve us useful when we want to test and fine tune clients that are having various sorts of maintenance trouble
+* a new section for potential duplicate search now duplicates the 'do search in idle time' setting you see in the duplicates page and has new 'work packet time' and 'rest time percentage' settings
+* a new section for repository processing now exposes the similar 'work/rest' timings for 'normal', 'idle', and 'very idle' (after an hour of idle mode). **if I have been working with you on freezes or memory explosions during PTR processing, increase the rest percentages here to 50-2,000, let's see if that gives your client time to breathe and clean up old work**
+* a new section for sibling/parent sync does the same, for 'idle', 'normal', and 'work hard' modes **same deal here probably**
+* a new section for the deferred database table delete system does the same, for 'idle', 'normal', and 'work hard' modes
+* I duplicated the 'do sibling/parent sync in idle/normal time' _tags_ menu settings to this options page. they are synced, so altering one updates the other
+* if you change the 'run file maintenance jobs in idle/normal time' settings in the dialog, the _database_ menu now properly updates to reflect any changes
+* the way these various systems calculate their rest time now smoothes out extreme bumps. sibling/parent display, in particular, should wait for a good amount of time after a big bump, but won't allow itself to wait for a crazy amount of time
+
+### all deleted files
+
+* fixed the various 'clear deletion record' commands to also remove from the 'all deleted files' service cache, which stores all your deleted files for all known specific file services and is used for various search tech on deleted file domains
+* also wrote a command to completely regen this cache from original deletion records. it can be fired under _database->regenerate->all deleted files_. this will happen on update, to fix the above retroactively
+* removed the foolish 'deleted from all deleted files' typo-entry from the advanced multiple file domain selector list. the value and use of a deletion record from a virtual combined deletion record is a complicated idea, and the entities that lurk in the shadows of the inverse sphere would strongly prefer that we not consider the matter any more
+
+### running from source stuff
+
+* **the setup_venv script has slightly different Qt questions this week, so if you have your own custom script that types the letters in for you, double-check what it is going to do before updating this week!**
+* there's a new version of PySide6, 6.6.0. the `(t)est` Qt version in the 'setup_venv' now points to this. it seems fine to me on a fairly normal Win 11 machine, but if recent history is any guide, there's going to be a niggle somewhere. if you have been waiting for a fix on the menu position issue or anything else, give it a go! if things go well, I'll roll this into a larger 'future' test release and then we'll integrate it into main
+* also, since Qt is the most test-heavy library we have, the 'setup_venv' scripts for all platforms now have an option to `(w)rite` your own version in!
+* the program no longer needs `distutils`, and thus should now be compatible (or less incompatible, let's see, ha ha) with python 3.12. thanks for the user report and assistance here
+
+### boring stuff
+
+* rejiggered a couple of maintenance flows to spend less time aggressively chilling out doing nothing
+* the hydrus timedelta widget can now handle milliseconds
+* misc code cleaning
+* fixed a typo in the thumbnail 'select->local/not local' descriptions/tooltips
+
 ## [Version 548](https://github.com/hydrusnetwork/hydrus/releases/tag/v548)
 
 ### user contributions
@@ -349,50 +390,3 @@ title: Changelog
 * the `file_metadata` call now has two new fields, `filetype_human`, which looks like 'jpeg' or 'webm', and `filetype_enum`, which uses internal hydrus filetype numbers
 * the help and unit tests are updated for this
 * client api version is now 50
-
-## [Version 539](https://github.com/hydrusnetwork/hydrus/releases/tag/v539)
-
-### another new library today
-
-* **if you run from source, I recommend you rebuild your venv today. we've got another library to add full PSD support**
-
-### viewable PSD files
-
-* thanks to a user, hydrus can now view PSD files in the main viewer, just like any other file. it can be a bit slow to load, and you can't show/hide away layers or anything, but for simply showing the image as-is, it works great
-* because this needs more CPU than for normal images, we're starting out with conservative view settings. while PSD files will show as normal in the media viewer, they'll only show the 'open externally' button in the preview viewer. see how it works for you, and remember you can change it under _options->media_. if there isn't any real problem IRL with showing even big PSDs everywhere, I'll change the defaults, so let's see how it goes
-* and of course if you have a borked PSD--say one that shows up in all the wrong colours, or has bad transparency--please send it in and I'll have a look. there is apparently a rare class of PSD files that simply won't render at all with our new system, and hydrus is pretty bad at handling that situation, so that'd also be useful if at the very least to get me to write some better error handling code
-* just like last week, if you run from source, please rebuild your venv again today--there's a PSD-handling library that supports all this
-* all PSD files will be scheduled for a thumbnail regen on update
-
-### static vs animated gif
-
-* the program now treats still and animated gifs as separate file types for the purpose of searching and selecting display options (previously, static gifs were just animated gifs with no duration). most people won't have many static gifs, so this doesn't matter too much, but it cleans up our image/animation filetype group distinction and makes a bunch of behind the scenes stuff simpler. all your gifs will be set to either camp on update
-* if you have an existing file import options or system:filetype that looked for gifs specifically, it will now search for 'animated gifs' only, so watch out if you need 'static gif' too/instead
-
-### parseable rating predicates
-
-* the system predicate parser (including the Client API) now accepts system:rating predicates. type 'system:has rating (service name)' or 'system:rating for (service name) > 4/5' or other reasonable variants and it should pre-fill
-* in the UI, the system 'has/no rating' predicate strings are now in the format 'has a rating for (service name)' and 'does not have a rating for (service name)'. (previously it was 'has/no (service name) rating', which is out of step with our usual syntax and generally unhelpfully parsing-ambiguous)
-* added a bunch of unit tests for this
-
-### misc
-
-* fixed the 'network timeout' setting under _options->connection_, which was not saving changes
-* the media viewer top hover window now enables/disables the 'show file metadata' button--rather than shows/hides--in order to stop the buttons on the left jumping around so much when you scroll through media
-* the duplicate filter's always-on-top right-hand window is fixed in place again. the buttons won't jump around any more. if the notes hover grows to overlap it, it won't show over it as long as your mouse is over the duplicate hover. this should make clicking those duplicate buttons on note-heavy files far less frustrating. sorry for the late fix here!
-* the duplicate filter now always presents a statement on the pair's filetypes, even if they are the same (it'll say like 'both are pngs'). this is to help catch the upcoming PSD matches (where you probably do not want to delete either) and other weirdness as we add new filetypes
-* just a small thing, but the 'management panel' labels are renamed broadly to 'sidebar' under the _pages_ menu. the panel on the left of pages is now called 'sidebar', and the wx-era 'sash' wording is gone
-* there's an issue with the file metadata reparse system right now where, on a filetype change, it will often fail to cleanly rename bigger files (e.g. from x.mkv to x.webm). the result is the file copies and the old one is never deleted, leaving a duplicate that is not properly cleared up later. on update this week, I am scheduling a fresh cleanup for these dupes. if, like me, you have a lot of large AV1-encoded vidya capture mkvs, you may have noticed your hydrus folders suddenly bloated in size this past week--this should be 99% fixed soon. I will fix the underlying issue here next week
-* touched up the 'running from source' help and 'setup_venv' texts in general and specifically regarding some new version info stuff. it looks like macOS <= 10.15 can't handle last week's new Qt6 version, and some versions of Linux need `libicu-dev` and `libxcb-cursor-dev` installed via apt or otherwise
-* fixed the file query sort-and-clip method when you are set to sort by file hash and also have system:limit, and fixed it for asc/desc too
-* for the second time, fixed the 'import QtSVG' error on hydrus server install when the client requirements.txt had not been run. turns out I messed up the 'proper' fix I did for the first time
-
-### boring cleanup
-
-* refactored a bunch of HydrusImageHandling code to HydrusAnimationHandling
-* cleaned up several of our enums and enum testing, and cleared out several hardcoded hooks to deal with different kinds of gif
-* did some similar enum cleaning and `gif`->`PILAnimation` renaming to encompass the new HEIF sequences
-* streamlined the image and animation metadata parsing methods significantly
-* a bunch of simple `image`->`animation` renames, like IMAGE_APNG is now ANIMATION_APNG
-* cleaned up some other confusing code handles for 'image' vs 'static image', to handle whether we are talking about strictly images or viewable raster image-likes (for now including PSD files) but I think it'll need more work
-* deleted some ancient and no longer used imageboard profile code

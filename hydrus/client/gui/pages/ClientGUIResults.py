@@ -4783,6 +4783,7 @@ def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
         ClientGUIMenus.AppendMenu( menu, remove_menu, 'remove' )
         
     
+
 def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domains, has_local_and_remote ):
     
     file_filter_all = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL )
@@ -4842,8 +4843,8 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
             
             ClientGUIMenus.AppendSeparator( select_menu )
             
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_local.ToStringWithCount( win, filter_counts ), 'Remove all the files that are in this client.', win._Select, file_filter_local )
-            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_remote.ToStringWithCount( win, filter_counts ), 'Remove all the files that are not in this client.', win._Select, file_filter_remote )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_local.ToStringWithCount( win, filter_counts ), 'Select all the files that are in this client.', win._Select, file_filter_local )
+            ClientGUIMenus.AppendMenuItem( select_menu, file_filter_remote.ToStringWithCount( win, filter_counts ), 'Select all the files that are not in this client.', win._Select, file_filter_remote )
             
         
         file_filter_selected = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_SELECTED )

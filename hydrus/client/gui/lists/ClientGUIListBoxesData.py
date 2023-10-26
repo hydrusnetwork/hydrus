@@ -70,6 +70,11 @@ class ListBoxItem( object ):
         raise NotImplementedError()
         
     
+    def UpdateFromOtherTerm( self, term: "ListBoxItem" ):
+        
+        pass
+        
+    
 class ListBoxItemTagSlice( ListBoxItem ):
     
     def __init__( self, tag_slice: str ):
@@ -449,6 +454,15 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
             
         
         return rows_of_texts_with_namespaces
+        
+    
+    def UpdateFromOtherTerm( self, term: "ListBoxItemTextTagWithCounts" ):
+        
+        self._current_count = term._current_count
+        self._deleted_count = term._deleted_count
+        self._pending_count = term._pending_count
+        self._petitioned_count = term._petitioned_count
+        self._include_actual_counts = term._include_actual_counts
         
     
 class ListBoxItemPredicate( ListBoxItem ):

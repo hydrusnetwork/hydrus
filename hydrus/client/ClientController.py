@@ -2122,13 +2122,6 @@ class Controller( HydrusController.HydrusController ):
                 
                 service.SyncProcessUpdates( maintenance_mode = HC.MAINTENANCE_IDLE )
                 
-                if HydrusThreading.IsThreadShuttingDown():
-                    
-                    return
-                    
-                
-                time.sleep( 1 )
-                
             
         
     
