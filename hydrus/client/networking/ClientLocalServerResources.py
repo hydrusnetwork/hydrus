@@ -1872,25 +1872,30 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
         ( os_file_handle, temp_path ) = request.temp_file_info
         
         mime = HydrusFileHandling.GetMime( temp_path )
-
-        if mime not in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
-
-            raise HydrusExceptions.BadRequestException('Requested file is a type that cannot have a perceptual hash!')
         
-
+        body_dict = {}
+        
         sha256_hash = HydrusFileHandling.GetHashFromPath( temp_path )
-
-        numpy_image = HydrusImageHandling.GenerateNumPyImage( temp_path, mime )
-
-        perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
-
-        pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
         
-        body_dict = {
-            'hash' : sha256_hash.hex(),
-            'perceptual_hashes' : [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ],
-            'pixel_hash': pixel_hash.hex()
-        }
+        body_dict['hash'] = sha256_hash.hex()
+        
+        if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH or mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH:
+            
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( temp_path, mime )
+            
+            if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
+                
+                perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
+                
+                body_dict['perceptual_hashes'] = [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ]
+                
+            if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH:
+                
+                pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
+                
+                body_dict['pixel_hash'] = pixel_hash.hex()
+                
+            
         
         body = Dumps( body_dict, request.preferred_mime )
         
