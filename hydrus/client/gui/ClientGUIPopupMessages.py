@@ -1,6 +1,7 @@
 import os
 import sys
 import traceback
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -830,7 +831,7 @@ class PopupMessageManager( QW.QFrame ):
             
         
     
-    def _GetAllMessageJobKeys( self ):
+    def GetAllMessageJobKeys( self ) -> typing.List[ClientThreading.JobKey]:
         
         job_keys = []
         
@@ -851,6 +852,27 @@ class PopupMessageManager( QW.QFrame ):
         
         return job_keys
         
+    def GetMessageJobKeyFromKey( self, job_key_key: bytes ) -> ClientThreading.JobKey:
+    
+        for i in range( self._message_vbox.count() ):
+                
+            sizer_item = self._message_vbox.itemAt( i )
+            
+            message_window = sizer_item.widget()
+            
+            if not message_window: continue
+            
+            if job_key_key == message_window.GetJobKey().GetKey():
+                
+                return message_window.GetJobKey()
+                
+        for job_key in self._pending_job_keys:
+            
+            if job_key.GetKey() == job_key_key:
+                
+                return job_key
+            
+        return None
     
     def _OKToAlterUI( self ):
 
@@ -902,7 +924,7 @@ class PopupMessageManager( QW.QFrame ):
             
             ( hashes, label ) = result
             
-            existing_job_keys = self._GetAllMessageJobKeys()
+            existing_job_keys = self.GetAllMessageJobKeys()
             
             for existing_job_key in existing_job_keys:
                 

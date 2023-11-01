@@ -4353,11 +4353,11 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
             
             message_manager: ClientGUIPopupMessages.PopupMessageManager = HG.client_controller.gui.GetMessageManager()
             
-            job_keys = message_manager._GetAllMessageJobKeys()
+            job_keys = message_manager.GetAllMessageJobKeys()
             
             return job_keys
         
-        job_keys: list[ClientThreading.JobKey] = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
+        job_keys: typing.List[ClientThreading.JobKey] = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
         
         body_dict = {
             'jobs' : [JobKeyToDict( job_key ) for job_key in job_keys]
@@ -4374,13 +4374,13 @@ class HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( HydrusResourceC
     
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
         
-        job_key = request.parsed_request_args.GetValue( 'job_key', bytes )
+        job_key_key = request.parsed_request_args.GetValue( 'job_key', bytes )
         
         def do_it( ):
             
             message_manager: ClientGUIPopupMessages.PopupMessageManager = HG.client_controller.gui.GetMessageManager()
             
-            message_manager.DismissJobKey( job_key )
+            message_manager.DismissJobKey( job_key_key )
         
         HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
         
@@ -4388,3 +4388,62 @@ class HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( HydrusResourceC
         
         return response_context
         
+    
+class HydrusResourceClientAPIRestrictedManagePopupsCancelPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_key_key = request.parsed_request_args.GetValue( 'job_key', bytes )
+        
+        def do_it( ):
+            
+            message_manager: ClientGUIPopupMessages.PopupMessageManager = HG.client_controller.gui.GetMessageManager()
+            
+            job_key = message_manager.GetMessageJobKeyFromKey( job_key_key )
+            
+            if job_key is None:
+                
+                raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
+            
+            if not job_key.IsCancellable():
+                
+                raise HydrusExceptions.BadRequestException('This job can\'t be cancelled!')
+            
+            job_key.Cancel()
+        
+        HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_key_key = request.parsed_request_args.GetValue( 'job_key', bytes )
+        
+        def do_it( ):
+            
+            message_manager: ClientGUIPopupMessages.PopupMessageManager = HG.client_controller.gui.GetMessageManager()
+            
+            job_key = message_manager.GetMessageJobKeyFromKey( job_key_key )
+            
+            if job_key is None:
+                
+                raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
+            
+            user_callable = job_key.GetUserCallable()
+            
+            if not user_callable:
+                
+                raise HydrusExceptions.BadRequestException('This job doesn\'t have a user callable!')
+            
+            user_callable()
+        
+        HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
