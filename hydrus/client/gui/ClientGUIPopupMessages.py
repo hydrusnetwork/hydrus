@@ -1067,6 +1067,31 @@ class PopupMessageManager( QW.QFrame ):
         self._CheckPending()
         
     
+    def DismissJobKey( self, job_key_key: bytes ):
+        
+        for i in range( self._message_vbox.count() ):
+            
+            sizer_item = self._message_vbox.itemAt( i )
+            
+            message_window = sizer_item.widget()
+            
+            if not message_window: continue
+            
+            if job_key_key == message_window.GetJobKey().GetKey():
+                
+                message_window.TryToDismiss()
+                
+                return
+            
+        for job_key in self._pending_job_keys:
+            
+            if job_key.GetKey() == job_key_key and not ( job_key.IsPausable() or job_key.IsCancellable() ):
+                
+                self._pending_job_keys.remove(job_key)
+                
+                return
+    
+    
     def ExpandCollapse( self ):
         
         if self._message_panel.isVisible():

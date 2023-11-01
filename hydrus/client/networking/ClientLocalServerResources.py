@@ -67,7 +67,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 # if a variable name isn't defined here, a GET with it won't work
 
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
-CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key' }
+CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key', 'job_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
@@ -4281,9 +4281,7 @@ class HydrusResourceClientAPIRestrictedManagePopups( HydrusResourceClientAPIRest
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_POPUPS )
         
     
-class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClientAPIRestrictedManagePages ):
-    
-    def _JobKeyToDict( self, job_key: ClientThreading.JobKey ):
+def JobKeyToDict( job_key: ClientThreading.JobKey ):
         
         return_dict = {
             'key' : job_key.GetKey().hex(),
@@ -4299,7 +4297,9 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
             'is_pauseable' : job_key.IsPausable(),
             'is_paused' : job_key.IsPaused(),
             'is_working' : job_key.IsWorking(),
-            'nice_string' : job_key.ToString()
+            'nice_string' : job_key.ToString(),
+            'popup_gauge_1' : job_key.GetIfHasVariable( 'popup_gauge_1' ),
+            'popup_gauge_2' : job_key.GetIfHasVariable( 'popup_gauge_2' ),
         }
         
         files_object = job_key.GetFiles()
@@ -4343,6 +4343,9 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
             return_dict['network_job'] = network_job_dict
             
         return {k: v for k, v in return_dict.items() if v is not None}
+        
+    
+class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
@@ -4357,7 +4360,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
         job_keys: list[ClientThreading.JobKey] = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
         
         body_dict = {
-            'jobs' : [self._JobKeyToDict( job_key ) for job_key in job_keys]
+            'jobs' : [JobKeyToDict( job_key ) for job_key in job_keys]
          }
         
         body = Dumps( body_dict, request.preferred_mime )
@@ -4365,3 +4368,23 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
         response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_key = request.parsed_request_args.GetValue( 'job_key', bytes )
+        
+        def do_it( ):
+            
+            message_manager: ClientGUIPopupMessages.PopupMessageManager = HG.client_controller.gui.GetMessageManager()
+            
+            message_manager.DismissJobKey( job_key )
+        
+        HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
