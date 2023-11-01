@@ -635,6 +635,46 @@ Response:
 This puts files back in the inbox, taking them out of the archive. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the inbox.
     
 
+### **POST `/add_files/generate_hashes`** { id="add_files_generate_hashes" }
+
+_Generate hashes for an arbitrary file._
+
+Restricted access:
+:   YES. Import Files permission needed.
+    
+Required Headers:
+:   - Content-Type: `application/json` (if sending path), `application/octet-stream` (if sending file)
+
+Arguments (in JSON):
+:   - `path`: (the path you want to import)
+
+```json title="Example request body"
+{
+  "path" : "E:\\to_import\\ayanami.jpg"
+}
+```
+
+Arguments (as bytes): 
+:   You can alternately just send the file's bytes as the POST body.
+    
+Response: 
+:   Some JSON with the hashes of the file
+```json title="Example response"
+{
+  "hash": "7de421a3f9be871a7037cca8286b149a31aecb6719268a94188d76c389fa140c",
+  "perceptual_hashes": [
+    "b44dc7b24dcb381c"
+  ],
+  "pixel_hash": "c7bf20e5c4b8a524c2c3e3af2737e26975d09cba2b3b8b76341c4c69b196da4e",
+}
+```
+
+    - `hash` is the sha256 hash of the submitted file.
+    - `perceptual_hashes` is a list of perceptual hashes for the file.
+    - `pixel_hash` is the sha256 hash of the pixel data of the rendered image.
+
+`hash` will always be returned for any file, the others will only be returned for filetypes they can be generated for.
+
 ## Importing and Editing URLs
 
 ### **GET `/add_urls/get_url_files`** { id="add_urls_get_url_files" }
