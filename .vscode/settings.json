@@ -1,0 +1,6 @@
+{
+  "editor.trimAutoWhitespace": false,
+  "editor.renderWhitespace": "boundary",
+  "diffEditor.ignoreTrimWhitespace": false,
+  "editor.tabSize": 4
+}
