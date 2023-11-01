@@ -339,7 +339,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             
             nj.engine = network_engine
             
-            if nj.NeedsLogin():
+            if nj.CurrentlyNeedsLogin():
                 
                 try:
                     
@@ -389,7 +389,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
             
             nj.engine = network_engine
             
-            if nj.NeedsLogin():
+            if nj.CurrentlyNeedsLogin():
                 
                 try:
                     

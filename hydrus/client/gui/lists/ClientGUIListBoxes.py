@@ -1860,9 +1860,16 @@ class ListBox( QW.QScrollArea ):
             return
             
         
-        for term in removable_terms:
+        if len( removable_terms ) > len( self._ordered_terms ) ** 0.5:
             
-            self._ordered_terms.remove( term )
+            self._ordered_terms = [ term for term in self._ordered_terms if term not in removable_terms ]
+            
+        else:
+            
+            for term in removable_terms:
+                
+                self._ordered_terms.remove( term )
+                
             
         
         self._selected_terms.difference_update( removable_terms )
@@ -3889,8 +3896,6 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
     def _UpdateTerms( self, limit_to_these_tags = None ):
         
-        # TODO: optimisation here--instead of remove/add, edit the terms _in place_ with new counts, removing now empty, and then just resort
-        
         previous_selected_terms = set( self._selected_terms )
         
         if limit_to_these_tags is None:
@@ -3935,10 +3940,11 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         nonzero_terms = [ self._GenerateTermFromTag( tag ) for tag in nonzero_tags ]
         
-        if len( removee_terms ) > len( self._ordered_terms ) / 2:
+        if len( removee_terms ) > len( self._selected_terms ) ** 0.5:
             
             self._Clear()
             
+            removee_terms = []
             altered_terms = []
             new_terms = nonzero_terms
             
@@ -3969,8 +3975,6 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         sort_needed = self._tag_sort.AffectedByCount()
         
         if len( new_terms ) > 0:
-            
-            # TODO: if not sort_needed at this stage, it would be ideal to call an auto-sorting '_InsertTerms', if that is reasonably doable
             
             self._AppendTerms( new_terms )
             

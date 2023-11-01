@@ -7,6 +7,40 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 550](https://github.com/hydrusnetwork/hydrus/releases/tag/v550)
+
+### misc
+
+* if you enter invalid URLs (i.e. non-parsing) into 'manage URLs', the dialog now lets you know they were not apparently good and asks if you want to enter them anyway. previously, it errored-out and disallowed anything that wasn't parsing ok (issue #1444)
+* when physically deleting files (i.e. deleting from trash or picking 'permanently delete' from the advanced delete dialog), the relevant files are now immediately removed from view. there were some situations where, when physically deleting a lot of files (causing the job to clear in batches), you could subsequently click on a soon-to-be-deleted file, loading it in mpv, and then, if you started a big UI-lag job like loading 'manage siblings', it could cause a crash if the file was deleted during the UI hang (issue #1447)
+* the client now explicitly closes and clears its network connections after five minutes of inactivity. it turns out that the behind the scenes tools were not doing this exactly as I had thought, clogging up connection slots (issue #1458)
+* thanks to a user, the rendering of palettized PNGs with ICC profiles is fixed!
+* fixed the github build script to include the new-as-of-a-couple-of-weeks-ago 'auto_update_installer.bat' file in the Windows builds. sorry for the confusion here, I forgot I had to do this!
+* optimised deselection of a large number of files when you already have a lot of thumbnails selected (a tricky example of this is clicking on an unselected file when you have a lot of files selected, thus deselecting all that old stuff). should be a little faster to work on big lists now
+* further optimised reduction recalculation of the taglist in general
+
+### thumbnail fill
+
+* after vacillating and talking about it for months, I finally reworked how ''scale to fill' thumbnails work. as sometimes happens, I only had to change about six critical lines of code to get the core functionality changed and nothing seems to have exploded
+* the main change here is KISS--'fill' thumbnail image files on disk are no longer clipped to just the viewable area, but the whole image scaled to fill the thumbnail space (with exceptions for extreme cases). this change gives us some simplicity and flexibility behind the scenes, saves some regeneration work when the user only changes one thumbnail dimension setting, improves maintenance tasks based off the thumbnail (like blurhash), and means that the Client API can fetch your thumbs and still have something useful to display
+* if you have 'scale to fit' set, hydrus will regenerate your thumbnails naturally as you browse the client. fingers crossed, you won't notice any visual difference through the transition
+* 'open externally' button panels now display their thumbnails with more reasonable maximum dimensions, and when things are gonk for whatever reason, they should nonetheless be centered correctly
+* as a side thing, this change allowed me to finally purge all the clipping tech from the thumbnail pipeline, where it had obtusely sunk in to every possible filetype thumbgen
+
+### eager login system
+
+* I fixed a problem where some sorts of login script could allow a network job supposedly waiting on them to start before they had completed. it was due to a complicated 'am I logged in?' cookie testing issue while the login process was still working. all network jobs that hypothetically need a login now test if there is a login process currently working on their domain and will properly wait for that process to finish before they move on
+* fixed a 'cannot log in' reporting bug in the login system
+* some misc login code cleanup
+
+### smarter orphan file record and repository update handling
+
+* _this is advanced stuff, most users can ignore_
+* _database->db maintenance->clear orphan file records_ is now able to recover file records where A) the file is in a service component but not the master, B) the file exists on disk. it copies the import timestamp from the specific to the umbrella domain and spams all the repaired files to a new page for user review. this maintenance routine isn't used all that much, but when you have a damaged database, it is nice to recover as much as possible rather than having to export (with clear orphan file records+clear orphan files) and then reimport and lose archive/inbox status and import timestamps
+* repository update files now have a 'delete from repository updates' entry in their right-click menu
+* this area of the code appears to be related to the PTR 404 issue some users have had (it seems to be repository update records not beeing added/deleted/updated correctly), so I am likely to revisit this
+* deleting a file from 'all local files' (which happens for repository update files) now correctly updates the UI-level media object to recognise that the file is fully deleted from all local file domains beneath the umbrella, removing the 'delete from x' commands from their menu, and in the right view contexts removing them from view completely
+
 ## [Version 549](https://github.com/hydrusnetwork/hydrus/releases/tag/v549)
 
 ### misc
@@ -358,35 +392,3 @@ title: Changelog
 * the feature to migrate the SQLite database files and then restart is removed from the 'migrate database' dialog. it was always ultrajank in a place that really shouldn't be, and it was completely user-unfriendly. just move things manually, while the client is closed
 * the old 'recover and merge surplus database locations into the correct position' side feature in 'move files now' is removed. it was always a little jank, was very rarely actually helpful, and had zero reporting. it will return in the new system as a better one-shot maintenance job
 * touched up the migrated database help a little
-
-## [Version 540](https://github.com/hydrusnetwork/hydrus/releases/tag/v540)
-
-### misc
-
-* the system predicate parser can now handle 'system:filetype is xxx' for more of the general human-friendly filetype strings like 'video' and 'mkv'. it can also handle 'static gif' and any other types with spaces but now enforces commas between each filetype. I think all system:filetype predicate strings the client produces now parse correctly if you paste them back
-* fixed many bitmap imports, most typically in the 'system:similar files' system, which was not generating pixel hashes correctly. most/all bitmaps coming in with alpha channels, or, I also believe, with a null channel (RGB32), were being handled wrong and coming out BGR. perceptual hashes are greyscale and were not affected, but pixel hashes were wrong. this was a real pain to figure out, and it may be that it is still broken for users on big-endian systems or something, so let me know how you get on
-* added links to https://github.com/abtalerico/wd-hydrus-tagger (danbooru-trained model tagging) and https://github.com/Garbevoir/wd-e621-hydrus-tagger (which adds more models) to the client api help. reports are that they work well, even on 'normal' pictures
-* the bad darkmode tooltip text colour in the new Qt 6.5.2 on Windows appears to be a bug, here: https://bugreports.qt.io/browse/QTBUG-116021 . there's not a great answer here, so let me know your thoughts. if you like, you can edit a custom stylesheet with a different `QToolTip` `background-color`, or I can spam some alternate fixed QSS files for everyone, or we can wait for a fix on Qt's end
-* on update, all existing PSD and static gif files will be scheduled for pixel hash regen, perceptual hash regen, and entry into the similar files system (I forgot to do this last week)
-* on update, all existing PNGs will be scheduled for pixel duplicate data regen. we have a legacy alpha channel issue here that has reared its head several times (searchting for 'must not be pixel dupes', but getting pixel dupes), so I am just going to bosh it on the head for everyone
-
-### file maintenance
-
-* if a file has multiple jobs pending, the file maintenance manager now processes all those jobs at once, saving significant disk I/O. also, a couple things like the 'do all work' button's popup now shows the total number of jobs to do, rather than that of each job type in turn
-* the 'manage scheduled jobs' file maintenance panel now shows the count for jobs that exist but are not yet due. previously, these were hidden, which was part of the mkv/webm duplicate difficulties last week.
-* when the program needs to rename a file because it has a new mime, it now first tests if the file is still in use (normally this means some file parsing component like ffmpeg or opencv is still cleaning up OS file handles or whatever), and, if so, waits just a little bit before trying
-* relatedly, the 'try and delete the rename-dupe again' job now tries again in one hour, rather than one week in the future, and if that after-one-hour job fails again (this would usually be because you were actually viewing the original file in the media viewer at the time of its reparse), then that job will retry again in a week, and the week after if that fails, and again after that, etc... for about a year
-* fixed an issue with the thumbnail resizing maintenance job on PSD files and probably some other weird types too
-* fixed some scheduling issues in how the mainloop of the file maintenance system tests its current rate of work and when it should cancel a current batch of work
-
-### boring stuff
-
-* simplified and cleaned up some of the duplicate system king-fetching code. I _may_ have also fixed one instance of pair representatives being fetched wrong for the filter when 'at least one file has to match the one search'
-* when editing the duplicate action merge options, a new label at the top says which dupe action you are editing for, and if it isn't "this is better", it notes that the available merge actions are limited
-* improved four things with the recovery code that handles missing master hash definitions--first, the substitute hashes are now the correct length; second, they are now saved back to the database, which should stop issues like the "trying to delete a thing that doesn't exist and has an ever-changing name in a loop forever" bug; third, the popup tells the user what to do next, and more information is written to the log; and fourth, the client checks the local hash cache so see if it can automatically recover the missing data
-
-### client api
-
-* the `file_metadata` call now has two new fields, `filetype_human`, which looks like 'jpeg' or 'webm', and `filetype_enum`, which uses internal hydrus filetype numbers
-* the help and unit tests are updated for this
-* client api version is now 50

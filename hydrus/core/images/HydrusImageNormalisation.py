@@ -88,7 +88,7 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ) -> PILImage.I
         
         src_profile = PILImageCms.ImageCmsProfile( f )
         
-        if pil_image.mode in ( 'L', 'LA' ):
+        if pil_image.mode in ( 'L', 'LA', 'P' ):
             
             # had a bunch of LA pngs that turned pure white on RGBA ICC conversion
             # but seem to work fine if keep colourspace the same for now
@@ -122,8 +122,6 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ) -> PILImage.I
         
         pass
         
-    
-    pil_image = NormalisePILImageToRGB( pil_image )
     
     return pil_image
     

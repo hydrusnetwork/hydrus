@@ -3102,7 +3102,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                         if width is not None and height is not None and width > 0 and height > 0:
                             
-                            ( clip_rect, ( expected_thumbnail_width, expected_thumbnail_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), thumbnail_bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+                            ( expected_thumbnail_width, expected_thumbnail_height ) = HydrusImageHandling.GetThumbnailResolution( ( width, height ), thumbnail_bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                             
                             metadata_row[ 'thumbnail_width' ] = expected_thumbnail_width
                             metadata_row[ 'thumbnail_height' ] = expected_thumbnail_height
@@ -3407,8 +3407,6 @@ class HydrusResourceClientAPIRestrictedManageCookiesGetCookies( HydrusResourceCl
             
             body_cookies_list.append( [ name, value, domain, path, expires ] )
             
-        
-        body_dict = {}
         
         body_dict = { 'cookies' : body_cookies_list }
         

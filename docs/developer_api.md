@@ -1872,10 +1872,14 @@ Response:
 
     If hydrus keeps no thumbnail for the filetype, for instance with pdfs, then you will get the same default 'pdf' icon you see in the client. If the file does not exist in the client, or the thumbnail was expected but is missing from storage, you will get the fallback 'hydrus' icon, again just as you would in the client itself. This request should never give a 404.
 
-!!! note
-    If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the defaults straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
-
+!!! note "Size of Normal Thumbs"
+    Thumbnails are not guaranteed to be the correct size! If a thumbnail has not been loaded in the client in years, it could well have been fitted for older thumbnail settings. Also, even 'clean' thumbnails will not always fit inside the settings' bounding box; they may be boosted due to a high-DPI setting or spill over due to a 'fill' vs 'fit' preference. You cannot easily predict what resolution a thumbnail will or should have!
     
+    In general, thumbnails *are* the correct ratio. If you are drawing thumbs, you should embed them to fit or fill, but don't fix them at 100% true size: make sure they can scale to the size you want!
+
+!!! note "Size of Defaults"
+    If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the pngs straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
+
 ### **GET `/get_files/render`** { id="get_files_render" }
 
 _Get an image file as rendered by Hydrus._

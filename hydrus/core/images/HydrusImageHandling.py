@@ -338,14 +338,9 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image
     
     return pil_image
     
-def GenerateThumbnailNumPyFromStaticImagePath( path, target_resolution, mime, clip_rect = None ):
+def GenerateThumbnailNumPyFromStaticImagePath( path, target_resolution, mime ):
     
     numpy_image = GenerateNumPyImage( path, mime )
-    
-    if clip_rect is not None:
-        
-        numpy_image = ClipNumPyImage( numpy_image, clip_rect )
-        
     
     thumbnail_numpy_image = ResizeNumPyImage( numpy_image, target_resolution )
     
@@ -517,9 +512,7 @@ thumbnail_scale_str_lookup = {
     THUMBNAIL_SCALE_TO_FILL : 'scale to fill'
 }
 
-def GetThumbnailResolutionAndClipRegion( image_resolution: typing.Tuple[ int, int ], bounding_dimensions: typing.Tuple[ int, int ], thumbnail_scale_type: int, thumbnail_dpr_percent: int ):
-    
-    clip_rect = None
+def GetThumbnailResolution( image_resolution: typing.Tuple[ int, int ], bounding_dimensions: typing.Tuple[ int, int ], thumbnail_scale_type: int, thumbnail_dpr_percent: int ) -> typing.Tuple[ int, int ]:
     
     ( im_width, im_height ) = image_resolution
     ( bounding_width, bounding_height ) = bounding_dimensions
@@ -530,7 +523,8 @@ def GetThumbnailResolutionAndClipRegion( image_resolution: typing.Tuple[ int, in
         
         bounding_height = int( bounding_height * thumbnail_dpr )
         bounding_width = int( bounding_width * thumbnail_dpr )
-
+        
+    
     if im_width is None:
         
         im_width = bounding_width
@@ -546,61 +540,75 @@ def GetThumbnailResolutionAndClipRegion( image_resolution: typing.Tuple[ int, in
         
         if bounding_width >= im_width and bounding_height >= im_height:
             
-            return ( clip_rect, ( im_width, im_height ) )
+            return ( im_width, im_height )
             
         
     
+    image_ratio = im_width / im_height
+    
     width_ratio = im_width / bounding_width
     height_ratio = im_height / bounding_height
+    
+    image_is_wider_than_bounding_box = width_ratio > height_ratio
+    image_is_taller_than_bounding_box = height_ratio > width_ratio
     
     thumbnail_width = bounding_width
     thumbnail_height = bounding_height
     
     if thumbnail_scale_type in ( THUMBNAIL_SCALE_DOWN_ONLY, THUMBNAIL_SCALE_TO_FIT ):
         
-        if width_ratio > height_ratio:
-            
-            thumbnail_height = im_height / width_ratio
-            
-        elif height_ratio > width_ratio:
+        if image_is_taller_than_bounding_box: # i.e. the height will be at bounding height
             
             thumbnail_width = im_width / height_ratio
+            
+        elif image_is_wider_than_bounding_box: # i.e. the width will be at bounding width
+            
+            thumbnail_height = im_height / width_ratio
             
         
     elif thumbnail_scale_type == THUMBNAIL_SCALE_TO_FILL:
         
-        if width_ratio == height_ratio:
+        # we do min 5.0 here to stop really tall and thin images getting zoomed in from width 1px to 150 and getting a thumbnail with a height of 75,000 pixels
+        # in this case the line image is already crazy distorted, so we don't mind squishing it
+        
+        if image_is_taller_than_bounding_box: # i.e. the width will be at bounding width, the height will spill over
             
-            # we have something that fits bounding region perfectly, no clip region required
+            thumbnail_height = bounding_width * min( 5.0, 1 / image_ratio )
             
-            pass
+        elif image_is_wider_than_bounding_box: # i.e. the height will be at bounding height, the width will spill over
             
-        else:
-            
-            clip_x = 0
-            clip_y = 0
-            clip_width = im_width
-            clip_height = im_height
-            
-            if width_ratio > height_ratio:
-                
-                clip_width = max( int( im_width * height_ratio / width_ratio ), 1 )
-                clip_x = ( im_width - clip_width ) // 2
-                
-            elif height_ratio > width_ratio:
-                
-                clip_height = max( int( im_height * width_ratio / height_ratio ), 1 )
-                clip_y = ( im_height - clip_height ) // 2
-                
-            
-            clip_rect = ( clip_x, clip_y, clip_width, clip_height )
+            thumbnail_width = bounding_height * min( 5.0, image_ratio )
             
         
+        # old stuff that actually clipped the size of the thing
+        '''
+        clip_x = 0
+        clip_y = 0
+        clip_width = im_width
+        clip_height = im_height
+        
+        if width_ratio > height_ratio:
+            
+            clip_width = max( int( im_width * height_ratio / width_ratio ), 1 )
+            clip_x = ( im_width - clip_width ) // 2
+            
+        elif height_ratio > width_ratio:
+            
+            clip_height = max( int( im_height * width_ratio / height_ratio ), 1 )
+            clip_y = ( im_height - clip_height ) // 2
+            
+        
+        clip_rect = ( clip_x, clip_y, clip_width, clip_height )
+        '''
+        
     
-    thumbnail_width = max( int( thumbnail_width ), 1 )
-    thumbnail_height = max( int( thumbnail_height ), 1 )
+    thumbnail_width = int( thumbnail_width )
+    thumbnail_height = int( thumbnail_height )
     
-    return ( clip_rect, ( thumbnail_width, thumbnail_height ) )
+    thumbnail_width = max( thumbnail_width, 1 )
+    thumbnail_height = max( thumbnail_height, 1 )
+    
+    return ( thumbnail_width, thumbnail_height )
     
 
 def IsDecompressionBomb( path ) -> bool:

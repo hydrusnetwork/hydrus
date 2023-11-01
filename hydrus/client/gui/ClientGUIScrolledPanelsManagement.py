@@ -5027,34 +5027,72 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         HG.client_controller.pub( 'clipboard', 'text', text )
         
     
-    def _EnterURL( self, url, only_add = False ):
+    def _EnterURLs( self, urls, only_add = False ):
         
-        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        normalised_urls = []
+        weird_urls = []
         
-        addee_media = set()
-        
-        for m in self._current_media:
+        for url in urls:
             
-            locations_manager = m.GetLocationsManager()
-            
-            if normalised_url not in locations_manager.GetURLs():
+            try:
                 
-                addee_media.add( m )
+                normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
-            
-        
-        if len( addee_media ) > 0:
-            
-            addee_hashes = { m.GetHash() for m in addee_media }
-            
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( normalised_url, ), addee_hashes ) )
-            
-            for m in addee_media:
+                normalised_urls.append( normalised_url )
                 
-                m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+            except HydrusExceptions.URLClassException:
+                
+                weird_urls.append( url )
                 
             
-            self._pending_content_updates.append( content_update )
+        
+        if len( weird_urls ) > 0:
+            
+            message = 'The URLs:'
+            message += '\n' * 2
+            message += '\n'.join( weird_urls )
+            message += '\n' * 2
+            message += '--did not parse. Normally I would not recommend importing invalid URLs, but do you want to force it anyway?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return False
+                
+            
+            normalised_urls.extend( weird_urls )
+            
+        
+        normalised_urls = HydrusData.DedupeList( normalised_urls )
+        
+        for normalised_url in normalised_urls:
+            
+            addee_media = set()
+            
+            for m in self._current_media:
+                
+                locations_manager = m.GetLocationsManager()
+                
+                if normalised_url not in locations_manager.GetURLs():
+                    
+                    addee_media.add( m )
+                    
+                
+            
+            if len( addee_media ) > 0:
+                
+                addee_hashes = { m.GetHash() for m in addee_media }
+                
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( normalised_url, ), addee_hashes ) )
+                
+                for m in addee_media:
+                    
+                    m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+                    
+                
+                self._pending_content_updates.append( content_update )
+                
             
         
         #
@@ -5077,13 +5115,9 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         try:
             
-            for url in HydrusText.DeserialiseNewlinedTexts( raw_text ):
-                
-                if url != '':
-                    
-                    self._EnterURL( url, only_add = True )
-                    
-                
+            urls = HydrusText.DeserialiseNewlinedTexts( raw_text )
+            
+            self._EnterURLs( urls, only_add = True )
             
         except Exception as e:
             
@@ -5195,6 +5229,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         else:
             
             return True # was: event.ignore()
+            
         
     
     def AddURL( self ):
@@ -5209,7 +5244,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             try:
                 
-                self._EnterURL( url )
+                self._EnterURLs( [ url ] )
                 
                 self._url_input.clear()
                 

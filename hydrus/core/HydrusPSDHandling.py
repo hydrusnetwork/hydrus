@@ -39,14 +39,9 @@ def MergedPILImageFromPSD( path: str ) -> PILImage:
     return pil_image
     
 
-def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+def GenerateThumbnailNumPyFromPSDPath( path: str, target_resolution: typing.Tuple[int, int] ) -> bytes:
     
     pil_image = MergedPILImageFromPSD( path )
-    
-    if clip_rect is not None:
-        
-        pil_image = HydrusImageHandling.ClipPILImage( pil_image, clip_rect )
-        
     
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )
     
