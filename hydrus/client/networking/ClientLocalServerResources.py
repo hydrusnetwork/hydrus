@@ -1858,11 +1858,7 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
-        if hasattr( request, 'temp_file_info' ):
-            
-            ( os_file_handle, temp_path ) = request.temp_file_info
-            
-        else:
+        if not hasattr( request, 'temp_file_info' ):
             
             path = request.parsed_request_args.GetValue( 'path', str )
             
@@ -1877,9 +1873,13 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
                 
             
             ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
-                        
+            
+            request.temp_file_info = ( os_file_handle, temp_path )
+            
             HydrusPaths.MirrorFile( path, temp_path )
             
+        
+        ( os_file_handle, temp_path ) = request.temp_file_info
         
         mime = HydrusFileHandling.GetMime( temp_path )
         
