@@ -7374,6 +7374,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             total_closed_num_seeds
         )
         
+    def GetMessageManager( self ):
+        
+        return self._message_manager
+        
     
     def HideToSystemTray( self ):
         

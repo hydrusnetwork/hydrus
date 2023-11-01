@@ -49,9 +49,12 @@ from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.search import ClientSearch
 from hydrus.client.search import ClientSearchAutocomplete
 from hydrus.client.search import ClientSearchParseSystemPredicates
+from hydrus.client.gui import ClientGUIPopupMessages
+
 
 local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
 
@@ -4271,3 +4274,94 @@ class HydrusResourceClientAPIRestrictedManagePagesRefreshPage( HydrusResourceCli
         return response_context
         
     
+class HydrusResourceClientAPIRestrictedManagePopups( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_POPUPS )
+        
+    
+class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _JobKeyToDict( self, job_key: ClientThreading.JobKey ):
+        
+        return_dict = {
+            'key' : job_key.GetKey().hex(),
+            'creation_time': job_key.GetCreationTime(),
+            'status_text' : job_key.GetStatusText(),
+            'status_title' : job_key.GetStatusTitle(),
+            'traceback' : job_key.GetTraceback(),
+            'had_error' : job_key.HadError(),
+            'is_cancellable' : job_key.IsCancellable(),
+            'is_cancelled' : job_key.IsCancelled(),
+            'is_deleted' : job_key.IsDeleted(),
+            'is_done' : job_key.IsDone(),
+            'is_pauseable' : job_key.IsPausable(),
+            'is_paused' : job_key.IsPaused(),
+            'is_working' : job_key.IsWorking(),
+            'nice_string' : job_key.ToString()
+        }
+        
+        files_object = job_key.GetFiles()
+        
+        if files_object:
+            
+            ( hashes, label ) = files_object
+            
+            return_dict['files'] = {
+                'hashes' : [ hash.hex() for hash in hashes ],
+                'label': label
+            }
+            
+        user_callable = job_key.GetUserCallable()
+        
+        if user_callable:
+            
+            return_dict['user_callable_label'] = user_callable.GetLabel()
+            
+        network_job: ClientNetworkingJobs.NetworkJob = job_key.GetNetworkJob()
+        
+        if network_job:
+            
+            ( status_text, current_speed, bytes_read, bytes_to_read ) = network_job.GetStatus()
+            
+            network_job_dict = {
+                'url' : network_job.GetURL(),
+                'waiting_on_connection_error' : network_job.CurrentlyWaitingOnConnectionError(),
+                'domain_ok' : network_job.DomainOK(),
+                'waiting_on_serverside_bandwidth' : network_job.CurrentlyWaitingOnServersideBandwidth(),
+                'no_engine_yet' : network_job.NoEngineYet(),
+                'has_error' : network_job.HasError(),
+                'total_data_used' : network_job.GetTotalDataUsed(),
+                'is_done' : network_job.IsDone(),
+                'status_text' : status_text,
+                'current_speed' : current_speed,
+                'bytes_read' : bytes_read,
+                'bytes_to_read' : bytes_to_read
+            }
+            
+            return_dict['network_job'] = network_job_dict
+            
+        return {k: v for k, v in return_dict.items() if v is not None}
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        def do_it( ):
+            
+            message_manager: ClientGUIPopupMessages.PopupMessageManager = HG.client_controller.gui.GetMessageManager()
+            
+            job_keys = message_manager._GetAllMessageJobKeys()
+            
+            return job_keys
+        
+        job_keys: list[ClientThreading.JobKey] = HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
+        
+        body_dict = {
+            'jobs' : [self._JobKeyToDict( job_key ) for job_key in job_keys]
+         }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
