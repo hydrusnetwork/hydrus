@@ -1866,6 +1866,11 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
                 raise HydrusExceptions.BadRequestException( 'Path "{}" does not exist!'.format( path ) )
                 
             
+            if not os.path.isfile( path ):
+                
+                raise HydrusExceptions.BadRequestException( 'Path "{}" is not a file!'.format( path ) )
+                
+            
             ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
                         
             HydrusPaths.MirrorFile( path, temp_path )
