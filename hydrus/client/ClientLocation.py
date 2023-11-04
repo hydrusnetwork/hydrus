@@ -314,6 +314,14 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
         return prefix + service_string
         
     
+    def ToDictForAPI( self ):
+
+        return {
+            'current_service_keys' : [ service_key.hex() for service_key in self.current_service_keys ],
+            'deleted_service_keys' : [ service_key.hex() for service_key in self.deleted_service_keys ]
+        }
+        
+    
     @staticmethod
     def STATICCreateAllCurrent( current_service_keys ) -> "LocationContext":
         

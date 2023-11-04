@@ -115,6 +115,7 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_database.putChild( b'mr_bones', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseMrBones( self._service, self._client_requests_domain ) )
         manage_database.putChild( b'lock_on', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseLockOn( self._service, self._client_requests_domain ) )
         manage_database.putChild( b'lock_off', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseLockOff( self._service, self._client_requests_domain ) )
+        manage_database.putChild( b'get_client_options', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( self._service, self._client_requests_domain ) )
         
         manage_file_relationships = NoResource()
         

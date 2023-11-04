@@ -36,6 +36,7 @@ from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
 
 from hydrus.client import ClientAPI
+from hydrus.client import ClientOptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
@@ -1672,6 +1673,7 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddFiles( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -3903,6 +3905,51 @@ class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClie
         body = Dumps( body_dict, mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( HydrusResourceClientAPIRestrictedManageDatabase ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+                
+        old_options = HG.client_controller.options
+
+        new_options: ClientOptions.ClientOptions = HG.client_controller.new_options
+
+        options_dict = {
+            'booleans' : new_options.GetAllBooleans(),
+            'strings' : new_options.GetAllStrings(),
+            'noneable_strings' : new_options.GetAllNoneableStrings(),
+            'integers' : new_options.GetAllIntegers(),
+            'noneable_integers' : new_options.GetAllNoneableIntegers(),
+            'keys' : new_options.GetAllKeysHex(),
+            'colors' : new_options.GetAllColours(),
+            'media_zooms' : new_options.GetMediaZooms(),
+            'slideshow_durations' : new_options.GetSlideshowDurations(),
+            'default_file_import_options' : {
+                'loud' : new_options.GetDefaultFileImportOptions('loud').GetSummary(),
+                'quiet' : new_options.GetDefaultFileImportOptions('quiet').GetSummary()
+            },
+            'default_namespace_sorts' : [ sort.ToDictForAPI() for sort in new_options.GetDefaultNamespaceSorts() ],
+            'default_sort' : new_options.GetDefaultSort().ToDictForAPI(),
+            'default_tag_sort' : new_options.GetDefaultTagSort().ToDictForAPI(),
+            'fallback_sort' : new_options.GetFallbackSort().ToDictForAPI(),
+            'suggested_tags_favourites' : new_options.GetAllSuggestedTagsFavourites(),
+            'default_local_location_context' : new_options.GetDefaultLocalLocationContext().ToDictForAPI()
+        }
+
+        body_dict = {
+            'old_options' : old_options,
+            'options' : options_dict,
+            'services' : GetServicesDict()
+        }
+
+                
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
