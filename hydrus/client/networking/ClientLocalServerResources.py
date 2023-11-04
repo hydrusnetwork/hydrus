@@ -40,6 +40,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client import ClientRendering
+from hydrus.client import ClientImageHandling
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
@@ -1692,6 +1693,11 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
                 raise HydrusExceptions.BadRequestException( 'Path "{}" does not exist!'.format( path ) )
                 
             
+            if not os.path.isfile( path ):
+                
+                raise HydrusExceptions.BadRequestException( 'Path "{}" is not a file!'.format( path ) )
+                
+            
             ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
             
             request.temp_file_info = ( os_file_handle, temp_path )
@@ -1844,6 +1850,66 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        if not hasattr( request, 'temp_file_info' ):
+            
+            path = request.parsed_request_args.GetValue( 'path', str )
+            
+            if not os.path.exists( path ):
+                
+                raise HydrusExceptions.BadRequestException( 'Path "{}" does not exist!'.format( path ) )
+                
+            
+            if not os.path.isfile( path ):
+                
+                raise HydrusExceptions.BadRequestException( 'Path "{}" is not a file!'.format( path ) )
+                
+            
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+            
+            request.temp_file_info = ( os_file_handle, temp_path )
+            
+            HydrusPaths.MirrorFile( path, temp_path )
+            
+        
+        ( os_file_handle, temp_path ) = request.temp_file_info
+        
+        mime = HydrusFileHandling.GetMime( temp_path )
+        
+        body_dict = {}
+        
+        sha256_hash = HydrusFileHandling.GetHashFromPath( temp_path )
+        
+        body_dict['hash'] = sha256_hash.hex()
+        
+        if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH or mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH:
+            
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( temp_path, mime )
+            
+            if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
+                
+                perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
+                
+                body_dict['perceptual_hashes'] = [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ]
+                
+            if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH:
+                
+                pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
+                
+                body_dict['pixel_hash'] = pixel_hash.hex()
+                
+            
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
