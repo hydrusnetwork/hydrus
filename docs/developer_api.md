@@ -2848,3 +2848,21 @@ Arguments (in percent-encoded JSON):
 ```
 
 The arguments here are the same as for [GET /get\_files/search\_files](#get_files_search_files). You can set any or none of them to set a search domain like in the dialog.
+
+### **GET `/manage_database/get_client_options`** { id="manage_database_get_client_options" }
+
+!!! warning "Unstable Response"
+    The response for this path is unstable and subject to change without warning. No examples are given.
+    
+
+_Gets the current options from the client._
+
+Restricted access:
+:   YES. Manage Database permission needed.
+    
+Required Headers: n/a
+    
+Arguments: n/a
+    
+Response:
+: A JSON dump of nearly all options set in the client. The format of this is based on internal hydrus structures and is subject to change without warning with new hydrus versions. Do not rely on anything you find here to continue to exist and don't rely on the structure to be the same.
