@@ -21,6 +21,7 @@ a = Analysis(['hydrus\\hydrus_client.pyw'],
                ('hydrus\\static', 'static'),
                ('hydrus\\license.txt', '.'),
                ('hydrus\\README.md', '.'),
+               ('hydrus\\auto_update_installer.bat', '.'),
                ('hydrus\\help my client will not boot.txt', '.'),
                ('hydrus\\db', 'db'),
                (cloudscraper_dir, 'cloudscraper')

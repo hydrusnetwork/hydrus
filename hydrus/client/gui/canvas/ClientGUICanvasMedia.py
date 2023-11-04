@@ -55,6 +55,7 @@ zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MOUSE ] = 'mouse (or viewer cente
 zoom_centerpoints_str_lookup[ ZOOM_CENTERPOINT_MEDIA_TOP_LEFT ] = 'media top-left'
 
 OPEN_EXTERNALLY_BUTTON_SIZE = ( 200, 45 )
+OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE = ( 200, 200 )
 
 def CalculateCanvasMediaSize( media, canvas_size: QC.QSize, show_action ):
     
@@ -216,9 +217,9 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
             #thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             thumbnail_dpr_percent = 100
             
-            ( clip_rect, ( thumb_width, thumb_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( media.GetResolution(), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+            ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
-            height = height + thumb_height
+            height = height + min( OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1], thumb_height )
             
         
         return QC.QSize( width, height )
@@ -2898,6 +2899,11 @@ class OpenExternallyPanel( QW.QWidget ):
                 
             
             thumbnail_window = ClientGUICommon.BufferedWindowIcon( self, qt_pixmap )
+            
+            thumbnail_window_width = min( thumbnail_window.width(), OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[0] )
+            thumbnail_window_height = min( thumbnail_window.height(), OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1] )
+            
+            thumbnail_window.setFixedSize( thumbnail_window_width, thumbnail_window_height )
             
             QP.AddToLayout( vbox, thumbnail_window, CC.FLAGS_CENTER )
             

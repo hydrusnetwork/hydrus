@@ -1056,7 +1056,7 @@ class DB( HydrusDB.HydrusDB ):
         
         job_key = ClientThreading.JobKey( cancellable = True )
         
-        job_key.SetStatusTitle( 'clear orphan file records' )
+        job_key.SetStatusTitle( 'clear/fix orphan file records' )
         
         self._controller.pub( 'modal_message', job_key )
         
@@ -1066,9 +1066,10 @@ class DB( HydrusDB.HydrusDB ):
             
             job_key.SetStatusText( 'looking for orphans' )
             
+            # actually important we do it in this order I guess, to potentially fix a file that is only in 'my files' and not in 'all my files' or 'all local files'
             jobs = [
-                ( ( HC.LOCAL_FILE_DOMAIN, ), self.modules_services.combined_local_media_service_id, 'my files umbrella' ),
-                ( ( HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_UPDATE_DOMAIN, ), self.modules_services.combined_local_file_service_id, 'local files umbrella' )
+                ( ( HC.LOCAL_FILE_DOMAIN, ), self.modules_services.combined_local_media_service_id, 'all my files umbrella' ),
+                ( ( HC.LOCAL_FILE_TRASH_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_UPDATE_DOMAIN, ), self.modules_services.combined_local_file_service_id, 'all local files umbrella' )
             ]
             
             for ( umbrella_components_service_types, umbrella_master_service_id, description ) in jobs:
@@ -1092,31 +1093,118 @@ class DB( HydrusDB.HydrusDB ):
                     return
                     
                 
-                job_key.SetStatusText( 'deleting orphans' )
+                job_key.SetStatusText( 'actioning orphans' )
                 
                 if len( in_components_not_in_master ) > 0:
                     
                     orphans_found = True
                     
-                    # these files were deleted from the umbrella service without being cleared from a specific file domain
-                    # they are most likely deleted from disk
-                    # pushing the master's delete call will flush from the components as well
+                    client_files_manager = HG.client_controller.client_files_manager
                     
-                    self._DeleteFiles( umbrella_master_service_id, in_components_not_in_master )
+                    those_that_exist_on_disk = set()
                     
-                    # we spam this stuff since it won't trigger if the files don't exist on master!
-                    self.modules_files_inbox.ArchiveFiles( in_components_not_in_master )
+                    hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = in_components_not_in_master )
                     
-                    for hash_id in in_components_not_in_master:
+                    for ( hash_id, hash ) in hash_ids_to_hashes.items():
                         
-                        self.modules_similar_files.StopSearchingFile( hash_id )
+                        try:
+                            
+                            mime = self.modules_files_metadata_basic.GetMime( hash_id )
+                            
+                        except HydrusExceptions.DataMissing:
+                            
+                            continue
+                            
+                        
+                        if client_files_manager.LocklessHasFile( hash, mime ):
+                            
+                            those_that_exist_on_disk.add( hash_id )
+                            
                         
                     
-                    self.modules_files_maintenance_queue.CancelFiles( in_components_not_in_master )
+                    those_that_are_missing = set( in_components_not_in_master ).difference( those_that_exist_on_disk )
                     
-                    self.modules_hashes_local_cache.DropHashIdsFromCache( in_components_not_in_master )
+                    if len( those_that_exist_on_disk ) > 0:
+                        
+                        # ok these we actually have but they aren't listed on the umbrella service. sounds like an import that went wrong
+                        # it would be nice to recover these files to save the import timestamp, but in the same stroke they may be borked deletes so we want to present them to the user
+                        
+                        import_rows = []
+                        
+                        for hash_id in those_that_exist_on_disk:
+                            
+                            timestamps = []
+                            
+                            for umbrella_components_service_id in umbrella_components_service_ids:
+                                
+                                service_key = self.modules_services.GetServiceKey( umbrella_components_service_id )
+                                
+                                timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = service_key )
+                                
+                                timestamp = self.modules_files_storage.GetTimestamp( hash_id, timestamp_data )
+                                
+                                if timestamp is not None:
+                                    
+                                    timestamps.append( timestamp )
+                                    
+                                
+                            
+                            if len( timestamps ) == 0:
+                                
+                                those_that_are_missing.add( hash_id )
+                                
+                            else:
+                                
+                                timestamp = min( timestamps )
+                                
+                                import_rows.append( ( hash_id, timestamp ) )
+                                
+                            
+                        
+                        if len( import_rows ) > 0:
+                            
+                            # with fingers crossed this magically corrects all sorts of stuff
+                            self._AddFiles( umbrella_master_service_id, import_rows )
+                            
+                            HydrusData.ShowText( 'Found and recovered {} records for files that were safely in specific component services components but not the master "{}". I have opened a new page with these files--they may have been faulty imports or faulty deletes, so you probably need to give them a look.'.format( HydrusData.ToHumanInt( len( in_components_not_in_master ) ), description ) )
+                            
+                            service_key = self.modules_services.GetServiceKey( umbrella_master_service_id )
+                            
+                            location_context = ClientLocation.LocationContext.STATICCreateSimple( service_key )
+                            
+                            hashes = self.modules_hashes_local_cache.GetHashes( [ row[0] for row in import_rows ] )
+                            
+                            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = 'reparented file records' )
+                            
+                        
                     
-                    HydrusData.ShowText( 'Found and deleted {} files that were in components but not the master {}.'.format( HydrusData.ToHumanInt( len( in_components_not_in_master ) ), description ) )
+                    if len( those_that_are_missing ) > 0:
+                        
+                        # these files were deleted from the umbrella service without being cleared from a specific file domain
+                        # they are most likely deleted from disk
+                        # we'll spam our delete calls
+                        
+                        self._DeleteFiles( umbrella_master_service_id, in_components_not_in_master )
+                        
+                        for umbrella_components_service_id in umbrella_components_service_ids:
+                            
+                            self._DeleteFiles( umbrella_components_service_id, in_components_not_in_master )
+                            
+                        
+                        # we spam this stuff since it won't trigger if the files don't exist on master!
+                        self.modules_files_inbox.ArchiveFiles( in_components_not_in_master )
+                        
+                        for hash_id in in_components_not_in_master:
+                            
+                            self.modules_similar_files.StopSearchingFile( hash_id )
+                            
+                        
+                        self.modules_files_maintenance_queue.CancelFiles( in_components_not_in_master )
+                        
+                        self.modules_hashes_local_cache.DropHashIdsFromCache( in_components_not_in_master )
+                        
+                        HydrusData.ShowText( 'Found and deleted {} records for files that were in specific service components but not the master "{}".'.format( HydrusData.ToHumanInt( len( in_components_not_in_master ) ), description ) )
+                        
                     
                 
                 if job_key.IsCancelled():
@@ -1134,7 +1222,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._DeleteFiles( umbrella_master_service_id, in_master_not_in_components )
                     
-                    HydrusData.ShowText( 'Found and deleted {} files that were in the master {} but not it its components.'.format( HydrusData.ToHumanInt( len( in_master_not_in_components ) ), description ) )
+                    HydrusData.ShowText( 'Found and deleted {} records for files that were in the master "{}" but not it its specific service components.'.format( HydrusData.ToHumanInt( len( in_master_not_in_components ) ), description ) )
                     
                 
             
@@ -8360,358 +8448,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
-        
-        if version == 480:
-            
-            try:
-                
-                from hydrus.client.gui.canvas import ClientGUIMPV
-                
-                if ClientGUIMPV.MPV_IS_AVAILABLE and HC.PLATFORM_LINUX:
-                    
-                    new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                    
-                    show_message = False
-                    
-                    for mime in ( HC.ANIMATION_GIF, HC.VIDEO_MP4, HC.AUDIO_MP3 ):
-                        
-                        ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( mime )
-                        
-                        if media_show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE:
-                            
-                            show_message = True
-                            
-                        
-                    
-                    if show_message:
-                        
-                        message = 'Hey, you are a Linux user and seem to have MPV support but you are not set to use MPV for one or more filetypes. If you know all about this, no worries, ignore this message. But if you are a long-time Linux user, you may have been reverted to the native hydrus renderer many releases ago due to stability worries. If you did not know hydrus supports audio now, please check the filetype options under _options->media_ and give mpv a go!'
-                        
-                        self.pub_initial_message( message )
-                        
-                    
-                
-            except:
-                
-                pass
-                
-            
-        
-        if version == 481:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                old_options = self._GetOptions()
-                
-                new_options.SetInteger( 'thumbnail_cache_size', old_options[ 'thumbnail_cache_size' ] )
-                new_options.SetInteger( 'image_cache_size', old_options[ 'fullscreen_cache_size' ] )
-                
-                new_options.SetBoolean( 'pause_export_folders_sync', old_options[ 'pause_export_folders_sync' ] )
-                new_options.SetBoolean( 'pause_import_folders_sync', old_options[ 'pause_import_folders_sync' ] )
-                new_options.SetBoolean( 'pause_repo_sync', old_options[ 'pause_repo_sync' ] )
-                new_options.SetBoolean( 'pause_subs_sync', old_options[ 'pause_subs_sync' ] )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Updating some cache sizes and pause states to a new options structure failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log. Also check _options->speed and memory_ for your thumbnail/image cache sizes, and your subs/repository/import folder/export folder pause status.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 482:
-            
-            self._Execute( 'UPDATE services SET service_type = ? WHERE service_key = ?;', ( HC.LOCAL_FILE_UPDATE_DOMAIN, sqlite3.Binary( CC.LOCAL_UPDATE_SERVICE_KEY ) ) )
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'nijie view popup parser',
-                    'deviant art file extended_fetch parser'
-                ] )
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'mega.nz file or folder',
-                    'mega.nz file',
-                    'mega.nz folder (alt format)',
-                    'mega.nz folder'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some parsers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 485:
-            
-            result = self._Execute( 'SELECT service_id FROM services WHERE service_type = ?;', ( HC.COMBINED_LOCAL_MEDIA, ) ).fetchone()
-            
-            if result is None:
-                
-                warning_ptr_text = 'After looking at your database, I think this will be quick, maybe a couple minutes at most.'
-                
-                nums_mappings = self._STL( self._Execute( 'SELECT info FROM service_info WHERE info_type = ?;', ( HC.SERVICE_INFO_NUM_MAPPINGS, ) ) )
-                
-                if len( nums_mappings ) > 0:
-                    
-                    we_ptr = max( nums_mappings ) > 1000000000
-                    
-                    if we_ptr:
-                        
-                        result = self._Execute( 'SELECT info FROM service_info WHERE info_type = ? AND service_id = ?;', ( HC.SERVICE_INFO_NUM_FILES, self.modules_services.combined_local_file_service_id ) ).fetchone()
-                        
-                        if result is not None:
-                            
-                            ( num_files, ) = result
-                            
-                            warning_ptr_text = 'For most users, this update works at about 25-100k files per minute, so with {} files I expect it to take ~{} minutes for you.'.format( HydrusData.ToHumanInt( num_files ), max( 1, int( num_files / 60000 ) ) )
-                            
-                        else:
-                            
-                            we_ptr = False
-                            
-                        
-                    
-                else:
-                    
-                    we_ptr = False
-                    
-                
-                message = 'Your database is going to calculate some new data so it can refer to multiple local services more efficiently. It could take a while.'
-                message += os.linesep * 2
-                message += warning_ptr_text
-                message += os.linesep * 2
-                message += 'If you do not have the time at the moment, please force kill the hydrus process now. Otherwise, continue!'
-                
-                BlockingSafeShowMessage( message )
-                
-                client_caches_path = os.path.join( self._db_dir, 'client.caches.db' )
-                
-                expected_space_needed = os.path.getsize( client_caches_path ) // 4
-                
-                try:
-                    
-                    HydrusDBBase.CheckHasSpaceForDBTransaction( self._db_dir, expected_space_needed )
-                    
-                except Exception as e:
-                    
-                    message = 'Hey, this update is going to expand your database cache. It requires some free space, but I think there is a problem and I am not sure it can be done safely. I recommend you kill the hydrus process now and free up some space. If you think the check is mistaken, click ok and it will try anyway. Full error:'
-                    message += os.linesep * 2
-                    message += str( e )
-                    
-                    BlockingSafeShowMessage( message )
-                    
-                
-                self._controller.frame_splash_status.SetText( 'creating "all my files" virtual service' )
-                self._controller.frame_splash_status.SetSubtext( 'gathering current file records' )
-                
-                self._cursor_transaction_wrapper.Commit()
-                
-                self._Execute( 'PRAGMA journal_mode = TRUNCATE;' )
-                
-                self._cursor_transaction_wrapper.BeginImmediate()
-                
-                dictionary = ClientServices.GenerateDefaultServiceDictionary( HC.COMBINED_LOCAL_MEDIA )
-                
-                self._AddService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, HC.COMBINED_LOCAL_MEDIA, 'all my files', dictionary )
-                
-                self._UnloadModules()
-                
-                self._LoadModules()
-                
-                # services module is now aware of the new guy
-                
-                # note we do not have to populate the mappings cache--we just have to add files naturally!
-                
-                # current files
-                
-                all_media_hash_ids = set()
-                
-                for service_id in self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) ):
-                    
-                    all_media_hash_ids.update( self.modules_files_storage.GetCurrentHashIdsList( service_id ) )
-                    
-                
-                num_to_do = len( all_media_hash_ids )
-                
-                BLOCK_SIZE = 500
-                
-                for ( i, block_of_hash_ids ) in enumerate( HydrusData.SplitIteratorIntoChunks( all_media_hash_ids, BLOCK_SIZE ) ):
-                    
-                    block_of_hash_ids_to_timestamps = self.modules_files_storage.GetCurrentHashIdsToTimestamps( self.modules_services.combined_local_file_service_id, block_of_hash_ids )
-                    
-                    rows = list( block_of_hash_ids_to_timestamps.items() )
-                    
-                    self._AddFiles( self.modules_services.combined_local_media_service_id, rows )
-                    
-                    self._controller.frame_splash_status.SetSubtext( 'making current file records: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) ) )
-                    
-                
-                # deleted files
-                
-                self._controller.frame_splash_status.SetSubtext( 'gathering deleted file records' )
-                
-                all_media_hash_ids = set()
-                
-                hash_ids_to_deletion_timestamps = {}
-                
-                for service_id in self.modules_services.GetServiceIds( ( HC.LOCAL_FILE_DOMAIN, ) ):
-                    
-                    deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
-                    
-                    results = self._Execute( 'SELECT hash_id, timestamp FROM {};'.format( deleted_files_table_name ) ).fetchall()
-                    
-                    for ( hash_id, timestamp ) in results:
-                        
-                        all_media_hash_ids.add( hash_id )
-                        
-                        if timestamp is not None:
-                            
-                            if hash_id in hash_ids_to_deletion_timestamps:
-                                
-                                hash_ids_to_deletion_timestamps[ hash_id ] = max( timestamp, hash_ids_to_deletion_timestamps[ hash_id ] )
-                                
-                            else:
-                                
-                                hash_ids_to_deletion_timestamps[ hash_id ] = timestamp
-                                
-                            
-                        
-                    
-                
-                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_DELETED )
-                
-                hash_ids_to_original_timestamps = dict( self._Execute( 'SELECT hash_id, original_timestamp FROM {};'.format( deleted_files_table_name ) ) )
-                
-                current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
-                
-                hash_ids_to_original_timestamps.update( dict( self._Execute( 'SELECT hash_id, timestamp FROM {};'.format( current_files_table_name ) ) ) )
-                
-                deleted_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_DELETED )
-                
-                num_to_do = len( all_media_hash_ids )
-                
-                for ( i, hash_id ) in enumerate( all_media_hash_ids ):
-                    
-                    # no need to fake the service info number updates--that will calculate from raw on next review services open
-                    
-                    if hash_id not in hash_ids_to_deletion_timestamps:
-                        
-                        timestamp = None
-                        
-                    else:
-                        
-                        timestamp = hash_ids_to_deletion_timestamps[ hash_id ]
-                        
-                    
-                    if hash_id not in hash_ids_to_original_timestamps:
-                        
-                        continue
-                        
-                    else:
-                        
-                        original_timestamp = hash_ids_to_original_timestamps[ hash_id ]
-                        
-                    
-                    self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id, timestamp, original_timestamp ) VALUES ( ?, ?, ? );'.format( deleted_files_table_name ), ( hash_id, timestamp, original_timestamp ) )
-                    
-                    if i % 500 == 0:
-                        
-                        self._controller.frame_splash_status.SetSubtext( 'making deleted file records: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) ) )
-                        
-                    
-                
-                self._cursor_transaction_wrapper.Commit()
-                
-                self._Execute( 'PRAGMA journal_mode = {};'.format( HG.db_journal_mode ) )
-                
-                self._cursor_transaction_wrapper.BeginImmediate()
-                
-                self._controller.frame_splash_status.SetSubtext( '' )
-                
-            
-        
-        if version == 486:
-            
-            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
-            
-            tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
-            
-            for ( file_service_id, tag_service_id ) in itertools.product( file_service_ids, tag_service_ids ):
-                
-                # some users still have a few of these floating around, they are not needed
-                
-                suffix = '{}_{}'.format( file_service_id, tag_service_id )
-                
-                cache_files_table_name = 'external_caches.specific_files_cache_{}'.format( suffix )
-                
-                result = self._Execute( 'SELECT 1 FROM external_caches.sqlite_master WHERE name = ?;', ( cache_files_table_name.split( '.', 1 )[1], ) ).fetchone()
-                
-                if result is None:
-                    
-                    continue
-                    
-                
-                self._Execute( 'DROP TABLE {};'.format( cache_files_table_name ) )
-                
-            
-        
-        if version == 488:
-            
-            # clearing up some garbo 1970-01-01 timestamps that got saved
-            self._Execute( 'DELETE FROM file_domain_modified_timestamps WHERE file_modified_timestamp < ?;', ( 86400 * 7, ) )
-            
-            #
-            
-            # mysterious situation where repo updates domain had some ghost files that were not in all local files!
-            
-            hash_ids_in_repo_updates = set( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.local_update_service_id ) )
-            
-            hash_ids_in_all_files = self.modules_files_storage.FilterHashIds( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ), hash_ids_in_repo_updates )
-            
-            orphan_hash_ids = hash_ids_in_repo_updates.difference( hash_ids_in_all_files )
-            
-            if len( orphan_hash_ids ) > 0:
-                
-                hash_ids_to_timestamps = self.modules_files_storage.GetCurrentHashIdsToTimestamps( self.modules_services.local_update_service_id, orphan_hash_ids )
-                
-                rows = list( hash_ids_to_timestamps.items() )
-                
-                self.modules_files_storage.AddFiles( self.modules_services.combined_local_file_service_id, rows )
-                
-            
-            # turns out ffmpeg was detecting some updates as mpegs, so this wasn't always working right!
-            self.modules_files_maintenance_queue.AddJobs( hash_ids_in_repo_updates, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-            
-            self._Execute( 'DELETE FROM service_info WHERE service_id = ?;', ( self.modules_services.local_update_service_id, ) )
-            
         
         if version == 490:
             

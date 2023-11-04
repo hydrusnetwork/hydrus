@@ -79,6 +79,13 @@ class NetworkEngine( object ):
         self.controller.sub( self, 'RefreshOptions', 'notify_new_options' )
         
     
+    def _AssignCurrentLoginProcess( self, login_process: typing.Optional[ ClientNetworkingLogin.LoginProcess ] ):
+        
+        self._current_login_process = login_process
+        
+        self.login_manager.SetCurrentLoginProcess( login_process )
+        
+    
     def AddJob( self, job: ClientNetworkingJobs.NetworkJob ):
         
         if HG.network_report_mode:
@@ -259,7 +266,7 @@ class NetworkEngine( object ):
                 
                 self.controller.CallToThread( login_process.Start )
                 
-                self._current_login_process = login_process
+                self._AssignCurrentLoginProcess( login_process )
                 
             
         
@@ -273,7 +280,7 @@ class NetworkEngine( object ):
                 
                 return True
                 
-            elif job.NeedsLogin():
+            elif job.CurrentlyNeedsLogin():
                 
                 try:
                     
@@ -291,13 +298,15 @@ class NetworkEngine( object ):
                         
                     else:
                         
+                        job_login_network_context = job.GetLoginNetworkContext()
+                        
                         if job.IsHydrusJob():
                             
-                            message = 'This hydrus service (' + job.GetLoginNetworkContext().ToString() + ') could not do work because: {}'.format( repr( e ) )
+                            message = f'This hydrus service "{job_login_network_context.ToString()}" could not do work because: {e}'
                             
                         else:
                             
-                            message = 'This job\'s network context (' + job.GetLoginNetworkContext().ToString() + ') seems to have an invalid login. The error was: {}'.format( repr( e ) )
+                            message = f'This job\'s network context "{job_login_network_context.ToString()}" seems to have an invalid login. The error was: {e}'
                             
                         
                         job.Cancel( message )
@@ -325,7 +334,7 @@ class NetworkEngine( object ):
                     
                     self.controller.CallToThread( login_process.Start )
                     
-                    self._current_login_process = login_process
+                    self._AssignCurrentLoginProcess( login_process )
                     
                     job.SetStatus( 'logging in' + HC.UNICODE_ELLIPSIS )
                     
@@ -350,7 +359,7 @@ class NetworkEngine( object ):
                 
                 if self._current_login_process.IsDone():
                     
-                    self._current_login_process = None
+                    self._AssignCurrentLoginProcess( None )
                     
                 
             

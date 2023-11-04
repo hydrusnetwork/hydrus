@@ -39,7 +39,7 @@ def ThumbnailPILImageFromKra(path):
         
     
 
-def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: typing.Tuple[ int, int ] ) -> bytes:
     
     try:
         
@@ -48,11 +48,6 @@ def GenerateThumbnailNumPyFromKraPath( path: str, target_resolution: typing.Tupl
     except:
         
         pil_image = ThumbnailPILImageFromKra( path )
-        
-    
-    if clip_rect is not None:
-        
-        pil_image = HydrusImageHandling.ClipPILImage( pil_image, clip_rect )
         
     
     thumbnail_pil_image = pil_image.resize( target_resolution, PILImage.LANCZOS )

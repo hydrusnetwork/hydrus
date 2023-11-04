@@ -2,7 +2,7 @@ import typing
 
 from hydrus.core import HydrusExceptions
 
-def BaseGenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+def BaseGenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tuple[int, int] ) -> bytes:
     
     raise HydrusExceptions.NoThumbnailFileException()
     

@@ -1137,6 +1137,21 @@ class NetworkJob( object ):
             
         
     
+    def CurrentlyNeedsLogin( self ):
+        
+        with self._lock:
+            
+            if self._for_login:
+                
+                return False
+                
+            else:
+                
+                return self.engine.login_manager.CurrentlyNeedsLogin( self._login_network_context )
+                
+            
+        
+    
     def CurrentlyWaitingOnConnectionError( self ):
         
         with self._lock:
@@ -1385,21 +1400,6 @@ class NetworkJob( object ):
         with self._lock:
             
             return self.engine.domain_manager.IsValid( self._network_contexts )
-            
-        
-    
-    def NeedsLogin( self ):
-        
-        with self._lock:
-            
-            if self._for_login:
-                
-                return False
-                
-            else:
-                
-                return self.engine.login_manager.NeedsLogin( self._login_network_context )
-                
             
         
     

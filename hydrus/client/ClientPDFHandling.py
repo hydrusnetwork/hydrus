@@ -75,24 +75,15 @@ def LoadPDF( path: str ):
     return document
     
 
-def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tuple[int, int], clip_rect = None ) -> bytes:
+def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tuple[int, int] ) -> bytes:
     
     try:
         
         document = LoadPDF( path )
         
-        if clip_rect is None:
-            
-            ( target_width, target_height ) = target_resolution
-            
-            resolution = QC.QSize( target_width, target_height )
-            
-        else:
-            
-            ( pdf_width, pdf_height ) = GetPDFResolutionFromDocument( document )
-            
-            resolution = QC.QSize( pdf_width, pdf_height )
-            
+        ( target_width, target_height ) = target_resolution
+        
+        resolution = QC.QSize( target_width, target_height )
         
         qt_image = document.render(0, resolution)
         
@@ -103,16 +94,7 @@ def GenerateThumbnailNumPyFromPDFPath( path: str, target_resolution: typing.Tupl
         
         document.close()
         
-        if clip_rect is None:
-            
-            thumbnail_numpy_image = numpy_image
-            
-        else:
-            
-            numpy_image = HydrusImageHandling.ClipNumPyImage( numpy_image, clip_rect )
-            
-            thumbnail_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
-            
+        thumbnail_numpy_image = numpy_image
         
         return thumbnail_numpy_image
         

@@ -365,16 +365,16 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         try:
             
-            ( involves_physical_delete, jobs ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, media_to_delete, default_reason, suggested_file_service_key = file_service_key )
+            ( hashes_physically_deleted, jobs ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, media_to_delete, default_reason, suggested_file_service_key = file_service_key )
             
         except HydrusExceptions.CancelledException:
             
             return
             
         
-        if involves_physical_delete:
+        if len( hashes_physically_deleted ) > 0:
             
-            self._SetFocusedMedia( None )
+            self._RemoveMediaByHashes( hashes_physically_deleted )
             
         
         def do_it( jobs ):
@@ -2111,9 +2111,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                     if action == CAC.SIMPLE_COPY_LITTLE_BMP and ( width > 1024 or height > 1024 ):
                         
-                        ( clip_rect, clipped_res ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                        target_resolution = HydrusImageHandling.GetThumbnailResolution( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
                         
-                        copied = self._CopyBMPToClipboard( resolution = clipped_res )
+                        copied = self._CopyBMPToClipboard( resolution = target_resolution )
                         
                     else:
                         
@@ -4049,7 +4049,9 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
-            local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( local_media_file_service_keys ), key = HG.client_controller.services_manager.GetName )
+            user_command_deletable_file_service_keys = local_media_file_service_keys.union( [ CC.LOCAL_UPDATE_SERVICE_KEY ] )
+            
+            local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( user_command_deletable_file_service_keys ), key = HG.client_controller.services_manager.GetName )
             
             for file_service_key in local_file_service_keys_we_are_in:
                 
@@ -4375,9 +4377,9 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     if width > 1024 or height > 1024:
                         
-                        ( clip_rect, clipped_res ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                        target_resolution = HydrusImageHandling.GetThumbnailResolution( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
                         
-                        ClientGUIMenus.AppendMenuItem( copy_menu, 'source lookup bitmap ({}x{})'.format( clipped_res[0], clipped_res[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', self._CopyBMPToClipboard, clipped_res )
+                        ClientGUIMenus.AppendMenuItem( copy_menu, 'source lookup bitmap ({}x{})'.format( target_resolution[0], target_resolution[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', self._CopyBMPToClipboard, target_resolution )
                         
                     
                 
@@ -4449,7 +4451,10 @@ class MediaPanelThumbnails( MediaPanel ):
     def TIMERAnimationUpdate( self ):
         
         FRAME_DURATION = 1.0 / 60
-        NUM_FRAMES_TO_FILL_IN = 15
+        
+        fade_thumbnails = HG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
+        
+        NUM_FRAMES_TO_FILL_IN = 15 if fade_thumbnails else 0
         
         loop_started = HydrusTime.GetNowPrecise()
         loop_should_break_time = loop_started + ( FRAME_DURATION / 2 )
