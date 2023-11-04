@@ -140,7 +140,6 @@ class HydrusServiceClientAPI( HydrusClientService ):
         root.putChild( b'manage_options', manage_options )
 
         manage_options.putChild( b'get_client_options', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageOptionsGetClientOptions( self._service, self._client_requests_domain ) )
-        manage_options.putChild( b'get_client_options_simple', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManageOptionsGetClientOptionsSimple( self._service, self._client_requests_domain ) )
 
         manage_pages = NoResource()
         
