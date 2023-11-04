@@ -4451,7 +4451,10 @@ class MediaPanelThumbnails( MediaPanel ):
     def TIMERAnimationUpdate( self ):
         
         FRAME_DURATION = 1.0 / 60
-        NUM_FRAMES_TO_FILL_IN = 15
+        
+        fade_thumbnails = HG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
+        
+        NUM_FRAMES_TO_FILL_IN = 15 if fade_thumbnails else 0
         
         loop_started = HydrusTime.GetNowPrecise()
         loop_should_break_time = loop_started + ( FRAME_DURATION / 2 )
