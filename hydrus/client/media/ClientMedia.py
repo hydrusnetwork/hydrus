@@ -1060,7 +1060,7 @@ class MediaList( object ):
                     if action == HC.CONTENT_UPDATE_DELETE:
                         
                         local_file_domains = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
-                        all_local_file_services = set( list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.TRASH_SERVICE_KEY ] )
+                        all_local_file_services = set( list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY ] )
                         
                         #
                         
@@ -2697,6 +2697,37 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
         return '{}, {}'.format( sort_type_string, sort_order_string )
         
     
+    def ToDictForAPI( self ):
+
+        ( sort_metatype, sort_data ) = self.sort_type
+
+        data = {
+            'sort_metatype' : sort_metatype,
+            'sort_order' : self.sort_order,
+            'tag_context': self.tag_context.ToDictForAPI(),
+        }
+
+        if sort_metatype == 'system':
+            
+            data[ 'sort_type' ] = sort_data
+            
+        elif sort_metatype == 'namespaces':
+            
+            (namespaces, tag_display_type) = sort_data
+
+            data[ 'namespaces' ] = self.GetNamespaces()
+            data[ 'tag_display_type' ] = tag_display_type
+            
+        elif sort_metatype == 'rating':
+            
+            service_key = sort_data
+            
+            data[ 'service_key' ] = service_key.hex()
+        
+        return data
+        
+    
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_MEDIA_SORT ] = MediaSort
 
 class SortedList( object ):

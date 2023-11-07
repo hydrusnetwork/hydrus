@@ -1212,11 +1212,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
         text += os.linesep * 2
-        text += 'This will instruct the database to review its file records\' integrity. If anything appears to be in a specific domain (e.g. my files) but not an umbrella domain (e.g. all my files), or vice versa, it will be removed.'
+        text += 'This will instruct the database to review its file records\' integrity. If anything appears to be in a specific domain (e.g. my files) but not an umbrella domain (e.g. all my files), and the actual file also exists on disk, it will try to recover the record. If the file does not actually exist on disk, or the record is in the umbrella domain and not in the specific domain, or if recovery data cannot be found, the record will be deleted.'
         text += os.linesep * 2
         text += 'You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly and may break other maintenance routines. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
         text += os.linesep * 2
-        text += 'It will create a popup message while it works and inform you of the number of orphan records found.'
+        text += 'It will create a popup message while it works and inform you of the number of orphan records found. It may lock up the client for a bit.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
         
@@ -3111,7 +3111,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( db_maintenance_submenu )
         
-        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear/fix orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
         
         ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
         

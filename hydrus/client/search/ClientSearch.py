@@ -1294,6 +1294,16 @@ class TagContext( HydrusSerialisable.SerialisableBase ):
         return name_method( self.service_key )
         
     
+    def ToDictForAPI( self ):
+        
+        return {
+            'service_key' : self.service_key.hex(), 
+            'include_current_tags' : self.include_current_tags, 
+            'include_pending_tags' : self.include_pending_tags, 
+            'display_service_key' : self.display_service_key.hex()
+        }
+        
+    
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_tag_context ] = TagContext
 

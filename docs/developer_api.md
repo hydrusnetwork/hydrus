@@ -635,6 +635,46 @@ Response:
 This puts files back in the inbox, taking them out of the archive. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the inbox.
     
 
+### **POST `/add_files/generate_hashes`** { id="add_files_generate_hashes" }
+
+_Generate hashes for an arbitrary file._
+
+Restricted access:
+:   YES. Import Files permission needed.
+    
+Required Headers:
+:   - Content-Type: `application/json` (if sending path), `application/octet-stream` (if sending file)
+
+Arguments (in JSON):
+:   - `path`: (the path you want to import)
+
+```json title="Example request body"
+{
+  "path" : "E:\\to_import\\ayanami.jpg"
+}
+```
+
+Arguments (as bytes): 
+:   You can alternately just send the file's bytes as the POST body.
+    
+Response: 
+:   Some JSON with the hashes of the file
+```json title="Example response"
+{
+  "hash": "7de421a3f9be871a7037cca8286b149a31aecb6719268a94188d76c389fa140c",
+  "perceptual_hashes": [
+    "b44dc7b24dcb381c"
+  ],
+  "pixel_hash": "c7bf20e5c4b8a524c2c3e3af2737e26975d09cba2b3b8b76341c4c69b196da4e",
+}
+```
+
+    - `hash` is the sha256 hash of the submitted file.
+    - `perceptual_hashes` is a list of perceptual hashes for the file.
+    - `pixel_hash` is the sha256 hash of the pixel data of the rendered image.
+
+`hash` will always be returned for any file, the others will only be returned for filetypes they can be generated for.
+
 ## Importing and Editing URLs
 
 ### **GET `/add_urls/get_url_files`** { id="add_urls_get_url_files" }
@@ -1872,10 +1912,14 @@ Response:
 
     If hydrus keeps no thumbnail for the filetype, for instance with pdfs, then you will get the same default 'pdf' icon you see in the client. If the file does not exist in the client, or the thumbnail was expected but is missing from storage, you will get the fallback 'hydrus' icon, again just as you would in the client itself. This request should never give a 404.
 
-!!! note
-    If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the defaults straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
-
+!!! note "Size of Normal Thumbs"
+    Thumbnails are not guaranteed to be the correct size! If a thumbnail has not been loaded in the client in years, it could well have been fitted for older thumbnail settings. Also, even 'clean' thumbnails will not always fit inside the settings' bounding box; they may be boosted due to a high-DPI setting or spill over due to a 'fill' vs 'fit' preference. You cannot easily predict what resolution a thumbnail will or should have!
     
+    In general, thumbnails *are* the correct ratio. If you are drawing thumbs, you should embed them to fit or fill, but don't fix them at 100% true size: make sure they can scale to the size you want!
+
+!!! note "Size of Defaults"
+    If you get a 'default' filetype thumbnail like the pdf or hydrus one, you will be pulling the pngs straight from the hydrus/static folder. They will most likely be 200x200 pixels. 
+
 ### **GET `/get_files/render`** { id="get_files_render" }
 
 _Get an image file as rendered by Hydrus._
@@ -2804,3 +2848,21 @@ Arguments (in percent-encoded JSON):
 ```
 
 The arguments here are the same as for [GET /get\_files/search\_files](#get_files_search_files). You can set any or none of them to set a search domain like in the dialog.
+
+### **GET `/manage_database/get_client_options`** { id="manage_database_get_client_options" }
+
+!!! warning "Unstable Response"
+    The response for this path is unstable and subject to change without warning. No examples are given.
+    
+
+_Gets the current options from the client._
+
+Restricted access:
+:   YES. Manage Database permission needed.
+    
+Required Headers: n/a
+    
+Arguments: n/a
+    
+Response:
+: A JSON dump of nearly all options set in the client. The format of this is based on internal hydrus structures and is subject to change without warning with new hydrus versions. Do not rely on anything you find here to continue to exist and don't rely on the structure to be the same.

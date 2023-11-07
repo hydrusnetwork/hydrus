@@ -1140,6 +1140,16 @@ class LocationsManager( object ):
                             
                         
                     
+                elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
+                    
+                    for s_k in HG.client_controller.services_manager.GetServiceKeys( ( HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
+                        
+                        if s_k in self._current:
+                            
+                            self._DeleteFromService( s_k, reason )
+                            
+                        
+                    
                 else:
                     
                     self._DeleteFromService( service_key, reason )

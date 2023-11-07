@@ -474,7 +474,7 @@ class ThumbnailCache( object ):
                     thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
                     thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                     
-                    ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+                    ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                     
                     numpy_image = HydrusBlurhash.GetNumpyFromBlurhash( blurhash, expected_width, expected_height )
                     
@@ -565,7 +565,7 @@ class ThumbnailCache( object ):
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
         thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
-        ( clip_rect, ( expected_width, expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+        ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
         
         exactly_as_expected = current_width == expected_width and current_height == expected_height
         
@@ -806,12 +806,7 @@ class ThumbnailCache( object ):
                 
                 numpy_image_resolution = HydrusImageHandling.GetResolutionNumPy( numpy_image )
                 
-                ( clip_rect, target_resolution ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( numpy_image_resolution, bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
-                
-                if clip_rect is not None:
-                    
-                    numpy_image = HydrusImageHandling.ClipNumPyImage( numpy_image, clip_rect )
-                    
+                target_resolution = HydrusImageHandling.GetThumbnailResolution( numpy_image_resolution, bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                 
                 numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, target_resolution )
                 

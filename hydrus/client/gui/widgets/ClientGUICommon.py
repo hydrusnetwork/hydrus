@@ -786,13 +786,16 @@ class BufferedWindowIcon( BufferedWindow ):
         
         painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes any scaling here due to jank thumbs look good
         
+        x_offset = ( self.width() - self._pixmap.width() ) / 2
+        y_offset = ( self.height() - self._pixmap.height() ) / 2
+        
         if isinstance( self._pixmap, QG.QImage ):
             
-            painter.drawImage( self.rect(), self._pixmap )
+            painter.drawImage( x_offset, y_offset, self._pixmap )
             
         else:
             
-            painter.drawPixmap( self.rect(), self._pixmap )
+            painter.drawPixmap( x_offset, y_offset, self._pixmap )
             
         
     

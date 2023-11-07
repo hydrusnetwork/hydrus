@@ -76,6 +76,16 @@ class TagSort( HydrusSerialisable.SerialisableBase ):
         )
         
     
+    def ToDictForAPI( self ):
+        
+        return {
+            'sort_type' : self.sort_type,
+            'sort_order' : self.sort_order,
+            'use_siblings': self.use_siblings,
+            'group_by' : self.group_by
+        }
+        
+    
     @staticmethod
     def STATICGetTextASCDefault() -> "TagSort":
         

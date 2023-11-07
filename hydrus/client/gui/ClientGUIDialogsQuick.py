@@ -23,16 +23,16 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
         
         if panel.QuestionIsAlreadyResolved():
             
-            ( involves_physical_delete, jobs ) = panel.GetValue()
+            ( hashes_physically_deleted, jobs ) = panel.GetValue()
             
-            return ( involves_physical_delete, jobs )
+            return ( hashes_physically_deleted, jobs )
             
         
         if dlg.exec() == QW.QDialog.Accepted:
             
-            ( involves_physical_delete, jobs ) = panel.GetValue()
+            ( hashes_physically_deleted, jobs ) = panel.GetValue()
             
-            return ( involves_physical_delete, jobs )
+            return ( hashes_physically_deleted, jobs )
             
         else:
             

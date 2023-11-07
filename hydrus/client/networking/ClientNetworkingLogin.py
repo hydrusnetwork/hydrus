@@ -3,6 +3,7 @@ import os
 import re
 import threading
 import time
+import typing
 import urllib.parse
 
 from hydrus.core import HydrusGlobals as HG
@@ -74,6 +75,8 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         
         self._login_script_keys_to_login_scripts = {}
         self._login_script_names_to_login_scripts = {}
+        
+        self._current_login_process: typing.Optional[ LoginProcess ] = None
         
         self._hydrus_login_script = LoginScriptHydrus()
         
@@ -324,11 +327,11 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                 
                 if login_domain is None or not login_expected:
                     
-                    raise HydrusExceptions.ValidationException( 'The domain ' + login_domain + ' has no active login script--has it just been turned off?' )
+                    raise HydrusExceptions.ValidationException( f'The domain "{login_domain}" has no active login script--has it just been turned off?' )
                     
                 elif not login_possible:
                     
-                    raise HydrusExceptions.ValidationException( 'The domain ' + login_domain + ' cannot log in: ' + login_error_text )
+                    raise HydrusExceptions.ValidationException( f'The domain "{login_domain}" cannot log in: {login_error_text}' )
                     
                 
             elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
@@ -354,6 +357,50 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                     
                     raise HydrusExceptions.ValidationException( message )
                     
+                
+            
+        
+    
+    def CurrentlyNeedsLogin( self, network_context ):
+        
+        with self._lock:
+            
+            if self._current_login_process is not None and self._current_login_process.network_context == network_context:
+                
+                # this network context is currently being logged in, so yes, we still need to wait for that to finish
+                
+                return True
+                
+            
+            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
+                
+                ( login_domain, login_expected, login_possible, login_error_text ) = self._GetLoginDomainStatus( network_context )
+                
+                if login_domain is None or not login_expected:
+                    
+                    return False # no login required, no problem
+                    
+                else:
+                    
+                    try:
+                        
+                        ( login_script, credentials ) = self._GetLoginScriptAndCredentials( login_domain )
+                        
+                    except HydrusExceptions.ValidationException:
+                        
+                        # couldn't find the script or something. assume we need a login to move errors forward to checkcanlogin trigger phase
+                        
+                        return True
+                        
+                    
+                    login_network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
+                    
+                    return not login_script.IsLoggedIn( self.engine, login_network_context )
+                    
+                
+            elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
+                
+                return not self._hydrus_login_script.IsLoggedIn( self.engine, network_context )
                 
             
         
@@ -529,43 +576,6 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def NeedsLogin( self, network_context ):
-        
-        with self._lock:
-            
-            if network_context.context_type == CC.NETWORK_CONTEXT_DOMAIN:
-                
-                ( login_domain, login_expected, login_possible, login_error_text ) = self._GetLoginDomainStatus( network_context )
-                
-                if login_domain is None or not login_expected:
-                    
-                    return False # no login required, no problem
-                    
-                else:
-                    
-                    try:
-                        
-                        ( login_script, credentials ) = self._GetLoginScriptAndCredentials( login_domain )
-                        
-                    except HydrusExceptions.ValidationException:
-                        
-                        # couldn't find the script or something. assume we need a login to move errors forward to checkcanlogin trigger phase
-                        
-                        return True
-                        
-                    
-                    login_network_context = ClientNetworkingContexts.NetworkContext( context_type = CC.NETWORK_CONTEXT_DOMAIN, context_data = login_domain )
-                    
-                    return not login_script.IsLoggedIn( self.engine, login_network_context )
-                    
-                
-            elif network_context.context_type == CC.NETWORK_CONTEXT_HYDRUS:
-                
-                return not self._hydrus_login_script.IsLoggedIn( self.engine, network_context )
-                
-            
-        
-    
     def OverwriteDefaultLoginScripts( self, login_script_names ):
         
         with self._lock:
@@ -617,6 +627,12 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             self._SetDirty()
             
+        
+    
+    def SetCurrentLoginProcess( self, login_process: typing.Optional[ "LoginProcess" ] ):
+        
+        self._current_login_process = login_process
+        
         
     
     def SetDomainsToLoginInfo( self, domains_to_login_info ):
@@ -902,6 +918,11 @@ class LoginProcess( object ):
     def _Start( self ):
         
         raise NotImplementedError()
+        
+    
+    def GetNetworkContext( self ):
+        
+        return self.network_context
         
     
     def IsDone( self ):

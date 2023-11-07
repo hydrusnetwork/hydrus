@@ -36,10 +36,12 @@ from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
 
 from hydrus.client import ClientAPI
+from hydrus.client import ClientOptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client import ClientRendering
+from hydrus.client import ClientImageHandling
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
@@ -1674,6 +1676,7 @@ class HydrusResourceClientAPIRestrictedGetServices( HydrusResourceClientAPIRestr
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddFiles( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1693,6 +1696,11 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
             if not os.path.exists( path ):
                 
                 raise HydrusExceptions.BadRequestException( 'Path "{}" does not exist!'.format( path ) )
+                
+            
+            if not os.path.isfile( path ):
+                
+                raise HydrusExceptions.BadRequestException( 'Path "{}" is not a file!'.format( path ) )
                 
             
             ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
@@ -1847,6 +1855,66 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        if not hasattr( request, 'temp_file_info' ):
+            
+            path = request.parsed_request_args.GetValue( 'path', str )
+            
+            if not os.path.exists( path ):
+                
+                raise HydrusExceptions.BadRequestException( 'Path "{}" does not exist!'.format( path ) )
+                
+            
+            if not os.path.isfile( path ):
+                
+                raise HydrusExceptions.BadRequestException( 'Path "{}" is not a file!'.format( path ) )
+                
+            
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+            
+            request.temp_file_info = ( os_file_handle, temp_path )
+            
+            HydrusPaths.MirrorFile( path, temp_path )
+            
+        
+        ( os_file_handle, temp_path ) = request.temp_file_info
+        
+        mime = HydrusFileHandling.GetMime( temp_path )
+        
+        body_dict = {}
+        
+        sha256_hash = HydrusFileHandling.GetHashFromPath( temp_path )
+        
+        body_dict['hash'] = sha256_hash.hex()
+        
+        if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH or mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH:
+            
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( temp_path, mime )
+            
+            if mime in HC.FILES_THAT_HAVE_PERCEPTUAL_HASH:
+                
+                perceptual_hashes = ClientImageHandling.GenerateShapePerceptualHashesNumPy( numpy_image )
+                
+                body_dict['perceptual_hashes'] = [ perceptual_hash.hex() for perceptual_hash in perceptual_hashes ]
+                
+            if mime in HC.FILES_THAT_CAN_HAVE_PIXEL_HASH:
+                
+                pixel_hash = HydrusImageHandling.GetImagePixelHashNumPy( numpy_image )
+                
+                body_dict['pixel_hash'] = pixel_hash.hex()
+                
+            
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         
@@ -3105,7 +3173,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         
                         if width is not None and height is not None and width > 0 and height > 0:
                             
-                            ( clip_rect, ( expected_thumbnail_width, expected_thumbnail_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( width, height ), thumbnail_bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+                            ( expected_thumbnail_width, expected_thumbnail_height ) = HydrusImageHandling.GetThumbnailResolution( ( width, height ), thumbnail_bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                             
                             metadata_row[ 'thumbnail_width' ] = expected_thumbnail_width
                             metadata_row[ 'thumbnail_height' ] = expected_thumbnail_height
@@ -3410,8 +3478,6 @@ class HydrusResourceClientAPIRestrictedManageCookiesGetCookies( HydrusResourceCl
             
             body_cookies_list.append( [ name, value, domain, path, expires ] )
             
-        
-        body_dict = {}
         
         body_dict = { 'cookies' : body_cookies_list }
         
@@ -3842,6 +3908,51 @@ class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClie
         body = Dumps( body_dict, mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = mime, body = body )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( HydrusResourceClientAPIRestrictedManageDatabase ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+                
+        old_options = HG.client_controller.options
+
+        new_options: ClientOptions.ClientOptions = HG.client_controller.new_options
+
+        options_dict = {
+            'booleans' : new_options.GetAllBooleans(),
+            'strings' : new_options.GetAllStrings(),
+            'noneable_strings' : new_options.GetAllNoneableStrings(),
+            'integers' : new_options.GetAllIntegers(),
+            'noneable_integers' : new_options.GetAllNoneableIntegers(),
+            'keys' : new_options.GetAllKeysHex(),
+            'colors' : new_options.GetAllColours(),
+            'media_zooms' : new_options.GetMediaZooms(),
+            'slideshow_durations' : new_options.GetSlideshowDurations(),
+            'default_file_import_options' : {
+                'loud' : new_options.GetDefaultFileImportOptions('loud').GetSummary(),
+                'quiet' : new_options.GetDefaultFileImportOptions('quiet').GetSummary()
+            },
+            'default_namespace_sorts' : [ sort.ToDictForAPI() for sort in new_options.GetDefaultNamespaceSorts() ],
+            'default_sort' : new_options.GetDefaultSort().ToDictForAPI(),
+            'default_tag_sort' : new_options.GetDefaultTagSort().ToDictForAPI(),
+            'fallback_sort' : new_options.GetFallbackSort().ToDictForAPI(),
+            'suggested_tags_favourites' : new_options.GetAllSuggestedTagsFavourites(),
+            'default_local_location_context' : new_options.GetDefaultLocalLocationContext().ToDictForAPI()
+        }
+
+        body_dict = {
+            'old_options' : old_options,
+            'options' : options_dict,
+            'services' : GetServicesDict()
+        }
+
+                
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
         
         return response_context
         

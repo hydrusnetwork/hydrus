@@ -4883,7 +4883,7 @@ class TestClientAPI( unittest.TestCase ):
                 thumbnail_scale_type = HG.test_controller.new_options.GetInteger( 'thumbnail_scale_type' )
                 thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                 
-                ( clip_rect, ( thumbnail_expected_width, thumbnail_expected_height ) ) = HydrusImageHandling.GetThumbnailResolutionAndClipRegion( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+                ( thumbnail_expected_width, thumbnail_expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                 
                 metadata_row[ 'thumbnail_width' ] = thumbnail_expected_width
                 metadata_row[ 'thumbnail_height' ] = thumbnail_expected_height
