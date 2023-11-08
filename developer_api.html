@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.7">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.8">
     
     
       
@@ -1936,6 +1936,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#add_files_generate_hashes" class="md-nav__link">
+    POST /add_files/generate_hashes
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -2395,6 +2402,13 @@
           <li class="md-nav__item">
   <a href="#manage_database_mr_bones" class="md-nav__link">
     GET /manage_database/mr_bones
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manage_database_get_client_options" class="md-nav__link">
+    GET /manage_database/get_client_options
   </a>
   
 </li>
@@ -2781,6 +2795,13 @@
   
 </li>
         
+          <li class="md-nav__item">
+  <a href="#add_files_generate_hashes" class="md-nav__link">
+    POST /add_files/generate_hashes
+  </a>
+  
+</li>
+        
       </ul>
     </nav>
   
@@ -3240,6 +3261,13 @@
           <li class="md-nav__item">
   <a href="#manage_database_mr_bones" class="md-nav__link">
     GET /manage_database/mr_bones
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#manage_database_get_client_options" class="md-nav__link">
+    GET /manage_database/get_client_options
   </a>
   
 </li>
@@ -3823,6 +3851,50 @@ Accept: application/json
 <dd>200 and no content.</dd>
 </dl>
 <p>This puts files back in the inbox, taking them out of the archive. It only has meaning for files currently in 'my files' or 'trash'. There is no error if any files do not currently exist or are already in the inbox.</p>
+<h3 id="add_files_generate_hashes"><strong>POST <code>/add_files/generate_hashes</code></strong><a class="headerlink" href="#add_files_generate_hashes" title="Permanent link">&para;</a></h3>
+<p><em>Generate hashes for an arbitrary file.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Import Files permission needed.</dd>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li>Content-Type: <code>application/json</code> (if sending path), <code>application/octet-stream</code> (if sending file)</li>
+</ul>
+</dd>
+<dt>Arguments (in JSON):</dt>
+<dd>
+<ul>
+<li><code>path</code>: (the path you want to import)</li>
+</ul>
+</dd>
+</dl>
+<div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;E:\\to_import\\ayanami.jpg&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<dl>
+<dt>Arguments (as bytes):</dt>
+<dd>You can alternately just send the file's bytes as the POST body.</dd>
+<dt>Response:</dt>
+<dd>
+<p>Some JSON with the hashes of the file
+<div class="highlight"><span class="filename">Example response</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;7de421a3f9be871a7037cca8286b149a31aecb6719268a94188d76c389fa140c&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;perceptual_hashes&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="s2">&quot;b44dc7b24dcb381c&quot;</span>
+<span class="w">  </span><span class="p">],</span>
+<span class="w">  </span><span class="nt">&quot;pixel_hash&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;c7bf20e5c4b8a524c2c3e3af2737e26975d09cba2b3b8b76341c4c69b196da4e&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</code></pre></div></p>
+<ul>
+<li><code>hash</code> is the sha256 hash of the submitted file.</li>
+<li><code>perceptual_hashes</code> is a list of perceptual hashes for the file.</li>
+<li><code>pixel_hash</code> is the sha256 hash of the pixel data of the rendered image.</li>
+</ul>
+</dd>
+</dl>
+<p><code>hash</code> will always be returned for any file, the others will only be returned for filetypes they can be generated for.</p>
 <h2 id="importing_and_editing_urls">Importing and Editing URLs<a class="headerlink" href="#importing_and_editing_urls" title="Permanent link">&para;</a></h2>
 <h3 id="add_urls_get_url_files"><strong>GET <code>/add_urls/get_url_files</code></strong><a class="headerlink" href="#add_urls_get_url_files" title="Permanent link">&para;</a></h3>
 <p><em>Ask the client about an URL's files.</em></p>
@@ -5845,13 +5917,29 @@ This request will also return any cookies for subdomains. The session system in 
 <span class="p">}</span>
 </code></pre></div>
 <p>The arguments here are the same as for <a href="#get_files_search_files">GET /get_files/search_files</a>. You can set any or none of them to set a search domain like in the dialog.</p>
+<h3 id="manage_database_get_client_options"><strong>GET <code>/manage_database/get_client_options</code></strong><a class="headerlink" href="#manage_database_get_client_options" title="Permanent link">&para;</a></h3>
+<div class="admonition warning">
+<p class="admonition-title">Unstable Response</p>
+<p>The response for this path is unstable and subject to change without warning. No examples are given.</p>
+</div>
+<p><em>Gets the current options from the client.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Manage Database permission needed.</dd>
+</dl>
+<p>Required Headers: n/a</p>
+<p>Arguments: n/a</p>
+<dl>
+<dt>Response:</dt>
+<dd>A JSON dump of nearly all options set in the client. The format of this is based on internal hydrus structures and is subject to change without warning with new hydrus versions. Do not rely on anything you find here to continue to exist and don't rely on the structure to be the same.</dd>
+</dl>
 
   <hr>
 <div class="md-source-file">
   <small>
     
       Last update:
-      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 1, 2023</span>
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 4, 2023</span>
       
     
   </small>
@@ -5974,7 +6062,7 @@ This request will also return any cookies for subdomains. The session system in 
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.aecac24b.min.js"></script>
+      <script src="assets/javascripts/bundle.81fa17fe.min.js"></script>
       
     
   </body>

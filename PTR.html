@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.7">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.4.8">
     
     
       
@@ -2116,9 +2116,12 @@
 <p>Short for <b>P</b>ublic  <b>T</b>ag <b>R</b>epository, a now community managed repository of tags. Locally it acts as a tag service, just like <code>my tags</code>. At the time of writing 54 million files have tags on it. The PTR only store the sha256 hash and tag mappings of a file, not the files themselves or any non-tag meta data. In other words: If you do not see it in the tag list then it is not stored.</p>
 <p>Most of the things in this document also applies to <a href="server.html">self-hosted servers</a>, except for tag guidelines.</p>
 <h2 id="connecting_to_the_ptr">Connecting to the PTR<a class="headerlink" href="#connecting_to_the_ptr" title="Permanent link">&para;</a></h2>
-<p>The easiest method is to use the built in function, found under <code>help -&gt; add the public tag repository</code>. For adding it manually, if you so desire, read the Hydrus help document on <a href="access_keys.html">access keys</a>.<br />
-<del>If you are starting out completely fresh you can also download a fully synced client <a href="https://koto.reisen/quicksync/">here</a></del> After losing the processed client in a crash or something similar Koto has decided against maintaining a quicksync, you will have to download and process it yourself. Though possibly a bit (couple of days or so usually) out of date it will none the less save time. Some settings may differ from the defaults of an official installation.<br />
-Once you are connected Hydrus will proceed to download and then process the update files. The progress of this can be seen under <code>services -&gt; review services -&gt; remote -&gt; tag repositories -&gt; public tag repository</code>. Here you can view its status, your account (the default account is a shared public account. Currently only janitors and the administrator have personal accounts), tag status, and how synced you are. Being behind on the sync by a certain amount makes you unable to push tags and petitions until you are caught up again.</p>
+<p>The easiest method is to use the built in function, found under <code>help -&gt; add the public tag repository</code>. For adding it manually, if you so desire, read the Hydrus help document on <a href="access_keys.html">access keys</a>.</p>
+<p>Once you are connected, Hydrus will proceed to download and then process the update files. The progress of this can be seen under <code>services -&gt; review services -&gt; remote -&gt; tag repositories -&gt; public tag repository</code>. Here you can view its status, your account (the default account is a shared public account. Currently only janitors and the administrator have personal accounts), tag status, and how synced you are. Being behind on the sync by a certain amount makes you unable to push tags and petitions until you are caught up again.</p>
+<div class="admonition note">
+<p class="admonition-title">QuickSync 2</p>
+<p>If you are starting out with a completely fresh client, you can instead download a fully pre-synced client <a href="https://breadthread.gay/">here</a> Though a little out of date, it will nonetheless save time. Some settings may differ from the defaults of an official installation.</p>
+</div>
 <h2 id="how_does_it_work">How does it work?<a class="headerlink" href="#how_does_it_work" title="Permanent link">&para;</a></h2>
 <p>For something to end up on the PTR it has to be pushed there. Tags can either be entered into the tag service manually by the user through the <code>manage tags</code> window, or be routed there by a parser when downloading files. See <a href="getting_started_downloading.html">parsing tags</a>. Once tags have been entered into the PTR tag service they are pending until pushed. This is indicated by the <code>pending ()</code> that will appear between <code>tags</code> and <code>help</code> in the menu bar. Here you can chose to either push your changes to the PTR or discard them.</p>
 <ul>
@@ -2185,7 +2188,7 @@ It's also helpful if you sanitise downloaded tags from sites with tagged galleri
   <small>
     
       Last update:
-      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 18, 2022</span>
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 8, 2023</span>
       
     
   </small>
@@ -2306,7 +2309,7 @@ It's also helpful if you sanitise downloaded tags from sites with tagged galleri
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.aecac24b.min.js"></script>
+      <script src="assets/javascripts/bundle.81fa17fe.min.js"></script>
       
     
   </body>
