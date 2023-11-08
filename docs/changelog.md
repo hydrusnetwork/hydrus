@@ -29,7 +29,6 @@ title: Changelog
 * fixed a counting typo error with the delete files code when you delete the last file in a domain but the domain thinks it already has 0 files
 * fixed up similar code across the database to forestall future typos on SQLite SUMs
 * improved and unified the 'hydrus temp dir' management code. if the specific per-process hydrus temp dir is cleared out by an external factor (I'm guessing just the OS cleaning up during a long running client session), hydrus should just simply make a new folder as needed. with luck, this will fix a problem with drag and drop export that ran into this
-* fingers crossed (I have little idea what I am doing and no convenient test platform!), the Docker build of the client will now have PDF and Charts support
 
 ### many file move/copy error handling improvements
 
