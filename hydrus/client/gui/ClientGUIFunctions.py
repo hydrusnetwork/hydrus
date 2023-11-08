@@ -12,6 +12,7 @@ from hydrus.core import HydrusText
 
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
+from hydrus.core.images import HydrusImageNormalisation
 
 def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
     
@@ -68,7 +69,7 @@ def ConvertPixelsToTextWidth( window, pixels, round_down = False ) -> int:
         return round( pixels / one_char_width )
         
     
-def ConvertQtImageToNumPy( qt_image: QG.QImage ):
+def ConvertQtImageToNumPy( qt_image: QG.QImage, strip_useless_alpha = True ):
     
     #        _     _                          _        _                           
     #    _  | |   (_)          _             | |      | |                          
@@ -147,6 +148,11 @@ def ConvertQtImageToNumPy( qt_image: QG.QImage ):
         numpy_padded = numpy.fromstring( data_bytes, dtype = 'uint8' ).reshape( ( height, bytes_per_line ) )
         
         numpy_image = numpy_padded[ :, : -excess_bytes_to_trim ].reshape( ( height, width, depth ) )
+        
+    
+    if strip_useless_alpha:
+        
+        numpy_image = HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
         
     
     return numpy_image

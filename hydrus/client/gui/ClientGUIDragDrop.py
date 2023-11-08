@@ -123,10 +123,7 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
             
             dnd_path = os.path.join( dnd_temp_dir, filename )
             
-            if not os.path.exists( dnd_path ):
-                
-                HydrusPaths.MirrorFile( original_path, dnd_path )
-                
+            HydrusPaths.MirrorFile( original_path, dnd_path )
             
             dnd_paths.append( dnd_path )
             

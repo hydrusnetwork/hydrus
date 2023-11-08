@@ -355,6 +355,20 @@ class DBBase( object ):
             
         
     
+    def _GetSumResult( self, result: typing.Optional[ typing.Tuple[ typing.Optional[ int ] ] ] ) -> int:
+        
+        if result is None or result[0] is None:
+            
+            sum_value = 0
+            
+        else:
+            
+            ( sum_value, ) = result
+            
+        
+        return sum_value
+        
+    
     def _ActuaIndexExists( self, index_name ):
         
         if '.' in index_name:

@@ -830,7 +830,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         # hashes to size
         result = self._Execute( 'SELECT SUM( size ) FROM {} CROSS JOIN files_info USING ( hash_id );'.format( current_files_table_name ) ).fetchone()
         
-        ( count, ) = result
+        count = self._GetSumResult( result )
         
         return count
         

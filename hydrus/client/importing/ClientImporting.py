@@ -123,6 +123,8 @@ def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button
         files_job_key.SetVariable( 'attached_files_mergable', True )
         files_job_key.SetFiles( list( hashes ), publishing_label )
         
+        files_job_key.Finish() # important to later make it auto-dismiss on all files disappearing
+        
         HG.client_controller.pub( 'message', files_job_key )
         
     

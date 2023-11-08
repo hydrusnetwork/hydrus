@@ -3,6 +3,7 @@ import decimal
 import fractions
 import itertools
 import os
+import numpy
 import psutil
 import random
 import re
@@ -762,6 +763,17 @@ def IterateHexPrefixes():
         yield prefix
         
     
+
+def IterateListRandomlyAndFast( xs: typing.List ):
+    
+    # do this instead of a pre-for-loop shuffle on big lists
+    
+    for i in numpy.random.permutation( len( xs ) ):
+        
+        yield xs[ i ]
+        
+    
+
 def LastShutdownWasBad( db_path, instance ):
     
     path = os.path.join( db_path, instance + '_running' )

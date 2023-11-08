@@ -1343,10 +1343,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def GetKey( self, name ):
         
-        with self._lock:
-            
-            return bytes.fromhex( self.GetKeyHex( name ) )
-            
+        return bytes.fromhex( self.GetKeyHex( name ) )
         
     
     def GetAllKeysHex( self ):

@@ -7,6 +7,52 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 551](https://github.com/hydrusnetwork/hydrus/releases/tag/v551)
+
+### misc
+
+* thanks to a user, we have a new checkbox under _options->thumbnails_ that disables thumbnail fading. they'll just blink into place in one frame as soon as ready
+* after looking at this code myself, I gave it a full clean. the actual thumbnail fade animation is now handled with some proper objects rather than a scatter of variables passed around
+* I also doubled the default fade time to 500ms. I expect I'll add an option for it, especially if we rework all this into the proper Qt animation engine and get it performing better
+* fixed the crashes users on PyQt were seeing! I made one tiny change (1->1.0) last week, and PyQt didn't like it, so any view of Mr Bones or 'open externally' panels, or the media viewer top-right ratings hover was leading to program instability
+* the system predicates for 'has/no duration', 'has/no frames', 'has/no notes', 'has/no words' (i.e. the respective 'num x' system pred, but either = 0 or >0) are now aware that they are each others' inverse, so if you ctrl+double-click or do similar edit actions, they'll flip
+* updated the 'PTR for dummies' page to link to a new QuickSync source, kindly maintained and hosted by a user
+
+### code cleanup and misc bug fixes
+
+* sped up some random iteration across the program (e.g. when deciding which order to waterfall thumbnails in, which can suffer from overhead if you do a fast giganto-scroll)
+* cleaned up the code that does image alpha channel (transparency) detection, comparison, and stripping
+* unified how the variety of image loads and conversions perform the 'strip this image of useless transparency data' normalisation step. thumbnails from krita, svg, and pdf are now stripped of useless alpha. also, all 'import this serialised object png' avenues now handle pngs with spurious alpha
+* I think I fixed the alpha channel stripping code to handle 'LA' (greyscale with transparency) files. if you try to import a hydrus serialised object png file that is for some crazy reason now LA, I think it'll work!
+* when a files popup message filters its current files and the count goes to 0 (happens if you re-click the button after deleting everything it has to show), the message now auto-dismisses itself (previously it was nuking the button but staying as a thin strip of null panel space)
+* fixed a bug where `system:date` predicates were displaying labels an hour off (usually midnight -> 11pm, thus cycling back to the previous day) thanks to the clocks changed (in the USA) last weekend. I suspect there is more of this, here and there, so let me know what you see
+* fixed a counting typo error with the delete files code when you delete the last file in a domain but the domain thinks it already has 0 files
+* fixed up similar code across the database to forestall future typos on SQLite SUMs
+* improved and unified the 'hydrus temp dir' management code. if the specific per-process hydrus temp dir is cleared out by an external factor (I'm guessing just the OS cleaning up during a long running client session), hydrus should just simply make a new folder as needed. with luck, this will fix a problem with drag and drop export that ran into this
+* fingers crossed (I have little idea what I am doing and no convenient test platform!), the Docker build of the client will now have PDF and Charts support
+
+### many file move/copy error handling improvements
+
+* _tl;dr: if hydrus can't put a file somewhere, it deals with that better now_
+* improved how file move/merge function reports its errors, and how all its callers handle them
+* the 'rename a file's file extension when its filetype changes' job now correctly recognises when it fails to rename a file due to a reason other than the file being currently in use
+* import folders now correctly detect when they fail to 'move' action a file out after processing
+* the check file integrity routine now correctly detects when it fails to move a damaged file from file storage to a landing zone in the main db directory. this failure now cancels the job properly and prints a nicer error to the log
+* improved how the file copy/mirror function reports its errors, and how all its callers handle them
+* saving a serialised object png now properly catches a 'transfer from temp dir to dest location' move error
+* the internal database backup and restore routines now detect file copy errors better
+* a drag and drop export operation that wants to put the files in the temp dir and also fails to collect its files nicely now correctly raises an error
+* failing to set the mpv file on options save (and the subsequent mpv-load action) now reports its error correctly
+* exporting update files now handles a missing update file more gracefully
+* mergedirectory and mirrordirectory now fail instantly after any single error, rather than several
+* added some more file/directory pre-checks to all the merge/mirror functions
+* deleted some old unused code here
+
+### client api
+
+* thanks to a user, the Client API now has a 'generate_hashes' endpoint that returns the sha256 hash (and pixel hash and perceptual hashes of any appropriate image file) of any file you give it
+* the client api version is now 55
+
 ## [Version 550](https://github.com/hydrusnetwork/hydrus/releases/tag/v550)
 
 ### misc
@@ -23,7 +69,7 @@ title: Changelog
 
 * after vacillating and talking about it for months, I finally reworked how ''scale to fill' thumbnails work. as sometimes happens, I only had to change about six critical lines of code to get the core functionality changed and nothing seems to have exploded
 * the main change here is KISS--'fill' thumbnail image files on disk are no longer clipped to just the viewable area, but the whole image scaled to fill the thumbnail space (with exceptions for extreme cases). this change gives us some simplicity and flexibility behind the scenes, saves some regeneration work when the user only changes one thumbnail dimension setting, improves maintenance tasks based off the thumbnail (like blurhash), and means that the Client API can fetch your thumbs and still have something useful to display
-* if you have 'scale to fit' set, hydrus will regenerate your thumbnails naturally as you browse the client. fingers crossed, you won't notice any visual difference through the transition
+* if you have 'scale to fill' set, hydrus will regenerate your thumbnails naturally as you browse the client. fingers crossed, you won't notice any visual difference through the transition
 * 'open externally' button panels now display their thumbnails with more reasonable maximum dimensions, and when things are gonk for whatever reason, they should nonetheless be centered correctly
 * as a side thing, this change allowed me to finally purge all the clipping tech from the thumbnail pipeline, where it had obtusely sunk in to every possible filetype thumbgen
 
@@ -344,51 +390,3 @@ title: Changelog
 * refactored many of my hardcoded special unicode characters to constants in HC. not sure I really like all the spammed `{HC.UNICODE_ELLIPSIS}` though, so might revisit
 * fixed an issue with last week's update code that was affecting users with a history of certain database damage
 * I may have improved import support for some damaged or generally very strange image files by falling back to OpenCV for resolution parsing when Pillow fails
-
-## [Version 541](https://github.com/hydrusnetwork/hydrus/releases/tag/v541)
-
-### misc
-
-* fixed the gallery downloader and thread watcher loading with the 'clear highlight' button enabled despite there being nothing currently highlighted
-* to fix the darkmode tooltips on the new Qt 6.5.2 on Windows (the text is stuck on a dark grey, which is unreadable in darkmodes), all the default darkmode styles now have an 'alternate-tooltip-colour' variant, which swaps out the tooltip background colour for the much brighter normal widget text colour
-* rewrote the apng parser to work much faster on large files. someone encountered a 200MB giga apng that locked up the client for minutes. now it takes a second or two (unfortunately it looks like that huge apng breaks mpv, but there we go)
-* the 'media' options page has two new checkboxes--'hide uninteresting import/modified times'--which allow you to turn off the media viewer behaivour where import and modified times similar to the 'added to my files xxx days ago' are hidden
-* reworked the layout of the 'media' options page. everything is in sections now and re-ordered a bit
-* the 'other file is a pixel-for-pixel duplicate png!' statements will now only show if the complement is a jpeg, gif, or webp. this statement isn't so appropriate for formats like PSD
-* a variety of tricky tags like `:>=` are now searchable in normal autocomplete lookup. a test that determined whether to use a slower but more capable search was misfiring
-* the client api key editing window has a new 'check all permissions' button
-* fixed the updates I made last week to the missing-master-file-id recovery system. I made a stupid typo and didn't test it properly, fixed now. sorry for the trouble!
-* thanks to a user, the help has a bunch of updated screenshots and fixed references to old concepts
-* did a little more reformatting and cleanup of 'getting started with downloading' help document and added a short section on note import options
-* cleaned up some of the syntax in our various batch files. fingers crossed, the setup_venv.bat script will absolutely retain the trailing space after its questions now, no matter what whitespace my IDE and github want to trim
-
-### string joiner
-
-* the parsing system has a new String Processor object--the 'String Joiner'. this is a simple concatenator that takes the list of strings and joins them together. it has two variables: what joining text to use, e.g. ', ', or '-', or empty string '' for simple concatenation; and an optional 'group size', which lets you join every two or three or n strings in 1-2-3, 1-2-3, 1-2-3 style patterns
-
-### new file types
-
-* thanks to a user; we now have support for QOI (a png-like lossless image type) and procreate (Apple image project file) files. the former has full support; the latter has thumbnails
-* QOI needs Pillow 9.5 at least, so if you are on a super old 'running from source' version, try rebuilding your venv; or cope with you QOI-lessness
-
-### client api
-
-* thanks to a user, we now have `/add_tags/get_siblings_and_parents`, which, given a set of tags, shows their sibling and parent display rules for each service
-* I wrote some help and unit tests for this
-* client api version is now 51
-
-### file storage (mostly boring)
-
-* the file storage system is creaky and ugly to use. I have prepped some longer-term upgrades, mostly by writing new tools and cleaning and reworking existing code. I am nowhere near to done, but I'd like us to have four new features in the nearish future: 
-  - dynamic-length subfolders (where instead of a fixed set of 256 x00-xff folders, we can bump up to 4096 x000-xfff, and beyond, based on total number of files)
-  - setting fixed space limits on particular database locations (e.g. 'no more than 200GB of files here') to complement the current weight system
-  - permitting multiple valid locations for a particular subfolder prefix
-  - slow per-file background migration between valid subfolders, rather than the giganto folder-atomic program-blocking 'move files now' button in database maintenance
-* so, it is pretty boring so far, but I did the following: 
-* wrote a new class to handle a specific file storage subfolder and spammed it everywhere, replacing previous location and prefix juggling
-* wrote some new tools to scan and check the coverage of multiple locations and dynamic-length subfolders
-* rewrote the file location database initialisation, storage, testing, updating, and repair to support multiple valid locations
-* updated the database to hold 'max num bytes' per file storage location
-* the feature to migrate the SQLite database files and then restart is removed from the 'migrate database' dialog. it was always ultrajank in a place that really shouldn't be, and it was completely user-unfriendly. just move things manually, while the client is closed
-* the old 'recover and merge surplus database locations into the correct position' side feature in 'move files now' is removed. it was always a little jank, was very rarely actually helpful, and had zero reporting. it will return in the new system as a better one-shot maintenance job
-* touched up the migrated database help a little

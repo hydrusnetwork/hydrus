@@ -1896,7 +1896,7 @@ class DB( HydrusDB.HydrusDB ):
                 chosen_media_id = None
                 chosen_hash_id = None
                 
-                for potential_media_id in potential_media_ids:
+                for potential_media_id in HydrusData.IterateListRandomlyAndFast( potential_media_ids ):
                     
                     best_king_hash_id = self.modules_files_duplicates.GetBestKingId( potential_media_id, db_location_context, allowed_hash_ids = chosen_allowed_hash_ids, preferred_hash_ids = chosen_preferred_hash_ids )
                     
@@ -5823,14 +5823,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             result = self._Execute( 'SELECT SUM( size ) FROM files_info WHERE hash_id IN ' + HydrusData.SplayListForDB( hash_ids ) + ';' ).fetchone()
                             
-                            if result is None:
-                                
-                                total_size = 0
-                                
-                            else:
-                                
-                                ( total_size, ) = result
-                                
+                            total_size = self._GetSumResult( result )
                             
                             self.modules_service_paths.SetServiceDirectory( service_id, hash_ids, dirname, total_size, note )
                             
@@ -10468,10 +10461,10 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                # if someone backs up with an older version that does not have as many db files as this version, we get conflict
-                # don't want to delete just in case, but we will move it out the way
+                # if the current database (and thus software) is newer and has a spare client.wew.db file, we get a confusing conflict on restart that tries to create a fresh wew file
+                # it is useless without the other stuff we are overwriting anyway, so delete it
                 
-                HydrusPaths.MergeFile( dest, dest + '.old' )
+                HydrusPaths.DeletePath( dest )
                 
             
         

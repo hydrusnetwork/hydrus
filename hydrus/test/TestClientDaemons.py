@@ -20,7 +20,7 @@ class TestDaemons( unittest.TestCase ):
     
     def test_import_folders_daemon( self ):
         
-        test_dir = HydrusTemp.GetHydrusTempDir()
+        test_dir = HydrusTemp.GetSubTempDir( 'import_test' )
         
         try:
             

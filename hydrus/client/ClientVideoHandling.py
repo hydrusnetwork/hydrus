@@ -109,7 +109,7 @@ class GIFRenderer( object ):
                 self._pil_canvas = current_frame
                 
             
-            numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas )
+            numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( self._pil_canvas, strip_useless_alpha = False )
             
         
         self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames

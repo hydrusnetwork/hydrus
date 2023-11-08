@@ -3,6 +3,7 @@ import itertools
 import os
 import random
 import time
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -49,6 +50,93 @@ from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
+
+FRAME_DURATION_60FPS = 1.0 / 60
+
+class ThumbnailWaitingToBeDrawn( object ):
+    
+    def __init__( self, hash, thumbnail, thumbnail_index, bitmap ):
+        
+        self.hash = hash
+        self.thumbnail = thumbnail
+        self.thumbnail_index = thumbnail_index
+        self.bitmap = bitmap
+        
+        self._draw_complete = False
+        
+    
+    def DrawComplete( self ) -> bool:
+        
+        return self._draw_complete
+        
+    
+    def DrawDue( self ) -> bool:
+        
+        return True
+        
+    
+    def DrawToPainter( self, x: int, y: int, painter: QG.QPainter ):
+        
+        painter.drawImage( x, y, self.bitmap )
+        
+        self._draw_complete = True
+        
+    
+
+class ThumbnailWaitingToBeDrawnAnimated( ThumbnailWaitingToBeDrawn ):
+    
+    FADE_DURATION_S = 0.5
+    
+    def __init__( self, hash, thumbnail, thumbnail_index, bitmap ):
+        
+        ThumbnailWaitingToBeDrawn.__init__( self, hash, thumbnail, thumbnail_index, bitmap )
+        
+        self.num_frames_drawn = 0
+        self.num_frames_to_draw = max( int( self.FADE_DURATION_S // FRAME_DURATION_60FPS ), 1 ) 
+        
+        opacity_factor = max( 0.05, 1 / ( self.num_frames_to_draw / 3 ) )
+        
+        self.alpha_bmp = QP.AdjustOpacity( self.bitmap, opacity_factor )
+        
+        self.animation_started = HydrusTime.GetNowPrecise()
+        
+    
+    def _GetNumFramesOutstanding( self ):
+        
+        now = HydrusTime.GetNowPrecise()
+        
+        num_frames_to_now = int( ( now - self.animation_started ) // FRAME_DURATION_60FPS )
+        
+        return min( num_frames_to_now, self.num_frames_to_draw - self.num_frames_drawn )
+        
+    
+    def DrawDue( self ) -> bool:
+        
+        return self._GetNumFramesOutstanding() > 0
+        
+    
+    def DrawToPainter( self, x: int, y: int, painter: QG.QPainter ):
+        
+        num_frames_to_draw = self._GetNumFramesOutstanding()
+        
+        if self.num_frames_drawn + num_frames_to_draw >= self.num_frames_to_draw:
+            
+            painter.drawImage( x, y, self.bitmap )
+            
+            self.num_frames_drawn = self.num_frames_to_draw
+            self._draw_complete = True
+            
+        else:
+            
+            for i in range( num_frames_to_draw ):
+                
+                painter.drawImage( x, y, self.alpha_bmp )
+                
+            
+            self.num_frames_drawn += num_frames_to_draw
+            
+        
+    
 
 class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMediaList, QW.QScrollArea ):
     
@@ -2602,7 +2690,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._drag_init_coordinates = None
         self._drag_prefire_event_count = 0
-        self._thumbnails_being_faded_in = {}
+        self._hashes_to_thumbnails_waiting_to_be_drawn: typing.Dict[ bytes, ThumbnailWaitingToBeDrawn ] = {}
         self._hashes_faded = set()
         
         MediaPanel.__init__( self, parent, page_key, management_controller, media_results )
@@ -2731,7 +2819,7 @@ class MediaPanelThumbnails( MediaPanel ):
             painter.setCompositionMode( comp_mode )
             
         else: 
-        
+            
             painter.setBackground( QG.QBrush( bg_colour ) )
             
             painter.eraseRect( painter.viewport() )
@@ -2833,11 +2921,20 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._StopFading( hash )
             
-            bmp = thumbnail.GetQtImage( self.devicePixelRatio() )
+            bitmap = thumbnail.GetQtImage( self.devicePixelRatio() )
             
-            alpha_bmp = QP.AdjustOpacity( bmp, 0.20 )
+            fade_thumbnails = HG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
             
-            self._thumbnails_being_faded_in[ hash ] = ( bmp, alpha_bmp, thumbnail_index, thumbnail, now_precise, 0 )
+            if fade_thumbnails:
+                
+                thumbnail_draw_object = ThumbnailWaitingToBeDrawnAnimated( hash, thumbnail, thumbnail_index, bitmap )
+                
+            else:
+                
+                thumbnail_draw_object = ThumbnailWaitingToBeDrawn( hash, thumbnail, thumbnail_index, bitmap )
+                
+            
+            self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ] = thumbnail_draw_object
             
         
         HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
@@ -3277,11 +3374,9 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _StopFading( self, hash ):
         
-        if hash in self._thumbnails_being_faded_in:
+        if hash in self._hashes_to_thumbnails_waiting_to_be_drawn:
             
-            ( bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames ) = self._thumbnails_being_faded_in[ hash ]
-            
-            del self._thumbnails_being_faded_in[ hash ]
+            del self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
             
         
     
@@ -4438,7 +4533,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
-        self._thumbnails_being_faded_in = {}
+        self._hashes_to_thumbnails_waiting_to_be_drawn = {}
         self._hashes_faded = set()
         
         self._ReinitialisePageCacheIfNeeded()
@@ -4450,120 +4545,81 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def TIMERAnimationUpdate( self ):
         
-        FRAME_DURATION = 1.0 / 60
-        
-        fade_thumbnails = HG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
-        
-        NUM_FRAMES_TO_FILL_IN = 15 if fade_thumbnails else 0
-        
-        loop_started = HydrusTime.GetNowPrecise()
-        loop_should_break_time = loop_started + ( FRAME_DURATION / 2 )
+        loop_should_break_time = HydrusTime.GetNowPrecise() + ( FRAME_DURATION_60FPS / 2 )
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
         thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
-        hashes = list( self._thumbnails_being_faded_in.keys() )
+        hashes = list( self._hashes_to_thumbnails_waiting_to_be_drawn.keys() )
         
-        random.shuffle( hashes )
-        
-        dcs = {}
-        
-        y_start = self._GetYStart()
-        
-        earliest_y = y_start
+        page_indices_to_painters = {}
         
         page_height = self._num_rows_per_canvas_page * thumbnail_span_height
         
-        for hash in hashes:
+        for hash in HydrusData.IterateListRandomlyAndFast( hashes ):
             
-            ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered ) = self._thumbnails_being_faded_in[ hash ]
-            
-            num_frames_supposed_to_be_rendered = int( ( loop_started - animation_started ) / FRAME_DURATION )
-            
-            num_frames_to_render = num_frames_supposed_to_be_rendered - num_frames_rendered
-            
-            if num_frames_to_render == 0:
-                
-                continue
-                
+            thumbnail_draw_object = self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
             
             delete_entry = False
             
-            try:
+            if thumbnail_draw_object.DrawDue():
                 
-                expected_thumbnail = self._sorted_media[ thumbnail_index ]
+                thumbnail_index = thumbnail_draw_object.thumbnail_index
                 
-            except:
-                
-                expected_thumbnail = None
-                
-            
-            page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
-            
-            if expected_thumbnail != thumbnail:
-                
-                delete_entry = True
-                
-            elif page_index not in self._clean_canvas_pages:
-                
-                delete_entry = True
-                
-            else:
-                
-                times_to_draw = 1
-                
-                if num_frames_supposed_to_be_rendered >= NUM_FRAMES_TO_FILL_IN:
+                try:
                     
-                    bmp_to_use = original_bmp
+                    expected_thumbnail = self._sorted_media[ thumbnail_index ]
+                    
+                except:
+                    
+                    expected_thumbnail = None
+                    
+                
+                page_index = self._GetPageIndexFromThumbnailIndex( thumbnail_index )
+                
+                if expected_thumbnail != thumbnail_draw_object.thumbnail:
+                    
+                    delete_entry = True
+                    
+                elif page_index not in self._clean_canvas_pages:
                     
                     delete_entry = True
                     
                 else:
                     
-                    times_to_draw = num_frames_to_render
+                    thumbnail_col = thumbnail_index % self._num_columns
                     
-                    bmp_to_use = alpha_bmp
+                    thumbnail_row = thumbnail_index // self._num_columns
                     
-                    num_frames_rendered += times_to_draw
+                    x = thumbnail_col * thumbnail_span_width + thumbnail_margin
                     
-                    self._thumbnails_being_faded_in[ hash ] = ( original_bmp, alpha_bmp, thumbnail_index, thumbnail, animation_started, num_frames_rendered )
+                    y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                     
-                
-                thumbnail_col = thumbnail_index % self._num_columns
-                
-                thumbnail_row = thumbnail_index // self._num_columns
-                
-                x = thumbnail_col * thumbnail_span_width + thumbnail_margin
-                
-                y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
-                
-                if page_index not in dcs:
+                    if page_index not in page_indices_to_painters:
+                        
+                        canvas_page = self._clean_canvas_pages[ page_index ]
+                        
+                        painter = QG.QPainter( canvas_page )
+                        
+                        page_indices_to_painters[ page_index ] = painter
+                        
                     
-                    canvas_page = self._clean_canvas_pages[ page_index ]
+                    painter = page_indices_to_painters[ page_index ]
                     
-                    painter = QG.QPainter( canvas_page )
+                    thumbnail_draw_object.DrawToPainter( x, y, painter )
                     
-                    dcs[ page_index ] = painter
+                    #
                     
-                
-                painter = dcs[ page_index ]
-                
-                for i in range( times_to_draw ):
+                    page_virtual_y = page_height * page_index
                     
-                    painter.drawImage( x, y, bmp_to_use )
+                    self.widget().update( QC.QRect( x, page_virtual_y + y, thumbnail_span_width - thumbnail_margin, thumbnail_span_height - thumbnail_margin ) )
                     
-                
-                #
-                
-                page_virtual_y = page_height * page_index
-                
-                self.widget().update( QC.QRect( x, page_virtual_y + y, thumbnail_span_width - thumbnail_margin, thumbnail_span_height - thumbnail_margin ) )
                 
             
-            if delete_entry:
+            if thumbnail_draw_object.DrawComplete() or delete_entry:
                 
-                del self._thumbnails_being_faded_in[ hash ]
+                del self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ]
                 
             
             if HydrusTime.TimeHasPassedPrecise( loop_should_break_time ):
@@ -4572,7 +4628,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
         
-        if len( self._thumbnails_being_faded_in ) == 0:
+        if len( self._hashes_to_thumbnails_waiting_to_be_drawn ) == 0:
             
             HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
@@ -4649,8 +4705,6 @@ class MediaPanelThumbnails( MediaPanel ):
             random.shuffle( potential_clean_indices_to_steal )
             
             y_start = self._parent._GetYStart()
-            
-            earliest_y = y_start
             
             bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
             

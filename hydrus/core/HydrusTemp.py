@@ -3,6 +3,7 @@ import tempfile
 import threading
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 
@@ -77,20 +78,9 @@ def GetCurrentTempDir():
     return tempfile.gettempdir()
     
 
-HYDRUS_TEMP_DIR = None
-
-def GetHydrusTempDir():
+def InitialiseHydrusTempDir():
     
-    path = tempfile.mkdtemp( prefix = 'hydrus' )
-    
-    global HYDRUS_TEMP_DIR
-    
-    if HYDRUS_TEMP_DIR is None:
-        
-        HYDRUS_TEMP_DIR = path
-        
-    
-    return path
+    return tempfile.mkdtemp( prefix = 'hydrus' )
     
 
 def SetEnvTempDir( path ):
@@ -127,25 +117,16 @@ def SetEnvTempDir( path ):
 
 def GetSubTempDir( prefix = '' ):
     
-    global HYDRUS_TEMP_DIR
+    hydrus_temp_dir = HG.client_controller.GetHydrusTempDir()
     
-    return tempfile.mkdtemp( prefix = prefix, dir = HYDRUS_TEMP_DIR )
+    return tempfile.mkdtemp( prefix = prefix, dir = hydrus_temp_dir )
     
 
 def GetTempPath( suffix = '', dir = None ):
     
-    global HYDRUS_TEMP_DIR
-    
-    if dir is None and HYDRUS_TEMP_DIR is not None:
+    if dir is None:
         
-        dir = HYDRUS_TEMP_DIR
-        
-        if not os.path.exists( dir ):
-            
-            HYDRUS_TEMP_DIR = None
-            
-            dir = GetHydrusTempDir()
-            
+        dir = HG.client_controller.GetHydrusTempDir()
         
     
     return tempfile.mkstemp( suffix = suffix, prefix = 'hydrus', dir = dir )

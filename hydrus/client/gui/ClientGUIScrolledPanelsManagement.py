@@ -4769,11 +4769,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             # I tried <100%, but Qt seems to cap it to 1.0. Sad!
             self._thumbnail_dpr_percentage = ClientGUICommon.BetterSpinBox( self, min = 100, max = 800 )
-            
             tt = 'If your OS runs at an UI scale greater than 100%, mirror it here and your thumbnails will look crisp. If you have multiple monitors at different UI scales, or you change UI scale regularly, set it to the largest one you use.'
             tt += os.linesep * 2
             tt += 'I believe the UI scale on the monitor this dialog opened on was {}'.format( HydrusData.ConvertFloatToPercentage( self.devicePixelRatio() ) )
-            
             self._thumbnail_dpr_percentage.setToolTip( tt )
             
             self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
@@ -4782,12 +4780,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_visibility_scroll_percent.setToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
             
             self._allow_blurhash_fallback = QW.QCheckBox( self )
-            
             tt = 'If hydrus does not have a thumbnail for a file (e.g. you are looking at a deleted file, or one unexpectedly missing), but it does know its blurhash, it will generate a blurry thumbnail based off that blurhash. Turning this behaviour off here will make it always show the default "hydrus" thumbnail.'
-            
             self._allow_blurhash_fallback.setToolTip( tt )
             
             self._fade_thumbnails = QW.QCheckBox( self )
+            tt = 'Whenever thumbnails change (appearing on a page, selecting, an icon or tag banner changes), they normally fade from the old to the new. If you would rather they change instantly, in one frame, uncheck this.'
+            self._fade_thumbnails.setToolTip( tt )
             
             self._focus_preview_on_ctrl_click = QW.QCheckBox( self )
             self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( self )
@@ -4849,7 +4847,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( '  Only on files with no duration: ', self._focus_preview_on_shift_click_only_static ) )
             rows.append( ( 'Generate video thumbnails this % in: ', self._video_thumbnail_percentage_in ) )
             rows.append( ( 'Use blurhash missing thumbnail fallback: ', self._allow_blurhash_fallback ) )
-            rows.append( ( 'Fade in thumbnails: ', self._fade_thumbnails ) )
+            rows.append( ( 'Fade thumbnails: ', self._fade_thumbnails ) )
             rows.append( ( 'Do not scroll down on key navigation if thumbnail at least this % visible: ', self._thumbnail_visibility_scroll_percent ) )
             rows.append( ( 'EXPERIMENTAL: Scroll thumbnails at this rate per scroll tick: ', self._thumbnail_scroll_rate ) )
             rows.append( ( 'EXPERIMENTAL: Image path for thumbnail panel background image (set blank to clear): ', self._media_background_bmp_path ) )

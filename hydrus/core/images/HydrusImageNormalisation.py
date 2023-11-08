@@ -222,7 +222,9 @@ def StripOutAnyUselessAlphaChannel( numpy_image: numpy.array ) -> numpy.array:
     
     if HydrusImageColours.NumPyImageHasUselessAlphaChannel( numpy_image ):
         
-        numpy_image = numpy_image[:,:,:3].copy()
+        channel_number = HydrusImageColours.GetNumPyAlphaChannelNumber( numpy_image )
+        
+        numpy_image = numpy_image[:,:,:channel_number].copy()
         
         # old way, which doesn't actually remove the channel lmao lmao lmao
         '''
