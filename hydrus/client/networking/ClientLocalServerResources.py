@@ -4487,11 +4487,24 @@ class HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( HydrusResourceC
         
         job_key_key = request.parsed_request_args.GetValue( 'job_key', bytes )
         
+        # TODO add 'seconds' to delay dismissal
+        #seconds = request.parsed_request_args.GetValue( 'seconds', int )
+        
         def do_it( ):
             
             message_manager: ClientGUIPopupMessages.PopupMessageManager = HG.client_controller.gui.GetMessageManager()
             
-            message_manager.DismissJobKey( job_key_key )
+            job_key = message_manager.GetMessageJobKeyFromKey( job_key_key )
+            
+            if job_key is None:
+                
+                raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
+            
+            if job_key.IsCancellable() or job_key.IsPausable():
+                
+                raise HydrusExceptions.BadRequestException('This job can\'t be dismissed!')
+            
+            job_key.Delete()
         
         HG.client_controller.CallBlockingToQt( HG.client_controller.gui, do_it )
         
