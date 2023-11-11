@@ -162,9 +162,9 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         raise NotImplementedError()
         
     
-    def _InitTempDir( self ):
+    def _InitHydrusTempDir( self ):
         
-        self.temp_dir = HydrusTemp.GetHydrusTempDir()
+        self._hydrus_temp_dir = HydrusTemp.InitialiseHydrusTempDir()
         
     
     def _MaintainCallToThreads( self ):
@@ -455,6 +455,16 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         return self._caches[ name ]
         
     
+    def GetHydrusTempDir( self ):
+        
+        if not os.path.exists( self._hydrus_temp_dir ):
+            
+            self._InitHydrusTempDir()
+            
+        
+        return self._hydrus_temp_dir
+        
+    
     def GetJobSchedulerSnapshot( self, scheduler_name ):
         
         if scheduler_name == 'fast':
@@ -548,7 +558,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         try:
             
-            self._InitTempDir()
+            self._InitHydrusTempDir()
             
         except:
             
@@ -813,9 +823,9 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         HydrusTemp.CleanUpOldTempPaths()
         
-        if hasattr( self, 'temp_dir' ):
+        if hasattr( self, '_hydrus_temp_dir' ):
             
-            HydrusPaths.DeletePath( self.temp_dir )
+            HydrusPaths.DeletePath( self._hydrus_temp_dir )
             
         
         with self._call_to_thread_lock:

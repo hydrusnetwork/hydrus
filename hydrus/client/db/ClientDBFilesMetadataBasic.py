@@ -193,12 +193,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
                 
             
         
-        if result is None:
-            
-            return 0
-            
-        
-        ( total_size, ) = result
+        total_size = self._GetSumResult( result )
         
         return total_size
         

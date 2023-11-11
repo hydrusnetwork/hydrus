@@ -172,7 +172,7 @@ def DumpToPNG( width, payload_bytes, title, payload_description, text, path ):
         
         HydrusData.ShowException( e )
         
-        raise Exception( 'Could not save the png!' )
+        raise Exception( 'Could not save the png!' ) from e
         
     finally:
         
@@ -242,6 +242,7 @@ def LoadFromQtImage( qt_image: QG.QImage ):
     
     return LoadFromNumPyImage( numpy_image )
     
+
 def LoadFromPNG( path ):
     
     # this is to deal with unicode paths, which cv2 can't handle
@@ -269,13 +270,15 @@ def LoadFromPNG( path ):
                 
                 pil_image = HydrusImageHandling.GeneratePILImage( temp_path, dequantize = False )
                 
+                # leave strip_useless_alpha = True in here just to catch the very odd LA situation
+                
                 numpy_image = HydrusImageHandling.GenerateNumPyImageFromPILImage( pil_image )
                 
             except Exception as e:
                 
                 HydrusData.ShowException( e )
                 
-                raise Exception( '"{}" did not appear to be a valid image!'.format( path ) )
+                raise Exception( '"{}" did not appear to be a valid image!'.format( path ) ) from e
                 
             
         
@@ -286,6 +289,7 @@ def LoadFromPNG( path ):
     
     return LoadFromNumPyImage( numpy_image )
     
+
 def LoadFromNumPyImage( numpy_image: numpy.array ):
     
     try:

@@ -661,7 +661,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     except Exception as e:
                         
-                        HydrusData.ShowText( 'Import folder tried to move ' + path + ', but could not:' )
+                        HydrusData.ShowText( f'Import folder tried to move "{path}", but it encountered an error:' )
                         
                         HydrusData.ShowException( e )
                         
@@ -690,7 +690,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     except Exception as e:
                         
-                        raise Exception( 'Tried to check existence of "{}", but could not.'.format( path ) )
+                        raise Exception( 'Tried to check existence of "{}", but could not.'.format( path ) ) from e
                         
                     
                 

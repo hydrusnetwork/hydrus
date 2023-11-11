@@ -35,6 +35,46 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_551"><a href="#version_551">version 551</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>thanks to a user, we have a new checkbox under _options->thumbnails_ that disables thumbnail fading. they'll just blink into place in one frame as soon as ready</li>
+                        <li>after looking at this code myself, I gave it a full clean. the actual thumbnail fade animation is now handled with some proper objects rather than a scatter of variables passed around</li>
+                        <li>I also doubled the default fade time to 500ms. I expect I'll add an option for it, especially if we rework all this into the proper Qt animation engine and get it performing better</li>
+                        <li>fixed the crashes users on PyQt were seeing! I made one tiny change (1->1.0) last week, and PyQt didn't like it, so any view of Mr Bones or 'open externally' panels, or the media viewer top-right ratings hover was leading to program instability</li>
+                        <li>the system predicates for 'has/no duration', 'has/no frames', 'has/no notes', 'has/no words' (i.e. the respective 'num x' system pred, but either = 0 or >0) are now aware that they are each others' inverse, so if you ctrl+double-click or do similar edit actions, they'll flip</li>
+                        <li>updated the 'PTR for dummies' page to link to a new QuickSync source, kindly maintained and hosted by a user</li>
+                        <li><h3>code cleanup and misc bug fixes</h3></li>
+                        <li>sped up some random iteration across the program (e.g. when deciding which order to waterfall thumbnails in, which can suffer from overhead if you do a fast giganto-scroll)</li>
+                        <li>cleaned up the code that does image alpha channel (transparency) detection, comparison, and stripping</li>
+                        <li>unified how the variety of image loads and conversions perform the 'strip this image of useless transparency data' normalisation step. thumbnails from krita, svg, and pdf are now stripped of useless alpha. also, all 'import this serialised object png' avenues now handle pngs with spurious alpha</li>
+                        <li>I think I fixed the alpha channel stripping code to handle 'LA' (greyscale with transparency) files. if you try to import a hydrus serialised object png file that is for some crazy reason now LA, I think it'll work!</li>
+                        <li>when a files popup message filters its current files and the count goes to 0 (happens if you re-click the button after deleting everything it has to show), the message now auto-dismisses itself (previously it was nuking the button but staying as a thin strip of null panel space)</li>
+                        <li>fixed a bug where `system:date` predicates were displaying labels an hour off (usually midnight -> 11pm, thus cycling back to the previous day) thanks to the clocks changed (in the USA) last weekend. I suspect there is more of this, here and there, so let me know what you see</li>
+                        <li>fixed a counting typo error with the delete files code when you delete the last file in a domain but the domain thinks it already has 0 files</li>
+                        <li>fixed up similar code across the database to forestall future typos on SQLite SUMs</li>
+                        <li>improved and unified the 'hydrus temp dir' management code. if the specific per-process hydrus temp dir is cleared out by an external factor (I'm guessing just the OS cleaning up during a long running client session), hydrus should just simply make a new folder as needed. with luck, this will fix a problem with drag and drop export that ran into this</li>
+                        <li><h3>many file move/copy error handling improvements</h3></li>
+                        <li>_tl;dr: if hydrus can't put a file somewhere, it deals with that better now_</li>
+                        <li>improved how file move/merge function reports its errors, and how all its callers handle them</li>
+                        <li>the 'rename a file's file extension when its filetype changes' job now correctly recognises when it fails to rename a file due to a reason other than the file being currently in use</li>
+                        <li>import folders now correctly detect when they fail to 'move' action a file out after processing</li>
+                        <li>the check file integrity routine now correctly detects when it fails to move a damaged file from file storage to a landing zone in the main db directory. this failure now cancels the job properly and prints a nicer error to the log</li>
+                        <li>improved how the file copy/mirror function reports its errors, and how all its callers handle them</li>
+                        <li>saving a serialised object png now properly catches a 'transfer from temp dir to dest location' move error</li>
+                        <li>the internal database backup and restore routines now detect file copy errors better</li>
+                        <li>a drag and drop export operation that wants to put the files in the temp dir and also fails to collect its files nicely now correctly raises an error</li>
+                        <li>failing to set the mpv file on options save (and the subsequent mpv-load action) now reports its error correctly</li>
+                        <li>exporting update files now handles a missing update file more gracefully</li>
+                        <li>mergedirectory and mirrordirectory now fail instantly after any single error, rather than several</li>
+                        <li>added some more file/directory pre-checks to all the merge/mirror functions</li>
+                        <li>deleted some old unused code here</li>
+                        <li><h3>client api</h3></li>
+                        <li>thanks to a user, the Client API now has a 'generate_hashes' endpoint that returns the sha256 hash (and pixel hash and perceptual hashes of any appropriate image file) of any file you give it</li>
+                        <li>the client api version is now 55</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_550"><a href="#version_550">version 550</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -48,7 +88,7 @@
                         <li><h3>thumbnail fill</h3></li>
                         <li>after vacillating and talking about it for months, I finally reworked how ''scale to fill' thumbnails work. as sometimes happens, I only had to change about six critical lines of code to get the core functionality changed and nothing seems to have exploded</li>
                         <li>the main change here is KISS--'fill' thumbnail image files on disk are no longer clipped to just the viewable area, but the whole image scaled to fill the thumbnail space (with exceptions for extreme cases). this change gives us some simplicity and flexibility behind the scenes, saves some regeneration work when the user only changes one thumbnail dimension setting, improves maintenance tasks based off the thumbnail (like blurhash), and means that the Client API can fetch your thumbs and still have something useful to display</li>
-                        <li>if you have 'scale to fit' set, hydrus will regenerate your thumbnails naturally as you browse the client. fingers crossed, you won't notice any visual difference through the transition</li>
+                        <li>if you have 'scale to fill' set, hydrus will regenerate your thumbnails naturally as you browse the client. fingers crossed, you won't notice any visual difference through the transition</li>
                         <li>'open externally' button panels now display their thumbnails with more reasonable maximum dimensions, and when things are gonk for whatever reason, they should nonetheless be centered correctly</li>
                         <li>as a side thing, this change allowed me to finally purge all the clipping tech from the thumbnail pipeline, where it had obtusely sunk in to every possible filetype thumbgen</li>
                         <li><h3>eager login system</h3></li>

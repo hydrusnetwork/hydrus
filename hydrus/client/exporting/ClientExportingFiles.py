@@ -536,7 +536,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         client_files_manager = HG.client_controller.client_files_manager
         
-        num_copied = 0
+        num_actually_copied = 0
         
         for ( i, media_result ) in enumerate( media_results ):
             
@@ -599,21 +599,21 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                                 
                             
                         
-                        copied = True
+                        actually_copied = True
                         
                     else:
                         
-                        copied = False
+                        actually_copied = False
                         
                     
                 else:
                     
-                    copied = HydrusPaths.MirrorFile( source_path, dest_path )
+                    actually_copied = HydrusPaths.MirrorFile( source_path, dest_path )
                     
                 
-                if copied:
+                if actually_copied:
                     
-                    num_copied += 1
+                    num_actually_copied += 1
                     
                     HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
                     
@@ -627,9 +627,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             sync_paths.add( dest_path )
             
         
-        if num_copied > 0:
+        if num_actually_copied > 0:
             
-            HydrusData.Print( 'Export folder ' + self._name + ' exported ' + HydrusData.ToHumanInt( num_copied ) + ' files.' )
+            HydrusData.Print( 'Export folder ' + self._name + ' exported ' + HydrusData.ToHumanInt( num_actually_copied ) + ' files.' )
             
         
         if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:

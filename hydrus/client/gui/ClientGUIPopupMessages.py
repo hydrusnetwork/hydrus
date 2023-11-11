@@ -323,6 +323,14 @@ class PopupMessage( PopupWindow ):
                     
                     self._job_key.SetFiles( presented_hashes, attached_files_label )
                     
+                    if len( presented_hashes ) == 0:
+                        
+                        if self._job_key.IsDone():
+                            
+                            self.TryToDismiss()
+                            
+                        
+                    
                 
                 if len( presented_hashes ) > 0:
                     

@@ -257,9 +257,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 
                 HG.client_controller.pub( 'modal_message', job_key )
                 
-                random.shuffle( names_to_analyze )
-                
-                for name in names_to_analyze:
+                for name in HydrusData.IterateListRandomlyAndFast( names_to_analyze ):
                     
                     HG.client_controller.frame_splash_status.SetText( 'analyzing ' + name )
                     job_key.SetStatusText( 'analyzing ' + name )
@@ -434,17 +432,11 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
     def DeferredDropTable( self, table_name: str ):
         
-        try:
+        if not self._TableExists( table_name ):
             
-            self._Execute( f'SELECT 1 FROM {table_name};' ).fetchone()
-            
-        except:
-            
-            # table doesn't exist I guess!
             return
             
         
-        schema = 'main'
         table_name_without_schema = table_name
         
         if '.' in table_name:
@@ -590,7 +582,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         return last_shutdown_work_time
         
     
-    def GetTableNamesDueAnalysis( self, force_reanalyze = False ):
+    def GetTableNamesDueAnalysis( self, force_reanalyze = False ) -> typing.List:
         
         db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
         

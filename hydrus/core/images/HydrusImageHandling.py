@@ -141,11 +141,9 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
         
         pil_image = HydrusPSDHandling.MergedPILImageFromPSD( path )
         
-        numpy_image = GenerateNumPyImageFromPILImage( pil_image )
+        return GenerateNumPyImageFromPILImage( pil_image )
         
-        return HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
-        
-
+    
     if mime == HC.APPLICATION_KRITA:
         
         if HG.media_load_report_mode:
@@ -252,16 +250,23 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
             
             numpy_image = HydrusImageNormalisation.DequantizeFreshlyLoadedNumPyImage( numpy_image )
             
+            numpy_image = HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
+            
         
-    
-    numpy_image = HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
     
     return numpy_image
     
-def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image ) -> numpy.array:
+def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alpha = True ) -> numpy.array:
     
     # this seems to magically work, I guess asarray either has a match for Image or Image provides some common shape/datatype properties that it can hook into
-    return numpy.asarray( pil_image )
+    numpy_image = numpy.asarray( pil_image )
+    
+    if strip_useless_alpha:
+        
+        numpy_image = HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
+        
+    
+    return numpy_image
     
     # old method:
     '''

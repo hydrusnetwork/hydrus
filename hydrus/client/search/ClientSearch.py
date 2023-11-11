@@ -2137,6 +2137,25 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, not self._value )
             
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
+            
+            ( operator, value ) = self._value
+            
+            number_test = NumberTest.STATICCreateFromCharacters( operator, value )
+            
+            if number_test.IsZero():
+                
+                return Predicate( self._predicate_type, ( '>', 0 ) )
+                
+            elif number_test.IsAnythingButZero():
+                
+                return Predicate( self._predicate_type, ( '=', 0 ) )
+                
+            else:
+                
+                return None
+                
+            
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
             
             return Predicate( self._predicate_type, not self._value )
@@ -2656,8 +2675,6 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         dt = datetime.datetime( year, month, day, hour, minute )
                         
-                        timestamp = HydrusTime.DateTimeToTimestamp( dt )
-                        
                         if operator == '<':
                             
                             pretty_operator = 'before '
@@ -2677,7 +2694,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                         include_24h_time = operator != '=' and ( hour > 0 or minute > 0 )
                         
-                        base += ': ' + pretty_operator + HydrusTime.TimestampToPrettyTime( timestamp, include_24h_time = include_24h_time )
+                        base += ': ' + pretty_operator + HydrusTime.DateTimeToPrettyTime( dt, include_24h_time = include_24h_time )
                         
                     
                 

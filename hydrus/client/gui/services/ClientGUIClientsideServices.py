@@ -2933,7 +2933,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                             
                             try:
                                 
-                                update_path = client_files_manager.GetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT, check_file_exists = False )
+                                update_path = client_files_manager.GetFilePath( update_hash, HC.APPLICATION_HYDRUS_UPDATE_CONTENT )
                                 
                                 dest_path = os.path.join( dest_dir, update_hash.hex() )
                                 

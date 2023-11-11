@@ -1054,7 +1054,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             self._previous_conf_content_bytes = conf_content_bytes
             
         
-        #To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
+        # To load an existing config file (by default it doesn't load the user/global config like standalone mpv does):
         
         load_f = getattr( mpv, '_mpv_load_config_file', None )
         

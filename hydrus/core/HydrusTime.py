@@ -5,6 +5,27 @@ import time
 from hydrus.core import HydrusData
 from hydrus.core import HydrusConstants as HC
 
+def DateTimeToPrettyTime( dt: datetime.datetime, include_24h_time = True ):
+    
+    if include_24h_time:
+        
+        phrase = '%Y-%m-%d %H:%M:%S'
+        
+    else:
+        
+        phrase = '%Y-%m-%d'
+        
+    
+    try:
+        
+        return dt.strftime( phrase )
+        
+    except:
+        
+        return f'unknown time {dt}'
+        
+    
+
 def DateTimeToTimestamp( dt: datetime.datetime ) -> int:
     
     try:
@@ -397,15 +418,6 @@ def TimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = True ):
         return 'unknown time'
         
     
-    if include_24h_time:
-        
-        phrase = '%Y-%m-%d %H:%M:%S'
-        
-    else:
-        
-        phrase = '%Y-%m-%d'
-        
-    
     if in_utc:
         
         timezone = HC.TIMEZONE_UTC
@@ -415,16 +427,20 @@ def TimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = True ):
         timezone = HC.TIMEZONE_LOCAL
         
     
+    # ok this timezone fails when the date of the timestamp we are actually talking about is in summer time and we are in standard time, or _vice versa_
+    # might be able to predict timezone better by recreating the dt using our year, month, day tuple and then pulling _that_ TZ, which I am pretty sure is corrected
+    # OR just don't convert back and forth so much when handling this garbage, which was the original fix to a system:date predicate shifting by an hour through two conversions
+    
     try:
         
         dt = TimestampToDateTime( timestamp, timezone = timezone )
-        
-        return dt.strftime( phrase )
         
     except:
         
         return 'unparseable time {}'.format( timestamp )
         
+    
+    return DateTimeToPrettyTime( dt, include_24h_time = include_24h_time )
     
 
 def BaseTimestampToPrettyTimeDelta( timestamp, just_now_string = 'now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):

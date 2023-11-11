@@ -17,6 +17,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusSessions
+from hydrus.core import HydrusTemp
 from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientAPI
@@ -184,6 +185,8 @@ class Controller( object ):
         self._test_db = None
         
         self.db_dir = tempfile.mkdtemp()
+        
+        self._hydrus_temp_dir = HydrusTemp.InitialiseHydrusTempDir()
         
         global DB_DIR
         
@@ -620,6 +623,11 @@ class Controller( object ):
         del self._read_call_args[ name ]
         
         return read
+        
+    
+    def GetHydrusTempDir( self ):
+        
+        return self._hydrus_temp_dir
         
     
     def GetWrite( self, name ):

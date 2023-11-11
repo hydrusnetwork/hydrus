@@ -387,17 +387,19 @@ class ClientFilesManager( object ):
             raise Exception( message )
             
         
-        successful = HydrusPaths.MirrorFile( source_path, dest_path )
-        
-        if not successful:
+        try:
             
-            message = 'Copying the file from "{}" to "{}" failed! Details should be shown and other import queues should be paused. You should shut the client down now and fix this!'.format( source_path, dest_path )
+            HydrusPaths.MirrorFile( source_path, dest_path )
+            
+        except Exception as e:
+            
+            message = f'Copying the file from "{source_path}" to "{dest_path}" failed! Details should be shown and other import queues should be paused. You should shut the client down now and fix this!'
             
             HydrusData.ShowText( message )
             
             self._HandleCriticalDriveError()
             
-            raise Exception( 'There was a problem copying the file from ' + source_path + ' to ' + dest_path + '!' )
+            raise Exception( message ) from e
             
         
     
@@ -1273,8 +1275,6 @@ class ClientFilesManager( object ):
                 
                 try:
                     
-                    is_an_orphan = False
-                    
                     ( directory, filename ) = os.path.split( path )
                     
                     should_be_a_hex_hash = filename[:64]
@@ -1300,7 +1300,20 @@ class ClientFilesManager( object ):
                         
                         HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
                         
-                        HydrusPaths.MergeFile( path, dest )
+                        try:
+                            
+                            HydrusPaths.MergeFile( path, dest )
+                            
+                        except Exception as e:
+                            
+                            HydrusData.ShowText( f'Had trouble moving orphan from {path} to {dest}! Abandoning job!' )
+                            
+                            HydrusData.ShowException( e, do_wait = False )
+                            
+                            job_key.Cancel()
+                            
+                            return
+                            
                         
                     
                     orphan_paths.append( path )
@@ -1745,6 +1758,11 @@ class ClientFilesManager( object ):
             
             path = self._GenerateExpectedThumbnailPath( hash )
             
+            if not os.path.exists( path ):
+                
+                raise Exception()
+                
+            
             thumbnail_mime = HydrusFileHandling.GetThumbnailMime( path )
             
             numpy_image = ClientImageHandling.GenerateNumPyImage( path, thumbnail_mime )
@@ -1773,6 +1791,7 @@ class ClientFilesManager( object ):
             
         
         return do_it
+        
     
     def Reinit( self ):
         
@@ -2110,7 +2129,14 @@ class FilesMaintenanceManager( object ):
                 
                 dest_path = os.path.join( error_dir, os.path.basename( path ) )
                 
-                HydrusPaths.MergeFile( path, dest_path )
+                try:
+                    
+                    HydrusPaths.MergeFile( path, dest_path )
+                    
+                except Exception as e:
+                    
+                    raise Exception( f'Could not move the damaged file "{path}" to "{dest_path}"!' ) from e
+                    
                 
                 if not self._pubbed_message_about_invalid_file_export:
                     

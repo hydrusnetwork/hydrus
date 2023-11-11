@@ -533,14 +533,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         
         result = self._Execute( 'SELECT SUM( current_count ) FROM {};'.format( counts_cache_table_name ) ).fetchone()
         
-        if result is None or result[0] is None:
-            
-            count = 0
-            
-        else:
-            
-            ( count, ) = result
-            
+        count = self._GetSumResult( result )
         
         return count
         
