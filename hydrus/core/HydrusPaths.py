@@ -565,7 +565,7 @@ def MergeTree( source, dest, text_update_hook = None ):
         raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the source is not a directory!' )
         
     
-    if not os.path.isdir( dest ):
+    if os.path.exists( dest ) and not os.path.isdir( dest ):
         
         raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the destination is not a directory!' )
         
@@ -712,7 +712,7 @@ def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None 
         raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the source is not a directory!' )
         
     
-    if not os.path.isdir( dest ):
+    if os.path.exists( dest ) and not os.path.isdir( dest ):
         
         raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the destination is not a directory!' )
         
