@@ -2018,7 +2018,7 @@
 <p>So, you have some files imported. Let's give them some tags so we can find them again later.</p>
 <p><a href="faq.html#tags">FAQ: what is a tag?</a></p>
 <p>Your client starts with two <a href="getting_started_tags.html#tag_services">local tags services</a>, called 'my tags' and 'downloader tags' which keep all of their file-&gt;tag mappings in your client's database where only you can see them. 'my tags' is a good place to practise.</p>
-<p>Select a file and press F3:</p>
+<p>Select a file and press F3 to open the <em>manage tags dialog</em>:</p>
 <p><a href="images/manage_tags.png"><img alt="" src="images/manage_tags.png" /></a></p>
 <p>The area below where you type is the 'autocomplete dropdown'. You will see this on normal search pages too. Type part of a tag, and matching results will appear below. Since you are starting out, your 'my tags' service won't have many tags in it yet, but things will populate fast! Select the tag you want with the arrow keys and hit enter. If you want to remove a tag, enter the exact same thing again or double-click it in the box above.</p>
 <p>Prefixing a tag with a category and a colon will create a <a href="faq.html#namespaces"><em>namespaced</em> tag</a>. This helps inform the software and other users about what the tag is. Examples of namespaced tags are:</p>
@@ -2029,20 +2029,30 @@
 <li><code>title:vitruvian man</code></li>
 </ul>
 <p>The client is set up to draw common namespaces in different colours, just like boorus do. You can change these colours in the options.</p>
-<p>Once you are happy with your tags, hit 'apply' or just press enter on the text box when it is empty.</p>
-<p>The tags are now saved to your database. On any search page, you can now type one in and be able to find everything with that tag::</p>
+<p>Once you are happy with your tag changes, click 'apply', or hit F3 again, or simply press Enter on the text box while it is empty. The tags are now saved to your database.</p>
+<div class="admonition note">
+<p class="admonition-title">Media Viewer Manage Tags</p>
+<p>You can also open the <em>manage tags dialog</em> from the full media viewer, but note that this one does not have 'apply' and 'cancel' buttons, only 'close'. It makes its changes instantly, and you can keep using the rest of the program while it is open (it is a non-'modal' dialog).</p>
+<p>Also, you need not close the media viewer's <em>manage tags dialog</em> while you browse. Just like you can hit Enter on the empty text box to close the dialog, hitting Page Up/Down navigates the parent viewer Back/Forward!</p>
+<details class="also">
+<summary>Also</summary>
+<p>Hit Arrow Up/Down on an empty text input to switch between the tag service tabs!</p>
+</details>
+</div>
+<p>Once you have some tags set, typing the first few characters of one in on a search page will show the counts of all the tags that start with that. Enter the one you want, and the search will run:</p>
 <p><a href="images/search_hu_tao.png"><img alt="" src="images/search_hu_tao.png" /></a></p>
-<p>If you add more 'search predicates' to a search, you will limit the results to those files that match every single one:</p>
+<p>If you add more 'predicates' to a search, you will limit the results to those files that match every single one:</p>
 <p><a href="images/search_hu_tao_solo.png"><img alt="" src="images/search_hu_tao_solo.png" /></a></p>
 <p>You can also exclude a tag by prefixing it with a hyphen (e.g. <code>-solo</code>).</p>
 <p><a href="images/search_hu_tao_not_solo.png"><img alt="" src="images/search_hu_tao_not_solo.png" /></a></p>
+<p>You can add as many tags as you want. In general, the more search predicates you add, the smaller and faster the results will be, but some types of tag (like excluded <code>-tags</code>), or the cleverer <code>system</code> tags that you will soon learn about, can be suddenly CPU expensive. If a search takes more than a few seconds to run, a 'stop' button appears by the tag input. It cancels things out pretty quick in most cases.</p>
 
   <hr>
 <div class="md-source-file">
   <small>
     
       Last update:
-      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 25, 2023</span>
+      <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">November 15, 2023</span>
       
     
   </small>
