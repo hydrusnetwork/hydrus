@@ -21,7 +21,6 @@ title: Changelog
 * if you have 'confirm sending files to trash' turned off, the delete dialog will now show on physical deletes (i.e. deletes from the trash)
 * updated the derpibooru parser to pull the new AI-based 'generator' and 'prompter' namespaces (converting both to the hydrus-appropriate 'creator')
 * thanks to a user, the Linux build is now archived with zstd instead of gzip. should be about the same size but faster to decompress
-* thanks to a user, the Docker release is pushed up to alpine 3.18. some python libraries should be included/updated also, with heif and dateparser and I think QtPDF support added
 
 ### fixes
 
