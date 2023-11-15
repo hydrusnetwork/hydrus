@@ -697,9 +697,9 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
             stop_time = HydrusTime.GetNow() + result
             
         
-        job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+        job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
         
-        HG.client_controller.pub( 'do_file_storage_rebalance', job_key )
+        HG.client_controller.pub( 'do_file_storage_rebalance', job_status )
         
         self._OKParent()
         
@@ -2403,7 +2403,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self._job_key = ClientThreading.JobKey()
+        self._job_status = ClientThreading.JobStatus()
         
         #
         
@@ -2483,7 +2483,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _CancelCurrentSearch( self ):
         
-        self._job_key.Cancel()
+        self._job_status.Cancel()
         
         self._cancel_button.setEnabled( False )
         
@@ -2494,7 +2494,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                file_history = HG.client_controller.Read( 'file_history', num_steps, file_search_context = file_search_context, job_key = job_key )
+                file_history = HG.client_controller.Read( 'file_history', num_steps, file_search_context = file_search_context, job_status = job_status )
                 
             except HydrusExceptions.DBException as e:
                 
@@ -2519,7 +2519,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     return
                     
-                elif job_key.IsCancelled():
+                elif job_status.IsCancelled():
                     
                     self._status_st.setText( 'Cancelled!' )
                     
@@ -2567,11 +2567,11 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
         self._flip_deleted.setVisible( False )
         self._file_history_chart.setVisible( False )
         
-        self._job_key.Cancel()
+        self._job_status.Cancel()
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        self._job_key = job_key
+        self._job_status = job_status
         
         self._update_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -3004,7 +3004,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._update_job = None
-        self._job_key = ClientThreading.JobKey()
+        self._job_status = ClientThreading.JobStatus()
         
         vbox = QP.VBoxLayout()
         
@@ -3130,7 +3130,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _CancelCurrentSearch( self ):
         
-        self._job_key.Cancel()
+        self._job_status.Cancel()
         
         self._cancel_button.setEnabled( False )
         
@@ -3139,14 +3139,14 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            boned_stats = HG.client_controller.Read( 'boned_stats', file_search_context = file_search_context, job_key = job_key )
+            boned_stats = HG.client_controller.Read( 'boned_stats', file_search_context = file_search_context, job_status = job_status )
             
             return boned_stats
             
         
         def publish_callable( boned_stats ):
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 self._SetCancelled()
                 
@@ -3172,11 +3172,11 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._SetToLoading()
         
-        self._job_key.Cancel()
+        self._job_status.Cancel()
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        self._job_key = job_key
+        self._job_status = job_status
         
         self._update_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -3633,7 +3633,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._current_path_data = {}
         
-        self._job_key = ClientThreading.JobKey()
+        self._job_status = ClientThreading.JobStatus()
         
         self._unparsed_paths_queue = queue.Queue()
         self._currently_parsing = threading.Event()

@@ -632,7 +632,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
             
         
     
-    def ProcessRepositoryDefinitions( self, service_key: bytes, definition_hash: bytes, definition_iterator_dict, content_types, job_key, work_time ):
+    def ProcessRepositoryDefinitions( self, service_key: bytes, definition_hash: bytes, definition_iterator_dict, content_types, job_status, work_time ):
         
         # ignore content_types for now
         
@@ -663,7 +663,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                 
                 num_rows_processed += len( inserts )
                 
-                if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_status.IsCancelled():
                     
                     return num_rows_processed
                     
@@ -700,7 +700,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
                 
                 num_rows_processed += len( inserts )
                 
-                if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_key.IsCancelled():
+                if HydrusTime.TimeHasPassedPrecise( precise_time_to_stop ) or job_status.IsCancelled():
                     
                     return num_rows_processed
                     

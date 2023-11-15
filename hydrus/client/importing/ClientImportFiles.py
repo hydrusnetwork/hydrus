@@ -126,6 +126,7 @@ class FileImportJob( object ):
         self._thumbnail_bytes = None
         self._perceptual_hashes = None
         self._extra_hashes = None
+        self._has_transparency = None
         self._has_exif = None
         self._has_human_readable_embedded_metadata = None
         self._has_icc_profile = None
@@ -405,6 +406,8 @@ class FileImportJob( object ):
         
         #
         
+        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, num_frames = num_frames, resolution = ( width, height ) )
+        
         has_exif = False
         
         raw_pil_image = None
@@ -528,6 +531,11 @@ class FileImportJob( object ):
     def HasICCProfile( self ) -> bool:
         
         return self._has_icc_profile
+        
+    
+    def HasTransparency( self ) -> bool:
+        
+        return self._has_transparency
         
     
     def GetBlurhash( self ) -> str:

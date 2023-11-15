@@ -1228,7 +1228,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             media = media.GetDisplayMedia()
             
-            if not ClientGUICanvasMedia.CanDisplayMedia( media, self.CANVAS_TYPE ):
+            if not ClientMedia.CanDisplayMedia( media ):
                 
                 media = None
                 
@@ -1238,7 +1238,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if self.CANVAS_TYPE == CC.CANVAS_PREVIEW:
                 
-                if not ClientGUICanvasMedia.UserWantsUsToDisplayMedia( media, self.CANVAS_TYPE ):
+                if not ClientMedia.UserWantsUsToDisplayMedia( media, self.CANVAS_TYPE ):
                     
                     media = None
                     
@@ -1263,14 +1263,12 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             else:
                 
+                ( media_width, media_height ) = self._current_media.GetResolution()
+                
                 maintain_zoom = self._maintain_pan_and_zoom and previous_media is not None
                 maintain_pan = self._maintain_pan_and_zoom
 
-                ( media_width, media_height ) = self._current_media.GetResolution()
-                
-                size_is_ok = ( media_width is None or media_width > 0 ) and ( media_height is None or media_height > 0 )
-                
-                if self._current_media.GetLocationsManager().IsLocal() and size_is_ok:
+                if self._current_media.GetLocationsManager().IsLocal():
                     
                     self._media_container.SetMedia( self._current_media, maintain_zoom, maintain_pan )
                     
@@ -3030,7 +3028,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_media = ClientMedia.MediaSingleton( first_media_result )
             second_media = ClientMedia.MediaSingleton( second_media_result )
             
-            if not ClientGUICanvasMedia.CanDisplayMedia( first_media, self.CANVAS_TYPE ) or not ClientGUICanvasMedia.CanDisplayMedia( second_media, self.CANVAS_TYPE ):
+            if not ClientMedia.CanDisplayMedia( first_media ) or not ClientMedia.CanDisplayMedia( second_media ):
                 
                 return False
                 

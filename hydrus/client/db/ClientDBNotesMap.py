@@ -44,28 +44,28 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM file_notes WHERE hash_id = ? AND name_id = ?;', ( hash_id, name_id ) )
         
     
-    def GetHashIdsFromNoteName( self, name: str, hash_ids_table_name: str, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+    def GetHashIdsFromNoteName( self, name: str, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         label_id = self.modules_texts.GetLabelId( name )
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         # as note name is rare, we force this to run opposite to typical: notes to temp hashes
         return self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM file_notes CROSS JOIN {} USING ( hash_id ) WHERE name_id = ?;'.format( hash_ids_table_name ), ( label_id, ), cancelled_hook ) )
         
     
-    def GetHashIdsFromNumNotes( self, min_num_notes: typing.Optional[ int ], max_num_notes: typing.Optional[ int ], hash_ids_table_name: str, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+    def GetHashIdsFromNumNotes( self, min_num_notes: typing.Optional[ int ], max_num_notes: typing.Optional[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         has_notes = max_num_notes is None and min_num_notes == 1
@@ -73,11 +73,11 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         
         if has_notes:
             
-            hash_ids = self.GetHashIdsThatHaveNotes( hash_ids_table_name, job_key = job_key )
+            hash_ids = self.GetHashIdsThatHaveNotes( hash_ids_table_name, job_status = job_status )
             
         elif not_has_notes:
             
-            hash_ids = self.GetHashIdsThatDoNotHaveNotes( hash_ids_table_name, job_key = job_key )
+            hash_ids = self.GetHashIdsThatDoNotHaveNotes( hash_ids_table_name, job_status = job_status )
             
         else:
             
@@ -105,7 +105,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
             
             if include_zero_count_hash_ids:
                 
-                zero_hash_ids = self.GetHashIdsThatDoNotHaveNotes( hash_ids_table_name, job_key = job_key )
+                zero_hash_ids = self.GetHashIdsThatDoNotHaveNotes( hash_ids_table_name, job_status = job_status )
                 
                 hash_ids.update( zero_hash_ids )
                 
@@ -114,13 +114,13 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsThatDoNotHaveNotes( self, hash_ids_table_name: str, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+    def GetHashIdsThatDoNotHaveNotes( self, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         query = 'SELECT hash_id FROM {} WHERE NOT EXISTS ( SELECT 1 FROM file_notes WHERE file_notes.hash_id = {}.hash_id );'.format( hash_ids_table_name, hash_ids_table_name )
@@ -130,13 +130,13 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsThatHaveNotes( self, hash_ids_table_name: str, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+    def GetHashIdsThatHaveNotes( self, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         query = 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM file_notes WHERE file_notes.hash_id = {}.hash_id );'.format( hash_ids_table_name, hash_ids_table_name )

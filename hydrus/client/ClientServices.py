@@ -1729,7 +1729,7 @@ class ServiceRepository( ServiceRestricted ):
         HydrusData.Print( summary )
         
     
-    def _ReportOngoingRowSpeed( self, job_key, rows_done, total_rows, precise_timestamp, rows_done_in_last_packet, row_name ):
+    def _ReportOngoingRowSpeed( self, job_status, rows_done, total_rows, precise_timestamp, rows_done_in_last_packet, row_name ):
         
         it_took = HydrusTime.GetNowPrecise() - precise_timestamp
         
@@ -1738,7 +1738,7 @@ class ServiceRepository( ServiceRestricted ):
         popup_message = '{} {}: processing at {} rows/s'.format( row_name, HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ), rows_s )
         
         HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
-        job_key.SetStatusText( popup_message, 2 )
+        job_status.SetStatusText( popup_message, 2 )
         
         if HG.profile_mode:
             
@@ -1842,21 +1842,21 @@ class ServiceRepository( ServiceRestricted ):
         
         if len( update_hashes ) > 0:
             
-            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
             
             try:
                 
-                job_key.SetStatusTitle( name + ' sync: downloading updates' )
+                job_status.SetStatusTitle( name + ' sync: downloading updates' )
                 
-                HG.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_status )
                 
                 for ( i, update_hash ) in enumerate( update_hashes ):
                     
                     status = 'update ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( update_hashes ) )
                     
                     HG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
-                    job_key.SetStatusText( status )
-                    job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( update_hashes ) ) )
+                    job_status.SetStatusText( status )
+                    job_status.SetVariable( 'popup_gauge_1', ( i + 1, len( update_hashes ) ) )
                     
                     with self._lock:
                         
@@ -1866,7 +1866,7 @@ class ServiceRepository( ServiceRestricted ):
                             
                         
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                     
                     if should_quit:
                         
@@ -1981,13 +1981,13 @@ class ServiceRepository( ServiceRestricted ):
                         
                     
                 
-                job_key.SetStatusText( 'finished' )
-                job_key.DeleteVariable( 'popup_gauge_1' )
+                job_status.SetStatusText( 'finished' )
+                job_status.DeleteVariable( 'popup_gauge_1' )
                 
             finally:
                 
-                job_key.Finish()
-                job_key.Delete( 5 )
+                job_status.Finish()
+                job_status.Delete( 5 )
                 
             
         
@@ -2011,11 +2011,11 @@ class ServiceRepository( ServiceRestricted ):
         
         try:
             
-            job_key = ClientThreading.JobKey( cancellable = True, maintenance_mode = maintenance_mode, stop_time = stop_time )
+            job_status = ClientThreading.JobStatus( cancellable = True, maintenance_mode = maintenance_mode, stop_time = stop_time )
             
             title = '{} sync: processing updates'.format( self._name )
             
-            job_key.SetStatusTitle( title )
+            job_status.SetStatusTitle( title )
             
             content_types_to_process = self._GetContentTypesWeAreProcessing()
             
@@ -2036,7 +2036,7 @@ class ServiceRepository( ServiceRestricted ):
             num_updates_done = 0
             num_updates_to_do = len( definition_hashes_and_content_types ) + len( content_hashes_and_content_types )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             HG.client_controller.frame_splash_status.SetTitleText( title, print_to_log = False )
             
             total_definition_rows_completed = 0
@@ -2059,8 +2059,8 @@ class ServiceRepository( ServiceRestricted ):
                     
                     status = 'processing {}'.format( progress_string )
                     
-                    job_key.SetStatusText( status )
-                    job_key.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
+                    job_status.SetStatusText( status )
+                    job_status.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
                     
                     try:
                         
@@ -2126,7 +2126,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         start_time = HydrusTime.GetNowPrecise()
                         
-                        num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_definitions', self._service_key, definition_hash, iterator_dict, content_types, job_key, work_time )
+                        num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_definitions', self._service_key, definition_hash, iterator_dict, content_types, job_status, work_time )
                         
                         time_it_took = HydrusTime.GetNowPrecise() - start_time
                         
@@ -2142,7 +2142,7 @@ class ServiceRepository( ServiceRestricted ):
                             did_definition_analyze = True
                             
                         
-                        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_key.IsCancelled():
+                        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_status.IsCancelled():
                             
                             return
                             
@@ -2151,7 +2151,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         time.sleep( reasonable_work_time * rest_ratio )
                         
-                        self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'definitions' )
+                        self._ReportOngoingRowSpeed( job_status, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'definitions' )
                         
                     
                     num_updates_done += 1
@@ -2169,7 +2169,7 @@ class ServiceRepository( ServiceRestricted ):
                 self._LogFinalRowSpeed( definition_start_time, total_definition_rows_completed, 'definitions' )
                 
             
-            if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_key.IsCancelled():
+            if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_status.IsCancelled():
                 
                 return
                 
@@ -2188,8 +2188,8 @@ class ServiceRepository( ServiceRestricted ):
                     
                     status = 'processing {}'.format( progress_string )
                     
-                    job_key.SetStatusText( status )
-                    job_key.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
+                    job_status.SetStatusText( status )
+                    job_status.SetVariable( 'popup_gauge_1', ( num_updates_done, num_updates_to_do ) )
                     
                     try:
                         
@@ -2276,7 +2276,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         start_time = HydrusTime.GetNowPrecise()
                         
-                        num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_content', self._service_key, content_hash, iterator_dict, content_types, job_key, work_time )
+                        num_rows_done = HG.client_controller.WriteSynchronous( 'process_repository_content', self._service_key, content_hash, iterator_dict, content_types, job_status, work_time )
                         
                         time_it_took = HydrusTime.GetNowPrecise() - start_time
                         
@@ -2292,7 +2292,7 @@ class ServiceRepository( ServiceRestricted ):
                             did_content_analyze = True
                             
                         
-                        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_key.IsCancelled():
+                        if HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ) or job_status.IsCancelled():
                             
                             return
                             
@@ -2301,7 +2301,7 @@ class ServiceRepository( ServiceRestricted ):
                         
                         time.sleep( reasonable_work_time * rest_ratio )
                         
-                        self._ReportOngoingRowSpeed( job_key, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'content rows' )
+                        self._ReportOngoingRowSpeed( job_status, rows_done_in_this_update, rows_in_this_update, this_work_start_time, num_rows_done, 'content rows' )
                         
                     
                     num_updates_done += 1
@@ -2358,12 +2358,12 @@ class ServiceRepository( ServiceRestricted ):
                 HG.client_controller.pub( 'notify_new_tag_display_application' )
                 
             
-            job_key.DeleteStatusText()
-            job_key.DeleteStatusText( 2 )
-            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_status.DeleteStatusText()
+            job_status.DeleteStatusText( 2 )
+            job_status.DeleteVariable( 'popup_gauge_1' )
             
-            job_key.Finish()
-            job_key.Delete( 3 )
+            job_status.Finish()
+            job_status.Delete( 3 )
             
         
     
@@ -2790,21 +2790,21 @@ class ServiceRepository( ServiceRestricted ):
             
             client_files_manager = HG.client_controller.client_files_manager
             
-            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
             
             try:
                 
-                job_key.SetStatusTitle( name + ' sync: downloading thumbnails' )
+                job_status.SetStatusTitle( name + ' sync: downloading thumbnails' )
                 
-                HG.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_status )
                 
                 for ( i, thumbnail_hash ) in enumerate( thumbnail_hashes ):
                     
                     status = 'thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do )
                     
                     HG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
-                    job_key.SetStatusText( status )
-                    job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
+                    job_status.SetStatusText( status )
+                    job_status.SetVariable( 'popup_gauge_1', ( i + 1, num_to_do ) )
                     
                     with self._lock:
                         
@@ -2814,7 +2814,7 @@ class ServiceRepository( ServiceRestricted ):
                             
                         
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                     
                     if should_quit:
                         
@@ -2855,13 +2855,13 @@ class ServiceRepository( ServiceRestricted ):
                     client_files_manager.AddThumbnailFromBytes( thumbnail_hash, thumbnail_bytes )
                     
                 
-                job_key.SetStatusText( 'finished' )
-                job_key.DeleteVariable( 'popup_gauge_1' )
+                job_status.SetStatusText( 'finished' )
+                job_status.DeleteVariable( 'popup_gauge_1' )
                 
             finally:
                 
-                job_key.Finish()
-                job_key.Delete( 5 )
+                job_status.Finish()
+                job_status.Delete( 5 )
                 
             
         
@@ -2897,7 +2897,7 @@ class ServiceIPFS( ServiceRemote ):
         return api_base_url
         
     
-    def ConvertMultihashToURLTree( self, name, size, multihash, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+    def ConvertMultihashToURLTree( self, name, size, multihash, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         with self._lock:
             
@@ -2908,9 +2908,9 @@ class ServiceIPFS( ServiceRemote ):
         
         network_job = ClientNetworkingJobs.NetworkJobIPFS( links_url )
         
-        if job_key is not None:
+        if job_status is not None:
             
-            job_key.SetNetworkJob( network_job )
+            job_status.SetNetworkJob( network_job )
             
         
         try:
@@ -2921,11 +2921,11 @@ class ServiceIPFS( ServiceRemote ):
             
         finally:
             
-            if job_key is not None:
+            if job_status is not None:
                 
-                job_key.DeleteNetworkJob()
+                job_status.DeleteNetworkJob()
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     raise HydrusExceptions.CancelledException( 'Multihash parsing cancelled by user.' )
                     
@@ -2959,7 +2959,7 @@ class ServiceIPFS( ServiceRemote ):
                 subsize = link[ 'Size' ]
                 submultihash = link[ 'Hash' ]
                 
-                children.append( self.ConvertMultihashToURLTree( subname, subsize, submultihash, job_key = job_key ) )
+                children.append( self.ConvertMultihashToURLTree( subname, subsize, submultihash, job_status = job_status ) )
                 
             
             if size is None:
@@ -3069,7 +3069,7 @@ class ServiceIPFS( ServiceRemote ):
     
     def ImportFile( self, multihash, silent = False ):
         
-        def on_qt_select_tree( job_key, url_tree ):
+        def on_qt_select_tree( job_status, url_tree ):
             
             try:
                 
@@ -3087,7 +3087,7 @@ class ServiceIPFS( ServiceRemote ):
                         
                         if len( urls ) > 0:
                             
-                            HG.client_controller.CallToThread( ClientImporting.THREADDownloadURLs, job_key, urls, multihash )
+                            HG.client_controller.CallToThread( ClientImporting.THREADDownloadURLs, job_status, urls, multihash )
                             
                             urls_good = True
                             
@@ -3095,13 +3095,13 @@ class ServiceIPFS( ServiceRemote ):
                     
                     if not urls_good:
                         
-                        job_key.Delete()
+                        job_status.Delete()
                         
                     
                 
             except:
                 
-                job_key.Delete()
+                job_status.Delete()
                 
                 raise
                 
@@ -3109,30 +3109,30 @@ class ServiceIPFS( ServiceRemote ):
         
         def off_qt():
             
-            job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+            job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
             
-            job_key.SetStatusText( 'Looking up multihash information' )
+            job_status.SetStatusText( 'Looking up multihash information' )
             
             if not silent:
                 
-                HG.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_status )
                 
             
             try:
                 
                 try:
                     
-                    url_tree = self.ConvertMultihashToURLTree( multihash, None, multihash, job_key = job_key )
+                    url_tree = self.ConvertMultihashToURLTree( multihash, None, multihash, job_status = job_status )
                     
                 except HydrusExceptions.NotFoundException:
                     
-                    job_key.SetStatusText( 'Failed to find multihash information for "{}"!'.format( multihash ) )
+                    job_status.SetStatusText( 'Failed to find multihash information for "{}"!'.format( multihash ) )
                     
                     return
                     
                 except HydrusExceptions.ServerException as e:
                     
-                    job_key.SetStatusText( 'IPFS Error: "{}"!'.format( e ) )
+                    job_status.SetStatusText( 'IPFS Error: "{}"!'.format( e ) )
                     
                     return
                     
@@ -3141,18 +3141,18 @@ class ServiceIPFS( ServiceRemote ):
                     
                     url = url_tree[3]
                     
-                    HG.client_controller.CallToThread( ClientImporting.THREADDownloadURL, job_key, url, multihash )
+                    HG.client_controller.CallToThread( ClientImporting.THREADDownloadURL, job_status, url, multihash )
                     
                 else:
                     
-                    job_key.SetStatusText( 'Waiting for user selection' )
+                    job_status.SetStatusText( 'Waiting for user selection' )
                     
-                    QP.CallAfter( on_qt_select_tree, job_key, url_tree )
+                    QP.CallAfter( on_qt_select_tree, job_status, url_tree )
                     
                 
             except:
                 
-                job_key.Delete()
+                job_status.Delete()
                 
                 raise
                 
@@ -3210,11 +3210,11 @@ class ServiceIPFS( ServiceRemote ):
     
     def PinDirectory( self, hashes, note ):
         
-        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+        job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
         
-        job_key.SetStatusTitle( 'creating ipfs directory on ' + self._name )
+        job_status.SetStatusTitle( 'creating ipfs directory on ' + self._name )
         
-        HG.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_status )
         
         try:
             
@@ -3224,17 +3224,17 @@ class ServiceIPFS( ServiceRemote ):
             
             for ( i, hash ) in enumerate( hashes ):
                 
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                 
                 if should_quit:
                     
-                    job_key.SetStatusText( 'cancelled!' )
+                    job_status.SetStatusText( 'cancelled!' )
                     
                     return
                     
                 
-                job_key.SetStatusText( 'ensuring files are pinned: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
-                job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( hashes ) ) )
+                job_status.SetStatusText( 'ensuring files are pinned: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
+                job_status.SetVariable( 'popup_gauge_1', ( i + 1, len( hashes ) ) )
                 
                 media_result = HG.client_controller.Read( 'media_result', hash )
                 
@@ -3278,17 +3278,17 @@ class ServiceIPFS( ServiceRemote ):
             
             for ( i, ( hash, mime, multihash ) ) in enumerate( file_info ):
                 
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                 
                 if should_quit:
                     
-                    job_key.SetStatusText( 'cancelled!' )
+                    job_status.SetStatusText( 'cancelled!' )
                     
                     return
                     
                 
-                job_key.SetStatusText( 'creating directory: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_info ) ) )
-                job_key.SetVariable( 'popup_gauge_1', ( i + 1, len( file_info ) ) )
+                job_status.SetStatusText( 'creating directory: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_info ) ) )
+                job_status.SetVariable( 'popup_gauge_1', ( i + 1, len( file_info ) ) )
                 
                 object_multihash = response_json[ 'Hash' ]
                 
@@ -3323,14 +3323,14 @@ class ServiceIPFS( ServiceRemote ):
             
             HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
             
-            job_key.SetStatusText( 'done!' )
+            job_status.SetStatusText( 'done!' )
             
             with self._lock:
                 
                 text = self._multihash_prefix + directory_multihash
                 
             
-            job_key.SetVariable( 'popup_clipboard', ( 'copy multihash to clipboard', text ) )
+            job_status.SetVariable( 'popup_clipboard', ( 'copy multihash to clipboard', text ) )
             
             return directory_multihash
             
@@ -3338,15 +3338,15 @@ class ServiceIPFS( ServiceRemote ):
             
             HydrusData.ShowException( e )
             
-            job_key.SetErrorException( e )
+            job_status.SetErrorException( e )
             
-            job_key.Cancel()
+            job_status.Cancel()
             
         finally:
             
-            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_status.DeleteVariable( 'popup_gauge_1' )
             
-            job_key.Finish()
+            job_status.Finish()
             
         
     

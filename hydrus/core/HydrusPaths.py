@@ -527,18 +527,24 @@ def MergeFile( source, dest ) -> bool:
     :return: Whether an actual move happened.
     """
     
+    if not os.path.exists( source ):
+        
+        raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the source does not exist!' )
+        
+    
     if os.path.isdir( source ):
         
-        raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the source is a directory!' )
+        raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the source is a directory, not a file!' )
         
     
     if os.path.isdir( dest ):
         
-        raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the destination is a directory!' )
+        raise Exception( f'Cannot file-merge "{source}" to "{dest}"--the destination is a directory, not a file!' )
         
     
     if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
         
+        # maybe this should just return, but we don't want the parent caller deleting the source or anything, so bleh
         raise Exception( f'Woah, "{source}" and "{dest}" are the same file!' )
         
     
@@ -560,18 +566,24 @@ def MergeTree( source, dest, text_update_hook = None ):
     Moves everything in the source to the dest using fast MergeFile tech.
     """
     
-    if not os.path.isdir( source ):
+    if not os.path.exists( source ):
         
-        raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the source is not a directory!' )
+        raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the source does not exist!' )
         
     
-    if os.path.exists( dest ) and not os.path.isdir( dest ):
+    if os.path.isfile( source ):
         
-        raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the destination is not a directory!' )
+        raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the source is a file, not a directory!' )
+        
+    
+    if os.path.isfile( dest ):
+        
+        raise Exception( f'Cannot directory-merge "{source}" to "{dest}"--the destination is a file, not a directory!' )
         
     
     if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
         
+        # maybe this should just return, but we don't want the parent caller deleting the source or anything, so bleh
         raise Exception( f'Woah, "{source}" and "{dest}" are the same directory!' )
         
     
@@ -647,14 +659,19 @@ def MirrorFile( source, dest ) -> bool:
     :return: Whether an actual file copy/overwrite happened.
     """
     
+    if not os.path.exists( source ):
+        
+        raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the source does not exist!' )
+        
+    
     if os.path.isdir( source ):
         
-        raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the source is a directory!' )
+        raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the source is a directory, not a file!' )
         
     
     if os.path.isdir( dest ):
         
-        raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the destination is a directory!' )
+        raise Exception( f'Cannot file-mirror "{source}" to "{dest}"--the destination is a directory, not a file!' )
         
     
     if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):
@@ -707,14 +724,19 @@ def MirrorTree( source, dest, text_update_hook = None, is_cancelled_hook = None 
     It deletes surplus stuff in the dest!
     """
     
-    if not os.path.isdir( source ):
+    if not os.path.exists( source ):
         
-        raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the source is not a directory!' )
+        raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the source does not exist!' )
         
     
-    if os.path.exists( dest ) and not os.path.isdir( dest ):
+    if os.path.isfile( source ):
         
-        raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the destination is not a directory!' )
+        raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the source is a file, not a directory!' )
+        
+    
+    if os.path.isfile( dest ):
+        
+        raise Exception( f'Cannot directory-mirror "{source}" to "{dest}"--the destination is a file, not a directory!' )
         
     
     if os.path.exists( source ) and os.path.exists( dest ) and os.path.samefile( source, dest ):

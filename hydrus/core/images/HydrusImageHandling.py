@@ -530,13 +530,13 @@ def GetThumbnailResolution( image_resolution: typing.Tuple[ int, int ], bounding
         bounding_width = int( bounding_width * thumbnail_dpr )
         
     
-    if im_width is None:
+    # this is appropriate for the crazy (0x0) svg or whatever we have, since we will _try_ to render it properly later on
+    # but if it fails to render, we'll still get a fairly nice filetype.png or hydrus.png fallback
+    # we don't want to pass around 0x0 and have a handler everywhere
+    if im_width is None or im_width == 0 or im_height is None or im_height == 0:
         
         im_width = bounding_width
-        
-    if im_height is None:
-        
-        im_height = bounding_height
+        im_height = bounding_width
         
     
     # TODO SVG thumbs should always scale up to the bounding dimensions

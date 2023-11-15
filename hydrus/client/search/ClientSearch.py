@@ -64,11 +64,12 @@ PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE = 41
 PREDICATE_TYPE_SYSTEM_TIME = 42
 PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME = 43
 PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA = 44
-PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA = 45
+PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES = 45
 PREDICATE_TYPE_SYSTEM_HAS_EXIF = 46
 PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME = 47
 PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA = 48
 PREDICATE_TYPE_SYSTEM_SIMILAR_TO = 49
+PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY = 50
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -90,7 +91,8 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FRAMERATE,
     PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
     PREDICATE_TYPE_SYSTEM_HAS_AUDIO,
-    PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA,
+    PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES,
+    PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY,
     PREDICATE_TYPE_SYSTEM_HAS_EXIF,
     PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
     PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
@@ -449,6 +451,13 @@ class FileSystemPredicates( object ):
                 has_audio = value
                 
                 self._common_info[ 'has_audio' ] = has_audio
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY:
+                
+                has_transparency = value
+                
+                self._common_info[ 'has_transparency' ] = has_transparency
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_EXIF:
@@ -2133,7 +2142,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, self._value, not self._inclusive )
             
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE ):
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE ):
             
             return Predicate( self._predicate_type, not self._value )
             
@@ -2391,7 +2400,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_UNTAGGED: base = 'untagged'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: base = 'local'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: base = 'not local'
-            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_EMBEDDED_METADATA: base = 'embedded metadata'
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES: base = 'file properties'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO: base = 'similar files'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TIME: base = 'time'
@@ -2731,6 +2740,20 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if not has_audio:
                         
                         base = 'no audio'
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY:
+                
+                base = 'has transparency'
+                
+                if self._value is not None:
+                    
+                    has_transparency = self._value
+                    
+                    if not has_transparency:
+                        
+                        base = 'no transparency'
                         
                     
                 

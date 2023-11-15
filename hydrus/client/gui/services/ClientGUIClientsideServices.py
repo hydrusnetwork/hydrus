@@ -1759,12 +1759,12 @@ class ReviewServicePanel( QW.QWidget ):
         
         def do_it():
             
-            job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+            job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
             
-            job_key.SetStatusTitle( self._service.GetName() + ': immediate sync' )
-            job_key.SetStatusText( 'downloading' )
+            job_status.SetStatusTitle( self._service.GetName() + ': immediate sync' )
+            job_status.SetStatusText( 'downloading' )
             
-            self._controller.pub( 'message', job_key )
+            self._controller.pub( 'message', job_status )
             
             content_update_package = self._service.Request( HC.GET, 'immediate_content_update_package' )
             
@@ -1775,26 +1775,26 @@ class ReviewServicePanel( QW.QWidget ):
             
             content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
             
-            job_key.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
+            job_status.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
             
-            job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
+            job_status.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
             
             for ( content_updates, weight ) in content_update_package.IterateContentUpdateChunks():
                 
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                 
                 if should_quit:
                     
-                    job_key.Delete()
+                    job_status.Delete()
                     
                     return
                     
                 
                 content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
-                job_key.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
+                job_status.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
                 
-                job_key.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
+                job_status.SetVariable( 'popup_gauge_1', ( c_u_p_total_weight_processed, c_u_p_num_rows ) )
                 
                 precise_timestamp = HydrusTime.GetNowPrecise()
                 
@@ -1809,13 +1809,13 @@ class ReviewServicePanel( QW.QWidget ):
                 c_u_p_total_weight_processed += weight
                 
             
-            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_status.DeleteVariable( 'popup_gauge_1' )
             
-            self._service.SyncThumbnails( job_key )
+            self._service.SyncThumbnails( job_status )
             
-            job_key.SetStatusText( 'done! ' + HydrusData.ToHumanInt( c_u_p_num_rows ) + ' rows added.' )
+            job_status.SetStatusText( 'done! ' + HydrusData.ToHumanInt( c_u_p_num_rows ) + ' rows added.' )
             
-            job_key.Finish()
+            job_status.Finish()
             
         
         self._controller.CallToThread( do_it )
@@ -2911,22 +2911,22 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                     
                 else:
                     
-                    job_key = ClientThreading.JobKey( cancellable = True )
+                    job_status = ClientThreading.JobStatus( cancellable = True )
                     
                     try:
                         
-                        job_key.SetStatusTitle( 'exporting updates for ' + service.GetName() )
-                        HG.client_controller.pub( 'message', job_key )
+                        job_status.SetStatusTitle( 'exporting updates for ' + service.GetName() )
+                        HG.client_controller.pub( 'message', job_status )
                         
                         client_files_manager = HG.client_controller.client_files_manager
                         
                         for ( i, update_hash ) in enumerate( update_hashes ):
                             
-                            ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                            ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                             
                             if should_quit:
                                 
-                                job_key.SetStatusText( 'Cancelled!' )
+                                job_status.SetStatusText( 'Cancelled!' )
                                 
                                 return
                                 
@@ -2945,18 +2945,18 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                                 
                             finally:
                                 
-                                job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
-                                job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+                                job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                                job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
                                 
                             
                         
-                        job_key.SetStatusText( 'Done!' )
+                        job_status.SetStatusText( 'Done!' )
                         
                     finally:
                         
-                        job_key.DeleteVariable( 'popup_gauge_1' )
+                        job_status.DeleteVariable( 'popup_gauge_1' )
                         
-                        job_key.Finish()
+                        job_status.Finish()
                         
                     
                 

@@ -479,9 +479,9 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 
                 stop_time = HydrusTime.GetNow() + 30
                 
-                job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+                job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
                 
-                parsed_urls = node.ParseURLs( job_key, data, referral_url )
+                parsed_urls = node.ParseURLs( job_status, data, referral_url )
                 
                 QP.CallAfter( qt_code, parsed_urls )
                 
@@ -741,11 +741,11 @@ And pass that html to a number of 'parsing children' that will each look through
             
             stop_time = HydrusTime.GetNow() + 30
             
-            job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+            job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
             
-            self._test_script_management.SetJobKey( job_key )
+            self._test_script_management.SetJobStatus( job_status )
             
-            parsing_text = script.FetchParsingText( job_key, file_identifier )
+            parsing_text = script.FetchParsingText( job_status, file_identifier )
             
             try:
                 
@@ -768,7 +768,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
         finally:
             
-            job_key.Finish()
+            job_status.Finish()
             
         
     
@@ -792,11 +792,11 @@ And pass that html to a number of 'parsing children' that will each look through
             self._results.setPlainText( results_text )
             
         
-        def do_it( script, job_key, data ):
+        def do_it( script, job_status, data ):
             
             try:
                 
-                results = script.Parse( job_key, data )
+                results = script.Parse( job_status, data )
                 
                 QP.CallAfter( qt_code, results )
                 
@@ -810,7 +810,7 @@ And pass that html to a number of 'parsing children' that will each look through
                 
             finally:
                 
-                job_key.Finish()
+                job_status.Finish()
                 
             
         
@@ -818,13 +818,13 @@ And pass that html to a number of 'parsing children' that will each look through
         
         stop_time = HydrusTime.GetNow() + 30
         
-        job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+        job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
         
-        self._test_script_management.SetJobKey( job_key )
+        self._test_script_management.SetJobStatus( job_status )
         
         data = self._example_data.toPlainText()
         
-        HG.client_controller.CallToThread( do_it, script, job_key, data )
+        HG.client_controller.CallToThread( do_it, script, job_status, data )
         
     
     def GetExampleData( self ):
@@ -1180,7 +1180,7 @@ class ScriptManagementControl( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._job_key = None
+        self._job_status = None
         
         self._lock = threading.Lock()
         
@@ -1234,15 +1234,15 @@ class ScriptManagementControl( QW.QWidget ):
     
     def _Update( self ):
         
-        if self._job_key is None:
+        if self._job_status is None:
             
             self._Reset()
             
         else:
             
-            if self._job_key.HasVariable( 'script_status' ):
+            if self._job_status.HasVariable( 'script_status' ):
                 
-                status = self._job_key.GetIfHasVariable( 'script_status' )
+                status = self._job_status.GetIfHasVariable( 'script_status' )
                 
             else:
                 
@@ -1251,9 +1251,9 @@ class ScriptManagementControl( QW.QWidget ):
             
             self._status.setText( status )
             
-            if self._job_key.HasVariable( 'script_gauge' ):
+            if self._job_status.HasVariable( 'script_gauge' ):
                 
-                ( value, range ) = self._job_key.GetIfHasVariable( 'script_gauge' )
+                ( value, range ) = self._job_status.GetIfHasVariable( 'script_gauge' )
                 
             else:
                 
@@ -1263,7 +1263,7 @@ class ScriptManagementControl( QW.QWidget ):
             self._gauge.SetRange( range )
             self._gauge.SetValue( value )
             
-            urls = self._job_key.GetURLs()
+            urls = self._job_status.GetURLs()
             
             if len( urls ) == 0:
                 
@@ -1280,7 +1280,7 @@ class ScriptManagementControl( QW.QWidget ):
                     
                 
             
-            if self._job_key.IsDone():
+            if self._job_status.IsDone():
                 
                 if self._cancel_button.isEnabled():
                     
@@ -1303,7 +1303,7 @@ class ScriptManagementControl( QW.QWidget ):
             
             self._Update()
             
-            if self._job_key is None:
+            if self._job_status is None:
                 
                 HG.client_controller.gui.UnregisterUIUpdateWindow( self )
                 
@@ -1314,9 +1314,9 @@ class ScriptManagementControl( QW.QWidget ):
         
         with self._lock:
             
-            if self._job_key is not None:
+            if self._job_status is not None:
                 
-                self._job_key.Cancel()
+                self._job_status.Cancel()
                 
             
         
@@ -1325,12 +1325,12 @@ class ScriptManagementControl( QW.QWidget ):
         
         with self._lock:
             
-            if self._job_key is None:
+            if self._job_status is None:
                 
                 return
                 
             
-            urls = self._job_key.GetURLs()
+            urls = self._job_status.GetURLs()
             
         
         menu = ClientGUIMenus.GenerateMenu( self )
@@ -1344,11 +1344,11 @@ class ScriptManagementControl( QW.QWidget ):
         
         
     
-    def SetJobKey( self, job_key ):
+    def SetJobStatus( self, job_status ):
         
         with self._lock:
             
-            self._job_key = job_key
+            self._job_status = job_status
             
         
         HG.client_controller.gui.RegisterUIUpdateWindow( self )

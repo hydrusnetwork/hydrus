@@ -128,7 +128,7 @@ def InsertTagPredicates( predicates: typing.List[ ClientSearch.Predicate ], tag_
 
 def ReadFetch(
     win: QW.QWidget,
-    job_key: ClientThreading.JobKey,
+    job_status: ClientThreading.JobStatus,
     prefetch_callable,
     results_callable,
     parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText,
@@ -153,7 +153,7 @@ def ReadFetch(
             
             AppendLoadingPredicate( matches, 'loading system predicates' )
             
-            HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_key, matches, parsed_autocomplete_text )
+            HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, matches, parsed_autocomplete_text )
             
             cache_valid = isinstance( results_cache, ClientSearchAutocomplete.PredicateResultsCacheSystem )
             
@@ -199,7 +199,7 @@ def ReadFetch(
                 return
                 
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 return
                 
@@ -236,7 +236,7 @@ def ReadFetch(
                 
             else:
                 
-                exact_match_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key )
+                exact_match_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = strict_search_text, exact_match = True, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status )
                 
                 small_exact_match_search = ShouldDoExactSearch( parsed_autocomplete_text )
                 
@@ -260,15 +260,15 @@ def ReadFetch(
                     
                     AppendLoadingPredicate( exact_match_matches, 'loading full results' )
                     
-                    HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_key, exact_match_matches, parsed_autocomplete_text )
+                    HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, exact_match_matches, parsed_autocomplete_text )
                     
                     #
                     
                     search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                     
-                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                    predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, file_search_context, search_text = autocomplete_search_text, inclusive = parsed_autocomplete_text.inclusive, job_status = job_status, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                     
-                    if job_key.IsCancelled():
+                    if job_status.IsCancelled():
                         
                         return
                         
@@ -286,7 +286,7 @@ def ReadFetch(
                     
                 
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 return
                 
@@ -299,7 +299,7 @@ def ReadFetch(
                 
                 AppendLoadingPredicate( matches, 'calculating results' )
                 
-                HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_key, matches, parsed_autocomplete_text )
+                HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, matches, parsed_autocomplete_text )
                 
                 # it is possible that media will change between calls to this, so don't cache it
                 
@@ -317,7 +317,7 @@ def ReadFetch(
                         
                     
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     return
                     
@@ -340,7 +340,7 @@ def ReadFetch(
                         pending_tags_to_count.update( itertools.chain.from_iterable( [ tags_manager.GetPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ) for tags_manager in group_of_tags_managers ] ) )
                         
                     
-                    if job_key.IsCancelled():
+                    if job_status.IsCancelled():
                         
                         return
                         
@@ -353,7 +353,7 @@ def ReadFetch(
                 
                 tags_to_count = { tag : ( current_tags_to_count[ tag ], pending_tags_to_count[ tag ] ) for tag in tags_to_do }
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     return
                     
@@ -374,25 +374,25 @@ def ReadFetch(
                 
                 AppendLoadingPredicate( prefetch_matches, 'loading sibling data' )
                 
-                HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_key, prefetch_matches, parsed_autocomplete_text )
+                HG.client_controller.CallAfterQtSafe( win, 'read a/c exact match results', prefetch_callable, job_status, prefetch_matches, parsed_autocomplete_text )
                 
                 #
                 
                 # now spend time fetching siblings if needed
                 
-                predicates = HG.client_controller.Read( 'media_predicates', tag_context, tags_to_count, parsed_autocomplete_text.inclusive, job_key = job_key )
+                predicates = HG.client_controller.Read( 'media_predicates', tag_context, tags_to_count, parsed_autocomplete_text.inclusive, job_status = job_status )
                 
                 results_cache = ClientSearchAutocomplete.PredicateResultsCacheMedia( predicates )
                 
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 return
                 
             
             predicates = results_cache.FilterPredicates( tag_service_key, autocomplete_search_text )
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 return
                 
@@ -419,12 +419,12 @@ def ReadFetch(
     
     InsertOtherPredicatesForRead( matches, parsed_autocomplete_text, include_unusual_predicate_types, under_construction_or_predicate )
     
-    if job_key.IsCancelled():
+    if job_status.IsCancelled():
         
         return
         
     
-    HG.client_controller.CallAfterQtSafe( win, 'read a/c full results', results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
+    HG.client_controller.CallAfterQtSafe( win, 'read a/c full results', results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
     
 def PutAtTopOfMatches( matches: list, predicate: ClientSearch.Predicate, insert_if_does_not_exist: bool = True ):
     
@@ -486,7 +486,7 @@ def ShouldDoExactSearch( parsed_autocomplete_text: ClientSearchAutocomplete.Pars
 
 def WriteFetch(
     win: QW.QWidget,
-    job_key: ClientThreading.JobKey,
+    job_status: ClientThreading.JobStatus,
     prefetch_callable,
     results_callable,
     parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText,
@@ -527,7 +527,7 @@ def WriteFetch(
             
         else:
             
-            original_exact_match_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, zero_count_ok = True, job_key = job_key )
+            original_exact_match_predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = strict_search_text, exact_match = True, zero_count_ok = True, job_status = job_status )
             
             exact_match_predicates = list( original_exact_match_predicates )
             
@@ -551,9 +551,9 @@ def WriteFetch(
                 
                 AppendLoadingPredicate( exact_match_matches, 'loading full results' )
                 
-                HG.client_controller.CallAfterQtSafe( win, 'write a/c exact match results', prefetch_callable, job_key, exact_match_matches, parsed_autocomplete_text )
+                HG.client_controller.CallAfterQtSafe( win, 'write a/c exact match results', prefetch_callable, job_status, exact_match_matches, parsed_autocomplete_text )
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     return
                     
@@ -562,7 +562,7 @@ def WriteFetch(
                 
                 search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
                 
-                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, job_key = job_key, zero_count_ok = True, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+                predicates = HG.client_controller.Read( 'autocomplete_predicates', ClientTags.TAG_DISPLAY_STORAGE, file_search_context, search_text = autocomplete_search_text, job_status = job_status, zero_count_ok = True, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
                 
                 if is_explicit_wildcard:
                     
@@ -576,7 +576,7 @@ def WriteFetch(
                     
                 
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 return
                 
@@ -589,7 +589,7 @@ def WriteFetch(
     
     InsertTagPredicates( matches, display_tag_service_key, parsed_autocomplete_text, allow_auto_wildcard_conversion )
     
-    HG.client_controller.CallAfterQtSafe( win, 'write a/c full results', results_callable, job_key, parsed_autocomplete_text, results_cache, matches )
+    HG.client_controller.CallAfterQtSafe( win, 'write a/c full results', results_callable, job_status, parsed_autocomplete_text, results_cache, matches )
     
 
 class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
@@ -895,7 +895,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._results_cache: ClientSearchAutocomplete.PredicateResultsCache = ClientSearchAutocomplete.PredicateResultsCacheInit()
         
-        self._current_fetch_job_key = None
+        self._current_fetch_job_status = None
         
         self._schedule_results_refresh_job = None
         
@@ -952,11 +952,11 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _CancelSearchResultsFetchJob( self ):
         
-        if self._current_fetch_job_key is not None:
+        if self._current_fetch_job_status is not None:
             
-            self._current_fetch_job_key.Cancel()
+            self._current_fetch_job_status.Cancel()
             
-            self._current_fetch_job_key = None
+            self._current_fetch_job_status = None
             
         
     
@@ -1148,7 +1148,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def _StartSearchResultsFetchJob( self, job_key ):
+    def _StartSearchResultsFetchJob( self, job_status ):
         
         raise NotImplementedError()
         
@@ -1178,9 +1178,9 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._CancelSearchResultsFetchJob()
         
-        self._current_fetch_job_key = ClientThreading.JobKey( cancellable = True )
+        self._current_fetch_job_status = ClientThreading.JobStatus( cancellable = True )
         
-        self._StartSearchResultsFetchJob( self._current_fetch_job_key )
+        self._StartSearchResultsFetchJob( self._current_fetch_job_status )
         
     
     def BroadcastChoices( self, predicates, shift_down = False ):
@@ -1543,7 +1543,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             tag_service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        self._last_prefetch_job_key = None
+        self._last_prefetch_job_status = None
         
         self._tag_service_key = tag_service_key
         
@@ -1682,7 +1682,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         raise NotImplementedError()
         
     
-    def _StartSearchResultsFetchJob( self, job_key ):
+    def _StartSearchResultsFetchJob( self, job_status ):
         
         raise NotImplementedError()
         
@@ -1747,13 +1747,13 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._favourites_list.SetPredicates( predicates )
         
     
-    def SetFetchedResults( self, job_key: ClientThreading.JobKey, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, results_cache: ClientSearchAutocomplete.PredicateResultsCache, results: list ):
+    def SetFetchedResults( self, job_status: ClientThreading.JobStatus, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, results_cache: ClientSearchAutocomplete.PredicateResultsCache, results: list ):
         
-        if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
+        if self._current_fetch_job_status is not None and self._current_fetch_job_status.GetKey() == job_status.GetKey():
             
             preserve_single_selection = False
             
-            if self._last_prefetch_job_key == self._current_fetch_job_key:
+            if self._last_prefetch_job_status == self._current_fetch_job_status:
                 
                 # we are completing a prefetch, so see if we can preserve if the user moved position
                 preserve_single_selection = True
@@ -1779,11 +1779,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetLocationContext( location_context )
         
     
-    def SetPrefetchResults( self, job_key: ClientThreading.JobKey, predicates: typing.List[ ClientSearch.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText ):
+    def SetPrefetchResults( self, job_status: ClientThreading.JobStatus, predicates: typing.List[ ClientSearch.Predicate ], parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText ):
         
-        if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
+        if self._current_fetch_job_status is not None and self._current_fetch_job_status.GetKey() == job_status.GetKey():
             
-            self._last_prefetch_job_key = self._current_fetch_job_key
+            self._last_prefetch_job_status = self._current_fetch_job_status
             
             self._SetResultsToList( predicates, parsed_autocomplete_text, preserve_single_selection = False )
             
@@ -2375,7 +2375,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
     
-    def _StartSearchResultsFetchJob( self, job_key ):
+    def _StartSearchResultsFetchJob( self, job_status ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
@@ -2390,7 +2390,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             under_construction_or_predicate = self._under_construction_or_predicate.Duplicate()
             
         
-        HG.client_controller.CallToThread( ReadFetch, self, job_key, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, self._media_callable, fsc, self._search_pause_play.IsOn(), self._include_unusual_predicate_types, self._results_cache, under_construction_or_predicate, self._force_system_everything )
+        HG.client_controller.CallToThread( ReadFetch, self, job_status, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, self._media_callable, fsc, self._search_pause_play.IsOn(), self._include_unusual_predicate_types, self._results_cache, under_construction_or_predicate, self._force_system_everything )
         
     
     def _ShouldTakeResponsibilityForEnter( self ):
@@ -2520,11 +2520,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         return command_processed
         
     
-    def SetFetchedResults( self, job_key: ClientThreading.JobKey, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, results_cache: ClientSearchAutocomplete.PredicateResultsCache, results: list ):
+    def SetFetchedResults( self, job_status: ClientThreading.JobStatus, parsed_autocomplete_text: ClientSearchAutocomplete.ParsedAutocompleteText, results_cache: ClientSearchAutocomplete.PredicateResultsCache, results: list ):
         
-        if self._current_fetch_job_key is not None and self._current_fetch_job_key.GetKey() == job_key.GetKey():
+        if self._current_fetch_job_status is not None and self._current_fetch_job_status.GetKey() == job_status.GetKey():
             
-            AutoCompleteDropdownTags.SetFetchedResults( self, job_key, parsed_autocomplete_text, results_cache, results )
+            AutoCompleteDropdownTags.SetFetchedResults( self, job_status, parsed_autocomplete_text, results_cache, results )
             
         
     
@@ -2993,7 +2993,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         return looking_at_search_results and ( p1 or p2 )
         
     
-    def _StartSearchResultsFetchJob( self, job_key ):
+    def _StartSearchResultsFetchJob( self, job_status ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
@@ -3001,7 +3001,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         file_search_context = ClientSearch.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_context = tag_context )
         
-        HG.client_controller.CallToThread( WriteFetch, self, job_key, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
+        HG.client_controller.CallToThread( WriteFetch, self, job_status, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
         
     
     def _TakeResponsibilityForEnter( self, shift_down ):

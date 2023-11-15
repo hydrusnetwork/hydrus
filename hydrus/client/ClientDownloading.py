@@ -222,13 +222,13 @@ class QuickDownloadManager( object ):
                     
                     if total_hashes_in_this_run == 0:
                         
-                        job_key = ClientThreading.JobKey( cancellable = True )
+                        job_status = ClientThreading.JobStatus( cancellable = True )
                         
-                        job_key.SetStatusTitle( 'downloading' )
+                        job_status.SetStatusTitle( 'downloading' )
                         
-                        job_key.SetStatusText( 'initialising downloader' )
+                        job_status.SetStatusText( 'initialising downloader' )
                         
-                        job_key_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', job_key )
+                        job_status_pub_job = self._controller.CallLater( 2.0, self._controller.pub, 'message', job_status )
                         
                     
                     num_before = len( hashes_still_to_download_in_this_run )
@@ -255,7 +255,7 @@ class QuickDownloadManager( object ):
                 continue
                 
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 hashes_still_to_download_in_this_run = set()
                 
@@ -268,8 +268,8 @@ class QuickDownloadManager( object ):
             
             total_done = total_hashes_in_this_run - len( hashes_still_to_download_in_this_run )
             
-            job_key.SetStatusText( 'downloading files from remote services: {}'.format( HydrusData.ConvertValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
-            job_key.SetVariable( 'popup_gauge_1', ( total_done, total_hashes_in_this_run ) )
+            job_status.SetStatusText( 'downloading files from remote services: {}'.format( HydrusData.ConvertValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
+            job_status.SetVariable( 'popup_gauge_1', ( total_done, total_hashes_in_this_run ) )
             
             try:
                 
@@ -391,19 +391,19 @@ class QuickDownloadManager( object ):
                 
                 if len( hashes_still_to_download_in_this_run ) == 0:
                     
-                    job_key.DeleteStatusText()
-                    job_key.DeleteVariable( 'popup_gauge_1' )
+                    job_status.DeleteStatusText()
+                    job_status.DeleteVariable( 'popup_gauge_1' )
                     
                     if total_successful_hashes_in_this_run > 0:
                         
-                        job_key.SetStatusText( HydrusData.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
+                        job_status.SetStatusText( HydrusData.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
                         
                     
-                    job_key_pub_job.Cancel()
+                    job_status_pub_job.Cancel()
                     
-                    job_key.Finish()
+                    job_status.Finish()
                     
-                    job_key.Delete( 1 )
+                    job_status.Delete( 1 )
                     
                 
             

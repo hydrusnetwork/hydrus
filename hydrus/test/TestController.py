@@ -388,7 +388,7 @@ class Controller( object ):
     
     def CallBlockingToQt( self, win, func, *args, **kwargs ):
         
-        def qt_code( win: QW.QWidget, job_key: ClientThreading.JobKey ):
+        def qt_code( win: QW.QWidget, job_status: ClientThreading.JobStatus ):
             
             try:
                 
@@ -399,30 +399,30 @@ class Controller( object ):
                 
                 result = func( *args, **kwargs )
                 
-                job_key.SetVariable( 'result', result )
+                job_status.SetVariable( 'result', result )
                 
             except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException ) as e:
                 
-                job_key.SetErrorException( e )
+                job_status.SetErrorException( e )
                 
             except Exception as e:
                 
-                job_key.SetErrorException( e )
+                job_status.SetErrorException( e )
                 
                 HydrusData.Print( 'CallBlockingToQt just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally:
                 
-                job_key.Finish()
+                job_status.Finish()
                 
             
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        QP.CallAfter( qt_code, win, job_key )
+        QP.CallAfter( qt_code, win, job_status )
         
-        while not job_key.IsDone():
+        while not job_status.IsDone():
             
             if HG.model_shutdown:
                 
@@ -432,18 +432,18 @@ class Controller( object ):
             time.sleep( 0.05 )
             
         
-        if job_key.HasVariable( 'result' ):
+        if job_status.HasVariable( 'result' ):
             
             # result can be None, for qt_code that has no return variable
             
-            result = job_key.GetIfHasVariable( 'result' )
+            result = job_status.GetIfHasVariable( 'result' )
             
             return result
             
         
-        if job_key.HadError():
+        if job_status.HadError():
             
-            e = job_key.GetErrorException()
+            e = job_status.GetErrorException()
             
             raise e
             

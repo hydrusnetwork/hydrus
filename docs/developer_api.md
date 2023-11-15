@@ -1589,6 +1589,7 @@ Response:
       "has_exif" : true,
       "has_human_readable_embedded_metadata" : true,
       "has_icc_profile" : true,
+      "has_transparency" : false,
       "known_urls" : [],
       "ratings" : {
         "74d52c6238d25f846d579174c11856b1aaccdb04a185cb2c79f0d0e499284f2c" : null,
@@ -1662,6 +1663,7 @@ Response:
       "has_exif" : false,
       "has_human_readable_embedded_metadata" : false,
       "has_icc_profile" : false,
+      "has_transparency" : false,
       "known_urls" : [
         "https://gelbooru.com/index.php?page=post&s=view&id=4841557",
         "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",

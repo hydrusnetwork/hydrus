@@ -499,35 +499,21 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             
         
     
-    def has_exif( m ):
+    s_has_transparency = shown_media.GetFileInfoManager().has_transparency
+    c_has_transparency = comparison_media.GetFileInfoManager().has_transparency
+    
+    if s_has_transparency ^ c_has_transparency:
         
-        try:
+        if s_has_transparency:
             
-            hash = m.GetHash()
-            mime = m.GetMime()
+            transparency_statement = 'has transparency, the other is opaque'
             
-            if mime not in ( HC.IMAGE_JPEG, HC.IMAGE_TIFF ):
-                
-                return False
-                
+        else:
             
-            path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+            transparency_statement = 'this is opaque, the other has transparency'
             
-            raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
-            
-            exif_dict = HydrusImageMetadata.GetEXIFDict( raw_pil_image )
-            
-            if exif_dict is None:
-                
-                return False
-                
-            
-            return len( exif_dict ) > 0
-            
-        except:
-            
-            return False
-            
+        
+        statements_and_scores[ 'has_transparency' ] = ( transparency_statement, 0 )
         
     
     s_has_exif = shown_media.GetFileInfoManager().has_exif
@@ -725,11 +711,11 @@ class DuplicatesManager( object ):
             
             HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
-            job_key.SetStatusTitle( 'searching for potential duplicates' )
+            job_status.SetStatusTitle( 'searching for potential duplicates' )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             
             still_work_to_do = True
             
@@ -743,7 +729,7 @@ class DuplicatesManager( object ):
                 
                 work_time = work_time_ms / 1000
                 
-                ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_key = job_key, work_time_float = work_time )
+                ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_status = job_status, work_time_float = work_time )
                 
                 time_it_took = HydrusTime.GetNowPrecise() - start_time
                 
@@ -769,10 +755,10 @@ class DuplicatesManager( object ):
                     
                 
                 text = 'searching: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_searched_estimate, total_num_files ) )
-                job_key.SetStatusText( text )
-                job_key.SetVariable( 'popup_gauge_1', ( num_searched_estimate, total_num_files ) )
+                job_status.SetStatusText( text )
+                job_status.SetVariable( 'popup_gauge_1', ( num_searched_estimate, total_num_files ) )
                 
-                if job_key.IsCancelled() or HG.model_shutdown:
+                if job_status.IsCancelled() or HG.model_shutdown:
                     
                     break
                     
@@ -784,7 +770,7 @@ class DuplicatesManager( object ):
                 time.sleep( reasonable_work_time * rest_ratio )
                 
             
-            job_key.Delete()
+            job_status.Delete()
             
         finally:
             

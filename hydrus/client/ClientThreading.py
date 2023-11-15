@@ -11,7 +11,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client.gui import QtPorting as QP
 
-class JobKey( object ):
+class JobStatus( object ):
     
     def __init__( self, pausable = False, cancellable = False, maintenance_mode = HC.MAINTENANCE_FORCED, only_start_if_unbusy = False, stop_time = None, cancel_on_shutdown = True ):
         
@@ -55,7 +55,7 @@ class JobKey( object ):
     
     def __eq__( self, other ):
         
-        if isinstance( other, JobKey ):
+        if isinstance( other, JobStatus ):
             
             return self.__hash__() == other.__hash__()
             
@@ -130,7 +130,9 @@ class JobKey( object ):
         
         if seconds is None:
             
-            self._deletion_time = HydrusTime.GetNow()
+            self.Finish()
+            
+            self._deleted.set()
             
         else:
             
@@ -280,6 +282,11 @@ class JobKey( object ):
         self._CheckCancelTests()
         
         return self._cancelled.is_set()
+        
+    
+    def IsDeletable( self ):
+        
+        return not ( self.IsPausable() or self.IsCancellable() )
         
     
     def IsDeleted( self ):

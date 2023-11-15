@@ -83,6 +83,8 @@ class Predicate( Enum ):
     NOT_BEST_QUALITY_OF_GROUP = auto()
     HAS_AUDIO = auto()
     NO_AUDIO = auto()
+    HAS_TRANSPARENCY = auto()
+    NO_TRANSPARENCY = auto()
     HAS_EXIF = auto()
     NO_EXIF = auto()
     HAS_HUMAN_READABLE_EMBEDDED_METADATA = auto()
@@ -92,6 +94,7 @@ class Predicate( Enum ):
     HAS_TAGS = auto()
     UNTAGGED = auto()
     NUM_OF_TAGS = auto()
+    NUM_OF_TAGS_WITH_NAMESPACE = auto()
     NUM_OF_WORDS = auto()
     HEIGHT = auto()
     WIDTH = auto()
@@ -161,6 +164,7 @@ class Value( Enum ):
     RATING_SERVICE_NAME_AND_NUMERICAL_VALUE = auto() # my favourites 3/5
     RATING_SERVICE_NAME_AND_LIKE_DISLIKE = auto() # my favourites like
     RATING_SERVICE_NAME_AND_INCDEC = auto() # my favourites 3/5
+    NAMESPACE_AND_NUM_TAGS = auto()
 
 
 # Possible operator formats
@@ -202,6 +206,8 @@ SYSTEM_PREDICATES = {
     '(((is )?not)|(isn\'t))( the)? best quality( file)? of( its)?( duplicate)? group': (Predicate.NOT_BEST_QUALITY_OF_GROUP, None, None, None),
     'has audio': (Predicate.HAS_AUDIO, None, None, None),
     'no audio': (Predicate.NO_AUDIO, None, None, None),
+    'has (transparency|alpha)': (Predicate.HAS_TRANSPARENCY, None, None, None),
+    'no (transparency|alpha)': (Predicate.NO_TRANSPARENCY, None, None, None),
     'has exif': (Predicate.HAS_EXIF, None, None, None),
     'no exif': (Predicate.NO_EXIF, None, None, None),
     'has.*embedded.*metadata': (Predicate.HAS_HUMAN_READABLE_EMBEDDED_METADATA, None, None, None),
@@ -210,8 +216,9 @@ SYSTEM_PREDICATES = {
     'no icc profile': (Predicate.NO_ICC_PROFILE, None, None, None),
     'has tags': (Predicate.HAS_TAGS, None, None, None),
     'untagged|no tags': (Predicate.UNTAGGED, None, None, None),
-    'number of tags': (Predicate.NUM_OF_TAGS, Operators.RELATIONAL, Value.NATURAL, None),
-    'number of words': (Predicate.NUM_OF_WORDS, Operators.RELATIONAL, Value.NATURAL, None),
+    'num(ber)?( of)? tags': (Predicate.NUM_OF_TAGS, Operators.RELATIONAL, Value.NATURAL, None),
+    'num(ber)?( of)? (?=[^\\s].* tags)': (Predicate.NUM_OF_TAGS_WITH_NAMESPACE, None, Value.NAMESPACE_AND_NUM_TAGS, None),
+    'num(ber)?( of)? words': (Predicate.NUM_OF_WORDS, Operators.RELATIONAL, Value.NATURAL, None),
     'height': (Predicate.HEIGHT, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'width': (Predicate.WIDTH, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'file ?size': (Predicate.FILESIZE, Operators.RELATIONAL, Value.NATURAL, Units.FILESIZE),
@@ -226,9 +233,9 @@ SYSTEM_PREDICATES = {
     'import(ed)? (date|time)|(date|time) imported|imported': (Predicate.TIME_IMPORTED, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'duration': (Predicate.DURATION, Operators.RELATIONAL, Value.TIME_SEC_MSEC, None),
     'framerate': (Predicate.FRAMERATE, Operators.RELATIONAL_EXACT, Value.NATURAL, Units.FPS_OR_NONE),
-    'number of frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
+    'num(ber)?( of)? frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
-    'num(ber of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
+    'num(ber)?( of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
     'ratio(?=.*\d)': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
     'ratio(?!.*\d)': (Predicate.RATIO_SPECIAL, Operators.RATIO_OPERATORS_SPECIAL, Value.RATIO_SPECIAL, None),
     'num pixels': (Predicate.NUM_PIXELS, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS),
@@ -249,7 +256,7 @@ SYSTEM_PREDICATES = {
     'tag as number': (Predicate.TAG_AS_NUMBER, Operators.TAG_RELATIONAL, Value.INTEGER, None),
     'has notes?$': (Predicate.HAS_NOTES, None, None, None),
     '((has )?no|does not have( a)?|doesn\'t have) notes?$': (Predicate.NO_NOTES, None, None, None),
-    'num(ber of)? notes?': (Predicate.NUM_NOTES, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
+    'num(ber)?( of)? notes?': (Predicate.NUM_NOTES, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
     '(has (a )?)?note (with name|named)': (Predicate.HAS_NOTE_NAME, None, Value.ANY_STRING, None),
     '((has )?no|does not have( a)?|doesn\'t have( a)?) note (with name|named)': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
     'has( a)? rating( for)?': (Predicate.HAS_RATING, None, Value.ANY_STRING, None ),
@@ -546,6 +553,27 @@ def parse_value( string: str, spec ):
             
         
         raise ValueError( "Invalid value, expected an inc/dec rating" )
+        
+    elif spec == Value.NAMESPACE_AND_NUM_TAGS:
+        
+        # 'character tags > 4'
+        match = re.match( r'(?P<namespace>.+) tags (?P<operator>.+?)\s?(?P<num>\d+)\s*$', string )
+        
+        if match:
+            
+            namespace = match[ 'namespace' ]
+            operator_string = match[ 'operator' ]
+            num = int( match[ 'num' ] )
+            
+            if namespace == 'unnamespaced':
+                
+                namespace = ''
+            
+            
+            ( gubbins, operator ) = parse_operator( operator_string, Operators.RELATIONAL )
+            
+            return ( '', ( namespace, operator, num ) )
+            
         
     
     raise ValueError( "Invalid value specification" )

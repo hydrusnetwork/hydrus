@@ -805,11 +805,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def do_it( directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards ):
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
-            job_key.SetStatusTitle( 'file export' )
+            job_status.SetStatusTitle( 'file export' )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             
             pauser = HydrusThreading.BigJobPauser()
             
@@ -817,7 +817,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 number = self._media_to_number_indices[ media ]
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     break
                     
@@ -826,8 +826,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     x_of_y = HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do )
                     
-                    job_key.SetStatusText( 'Done {}'.format( x_of_y ) )
-                    job_key.SetVariable( 'popup_gauge_1', ( index + 1, num_to_do ) )
+                    job_status.SetStatusText( 'Done {}'.format( x_of_y ) )
+                    job_status.SetVariable( 'popup_gauge_1', ( index + 1, num_to_do ) )
                     
                     QP.CallAfter( qt_update_label, x_of_y )
                     
@@ -886,7 +886,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 pauser.Pause()
                 
             
-            if not job_key.IsCancelled() and delete_afterwards:
+            if not job_status.IsCancelled() and delete_afterwards:
                 
                 QP.CallAfter( qt_update_label, 'deleting' )
                 
@@ -921,12 +921,12 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 
             
-            job_key.DeleteVariable( 'popup_gauge_1' )
-            job_key.SetStatusText( 'Done!' )
+            job_status.DeleteVariable( 'popup_gauge_1' )
+            job_status.SetStatusText( 'Done!' )
             
-            job_key.Finish()
+            job_status.Finish()
             
-            job_key.Delete( 5 )
+            job_status.Delete( 5 )
             
             QP.CallAfter( qt_update_label, 'done!' )
             

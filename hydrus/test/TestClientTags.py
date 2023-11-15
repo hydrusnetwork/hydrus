@@ -1781,6 +1781,18 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, True )
+        
+        self.assertEqual( p.ToString(), 'system:has transparency' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, False )
+        
+        self.assertEqual( p.ToString(), 'system:no transparency' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF, True )
         
         self.assertEqual( p.ToString(), 'system:has exif' )
@@ -2026,6 +2038,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:has icc profile', "system:has icc profile" ),
             ( 'system:no icc profile', "system:no icc profile" ),
             ( 'system:number of tags > 5', "system:number of tags > 5" ),
+            ( 'system:number of character tags > 5', "system:number of character tags > 5" ),
             ( f'system:number of tags {HC.UNICODE_APPROX_EQUAL} 10', "system:number of tags ~= 10" ),
             ( 'system:has tags', "system:number of tags > 0  " ),
             ( 'system:number of words < 2', "system:number of words < 2" ),
