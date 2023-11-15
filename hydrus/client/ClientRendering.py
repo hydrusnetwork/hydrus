@@ -456,16 +456,6 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         return pixmap
         
     
-    def HasTransparency( self ):
-        
-        if not self.IsReady():
-            
-            raise Exception( 'I cannot know this yet--the image is not ready!' )
-            
-        
-        return HydrusImageColours.NumPyImageHasAlphaChannel( self._numpy_image )
-        
-    
     def IsReady( self ):
         
         return self._is_ready

@@ -955,23 +955,23 @@ class LoginProcessDomain( LoginProcess ):
         
         login_domain = self.network_context.context_data
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        job_status = ClientThreading.JobStatus( cancellable = True )
         
-        job_key.SetStatusTitle( 'Logging in ' + login_domain )
+        job_status.SetStatusTitle( 'Logging in ' + login_domain )
         
-        HG.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_status )
         
         HydrusData.Print( 'Starting login for ' + login_domain )
         
-        result = self.login_script.Start( self.engine, self.network_context, self.credentials, job_key = job_key )
+        result = self.login_script.Start( self.engine, self.network_context, self.credentials, job_status = job_status )
         
         HydrusData.Print( 'Finished login for ' + self.network_context.context_data + '. Result was: ' + result )
         
-        job_key.SetStatusText( result )
+        job_status.SetStatusText( result )
         
-        job_key.Finish()
+        job_status.Finish()
         
-        job_key.Delete( 4 )
+        job_status.Delete( 4 )
         
     
 class LoginProcessHydrus( LoginProcess ):
@@ -1387,7 +1387,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         self._name = name
         
     
-    def Start( self, engine, network_context, given_credentials, network_job_presentation_context_factory = None, test_result_callable = None, job_key = None ):
+    def Start( self, engine, network_context, given_credentials, network_job_presentation_context_factory = None, test_result_callable = None, job_status = None ):
         
         # don't mess with the domain--assume that we are given precisely the right domain
         
@@ -1399,9 +1399,9 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
         
         for login_step in self._login_steps:
             
-            if job_key is not None:
+            if job_status is not None:
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     message = 'User cancelled the login process.'
                     
@@ -1410,7 +1410,7 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
                     return message
                     
                 
-                job_key.SetStatusText( login_step.GetName() )
+                job_status.SetStatusText( login_step.GetName() )
                 
             
             try:

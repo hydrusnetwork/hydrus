@@ -85,9 +85,9 @@ def InitialiseHydrusTempDir():
 
 def SetEnvTempDir( path ):
     
-    if os.path.exists( path ) and not os.path.isdir( path ):
+    if os.path.isfile( path ):
         
-        raise Exception( 'The given temp directory, "{}", does not seem to be a directory!'.format( path ) )
+        raise Exception( 'The given temp directory, "{}", seems to be a file already, not a directory!'.format( path ) )
         
     
     try:

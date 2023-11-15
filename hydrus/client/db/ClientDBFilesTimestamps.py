@@ -105,13 +105,13 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         # can't clear a file timestamp or file viewing timestamp from here, can't do it from UI either, so we good for now
         
     
-    def GetHashIdsInRange( self, timestamp_type: int, ranges, job_key: typing.Optional[ ClientThreading.JobKey ] = None ):
+    def GetHashIdsInRange( self, timestamp_type: int, ranges, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE:

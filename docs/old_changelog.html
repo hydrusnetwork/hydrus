@@ -35,6 +35,51 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_552"><a href="#version_552">version 552</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>'system:has audio' and 'system:embedded metadata' are now combined under a new meta-system predicate 'system:file properties'. if you can't find your yes/no predicate, try looking there!</li>
+                        <li>menu commands will no longer have their unadjusted label as their tooltip. all tooltips are either the full status bar description or the full label if it was long enough to be elided</li>
+                        <li>the 'open externally' panel now shows the default filetype thumbnail for formats like zip and epub</li>
+                        <li>'system:number of character tags > 4' now parses correct when you type it (previously it wouldn't work with a namespace), including special handling for 'unnamespaced'</li>
+                        <li>the various 'number of x' system predicates will now parse if you type 'num x', 'number x', or 'num of x'</li>
+                        <li>to match the other entries, the '4k' resolution swap-in label is now '2160p'</li>
+                        <li>added a little extra info on the manage tags dialog to 'getting started with tags'</li>
+                        <li>if you have 'confirm sending files to trash' turned off, the delete dialog will now show on physical deletes (i.e. deletes from the trash)</li>
+                        <li>updated the derpibooru parser to pull the new AI-based 'generator' and 'prompter' namespaces (converting both to the hydrus-appropriate 'creator')</li>
+                        <li>thanks to a user, the Linux build is now archived with zstd instead of gzip. should be about the same size but faster to decompress</li>
+                        <li>thanks to a user, the Docker release is pushed up to alpine 3.18. some python libraries should be included/updated also, with heif and dateparser and I think QtPDF support added</li>
+                        <li><h3>fixes</h3></li>
+                        <li>fixed a stupid typo in the folder copy/move tech last week that was not allowing some move/copies to start (as always, the thing that is so simple that you don't think to test it is the very thing that blows up). sorry for the trouble!</li>
+                        <li>cleaned up the file/folder move/copy error statements a little more</li>
+                        <li>fixed the 'default search page tag service' dropdown in _options->search_ not saving correctly</li>
+                        <li>fixed the 'open externally' panel having out of position thumbnails when your thumbnail supersampling is set to other than 100%</li>
+                        <li>fixed the import and display of images in signed 16-bit format (weird TIFFs, seems like).</li>
+                        <li>any image with an unusual channel data type beyond uint16 and int16 is going to be, as the default thing to do, normalised to unsigned 8-bit. it may blow out the colour range, but it should show something!</li>
+                        <li>the client handles files with (0x0) resolution better. they should now always import, and it'll _attempt_ to render them to a normal full size thumb. if it works (e.g. this is some misconfigured SVG), great, and if it doesn't, we'll get a nicely sized filetype.png or hydrus.png fallback</li>
+                        <li>files with (0x0) resolution will now never show in the preview or media viewers. previously, the preview viewer would bail out half-way through setting the media, causing it to fall into an invalid state where it still showed the previous valid media but wouldn't 'click-off' it easily, and the media viewer would generally panic to its 'no media to show' state and lose navigation functionality. now, files that are 0x0 are included in the general 'can we show this?' pre-launch sanity checks</li>
+                        <li><h3>has_transparency</h3></li>
+                        <li>the database can now remember if a file has transparency. you can search this with the new 'system:has transparency' predicate, which is under the new 'system:file properties' and will also parse if you type 'system:has/no transparency/alpha'</li>
+                        <li>note that my version of 'has transparency' discludes files that have an all-opaque alpha channel (i.e. one that lets no light through). RGBA is insufficient--I want an alpha channel with some actual translucency somewhere!</li>
+                        <li>although many application image project types like PSD and XCF can have transparency, the various ways we render or thumbnail them are hacky and probably lock to RGB or RGBA always, so I'm going to start simple. this week, we test transparency for all the images that support it (basically anything but jpeg), and animated gif. the animated gif tech is new and actually looks through every frame of an RGBA gif until it hits interesting alpha to catch cases where it starts opaque and fades away</li>
+                        <li>just like we had with 'has exif' and similar, 'has transparency' knowledge will be calculated instantly for all new files, but for the files you already have, we'll have to do some slow file maintenance in the background for a while to retroactively calculate it all. you don't have to do anything; the data will just populate over time</li>
+                        <li>the duplicate filter now shows 'has transparency, the other is opaque' statements</li>
+                        <li>while working on this, I encountered a number of files that seemed to be false positives--apparently normal, fully opaque images of anime girls that were somehow showing up as 'has interesting alpha'. upon inspecting them closely, I discovered the border pixels had a slight fade, or one pixel out of all of them was 98% opaque, or the single bottom right pixel was completely transparent. perhaps some of these are secret artist markers, but I imagine many are just an accidental drawing tablet smudge or dodgy crop tool calculations. I'm leaving them as 'has_transparency' for now, but maybe we'll want to tune this more in future, perhaps saying you have to be at least 0.3% transparent to count. anyway, as always, while I am interested in seeing files that seem to get a false positive/negative with this new 'has transparency' test, if you have the technical know-how, please check if they actually have no alpha yourself first. once you play around with this system, let me know what sort of pseudo-'false positive' rate you are getting, and we can talk about an appropriate threshold</li>
+                        <li><h3>client api</h3></li>
+                        <li>the 'file_metadata' call now includes a 'has_transparency' boolean! remember that it will be overly `false` for a while, until the file maintenance catches up</li>
+                        <li>forgot to mention it last week, but thanks to a user there is a new `/manage_database/get_client_options` call that fetches a heap of different client options. this exposes a mess that may change with any update, but there may be something neat you can hook into. this week we fixed a thing that was breaking this call for probably all old clients</li>
+                        <li>the client api version is now 56</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>renamed JobKey to JobStatus across the program</li>
+                        <li>in prep for Client API calls to interact with the popup system, the queue of JobStatuses waiting to be displayed in the popup toaster is now encapsulated in a separate class, outside of the Qt object dangerzone</li>
+                        <li>sped up how the popup manager system inspects and cleans the JobStatus queue in general. should have better performance when you get hundreds or thousands of messages</li>
+                        <li>cleaned up some awkward popup manager dismiss code</li>
+                        <li>fixed a timing issue that meant popup messages were auto-dismissed from the popup toaster up to a second after they were being 'deleted' by their parent functiions. subscription flow felt more laggy because of this</li>
+                        <li>fixed the file info manager's duplicate call to duplicate unusual metadata like has_exif and blurhash</li>
+                        <li>removed some old code that isn't used any more</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_551"><a href="#version_551">version 551</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

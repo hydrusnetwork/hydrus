@@ -482,15 +482,15 @@ def FilterAndReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Me
 
 def ReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Media ] ):
     
-    job_key = ClientThreading.JobKey()
+    job_status = ClientThreading.JobStatus()
     
     message = 'Was unable to delete one or more files because of a delete lock!'
     
-    job_key.SetStatusText( message )
+    job_status.SetStatusText( message )
     
     hashes = list( itertools.chain.from_iterable( ( media.GetHashes() for media in medias ) ) )
     
-    job_key.SetFiles( hashes, 'see them' )
+    job_status.SetFiles( hashes, 'see them' )
     
-    HG.client_controller.pub( 'message', job_key )
+    HG.client_controller.pub( 'message', job_status )
     

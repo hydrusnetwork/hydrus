@@ -106,13 +106,13 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
         
         HG.client_controller.pub( 'clipboard', 'text', hex_hashes_text )
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusText( '{} {} hashes copied'.format( HydrusData.ToHumanInt( len( desired_hashes ) ), hash_type ) )
+        job_status.SetStatusText( '{} {} hashes copied'.format( HydrusData.ToHumanInt( len( desired_hashes ) ), hash_type ) )
         
-        HG.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_status )
         
-        job_key.Delete( 2 )
+        job_status.Delete( 2 )
         
     
 def CopyMediaURLs( medias ):
@@ -318,34 +318,34 @@ def OpenURLs( urls ):
     
     def do_it( urls ):
         
-        job_key = None
+        job_status = None
         
         num_urls = len( urls )
         
         if num_urls > 5:
             
-            job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+            job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
             
-            job_key.SetStatusTitle( 'Opening URLs' )
+            job_status.SetStatusTitle( 'Opening URLs' )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             
         
         try:
             
             for ( i, url ) in enumerate( urls ):
                 
-                if job_key is not None:
+                if job_status is not None:
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                     
                     if should_quit:
                         
                         return
                         
                     
-                    job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_urls ) )
-                    job_key.SetVariable( 'popup_gauge_1', ( i + 1, num_urls ) )
+                    job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_urls ) )
+                    job_status.SetVariable( 'popup_gauge_1', ( i + 1, num_urls ) )
                     
                 
                 ClientPaths.LaunchURLInWebBrowser( url )
@@ -355,11 +355,11 @@ def OpenURLs( urls ):
             
         finally:
             
-            if job_key is not None:
+            if job_status is not None:
                 
-                job_key.Finish()
+                job_status.Finish()
                 
-                job_key.Delete( 1 )
+                job_status.Delete( 1 )
                 
             
         

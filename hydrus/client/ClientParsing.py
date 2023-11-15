@@ -282,7 +282,7 @@ def ConvertParsableContentToPrettyString( parsable_content, include_veto = False
         
     
 
-def GetChildrenContent( job_key, children, parsing_text, referral_url ):
+def GetChildrenContent( job_status, children, parsing_text, referral_url ):
     
     content = []
     
@@ -292,7 +292,7 @@ def GetChildrenContent( job_key, children, parsing_text, referral_url ):
             
             if isinstance( child, ParseNodeContentLink ):
                 
-                child_content = child.Parse( job_key, parsing_text, referral_url )
+                child_content = child.Parse( job_status, parsing_text, referral_url )
                 
             elif isinstance( child, ContentParser ):
                 
@@ -2884,15 +2884,15 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         return children_parsable_content
         
     
-    def Parse( self, job_key, parsing_text, referral_url ):
+    def Parse( self, job_status, parsing_text, referral_url ):
         
-        search_urls = self.ParseURLs( job_key, parsing_text, referral_url )
+        search_urls = self.ParseURLs( job_status, parsing_text, referral_url )
         
         content = []
         
         for search_url in search_urls:
             
-            job_key.SetVariable( 'script_status', 'fetching ' + HydrusText.ElideText( search_url, 32 ) )
+            job_status.SetVariable( 'script_status', 'fetching ' + HydrusText.ElideText( search_url, 32 ) )
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', search_url, referral_url = referral_url )
             
@@ -2912,7 +2912,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
                 
                 if isinstance( e, HydrusExceptions.NotFoundException ):
                     
-                    job_key.SetVariable( 'script_status', '404 - nothing found' )
+                    job_status.SetVariable( 'script_status', '404 - nothing found' )
                     
                     time.sleep( 2 )
                     
@@ -2920,7 +2920,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
                     
                 elif isinstance( e, HydrusExceptions.NetworkException ):
                     
-                    job_key.SetVariable( 'script_status', 'Network error! Details written to log.' )
+                    job_status.SetVariable( 'script_status', 'Network error! Details written to log.' )
                     
                     HydrusData.Print( 'Problem fetching ' + HydrusText.ElideText( search_url, 32 ) + ':' )
                     HydrusData.PrintException( e )
@@ -2937,11 +2937,11 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
             
             linked_text = network_job.GetContentText()
             
-            children_content = GetChildrenContent( job_key, self._children, linked_text, search_url )
+            children_content = GetChildrenContent( job_status, self._children, linked_text, search_url )
             
             content.extend( children_content )
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 raise HydrusExceptions.CancelledException( 'Job was cancelled.' )
                 
@@ -2950,7 +2950,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         return content
         
     
-    def ParseURLs( self, job_key, parsing_text, referral_url ):
+    def ParseURLs( self, job_status, parsing_text, referral_url ):
         
         collapse_newlines = True
         
@@ -2960,7 +2960,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
         
         for url in absolute_urls:
             
-            job_key.AddURL( url )
+            job_status.AddURL( url )
             
         
         return absolute_urls
@@ -3123,7 +3123,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def FetchParsingText( self, job_key, file_identifier ):
+    def FetchParsingText( self, job_status, file_identifier ):
         
         # add gauge report hook and in-stream cancel support to the get/post calls
         
@@ -3147,9 +3147,9 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             full_request_url = self._url + '?' + ClientNetworkingFunctions.ConvertQueryDictToText( request_args, single_value_parameters )
             
-            job_key.SetVariable( 'script_status', 'fetching ' + HydrusText.ElideText( full_request_url, 32 ) )
+            job_status.SetVariable( 'script_status', 'fetching ' + HydrusText.ElideText( full_request_url, 32 ) )
             
-            job_key.AddURL( full_request_url )
+            job_status.AddURL( full_request_url )
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', full_request_url )
             
@@ -3160,7 +3160,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             if self._file_identifier_type == FILE_IDENTIFIER_TYPE_FILE:
                 
-                job_key.SetVariable( 'script_status', 'uploading file' )
+                job_status.SetVariable( 'script_status', 'uploading file' )
                 
                 path  = file_identifier
                 
@@ -3186,7 +3186,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
             else:
                 
-                job_key.SetVariable( 'script_status', 'uploading identifier' )
+                job_status.SetVariable( 'script_status', 'uploading identifier' )
                 
                 files = None
                 
@@ -3216,13 +3216,13 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
         except HydrusExceptions.NotFoundException:
             
-            job_key.SetVariable( 'script_status', '404 - nothing found' )
+            job_status.SetVariable( 'script_status', '404 - nothing found' )
             
             raise
             
         except HydrusExceptions.NetworkException as e:
             
-            job_key.SetVariable( 'script_status', 'Network error!' )
+            job_status.SetVariable( 'script_status', 'Network error!' )
             
             HydrusData.ShowException( e )
             
@@ -3236,7 +3236,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        if job_key.IsCancelled():
+        if job_status.IsCancelled():
             
             raise HydrusExceptions.CancelledException( 'Job was cancelled.' )
             
@@ -3258,32 +3258,32 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return children_parsable_content
         
     
-    def DoQuery( self, job_key, file_identifier ):
+    def DoQuery( self, job_status, file_identifier ):
         
         try:
             
             try:
                 
-                parsing_text = self.FetchParsingText( job_key, file_identifier )
+                parsing_text = self.FetchParsingText( job_status, file_identifier )
                 
             except HydrusExceptions.NetworkException as e:
                 
                 return []
                 
             
-            parse_results = self.Parse( job_key, parsing_text )
+            parse_results = self.Parse( job_status, parsing_text )
             
             return parse_results
             
         except HydrusExceptions.CancelledException:
             
-            job_key.SetVariable( 'script_status', 'Cancelled!' )
+            job_status.SetVariable( 'script_status', 'Cancelled!' )
             
             return []
             
         finally:
             
-            job_key.Finish()
+            job_status.Finish()
             
         
     
@@ -3292,17 +3292,17 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         return self._file_identifier_type == FILE_IDENTIFIER_TYPE_USER_INPUT
         
     
-    def Parse( self, job_key, parsing_text ):
+    def Parse( self, job_status, parsing_text ):
         
-        parse_results = GetChildrenContent( job_key, self._children, parsing_text, self._url )
+        parse_results = GetChildrenContent( job_status, self._children, parsing_text, self._url )
         
         if len( parse_results ) == 0:
             
-            job_key.SetVariable( 'script_status', 'Did not find anything.' )
+            job_status.SetVariable( 'script_status', 'Did not find anything.' )
             
         else:
             
-            job_key.SetVariable( 'script_status', 'Found ' + HydrusData.ToHumanInt( len( parse_results ) ) + ' rows.' )
+            job_status.SetVariable( 'script_status', 'Found ' + HydrusData.ToHumanInt( len( parse_results ) ) + ' rows.' )
             
         
         return parse_results

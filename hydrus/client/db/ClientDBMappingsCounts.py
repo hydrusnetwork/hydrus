@@ -262,7 +262,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return ( current_count, pending_count )
         
     
-    def GetCounts( self, tag_display_type, tag_service_id, file_service_id, tag_ids, include_current, include_pending, domain_is_cross_referenced = True, zero_count_ok = False, job_key = None, tag_ids_table_name = None ):
+    def GetCounts( self, tag_display_type, tag_service_id, file_service_id, tag_ids, include_current, include_pending, domain_is_cross_referenced = True, zero_count_ok = False, job_status = None, tag_ids_table_name = None ):
         
         if len( tag_ids ) == 0:
             
@@ -295,7 +295,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                     
                     for search_tag_service_id in search_tag_service_ids:
                         
-                        if job_key is not None and job_key.IsCancelled():
+                        if job_status is not None and job_status.IsCancelled():
                             
                             return {}
                             
@@ -308,7 +308,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                 
                 for search_tag_service_id in search_tag_service_ids:
                     
-                    if job_key is not None and job_key.IsCancelled():
+                    if job_status is not None and job_status.IsCancelled():
                         
                         return {}
                         

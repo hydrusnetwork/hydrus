@@ -532,7 +532,7 @@ class ThumbnailCache( object ):
             try:
                 
                 # file is malformed, let's force a regen
-                self._controller.files_maintenance_manager.RunJobImmediately( [ display_media ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_key = False )
+                self._controller.files_maintenance_manager.RunJobImmediately( [ display_media ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
                 
             except Exception as e:
                 
@@ -630,12 +630,12 @@ class ThumbnailCache( object ):
             message += os.linesep * 2
             message += summary
             
-            job_key = ClientThreading.JobKey()
+            job_status = ClientThreading.JobStatus()
             
-            job_key.SetStatusText( message )
-            job_key.SetFiles( { hash }, 'broken thumbnail' )
+            job_status.SetStatusText( message )
+            job_status.SetFiles( { hash }, 'broken thumbnail' )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             
         
     
@@ -1067,7 +1067,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                self._controller.files_maintenance_manager.RunJobImmediately( [ media_result ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_key = False )
+                self._controller.files_maintenance_manager.RunJobImmediately( [ media_result ], ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL, pub_job_status = False )
                 
             except HydrusExceptions.FileMissingException:
                 

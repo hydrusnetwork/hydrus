@@ -350,21 +350,21 @@ class MigrationJob( object ):
     
     def Run( self ):
         
-        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+        job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
         
-        job_key.SetStatusTitle( self._title )
+        job_status.SetStatusTitle( self._title )
         
-        self._controller.pub( 'message', job_key )
+        self._controller.pub( 'message', job_status )
         
-        job_key.SetStatusText( 'preparing source' )
+        job_status.SetStatusText( 'preparing source' )
         
         self._source.Prepare()
         
-        job_key.SetStatusText( 'preparing destination' )
+        job_status.SetStatusText( 'preparing destination' )
         
         self._destination.Prepare()
         
-        job_key.SetStatusText( 'beginning work' )
+        job_status.SetStatusText( 'beginning work' )
         
         try:
             
@@ -372,11 +372,11 @@ class MigrationJob( object ):
                 
                 progress_statement = self._destination.DoSomeWork( self._source )
                 
-                job_key.SetStatusText( progress_statement )
+                job_status.SetStatusText( progress_statement )
                 
-                job_key.WaitIfNeeded()
+                job_status.WaitIfNeeded()
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     break
                     
@@ -384,19 +384,19 @@ class MigrationJob( object ):
             
         finally:
             
-            job_key.SetStatusText( 'done, cleaning up source' )
+            job_status.SetStatusText( 'done, cleaning up source' )
             
             self._source.CleanUp()
             
-            job_key.SetStatusText( 'done, cleaning up destination' )
+            job_status.SetStatusText( 'done, cleaning up destination' )
             
             self._destination.CleanUp()
             
-            job_key.SetStatusText( 'done!' )
+            job_status.SetStatusText( 'done!' )
             
-            job_key.Finish()
+            job_status.Finish()
             
-            job_key.Delete( 3 )
+            job_status.Delete( 3 )
             
         
     

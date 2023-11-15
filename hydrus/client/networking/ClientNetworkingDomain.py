@@ -2374,7 +2374,7 @@ class DomainValidationPopupProcess( object ):
             
             for ( network_context, key, value, reason ) in self._header_tuples:
                 
-                job_key = ClientThreading.JobKey()
+                job_status = ClientThreading.JobStatus()
                 
                 # generate question
                 
@@ -2384,11 +2384,11 @@ class DomainValidationPopupProcess( object ):
                 question += os.linesep * 2
                 question += reason
                 
-                job_key.SetVariable( 'popup_yes_no_question', question )
+                job_status.SetVariable( 'popup_yes_no_question', question )
                 
-                HG.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_status )
                 
-                result = job_key.GetIfHasVariable( 'popup_yes_no_answer' )
+                result = job_status.GetIfHasVariable( 'popup_yes_no_answer' )
                 
                 while result is None:
                     
@@ -2399,7 +2399,7 @@ class DomainValidationPopupProcess( object ):
                     
                     time.sleep( 0.25 )
                     
-                    result = job_key.GetIfHasVariable( 'popup_yes_no_answer' )
+                    result = job_status.GetIfHasVariable( 'popup_yes_no_answer' )
                     
                 
                 if result:

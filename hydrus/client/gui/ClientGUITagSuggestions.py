@@ -723,13 +723,13 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         stop_time = HydrusTime.GetNow() + 30
         
-        job_key = ClientThreading.JobKey( cancellable = True, stop_time = stop_time )
+        job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
         
-        self._script_management.SetJobKey( job_key )
+        self._script_management.SetJobStatus( job_status )
         
         self._SetTags( [] )
         
-        HG.client_controller.CallToThread( self.THREADFetchTags, script, job_key, file_identifier )
+        HG.client_controller.CallToThread( self.THREADFetchTags, script, job_status, file_identifier )
         
     
     def MediaUpdated( self ):
@@ -756,7 +756,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             
         
     
-    def THREADFetchTags( self, script, job_key, file_identifier ):
+    def THREADFetchTags( self, script, job_status, file_identifier ):
         
         def qt_code( tags ):
             
@@ -770,7 +770,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
             self._have_fetched = True
             
         
-        parse_results = script.DoQuery( job_key, file_identifier )
+        parse_results = script.DoQuery( job_status, file_identifier )
         
         tags = list( ClientParsing.GetTagsFromParseResults( parse_results ) )
         

@@ -7,6 +7,58 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 552](https://github.com/hydrusnetwork/hydrus/releases/tag/v552)
+
+### misc
+
+* 'system:has audio' and 'system:embedded metadata' are now combined under a new meta-system predicate 'system:file properties'. if you can't find your yes/no predicate, try looking there!
+* menu commands will no longer have their unadjusted label as their tooltip. all tooltips are either the full status bar description or the full label if it was long enough to be elided
+* the 'open externally' panel now shows the default filetype thumbnail for formats like zip and epub
+* 'system:number of character tags > 4' now parses correct when you type it (previously it wouldn't work with a namespace), including special handling for 'unnamespaced'
+* the various 'number of x' system predicates will now parse if you type 'num x', 'number x', or 'num of x'
+* to match the other entries, the '4k' resolution swap-in label is now '2160p'
+* added a little extra info on the manage tags dialog to 'getting started with tags'
+* if you have 'confirm sending files to trash' turned off, the delete dialog will now show on physical deletes (i.e. deletes from the trash)
+* updated the derpibooru parser to pull the new AI-based 'generator' and 'prompter' namespaces (converting both to the hydrus-appropriate 'creator')
+* thanks to a user, the Linux build is now archived with zstd instead of gzip. should be about the same size but faster to decompress
+* thanks to a user, the Docker release is pushed up to alpine 3.18. some python libraries should be included/updated also, with heif and dateparser and I think QtPDF support added
+
+### fixes
+
+* fixed a stupid typo in the folder copy/move tech last week that was not allowing some move/copies to start (as always, the thing that is so simple that you don't think to test it is the very thing that blows up). sorry for the trouble!
+* cleaned up the file/folder move/copy error statements a little more
+* fixed the 'default search page tag service' dropdown in _options->search_ not saving correctly
+* fixed the 'open externally' panel having out of position thumbnails when your thumbnail supersampling is set to other than 100%
+* fixed the import and display of images in signed 16-bit format (weird TIFFs, seems like).
+* any image with an unusual channel data type beyond uint16 and int16 is going to be, as the default thing to do, normalised to unsigned 8-bit. it may blow out the colour range, but it should show something!
+* the client handles files with (0x0) resolution better. they should now always import, and it'll _attempt_ to render them to a normal full size thumb. if it works (e.g. this is some misconfigured SVG), great, and if it doesn't, we'll get a nicely sized filetype.png or hydrus.png fallback
+* files with (0x0) resolution will now never show in the preview or media viewers. previously, the preview viewer would bail out half-way through setting the media, causing it to fall into an invalid state where it still showed the previous valid media but wouldn't 'click-off' it easily, and the media viewer would generally panic to its 'no media to show' state and lose navigation functionality. now, files that are 0x0 are included in the general 'can we show this?' pre-launch sanity checks
+
+### has_transparency
+
+* the database can now remember if a file has transparency. you can search this with the new 'system:has transparency' predicate, which is under the new 'system:file properties' and will also parse if you type 'system:has/no transparency/alpha'
+* note that my version of 'has transparency' discludes files that have an all-opaque alpha channel (i.e. one that lets no light through). RGBA is insufficient--I want an alpha channel with some actual translucency somewhere!
+* although many application image project types like PSD and XCF can have transparency, the various ways we render or thumbnail them are hacky and probably lock to RGB or RGBA always, so I'm going to start simple. this week, we test transparency for all the images that support it (basically anything but jpeg), and animated gif. the animated gif tech is new and actually looks through every frame of an RGBA gif until it hits interesting alpha to catch cases where it starts opaque and fades away
+* just like we had with 'has exif' and similar, 'has transparency' knowledge will be calculated instantly for all new files, but for the files you already have, we'll have to do some slow file maintenance in the background for a while to retroactively calculate it all. you don't have to do anything; the data will just populate over time
+* the duplicate filter now shows 'has transparency, the other is opaque' statements
+* while working on this, I encountered a number of files that seemed to be false positives--apparently normal, fully opaque images of anime girls that were somehow showing up as 'has interesting alpha'. upon inspecting them closely, I discovered the border pixels had a slight fade, or one pixel out of all of them was 98% opaque, or the single bottom right pixel was completely transparent. perhaps some of these are secret artist markers, but I imagine many are just an accidental drawing tablet smudge or dodgy crop tool calculations. I'm leaving them as 'has_transparency' for now, but maybe we'll want to tune this more in future, perhaps saying you have to be at least 0.3% transparent to count. anyway, as always, while I am interested in seeing files that seem to get a false positive/negative with this new 'has transparency' test, if you have the technical know-how, please check if they actually have no alpha yourself first. once you play around with this system, let me know what sort of pseudo-'false positive' rate you are getting, and we can talk about an appropriate threshold
+
+### client api
+
+* the 'file_metadata' call now includes a 'has_transparency' boolean! remember that it will be overly `false` for a while, until the file maintenance catches up
+* forgot to mention it last week, but thanks to a user there is a new `/manage_database/get_client_options` call that fetches a heap of different client options. this exposes a mess that may change with any update, but there may be something neat you can hook into. this week we fixed a thing that was breaking this call for probably all old clients
+* the client api version is now 56
+
+### boring cleanup
+
+* renamed JobKey to JobStatus across the program
+* in prep for Client API calls to interact with the popup system, the queue of JobStatuses waiting to be displayed in the popup toaster is now encapsulated in a separate class, outside of the Qt object dangerzone
+* sped up how the popup manager system inspects and cleans the JobStatus queue in general. should have better performance when you get hundreds or thousands of messages
+* cleaned up some awkward popup manager dismiss code
+* fixed a timing issue that meant popup messages were auto-dismissed from the popup toaster up to a second after they were being 'deleted' by their parent functiions. subscription flow felt more laggy because of this
+* fixed the file info manager's duplicate call to duplicate unusual metadata like has_exif and blurhash
+* removed some old code that isn't used any more
+
 ## [Version 551](https://github.com/hydrusnetwork/hydrus/releases/tag/v551)
 
 ### misc
@@ -344,48 +396,3 @@ title: Changelog
 * added a bunch of unit tests for the new base storage location object. it separately reports whether it needs to shrink, wants to shrink, is able to expand, or is eager to expand
 * improved how updated objects are substituted into all multi-column lists, it fixes a couple of odd storage/display sync bugs here and there
 * a core image data loading/conversion tool inside the program is now a bit simpler and faster, and I think it also saves memory. it should speed up various sorts of unusual file loading
-
-## [Version 542](https://github.com/hydrusnetwork/hydrus/releases/tag/v542)
-
-### pdfs
-
-* thanks to a user, we now have pdf thumbnails! there is surprisingly little jank!
-* I hacked together a newer and better word count for PDFs. I can't promise it is perfect, but it does actually inspect the raw text. I'm expect we'll add a separate 'num_pages' row in future to handle comics (and other stuff like cbr/cbz)
-* I also hacked in 'human-readable file metadata' for PDFs. any PDF with author, title, subject, or keywords metadata is now viewable at the top of the media viewer
-* on update all your existing pdfs will be scheduled to get new thumbs, count their words, and learn if they have human-readable file metadata
-* this tech relies on Qt, so users running from source on old OSes (and thus Qt5) may not have very good support, sorry!
-
-### predicate parsing
-
-* the system predicate parser can now deal with numbers with commas, like in `system:width = 1,920`
-* `system:filetype is gif` works again in the predicate parser, now resolving to `system:filetype is animated gif, static gif`
-* fixed some weird parsing for 'system:tag as number' and added more operators like 'less than' and support for 'unnamespaced' and 'any namespace'
-* `system:tag as number` now labels itself in the client in the style `system:tag as number: page less than 20`, which is parseable by the system
-* the predicates for 'has exif/icc profile/human-readable embedded metadata' now label themselves in the format `system:has x`, not `system:image has x`. this harmonises with our other `has x` predicates, recognises that we pull metadata from non-images these days, and is the text that they were parsing with anyway
-
-### misc
-
-* the 'exporting' sidecar system's 'tag' source (i.e. pulling tags from your local tag services) now has a button to select 'storage' (no siblings or parents, what you see in manage tags dialog) or 'display' (has sibling and parent calculations, what you see in normal views) tags. all existing tag source sidecars will stay 'storage', but the default for new ones is now 'display'
-* renamed the dumb 'x metadata migrations' button label in export files to 'x sidecar actions'
-* wrote a new FAQ answer about why tags don't disappear when you delete files: https://hydrusnetwork.github.io/hydrus/faq.html#service_isolation
-* also wrote just a little FAQ about running hydrus off an encrypted partition--yes you can, and this is good tech to learn
-* moved the builds up to python 3.10. I thought we had already done this, but there we go. no special install instructions, it should just update as normal
-* for users who run from source: added a '(m)iddle Qt6' selection to the advanced setup venv script, for those who cannot run 6.5.2, with some explanation about it (it is the recently used 6.4.1, since Python 3.11 can't run the '(o)lder' 6.3.1), and added a '(t)est mpv' option for the newer python-mpv 1.0.4
-
-### boring file storage work
-
-* I decided that the planned granular folders will nest in groups of 2 hex characters. when you move to three-character storage, the files starting 'ab1' will be stored in '/fab/1' directory (rather than '/fab1'). we don't want to solve the overhead of a folder with 30,000 files by creating a folder with 4096 or 65536 folders. all the code was shifted over to this
-* all the migrate and repair code now uses subfolders
-* replaced various hardcoded folder determination code with subfolders, ensuring we are all calculating locations using the same single method
-* a variety of other responsibilities like 'does this subfolder exist on disk?' and 'make sure it does exist' are similarly now all collected in one place, in the subfolder code
-* added a little suite of unit tests for the new subfolders class
-* did a bunch of renaming to clear up various different concepts and names in all this code
-* the 'clear' custom thumbnail location button in migrate database is now wrapped in a yes/no confirmation dialog
-
-### other boring stuff
-
-* wrote some new exception classes to handle several 'limited support for this particular file' states and refactored a bunch of the resolution and thumbnail producing code to use it instead of None hacks or 'this file is completely busted' exceptions
-* improved some misc file format handling, particularly when they are damaged. stuff like clip database inspection and general thumbnail generation fail states
-* refactored many of my hardcoded special unicode characters to constants in HC. not sure I really like all the spammed `{HC.UNICODE_ELLIPSIS}` though, so might revisit
-* fixed an issue with last week's update code that was affecting users with a history of certain database damage
-* I may have improved import support for some damaged or generally very strange image files by falling back to OpenCV for resolution parsing when Pillow fails

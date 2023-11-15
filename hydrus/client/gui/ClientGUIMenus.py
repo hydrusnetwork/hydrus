@@ -21,10 +21,9 @@ def AppendMenu( menu, submenu, label ):
     menu_action = menu.addMenu( submenu )
     
     return menu_action
+    
 
 def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.QIcon, callable, *args, **kwargs ):
-    
-    label = SanitiseLabel( label )
     
     menu_item = QW.QAction( menu )
     
@@ -33,11 +32,7 @@ def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.Q
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( HydrusText.ElideText( label, 128, elide_center = True ) )
-    
-    menu_item.setStatusTip( description )
-    menu_item.setToolTip( description )
-    menu_item.setWhatsThis( description )
+    SetMenuTexts( menu_item, label, description )
     
     menu_item.setIcon( icon )
     
@@ -47,13 +42,13 @@ def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.Q
     
     return menu_item
     
+
 def AppendMenuBitmapItem( menu, label, description, bitmap, callable, *args, **kwargs ):
     
     return AppendMenuIconItem(menu, label, description, QG.QIcon( bitmap ), callable, *args, **kwargs)
     
+
 def AppendMenuCheckItem( menu, label, description, initial_value, callable, *args, **kwargs ):
-    
-    label = SanitiseLabel( label )
     
     menu_item = QW.QAction( menu )
     
@@ -62,11 +57,7 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( HydrusText.ElideText( label, 128, elide_center = True ) )
-    
-    menu_item.setStatusTip( description )
-    menu_item.setToolTip( description )
-    menu_item.setWhatsThis( description )
+    SetMenuTexts( menu_item, label, description )
     
     menu_item.setCheckable( True )
     menu_item.setChecked( initial_value )
@@ -79,8 +70,6 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     
 def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
     
-    label = SanitiseLabel( label )
-    
     menu_item = QW.QAction( menu )
     
     if HC.PLATFORM_MACOS:
@@ -88,22 +77,8 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    elided_label = HydrusText.ElideText( label, 128, elide_center = True )
+    SetMenuTexts( menu_item, label, description )
     
-    menu_item.setText( elided_label )
-    
-    if elided_label != label:
-        
-        menu_item.setToolTip( label )
-        
-    else:
-        
-        menu_item.setToolTip( description )
-        
-    
-    menu_item.setStatusTip( description )
-    menu_item.setWhatsThis( description )
-
     menu.addAction( menu_item )
     
     BindMenuItem( menu_item, callable, *args, **kwargs )
@@ -112,14 +87,10 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
     
 def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
     
-    original_label_text = label
-    
     if copy_text == '':
         
-        copy_text = original_label_text
+        copy_text = label
         
-    
-    label = SanitiseLabel( label )
     
     if description == '':
         
@@ -133,12 +104,8 @@ def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
         menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
         
     
-    menu_item.setText( HydrusText.ElideText( label, 128, elide_center = True ) )
+    SetMenuTexts( menu_item, label, description )
     
-    menu_item.setStatusTip( description )
-    menu_item.setToolTip( description )
-    menu_item.setWhatsThis( description )
-
     menu.addAction( menu_item )
     
     BindMenuItem( menu_item, HG.client_controller.pub, 'clipboard', 'text', copy_text )
@@ -283,12 +250,36 @@ def SanitiseLabel( label: str ) -> str:
     
     return label.replace( '&', '&&' )
     
+
 def SetMenuItemLabel( menu_item: QW.QAction, label: str ):
     
     label = SanitiseLabel( label )
     
     menu_item.setText( label )
     
+
+def SetMenuTexts( menu_item: QW.QAction, label: str, description: str ):
+    
+    label = SanitiseLabel( label )
+    
+    elided_label = HydrusText.ElideText( label, 128, elide_center = True )
+    
+    menu_item.setText( elided_label )
+    
+    menu_item.setStatusTip( description )
+    
+    if label != elided_label:
+        
+        menu_item.setToolTip( label )
+        
+    elif description != '':
+        
+        menu_item.setToolTip( description )
+        
+    
+    menu_item.setWhatsThis( description )
+    
+
 def SetMenuTitle( menu: QW.QMenu, label: str ):
     
     label = SanitiseLabel( label )

@@ -1305,9 +1305,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._highlighted_gallery_import = self._multiple_gallery_import.GetHighlightedGalleryImport()
         
-        self._loading_highlight_job_key = ClientThreading.JobKey( cancellable = True )
+        self._loading_highlight_job_status = ClientThreading.JobStatus( cancellable = True )
         
-        self._loading_highlight_job_key.Finish()
+        self._loading_highlight_job_status.Finish()
         
         #
         
@@ -1421,7 +1421,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _CanClearHighlight( self ):
         
-        return self._highlighted_gallery_import is not None or not self._loading_highlight_job_key.IsDone()
+        return self._highlighted_gallery_import is not None or not self._loading_highlight_job_status.IsDone()
         
     
     def _CanHighlight( self ):
@@ -1466,9 +1466,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
     
     def _ClearExistingHighlight( self ):
         
-        if not self._loading_highlight_job_key.IsDone():
+        if not self._loading_highlight_job_status.IsDone():
             
-            self._loading_highlight_job_key.Cancel()
+            self._loading_highlight_job_status.Cancel()
             
         
         if self._highlighted_gallery_import is not None:
@@ -1514,9 +1514,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             pretty_query_text = f'* {pretty_query_text}'
             
-        elif not self._loading_highlight_job_key.IsDone():
+        elif not self._loading_highlight_job_status.IsDone():
             
-            downloader = self._loading_highlight_job_key.GetIfHasVariable( 'downloader' )
+            downloader = self._loading_highlight_job_status.GetIfHasVariable( 'downloader' )
             
             if downloader is not None and gallery_import == downloader:
                 
@@ -1697,19 +1697,19 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             self._ClearExistingHighlight()
             
-            self._loading_highlight_job_key = ClientThreading.JobKey( cancellable = True )
+            self._loading_highlight_job_status = ClientThreading.JobStatus( cancellable = True )
             
             name = new_highlight.GetQueryText()
             
-            self._loading_highlight_job_key.SetStatusTitle( f'Loading {name}' )
+            self._loading_highlight_job_status.SetStatusTitle( f'Loading {name}' )
             
-            self._loading_highlight_job_key.SetVariable( 'downloader', new_highlight )
+            self._loading_highlight_job_status.SetVariable( 'downloader', new_highlight )
             
             self._gallery_importers_listctrl_panel.UpdateButtons()
             
             self._gallery_importers_listctrl.UpdateDatas()
             
-            job_key = self._loading_highlight_job_key
+            job_status = self._loading_highlight_job_status
             hashes = new_highlight.GetPresentedHashes()
             
             num_to_do = len( hashes )
@@ -1726,7 +1726,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 BLOCK_SIZE = 256
                 
                 start_time = HydrusTime.GetNowFloat()
-                have_published_job_key = False
+                have_published_job_status = False
                 
                 all_media_results = []
                 
@@ -1734,17 +1734,17 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     
                     num_done = i * BLOCK_SIZE
                     
-                    job_key.SetStatusText( 'Loading files: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) ) )
-                    job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) ) )
+                    job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                     
-                    if not have_published_job_key and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
+                    if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
                         
-                        HG.client_controller.pub( 'message', job_key )
+                        HG.client_controller.pub( 'message', job_status )
                         
-                        have_published_job_key = True
+                        have_published_job_status = True
                         
                     
-                    if job_key.IsCancelled():
+                    if job_status.IsCancelled():
                         
                         return all_media_results
                         
@@ -1754,8 +1754,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     all_media_results.extend( block_of_media_results )
                     
                 
-                job_key.SetStatusText( 'Done!' )
-                job_key.DeleteVariable( 'popup_gauge_1' )
+                job_status.SetStatusText( 'Done!' )
+                job_status.DeleteVariable( 'popup_gauge_1' )
                 
                 return all_media_results
                 
@@ -1764,7 +1764,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
                 try:
                     
-                    if job_key != self._loading_highlight_job_key or job_key.IsCancelled():
+                    if job_status != self._loading_highlight_job_status or job_status.IsCancelled():
                         
                         return
                         
@@ -1793,8 +1793,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     
                     self._gallery_importers_listctrl.UpdateDatas()
                     
-                    job_key.Finish()
-                    job_key.Delete()
+                    job_status.Finish()
+                    job_status.Delete()
                     
                 
             
@@ -2096,9 +2096,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
         else:
             
-            if not self._loading_highlight_job_key.IsDone():
+            if not self._loading_highlight_job_status.IsDone():
                 
-                downloader = self._loading_highlight_job_key.GetIfHasVariable( 'downloader' )
+                downloader = self._loading_highlight_job_status.GetIfHasVariable( 'downloader' )
                 
                 if downloader is not None and downloader == gallery_import:
                     
@@ -2239,9 +2239,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._highlighted_watcher = self._multiple_watcher_import.GetHighlightedWatcher()
         
-        self._loading_highlight_job_key = ClientThreading.JobKey( cancellable = True )
+        self._loading_highlight_job_status = ClientThreading.JobStatus( cancellable = True )
         
-        self._loading_highlight_job_key.Finish()
+        self._loading_highlight_job_status.Finish()
         
         checker_options = self._multiple_watcher_import.GetCheckerOptions()
         file_import_options = self._multiple_watcher_import.GetFileImportOptions()
@@ -2374,7 +2374,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _CanClearHighlight( self ):
         
-        return self._highlighted_watcher is not None or not self._loading_highlight_job_key.IsDone()
+        return self._highlighted_watcher is not None or not self._loading_highlight_job_status.IsDone()
         
     
     def _CanHighlight( self ):
@@ -2427,9 +2427,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
     
     def _ClearExistingHighlight( self ):
         
-        if not self._loading_highlight_job_key.IsDone():
+        if not self._loading_highlight_job_status.IsDone():
             
-            self._loading_highlight_job_key.Cancel()
+            self._loading_highlight_job_status.Cancel()
             
         
         if self._highlighted_watcher is not None:
@@ -2475,9 +2475,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             pretty_subject = f'* {pretty_subject}'
             
-        elif not self._loading_highlight_job_key.IsDone():
+        elif not self._loading_highlight_job_status.IsDone():
             
-            downloader = self._loading_highlight_job_key.GetIfHasVariable( 'downloader' )
+            downloader = self._loading_highlight_job_status.GetIfHasVariable( 'downloader' )
             
             if downloader is not None and downloader == watcher:
                 
@@ -2693,19 +2693,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             self._ClearExistingHighlight()
             
-            self._loading_highlight_job_key = ClientThreading.JobKey( cancellable = True )
+            self._loading_highlight_job_status = ClientThreading.JobStatus( cancellable = True )
             
             name = new_highlight.GetSubject()
             
-            self._loading_highlight_job_key.SetStatusTitle( f'Loading {name}' )
+            self._loading_highlight_job_status.SetStatusTitle( f'Loading {name}' )
             
-            self._loading_highlight_job_key.SetVariable( 'downloader', new_highlight )
+            self._loading_highlight_job_status.SetVariable( 'downloader', new_highlight )
             
             self._watchers_listctrl_panel.UpdateButtons()
             
             self._watchers_listctrl.UpdateDatas()
             
-            job_key = self._loading_highlight_job_key
+            job_status = self._loading_highlight_job_status
             hashes = new_highlight.GetPresentedHashes()
             
             num_to_do = len( hashes )
@@ -2722,7 +2722,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 BLOCK_SIZE = 256
                 
                 start_time = HydrusTime.GetNowFloat()
-                have_published_job_key = False
+                have_published_job_status = False
                 
                 all_media_results = []
                 
@@ -2730,17 +2730,17 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     
                     num_done = i * BLOCK_SIZE
                     
-                    job_key.SetStatusText( 'Loading files: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) ) )
-                    job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) ) )
+                    job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                     
-                    if not have_published_job_key and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
+                    if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
                         
-                        HG.client_controller.pub( 'message', job_key )
+                        HG.client_controller.pub( 'message', job_status )
                         
-                        have_published_job_key = True
+                        have_published_job_status = True
                         
                     
-                    if job_key.IsCancelled():
+                    if job_status.IsCancelled():
                         
                         return all_media_results
                         
@@ -2750,8 +2750,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     all_media_results.extend( block_of_media_results )
                     
                 
-                job_key.SetStatusText( 'Done!' )
-                job_key.DeleteVariable( 'popup_gauge_1' )
+                job_status.SetStatusText( 'Done!' )
+                job_status.DeleteVariable( 'popup_gauge_1' )
                 
                 return all_media_results
                 
@@ -2760,7 +2760,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 try:
                     
-                    if job_key != self._loading_highlight_job_key or job_key.IsCancelled():
+                    if job_status != self._loading_highlight_job_status or job_status.IsCancelled():
                         
                         return
                         
@@ -2789,8 +2789,8 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     
                     self._watchers_listctrl.UpdateDatas()
                     
-                    job_key.Finish()
-                    job_key.Delete()
+                    job_status.Finish()
+                    job_status.Delete()
                     
                 
             
@@ -3087,9 +3087,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         else:
             
-            if not self._loading_highlight_job_key.IsDone():
+            if not self._loading_highlight_job_status.IsDone():
                 
-                downloader = self._loading_highlight_job_key.GetIfHasVariable( 'downloader' )
+                downloader = self._loading_highlight_job_status.GetIfHasVariable( 'downloader' )
                 
                 if downloader is not None and downloader == watcher:
                     
@@ -4575,13 +4575,13 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
             except HydrusExceptions.NotFoundException:
                 
-                job_key = ClientThreading.JobKey()
+                job_status = ClientThreading.JobStatus()
                 
-                job_key.SetStatusText( 'Hey, the server did not have that type of petition after all. Please hit refresh counts.' )
+                job_status.SetStatusText( 'Hey, the server did not have that type of petition after all. Please hit refresh counts.' )
                 
-                job_key.Delete( 5 )
+                job_status.Delete( 5 )
                 
-                HG.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_status )
                 
             finally:
                 
@@ -5408,9 +5408,9 @@ class ManagementPanelPetitions( ManagementPanel ):
                     
                     try:
                         
-                        job_key = ClientThreading.JobKey( cancellable = True )
+                        job_status = ClientThreading.JobStatus( cancellable = True )
                         
-                        job_key.SetStatusTitle( 'committing petition' )
+                        job_status.SetStatusTitle( 'committing petition' )
                         
                         time_started = HydrusTime.GetNowFloat()
                         
@@ -5424,10 +5424,10 @@ class ManagementPanelPetitions( ManagementPanel ):
                                 
                                 if HydrusTime.TimeHasPassed( time_started + 3 ):
                                     
-                                    HG.client_controller.pub( 'message', job_key )
+                                    HG.client_controller.pub( 'message', job_status )
                                     
                                 
-                                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                                 
                                 if should_quit:
                                     
@@ -5441,13 +5441,13 @@ class ManagementPanelPetitions( ManagementPanel ):
                                     HG.client_controller.WriteSynchronous( 'content_updates', { service.GetServiceKey() : content_updates } )
                                     
                                 
-                                job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
-                                job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+                                job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                                job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                                 
                             
                         finally:
                             
-                            job_key.Delete()
+                            job_status.Delete()
                             
                         
                         HG.client_controller.CallBlockingToQt( self, qt_petition_cleared, outgoing_petition )
@@ -5479,9 +5479,9 @@ class ManagementPanelQuery( ManagementPanel ):
         
         self._search_enabled = self._management_controller.GetVariable( 'search_enabled' )
         
-        self._query_job_key = ClientThreading.JobKey( cancellable = True )
+        self._query_job_status = ClientThreading.JobStatus( cancellable = True )
         
-        self._query_job_key.Finish()
+        self._query_job_status.Finish()
         
         if self._search_enabled:
             
@@ -5522,7 +5522,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            self._query_job_key.Cancel()
+            self._query_job_status.Cancel()
             
             file_search_context = self._tag_autocomplete.GetFileSearchContext()
             
@@ -5597,17 +5597,17 @@ class ManagementPanelQuery( ManagementPanel ):
                 return
                 
             
-            interrupting_current_search = not self._query_job_key.IsDone()
+            interrupting_current_search = not self._query_job_status.IsDone()
             
-            self._query_job_key.Cancel()
+            self._query_job_status.Cancel()
             
             if len( file_search_context.GetPredicates() ) > 0:
                 
-                self._query_job_key = ClientThreading.JobKey()
+                self._query_job_status = ClientThreading.JobStatus()
                 
                 sort_by = self._media_sort_widget.GetSort()
                 
-                self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_key, file_search_context, sort_by )
+                self._controller.CallToThread( self.THREADDoQuery, self._controller, self._page_key, self._query_job_status, file_search_context, sort_by )
                 
                 panel = ClientGUIResults.MediaPanelLoading( self._page, self._page_key, self._management_controller )
                 
@@ -5632,7 +5632,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         if self._search_enabled:
             
-            if self._query_job_key.IsDone():
+            if self._query_job_status.IsDone():
                 
                 self._tag_autocomplete.ShowCancelSearchButton( False )
                 
@@ -5642,7 +5642,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
                 WAIT_PERIOD = 3.0
                 
-                search_is_lagging = HydrusTime.TimeHasPassedFloat( self._query_job_key.GetCreationTime() + WAIT_PERIOD )
+                search_is_lagging = HydrusTime.TimeHasPassedFloat( self._query_job_status.GetCreationTime() + WAIT_PERIOD )
                 
                 self._tag_autocomplete.ShowCancelSearchButton( search_is_lagging )
                 
@@ -5670,7 +5670,7 @@ class ManagementPanelQuery( ManagementPanel ):
             self._tag_autocomplete.CancelCurrentResultsFetchJob()
             
         
-        self._query_job_key.Cancel()
+        self._query_job_status.Cancel()
         
     
     def CleanBeforeDestroy( self ):
@@ -5682,7 +5682,7 @@ class ManagementPanelQuery( ManagementPanel ):
             self._tag_autocomplete.CancelCurrentResultsFetchJob()
             
         
-        self._query_job_key.Cancel()
+        self._query_job_status.Cancel()
         
     
     def GetPredicates( self ):
@@ -5754,7 +5754,7 @@ class ManagementPanelQuery( ManagementPanel ):
                 
             else:
                 
-                interrupting_current_search = not self._query_job_key.IsDone()
+                interrupting_current_search = not self._query_job_status.IsDone()
                 
                 if interrupting_current_search:
                     
@@ -5772,9 +5772,9 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def ShowFinishedQuery( self, query_job_key, media_results ):
+    def ShowFinishedQuery( self, query_job_status, media_results ):
         
-        if query_job_key == self._query_job_key:
+        if query_job_status == self._query_job_status:
             
             location_context = self._management_controller.GetLocationContext()
             
@@ -5806,27 +5806,27 @@ class ManagementPanelQuery( ManagementPanel ):
             
         
     
-    def THREADDoQuery( self, controller, page_key, query_job_key, file_search_context: ClientSearch.FileSearchContext, sort_by ):
+    def THREADDoQuery( self, controller, page_key, query_job_status, file_search_context: ClientSearch.FileSearchContext, sort_by ):
         
         def qt_code():
             
-            query_job_key.Finish()
+            query_job_status.Finish()
             
             if not self or not QP.isValid( self ):
                 
                 return
                 
             
-            self.ShowFinishedQuery( query_job_key, media_results )
+            self.ShowFinishedQuery( query_job_status, media_results )
             
         
         QUERY_CHUNK_SIZE = 256
         
         HG.client_controller.file_viewing_stats_manager.Flush()
         
-        query_hash_ids = controller.Read( 'file_query_ids', file_search_context, job_key = query_job_key, limit_sort_by = sort_by )
+        query_hash_ids = controller.Read( 'file_query_ids', file_search_context, job_status = query_job_status, limit_sort_by = sort_by )
         
-        if query_job_key.IsCancelled():
+        if query_job_status.IsCancelled():
             
             return
             
@@ -5835,7 +5835,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         for sub_query_hash_ids in HydrusLists.SplitListIntoChunks( query_hash_ids, QUERY_CHUNK_SIZE ):
             
-            if query_job_key.IsCancelled():
+            if query_job_status.IsCancelled():
                 
                 return
                 

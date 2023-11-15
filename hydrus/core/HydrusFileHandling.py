@@ -51,11 +51,6 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
 
 def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
     
-    if target_resolution == ( 0, 0 ):
-        
-        target_resolution = ( 128, 128 )
-        
-    
     if mime == HC.APPLICATION_PSD:
         
         try:
@@ -168,7 +163,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
             
         
-    elif mime == HC.APPLICATION_PDF: 
+    elif mime == HC.APPLICATION_PDF:
         
         try:
             

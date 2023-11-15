@@ -458,13 +458,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetAllTagIds( self, leaf: ClientDBServices.FileSearchContextLeaf, job_key = None ):
+    def GetAllTagIds( self, leaf: ClientDBServices.FileSearchContextLeaf, job_status = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         query = '{};'.format( self.GetQueryPhraseForTagIds( leaf.file_service_id, leaf.tag_service_id ) )
@@ -483,7 +483,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         inclusive = True,
         search_namespaces_into_full_tags = False,
         zero_count_ok = False,
-        job_key = None
+        job_status = None
     ):
         
         # TODO: So I think I should interleave this, perhaps with the SearchLeaf object, or just as GetHashIdsFromTag now does, for each tag service. don't throw 'all known tags' down to lower methods
@@ -499,7 +499,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 time.sleep( 0.1 )
                 
-                if job_key is not None and job_key.IsCancelled():
+                if job_status is not None and job_status.IsCancelled():
                     
                     return []
                     
@@ -525,7 +525,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         for leaf in file_search_context_branch.IterateLeaves():
             
-            tag_ids = self.GetAutocompleteTagIds( tag_display_type, leaf, search_text, exact_match, job_key = job_key )
+            tag_ids = self.GetAutocompleteTagIds( tag_display_type, leaf, search_text, exact_match, job_status = job_status )
             
             if ':' not in search_text and search_namespaces_into_full_tags and not exact_match:
                 
@@ -533,10 +533,10 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 special_search_text = '{}*:*'.format( search_text )
                 
-                tag_ids.update( self.GetAutocompleteTagIds( tag_display_type, leaf, special_search_text, exact_match, job_key = job_key ) )
+                tag_ids.update( self.GetAutocompleteTagIds( tag_display_type, leaf, special_search_text, exact_match, job_status = job_status ) )
                 
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 return []
                 
@@ -545,12 +545,12 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             for group_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids, 1000 ):
                 
-                if job_key is not None and job_key.IsCancelled():
+                if job_status is not None and job_status.IsCancelled():
                     
                     return []
                     
                 
-                ids_to_count = self.modules_mappings_counts.GetCounts( tag_display_type, leaf.tag_service_id, leaf.file_service_id, group_of_tag_ids, include_current, include_pending, domain_is_cross_referenced = domain_is_cross_referenced, zero_count_ok = zero_count_ok, job_key = job_key )
+                ids_to_count = self.modules_mappings_counts.GetCounts( tag_display_type, leaf.tag_service_id, leaf.file_service_id, group_of_tag_ids, include_current, include_pending, domain_is_cross_referenced = domain_is_cross_referenced, zero_count_ok = zero_count_ok, job_status = job_status )
                 
                 if len( ids_to_count ) == 0:
                     
@@ -559,12 +559,12 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 #
                 
-                predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, display_tag_service_id, ids_to_count, inclusive, job_key = job_key )
+                predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, display_tag_service_id, ids_to_count, inclusive, job_status = job_status )
                 
                 all_predicates.extend( predicates )
                 
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 return []
                 
@@ -575,7 +575,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return predicates
         
     
-    def GetAutocompleteTagIds( self, tag_display_type: int, leaf: ClientDBServices.FileSearchContextLeaf, search_text, exact_match, job_key = None ):
+    def GetAutocompleteTagIds( self, tag_display_type: int, leaf: ClientDBServices.FileSearchContextLeaf, search_text, exact_match, job_status = None ):
         
         if search_text == '':
             
@@ -617,11 +617,11 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                 
                 # hellmode 'get all tags' search
                 
-                tag_ids = self.GetAllTagIds( leaf, job_key = job_key )
+                tag_ids = self.GetAllTagIds( leaf, job_status = job_status )
                 
             else:
                 
-                tag_ids = self.GetTagIdsFromNamespaceIds( leaf, namespace_ids, job_key = job_key )
+                tag_ids = self.GetTagIdsFromNamespaceIds( leaf, namespace_ids, job_status = job_status )
                 
             
         else:
@@ -630,17 +630,17 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             with self._MakeTemporaryIntegerTable( [], 'subtag_id' ) as temp_subtag_ids_table_name:
                 
-                self.GetSubtagIdsFromWildcardIntoTable( leaf.file_service_id, leaf.tag_service_id, half_complete_searchable_subtag, temp_subtag_ids_table_name, job_key = job_key )
+                self.GetSubtagIdsFromWildcardIntoTable( leaf.file_service_id, leaf.tag_service_id, half_complete_searchable_subtag, temp_subtag_ids_table_name, job_status = job_status )
                 
                 if namespace == '':
                     
-                    loop_of_tag_ids = self.GetTagIdsFromSubtagIdsTable( leaf.file_service_id, leaf.tag_service_id, temp_subtag_ids_table_name, job_key = job_key )
+                    loop_of_tag_ids = self.GetTagIdsFromSubtagIdsTable( leaf.file_service_id, leaf.tag_service_id, temp_subtag_ids_table_name, job_status = job_status )
                     
                 else:
                     
                     with self._MakeTemporaryIntegerTable( namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
                         
-                        loop_of_tag_ids = self.GetTagIdsFromNamespaceIdsSubtagIdsTables( leaf.file_service_id, leaf.tag_service_id, temp_namespace_ids_table_name, temp_subtag_ids_table_name, job_key = job_key )
+                        loop_of_tag_ids = self.GetTagIdsFromNamespaceIdsSubtagIdsTables( leaf.file_service_id, leaf.tag_service_id, temp_namespace_ids_table_name, temp_subtag_ids_table_name, job_status = job_status )
                         
                     
                 
@@ -664,7 +664,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             with self._MakeTemporaryIntegerTable( batch_of_tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
                 
-                if job_key is not None and job_key.IsCancelled():
+                if job_status is not None and job_status.IsCancelled():
                     
                     return set()
                     
@@ -817,13 +817,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return 'SELECT tag_id FROM {}'.format( tags_table_name )
         
     
-    def GetSubtagIdsFromWildcard( self, file_service_id: int, tag_service_id: int, subtag_wildcard, job_key = None ):
+    def GetSubtagIdsFromWildcard( self, file_service_id: int, tag_service_id: int, subtag_wildcard, job_status = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         if tag_service_id == self.modules_services.combined_tag_service_id:
@@ -923,7 +923,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     
                 
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 return set()
                 
@@ -934,13 +934,13 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return result_subtag_ids
         
     
-    def GetSubtagIdsFromWildcardIntoTable( self, file_service_id: int, tag_service_id: int, subtag_wildcard, subtag_id_table_name, job_key = None ):
+    def GetSubtagIdsFromWildcardIntoTable( self, file_service_id: int, tag_service_id: int, subtag_wildcard, subtag_id_table_name, job_status = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         if tag_service_id == self.modules_services.combined_tag_service_id:
@@ -1037,7 +1037,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     
                 
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 self._Execute( 'DELETE FROM {};'.format( subtag_id_table_name ) )
                 
@@ -1129,7 +1129,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return count
         
     
-    def GetTagIdsFromNamespaceIds( self, leaf: ClientDBServices.FileSearchContextLeaf, namespace_ids: typing.Collection[ int ], job_key = None ):
+    def GetTagIdsFromNamespaceIds( self, leaf: ClientDBServices.FileSearchContextLeaf, namespace_ids: typing.Collection[ int ], job_status = None ):
         
         if len( namespace_ids ) == 0:
             
@@ -1158,16 +1158,16 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             cancelled_hook = None
             
-            if job_key is not None:
+            if job_status is not None:
                 
-                cancelled_hook = job_key.IsCancelled
+                cancelled_hook = job_status.IsCancelled
                 
             
             result_tag_ids = self._STS( self._ExecuteCancellable( query, query_args, cancelled_hook ) )
             
-            if job_key is not None:
+            if job_status is not None:
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     return set()
                     
@@ -1179,7 +1179,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return final_result_tag_ids
         
     
-    def GetTagIdsFromNamespaceIdsSubtagIds( self, file_service_id: int, tag_service_id: int, namespace_ids: typing.Collection[ int ], subtag_ids: typing.Collection[ int ], job_key = None ):
+    def GetTagIdsFromNamespaceIdsSubtagIds( self, file_service_id: int, tag_service_id: int, namespace_ids: typing.Collection[ int ], subtag_ids: typing.Collection[ int ], job_status = None ):
         
         if len( namespace_ids ) == 0 or len( subtag_ids ) == 0:
             
@@ -1190,18 +1190,18 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             with self._MakeTemporaryIntegerTable( namespace_ids, 'namespace_id' ) as temp_namespace_ids_table_name:
                 
-                return self.GetTagIdsFromNamespaceIdsSubtagIdsTables( file_service_id, tag_service_id, temp_namespace_ids_table_name, temp_subtag_ids_table_name, job_key = job_key )
+                return self.GetTagIdsFromNamespaceIdsSubtagIdsTables( file_service_id, tag_service_id, temp_namespace_ids_table_name, temp_subtag_ids_table_name, job_status = job_status )
                 
             
         
     
-    def GetTagIdsFromNamespaceIdsSubtagIdsTables( self, file_service_id: int, tag_service_id: int, namespace_ids_table_name: str, subtag_ids_table_name: str, job_key = None ):
+    def GetTagIdsFromNamespaceIdsSubtagIdsTables( self, file_service_id: int, tag_service_id: int, namespace_ids_table_name: str, subtag_ids_table_name: str, job_status = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         final_result_tag_ids = set()
@@ -1224,9 +1224,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             result_tag_ids = self._STS( self._ExecuteCancellable( query, (), cancelled_hook ) )
             
-            if job_key is not None:
+            if job_status is not None:
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     return set()
                     
@@ -1238,7 +1238,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return final_result_tag_ids
         
     
-    def GetTagIdsFromSubtagIds( self, file_service_id: int, tag_service_id: int, subtag_ids: typing.Collection[ int ], job_key = None ):
+    def GetTagIdsFromSubtagIds( self, file_service_id: int, tag_service_id: int, subtag_ids: typing.Collection[ int ], job_status = None ):
         
         if len( subtag_ids ) == 0:
             
@@ -1247,17 +1247,17 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         with self._MakeTemporaryIntegerTable( subtag_ids, 'subtag_id' ) as temp_subtag_ids_table_name:
             
-            return self.GetTagIdsFromSubtagIdsTable( file_service_id, tag_service_id, temp_subtag_ids_table_name, job_key = job_key )
+            return self.GetTagIdsFromSubtagIdsTable( file_service_id, tag_service_id, temp_subtag_ids_table_name, job_status = job_status )
             
         
     
-    def GetTagIdsFromSubtagIdsTable( self, file_service_id: int, tag_service_id: int, subtag_ids_table_name: str, job_key = None ):
+    def GetTagIdsFromSubtagIdsTable( self, file_service_id: int, tag_service_id: int, subtag_ids_table_name: str, job_status = None ):
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         final_result_tag_ids = set()
@@ -1280,9 +1280,9 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             result_tag_ids = self._STS( self._ExecuteCancellable( query, (), cancelled_hook ) )
             
-            if job_key is not None:
+            if job_status is not None:
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     return set()
                     

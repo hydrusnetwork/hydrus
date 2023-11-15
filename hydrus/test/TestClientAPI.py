@@ -4918,6 +4918,7 @@ class TestClientAPI( unittest.TestCase ):
                 'is_local' : False,
                 'is_trashed' : False,
                 'is_deleted' : False,
+                'has_transparency' : False,
                 'has_exif' : True,
                 'has_human_readable_embedded_metadata' : False,
                 'has_icc_profile' : True,

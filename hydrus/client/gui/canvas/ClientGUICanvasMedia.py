@@ -208,19 +208,19 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
         
         ( width, height ) = OPEN_EXTERNALLY_BUTTON_SIZE
         
-        if media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
-            
-            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-            thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
-            
-            # we want the device independant size here, not actual pixels, so want to keep this 100
-            #thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
-            thumbnail_dpr_percent = 100
-            
-            ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
-            
-            height = height + min( OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1], thumb_height )
-            
+        # Note that this handles a zipfile default thumb too. by sending None resolution to GetThumbnailResolution, it falls back to default dimensions
+        # imperfect, but overall fine for most situations
+        
+        bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
+        thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+        
+        # we want the device independant size here, not actual pixels, so want to keep this 100
+        #thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+        thumbnail_dpr_percent = 100
+        
+        ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
+        
+        height = height + min( OPEN_EXTERNALLY_MAX_THUMBNAIL_SIZE[1], thumb_height )
         
         return QC.QSize( width, height )
         
@@ -262,67 +262,6 @@ def CalculateMediaSize( media, zoom ):
     return ( media_width, media_height )
     
 
-def CanDisplayMedia( media: ClientMedia.MediaSingleton, canvas_type: int ) -> bool:
-    
-    if media is None:
-        
-        return False
-        
-    
-    media = media.GetDisplayMedia()
-    
-    if media is None:
-        
-        return False
-        
-    
-    locations_manager = media.GetLocationsManager()
-    
-    if not locations_manager.IsLocal():
-        
-        return False
-        
-    
-    return True
-    
-
-def GetShowAction( media: ClientMedia.MediaSingleton, canvas_type: int ):
-    
-    # in the midst of a rewrite, feel free to refactor further
-    
-    start_paused = False
-    start_with_embed = False
-    
-    bad_result = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, start_paused, start_with_embed )
-    
-    if media is None:
-        
-        return bad_result
-        
-    
-    mime = media.GetMime()
-    
-    if mime not in HC.ALLOWED_MIMES: # stopgap to catch a collection or application_unknown due to unusual import order/media moving
-        
-        return bad_result
-        
-    if canvas_type == CC.CANVAS_PREVIEW:
-        
-        action =  HG.client_controller.new_options.GetPreviewShowAction( mime )
-        
-    else:
-        
-        action = HG.client_controller.new_options.GetMediaShowAction( mime )
-        
-    if mime == HC.APPLICATION_PSD and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and not HydrusPSDHandling.PSD_TOOLS_OK:
-        
-        # fallback to open externally button when psd_tools not available 
-        action = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, start_paused, start_with_embed )
-        
-    
-    return action
-    
-
 def ShouldHaveAnimationBar( media, show_action ):
     
     if media is None:
@@ -362,21 +301,9 @@ def ShouldHaveAnimationBar( media, show_action ):
     return False
     
 
-def UserWantsUsToDisplayMedia( media: ClientMedia.MediaSingleton, canvas_type: int ) -> bool:
-    
-    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media, canvas_type )
-    
-    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
-        
-        return False
-        
-    
-    return True
-    
-
 def WeAreExpectingToLoadThisMediaFile( media: ClientMedia.MediaSingleton, canvas_type: int ) -> bool:
     
-    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media, canvas_type )
+    ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( media, canvas_type )
     
     if media_show_action in ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ):
         
@@ -559,7 +486,7 @@ class Animation( QW.QWidget ):
     
     def _DrawABlankFrame( self, painter ):
         
-        if self._background_colour_generator.CanDoTransparencyCheckerboard():
+        if self._background_colour_generator.CanDoTransparencyCheckerboard() and self._media is not None and self._media.GetFileInfoManager().has_transparency:
             
             light_grey = QG.QColor( 237, 237, 237 )
             dark_grey = QG.QColor( 222, 222, 222 )
@@ -2228,7 +2155,7 @@ class MediaContainer( QW.QWidget ):
         
         self._media = media
         
-        ( self._show_action, self._start_paused, self._start_with_embed ) = GetShowAction( self._media, self._canvas_type )
+        ( self._show_action, self._start_paused, self._start_with_embed ) = ClientMedia.GetShowAction( self._media, self._canvas_type )
         
         if self._show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
@@ -2391,7 +2318,7 @@ class MediaContainer( QW.QWidget ):
         
         previous_current_zoom = self._current_zoom
         
-        ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( previous_media, self._canvas_type )
+        ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( previous_media, self._canvas_type )
         
         if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
@@ -2400,7 +2327,7 @@ class MediaContainer( QW.QWidget ):
         
         ( previous_default_zoom, previous_canvas_zoom ) = CalculateCanvasZooms( canvas_size, self._canvas_type, my_dpr, previous_media, media_show_action )
         
-        ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( self._media, self._canvas_type )
+        ( media_show_action, media_start_paused, media_start_with_embed ) = ClientMedia.GetShowAction( self._media, self._canvas_type )
         
         if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
             
@@ -2883,13 +2810,9 @@ class OpenExternallyPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        if self._media.GetLocationsManager().IsLocal() and self._media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+        if self._media.GetLocationsManager().IsLocal():
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
-            
-            thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
-            
-            qt_pixmap = ClientRendering.GenerateHydrusBitmap( thumbnail_path, thumbnail_mime ).GetQtPixmap()
+            qt_pixmap = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media ).GetQtPixmap()
             
             thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
@@ -3283,8 +3206,6 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self.setMouseTracking( True )
         
         self._media = None
-        self._i_know_if_media_has_transparency = False
-        self._media_has_transparency = False
         
         self._image_renderer = None
         
@@ -3374,16 +3295,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _DrawBackground( self, painter, topLeftOffset = None ):
         
-        if not self._i_know_if_media_has_transparency:
-            
-            if self._image_renderer is not None and self._image_renderer.IsReady():
-                
-                self._media_has_transparency = self._image_renderer.HasTransparency()
-                self._i_know_if_media_has_transparency = True
-                
-            
-        
-        if self._background_colour_generator.CanDoTransparencyCheckerboard() and self._i_know_if_media_has_transparency and self._media_has_transparency:
+        if self._background_colour_generator.CanDoTransparencyCheckerboard() and self._media is not None and self._media.GetFileInfoManager().has_transparency:
             
             light_grey = QG.QColor( 237, 237, 237 )
             dark_grey = QG.QColor( 222, 222, 222 )
@@ -3779,8 +3691,6 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._ClearCanvasTileCache()
         
         self._media = media
-        self._i_know_if_media_has_transparency = False
-        self._media_has_transparency = False
         
         image_cache = HG.client_controller.GetCache( 'images' )
         

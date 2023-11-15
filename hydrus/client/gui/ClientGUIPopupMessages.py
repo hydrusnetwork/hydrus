@@ -1,3 +1,4 @@
+import collections
 import os
 import sys
 import traceback
@@ -52,11 +53,11 @@ class PopupMessage( PopupWindow ):
     
     TEXT_CUTOFF = 1024
     
-    def __init__( self, parent, job_key: ClientThreading.JobKey ):
+    def __init__( self, parent, job_status: ClientThreading.JobStatus ):
         
         PopupWindow.__init__( self, parent )
         
-        self._job_key = job_key
+        self._job_status = job_status
         
         vbox_margin = 2
         
@@ -208,9 +209,9 @@ class PopupMessage( PopupWindow ):
     
     def _NoButton( self ):
         
-        self._job_key.SetVariable( 'popup_yes_no_answer', False )
+        self._job_status.SetVariable( 'popup_yes_no_answer', False )
         
-        self._job_key.Delete()
+        self._job_status.Delete()
         
         self._yes.hide()
         self._no.hide()
@@ -236,9 +237,9 @@ class PopupMessage( PopupWindow ):
     
     def _YesButton( self ):
         
-        self._job_key.SetVariable( 'popup_yes_no_answer', True )
+        self._job_status.SetVariable( 'popup_yes_no_answer', True )
         
-        self._job_key.Delete()
+        self._job_status.Delete()
         
         self._yes.hide()
         self._no.hide()
@@ -246,7 +247,7 @@ class PopupMessage( PopupWindow ):
     
     def CallUserCallable( self ):
         
-        user_callable = self._job_key.GetUserCallable()
+        user_callable = self._job_status.GetUserCallable()
         
         if user_callable is not None:
             
@@ -256,7 +257,7 @@ class PopupMessage( PopupWindow ):
     
     def Cancel( self ):
         
-        self._job_key.Cancel()
+        self._job_status.Cancel()
         
         self._pause_button.setEnabled( False )
         self._cancel_button.setEnabled( False )
@@ -265,7 +266,7 @@ class PopupMessage( PopupWindow ):
     def CopyTB( self ):
         
         info = 'v{}, {}, {}'.format( HC.SOFTWARE_VERSION, sys.platform.lower(), 'frozen' if HC.RUNNING_FROM_FROZEN_BUILD else 'source' )
-        trace = self._job_key.ToString()
+        trace = self._job_status.ToString()
         
         full_text = info + os.linesep + trace
         
@@ -274,7 +275,7 @@ class PopupMessage( PopupWindow ):
     
     def CopyToClipboard( self ):
         
-        result = self._job_key.GetIfHasVariable( 'popup_clipboard' )
+        result = self._job_status.GetIfHasVariable( 'popup_clipboard' )
         
         if result is not None:
             
@@ -286,9 +287,9 @@ class PopupMessage( PopupWindow ):
     
     def PausePlay( self ):
         
-        self._job_key.PausePlay()
+        self._job_status.PausePlay()
         
-        if self._job_key.IsPaused():
+        if self._job_status.IsPaused():
             
             ClientGUIFunctions.SetBitmapButtonBitmap( self._pause_button, CC.global_pixmaps().play )
             
@@ -300,7 +301,7 @@ class PopupMessage( PopupWindow ):
     
     def ShowFiles( self ):
         
-        result = self._job_key.GetFiles()
+        result = self._job_status.GetFiles()
         
         if result is not None:
             
@@ -321,11 +322,11 @@ class PopupMessage( PopupWindow ):
                 
                 if len( presented_hashes ) != len( hashes ):
                     
-                    self._job_key.SetFiles( presented_hashes, attached_files_label )
+                    self._job_status.SetFiles( presented_hashes, attached_files_label )
                     
                     if len( presented_hashes ) == 0:
                         
-                        if self._job_key.IsDone():
+                        if self._job_status.IsDone():
                             
                             self.TryToDismiss()
                             
@@ -374,23 +375,21 @@ class PopupMessage( PopupWindow ):
         self.iJustChangedSize.emit()
         
     
-    def GetJobKey( self ):
+    def GetJobStatus( self ):
         
-        return self._job_key
+        return self._job_status
         
     
     def IsDeleted( self ):
         
-        return self._job_key.IsDeleted()
+        return self._job_status.IsDeleted()
         
     
     def TryToDismiss( self ):
         
-        if self._job_key.IsPausable() or self._job_key.IsCancellable():
+        if self._job_status.IsDeletable():
             
-            return
-            
-        else:
+            self._job_status.Delete()
             
             PopupWindow.TryToDismiss( self )
             
@@ -398,7 +397,7 @@ class PopupMessage( PopupWindow ):
     
     def UpdateMessage( self ):
         
-        title = self._job_key.GetStatusTitle()
+        title = self._job_status.GetStatusTitle()
         
         if title is not None:
             
@@ -413,9 +412,9 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        paused = self._job_key.IsPaused()
+        paused = self._job_status.IsPaused()
         
-        popup_text_1 = self._job_key.GetStatusText()
+        popup_text_1 = self._job_status.GetStatusText()
         
         if popup_text_1 is not None or paused:
             
@@ -439,7 +438,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_gauge_1 = self._job_key.GetIfHasVariable( 'popup_gauge_1' )
+        popup_gauge_1 = self._job_status.GetIfHasVariable( 'popup_gauge_1' )
         
         if popup_gauge_1 is not None and not paused:
             
@@ -457,7 +456,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_text_2 = self._job_key.GetStatusText( 2 )
+        popup_text_2 = self._job_status.GetStatusText( 2 )
         
         if popup_text_2 is not None and not paused:
             
@@ -474,7 +473,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_gauge_2 = self._job_key.GetIfHasVariable( 'popup_gauge_2' )
+        popup_gauge_2 = self._job_status.GetIfHasVariable( 'popup_gauge_2' )
         
         if popup_gauge_2 is not None and not paused:
             
@@ -492,7 +491,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_yes_no_question = self._job_key.GetIfHasVariable( 'popup_yes_no_question' )
+        popup_yes_no_question = self._job_status.GetIfHasVariable( 'popup_yes_no_question' )
         
         if popup_yes_no_question is not None and not paused:
             
@@ -514,7 +513,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        network_job = self._job_key.GetNetworkJob()
+        network_job = self._job_status.GetNetworkJob()
         
         if network_job is None:
             
@@ -539,7 +538,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_clipboard = self._job_key.GetIfHasVariable( 'popup_clipboard' )
+        popup_clipboard = self._job_status.GetIfHasVariable( 'popup_clipboard' )
         
         if popup_clipboard is not None:
             
@@ -559,7 +558,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        result = self._job_key.GetFiles()
+        result = self._job_status.GetFiles()
         
         if result is not None:
             
@@ -581,7 +580,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        user_callable = self._job_key.GetUserCallable()
+        user_callable = self._job_status.GetUserCallable()
         
         if user_callable is None:
             
@@ -596,7 +595,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        popup_traceback = self._job_key.GetTraceback()
+        popup_traceback = self._job_status.GetTraceback()
         
         if popup_traceback is not None:
             
@@ -618,7 +617,7 @@ class PopupMessage( PopupWindow ):
         
         #
         
-        if self._job_key.IsPausable():
+        if self._job_status.IsPausable():
             
             self._pause_button.show()
             
@@ -627,19 +626,152 @@ class PopupMessage( PopupWindow ):
             self._pause_button.hide()
             
         
-        if self._job_key.IsCancellable():
+        if self._job_status.IsCancellable():
             
             self._cancel_button.show()
             
         else:
             
             self._cancel_button.hide()
+            
+        
+    
+
+class JobStatusPopupQueue( object ):
+    
+    def __init__( self ):
+        
+        self._job_status_ordered_dict_queue: typing.OrderedDict[ bytes, ClientThreading.JobStatus ] = collections.OrderedDict()
+        
+        self._job_statuses_in_view: typing.Set[ ClientThreading.JobStatus ] = set()
+        
+    
+    def AddJobStatus( self, job_status: ClientThreading.JobStatus ):
+        
+        self._job_status_ordered_dict_queue[ job_status.GetKey() ] = job_status
+        
+    
+    def ClearAllDeleted( self ):
+        
+        removees = [ job_status.GetKey() for job_status in self._job_status_ordered_dict_queue.values() if job_status.IsDeleted() ]
+        
+        for job_status_key in removees:
+            
+            del self._job_status_ordered_dict_queue[ job_status_key ]
+            
+        
+        self._job_statuses_in_view = { job_status for job_status in self._job_statuses_in_view if not job_status.IsDeleted() }
+        
+    
+    def DeleteAllPossible( self ):
+        
+        for job_status in self._job_status_ordered_dict_queue.values():
+            
+            if job_status.IsDeletable():
+                
+                job_status.Delete()
+                
+            
+        
+    
+    def GetCount( self ) -> int:
+        
+        return len( self._job_status_ordered_dict_queue )
+        
+    
+    def GetInViewCount( self ) -> int:
+        
+        return len( self._job_statuses_in_view )
+        
+    
+    def GetJobStatus( self, job_status_key: bytes ) -> typing.Optional[ ClientThreading.JobStatus ]:
+        
+        return self._job_status_ordered_dict_queue.get( job_status_key, None )
+        
+    
+    def GetJobStatuses( self, only_in_view = False ) -> typing.List[ ClientThreading.JobStatus ]:
+        
+        if only_in_view:
+            
+            return [ job_status for job_status in self._job_status_ordered_dict_queue.values() if job_status in self._job_statuses_in_view ]
+            
+        else:
+            
+            return list( self._job_status_ordered_dict_queue.values() )
+            
+        
+    
+    def GetNextJobStatusToShow( self ) -> typing.Optional[ ClientThreading.JobStatus ]:
+        
+        for job_status in self._job_status_ordered_dict_queue.values():
+            
+            if job_status not in self._job_statuses_in_view:
+                
+                return job_status
+                
+            
+        
+        return None
+        
+    
+    def HavePendingToShow( self ):
+        
+        return len( self._job_status_ordered_dict_queue ) > len( self._job_statuses_in_view )
+        
+    
+    def PutJobStatusInView( self, job_status ):
+        
+        self._job_statuses_in_view.add( job_status )
+        
+    
+    def TryToMergeJobStatus( self, job_status: ClientThreading.JobStatus ) -> bool:
+        
+        if not job_status.HasVariable( 'attached_files_mergable' ):
+            
+            return False
+            
+        
+        result = job_status.GetFiles()
+        
+        if result is not None:
+            
+            ( hashes, label ) = result
+            
+            for existing_job_status in self._job_status_ordered_dict_queue.values():
+                
+                if existing_job_status.HasVariable( 'attached_files_mergable' ):
+                    
+                    result = existing_job_status.GetFiles()
+                    
+                    if result is not None:
+                        
+                        ( existing_hashes, existing_label ) = result
+                        
+                        if existing_label == label:
+                            
+                            if isinstance( existing_hashes, list ):
+                                
+                                existing_hashes.extend( hashes )
+                                
+                            elif isinstance( existing_hashes, set ):
+                                
+                                existing_hashes.update( hashes )
+                                
+                            
+                            return True
+                            
+                        
+                    
+                
+            
+        
+        return False
         
     
 
 class PopupMessageManager( QW.QFrame ):
     
-    def __init__( self, parent ):
+    def __init__( self, parent, job_status_queue: JobStatusPopupQueue ):
         
         QW.QFrame.__init__( self, parent )
         
@@ -671,7 +803,7 @@ class PopupMessageManager( QW.QFrame ):
         
         self.setLayout( vbox )
         
-        self._pending_job_keys = []
+        self._job_status_queue = job_status_queue
         
         parent.installEventFilter( self )
         
@@ -687,33 +819,38 @@ class PopupMessageManager( QW.QFrame ):
         HydrusData.ShowExceptionTuple = ClientData.ShowExceptionTupleClient
         HydrusData.ShowText = ClientData.ShowTextClient
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusText( 'initialising popup message manager' + HC.UNICODE_ELLIPSIS )
+        job_status.SetStatusText( 'initialising popup message manager' + HC.UNICODE_ELLIPSIS )
         
         self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.25, 'repeating popup message update', self.REPEATINGUpdate )
         
         self._summary_bar.dismissAll.connect( self.DismissAll )
         self._summary_bar.expandCollapse.connect( self.ExpandCollapse )
         
-        HG.client_controller.CallLaterQtSafe( self, 0.5, 'initialise message', self.AddMessage, job_key )
+        HG.client_controller.CallLaterQtSafe( self, 0.5, 'initialise message', self.AddMessage, job_status )
         
-        HG.client_controller.CallLaterQtSafe( self, 1.0, 'delete initial message', job_key.Delete )
+        HG.client_controller.CallLaterQtSafe( self, 1.0, 'delete initial message', job_status.Delete )
         
     
     def _CheckPending( self ):
         
-        self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if not job_key.IsDeleted() ]
-        
         we_added_some = False
         
-        while len( self._pending_job_keys ) > 0 and self._message_vbox.count() < self._max_messages_to_display:
+        self._job_status_queue.ClearAllDeleted()
+        
+        while self._job_status_queue.GetInViewCount() < self._max_messages_to_display:
+            
+            job_status = self._job_status_queue.GetNextJobStatusToShow()
+            
+            if job_status is None:
+                
+                break
+                
             
             we_added_some = True
             
-            job_key = self._pending_job_keys.pop( 0 )
-            
-            window = PopupMessage( self._message_panel, job_key )
+            window = PopupMessage( self._message_panel, job_status )
             
             window.dismiss.connect( self.Dismiss )
             window.iJustChangedSize.connect( self.MakeSureEverythingFits )
@@ -722,8 +859,10 @@ class PopupMessageManager( QW.QFrame ):
             
             QP.AddToLayout( self._message_vbox, window, CC.FLAGS_EXPAND_PERPENDICULAR )
             
+            self._job_status_queue.PutJobStatusInView( job_status )
+            
         
-        total_messages = len( self._pending_job_keys ) + self._message_vbox.count()
+        total_messages = self._job_status_queue.GetCount()
         
         if total_messages != self._current_num_messages:
             
@@ -758,9 +897,9 @@ class PopupMessageManager( QW.QFrame ):
                 continue
                 
             
-            job_key = message_window.GetJobKey()
+            job_status = message_window.GetJobStatus()
             
-            if job_key.HadError():
+            if job_status.HadError():
                 
                 return True
                 
@@ -839,49 +978,6 @@ class PopupMessageManager( QW.QFrame ):
             
         
     
-    def GetAllMessageJobKeys( self ) -> typing.List[ClientThreading.JobKey]:
-        
-        job_keys = []
-        
-        for i in range( self._message_vbox.count() ):
-            
-            sizer_item = self._message_vbox.itemAt( i )
-            
-            message_window = sizer_item.widget()
-            
-            if not message_window: continue
-            
-            job_key = message_window.GetJobKey()
-            
-            job_keys.append( job_key )
-            
-        
-        job_keys.extend( self._pending_job_keys )
-        
-        return job_keys
-        
-    def GetMessageJobKeyFromKey( self, job_key_key: bytes ) -> ClientThreading.JobKey:
-    
-        for i in range( self._message_vbox.count() ):
-                
-            sizer_item = self._message_vbox.itemAt( i )
-            
-            message_window = sizer_item.widget()
-            
-            if not message_window: continue
-            
-            if job_key_key == message_window.GetJobKey().GetKey():
-                
-                return message_window.GetJobKey()
-                
-        for job_key in self._pending_job_keys:
-            
-            if job_key.GetKey() == job_key_key:
-                
-                return job_key
-            
-        return None
-    
     def _OKToAlterUI( self ):
 
         if not QP.isValid( self ):
@@ -919,52 +1015,6 @@ class PopupMessageManager( QW.QFrame ):
         return True
         
     
-    def _TryToMergeMessage( self, job_key ):
-        
-        if not job_key.HasVariable( 'attached_files_mergable' ):
-            
-            return False
-            
-        
-        result = job_key.GetFiles()
-        
-        if result is not None:
-            
-            ( hashes, label ) = result
-            
-            existing_job_keys = self.GetAllMessageJobKeys()
-            
-            for existing_job_key in existing_job_keys:
-                
-                if existing_job_key.HasVariable( 'attached_files_mergable' ):
-                    
-                    result = existing_job_key.GetFiles()
-                    
-                    if result is not None:
-                        
-                        ( existing_hashes, existing_label ) = result
-                        
-                        if existing_label == label:
-                            
-                            if isinstance( existing_hashes, list ):
-                                
-                                existing_hashes.extend( hashes )
-                                
-                            elif isinstance( existing_hashes, set ):
-                                
-                                existing_hashes.update( hashes )
-                                
-                            
-                            return True
-                            
-                        
-                    
-                
-            
-        
-        return False
-        
-    
     def _Update( self ):
         
         if HG.started_shutdown:
@@ -984,7 +1034,7 @@ class PopupMessageManager( QW.QFrame ):
                 
                 if message_window.IsDeleted():
                     
-                    message_window.TryToDismiss()
+                    self._RemovePopupWindow( message_window )
                     
                     break
                     
@@ -996,18 +1046,18 @@ class PopupMessageManager( QW.QFrame ):
             
         
     
-    def AddMessage( self, job_key ):
+    def AddMessage( self, job_status ):
         
         try:
             
-            was_merged = self._TryToMergeMessage( job_key )
+            was_merged = self._job_status_queue.TryToMergeJobStatus( job_status )
             
             if was_merged:
                 
                 return
                 
             
-            self._pending_job_keys.append( job_key )
+            self._job_status_queue.AddJobStatus( job_status )
             
             if self._OKToAlterUI():
                 
@@ -1022,11 +1072,11 @@ class PopupMessageManager( QW.QFrame ):
     
     def CleanBeforeDestroy( self ):
         
-        for job_key in self._pending_job_keys:
+        for job_status in self._job_status_queue.GetJobStatuses():
             
-            if job_key.IsCancellable():
+            if job_status.IsCancellable():
                 
-                job_key.Cancel()
+                job_status.Cancel()
                 
             
         
@@ -1039,11 +1089,11 @@ class PopupMessageManager( QW.QFrame ):
                 continue
                 
             
-            job_key = message_window.GetJobKey()
+            job_status = message_window.GetJobStatus()
             
-            if job_key.IsCancellable():
+            if job_status.IsCancellable():
                 
-                job_key.Cancel()
+                job_status.Cancel()
                 
             
         
@@ -1054,7 +1104,16 @@ class PopupMessageManager( QW.QFrame ):
         HydrusData.ShowText = self._old_show_text
         
     
-    def Dismiss( self, window ):
+    def _RemovePopupWindow( self, window: PopupMessage ):
+        
+        job_status = window.GetJobStatus()
+        
+        if not job_status.IsDeletable():
+            
+            return
+            
+        
+        job_status.Delete()
         
         self._message_vbox.removeWidget( window )
         
@@ -1066,6 +1125,11 @@ class PopupMessageManager( QW.QFrame ):
         
         window.deleteLater()
         
+    
+    def Dismiss( self, window: PopupMessage ):
+        
+        self._RemovePopupWindow( window )
+        
         if self._OKToAlterUI():
             
             self._CheckPending()
@@ -1076,25 +1140,38 @@ class PopupMessageManager( QW.QFrame ):
     
     def DismissAll( self ):
         
-        self._pending_job_keys = [ job_key for job_key in self._pending_job_keys if job_key.IsPausable() or job_key.IsCancellable() ]
+        self._job_status_queue.DeleteAllPossible()
         
-        items = []
+        removees = []
         
         for i in range( self._message_vbox.count() ):
             
-            items.append( self._message_vbox.itemAt( i ) )
+            item = self._message_vbox.itemAt( i )
             
-        
-        for item in items:
-
             message_window = item.widget()
             
-            if not message_window: continue
+            if not message_window:
+                
+                continue
+                
             
-            message_window.TryToDismiss()
+            if message_window.GetJobStatus().IsDeleted():
+                
+                removees.append( message_window )
+                
             
         
-        self._CheckPending()
+        for message_window in removees:
+            
+            self._RemovePopupWindow( message_window )
+            
+        
+        if self._OKToAlterUI():
+            
+            self._CheckPending()
+            
+            self._SizeAndPositionAndShow()
+            
         
     
     def ExpandCollapse( self ):
@@ -1168,7 +1245,7 @@ class PopupMessageManager( QW.QFrame ):
 # This was originally a reviewpanel subclass which is a scroll area subclass, but having it in a scroll area didn't work out with dynamically updating size as the widget contents change.
 class PopupMessageDialogPanel( QW.QWidget ):
     
-    def __init__( self, parent, job_key, hide_main_gui = False ):
+    def __init__( self, parent, job_status, hide_main_gui = False ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -1176,11 +1253,9 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         self._hide_main_gui = hide_main_gui
         
-        self._job_key = job_key
+        self._job_status = job_status
         
-        self._message_window = PopupMessage( self, self._job_key )
-        
-        self._message_window.dismiss.connect( self.Dismiss )
+        self._message_window = PopupMessage( self, self._job_status )
         
         vbox = QP.VBoxLayout()
         
@@ -1198,7 +1273,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
     
     def CleanBeforeDestroy( self ):
-
+        
         pass
         
 
@@ -1248,7 +1323,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         if not self._message_pubbed:
             
-            HG.client_controller.pub( 'message', self._job_key )
+            HG.client_controller.pub( 'message', self._job_status )
             
             self._message_pubbed = True
             
@@ -1281,11 +1356,6 @@ class PopupMessageDialogPanel( QW.QWidget ):
         self.window().adjustSize()
         
     
-    def Dismiss( self, window ):
-        
-        return
-        
-    
     def CheckValid( self ):
         
         return True
@@ -1298,11 +1368,11 @@ class PopupMessageDialogPanel( QW.QWidget ):
     
     def UserIsOKToCancel( self ):
         
-        if self._job_key.IsDone():
+        if self._job_status.IsDone():
             
             self._ReleaseMessage()
             
-        elif self._job_key.IsCancellable():
+        elif self._job_status.IsCancellable():
             
             text = 'Cancel/stop job?'
             
@@ -1319,7 +1389,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
             
             if result == QW.QDialog.Accepted:
                 
-                self._job_key.Cancel()
+                self._job_status.Cancel()
                 
                 self._ReleaseMessage()
                 
@@ -1342,7 +1412,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         try:
             
-            if self._job_key.IsDone():
+            if self._job_status.IsDone():
                 
                 if not self._yesno_open: # don't close while a child dialog open m8
                     

@@ -888,7 +888,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 
                 if has_human_readable_embedded_metadata:
                     
-                    tt_components.append( 'non-exif human-readable embedded metadata')
+                    tt_components.append( 'non-exif human-readable embedded metadata' )
                     
                 
                 if has_extra_rows:
@@ -1890,7 +1890,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self._comparison_statements_vbox = QP.VBoxLayout()
         
-        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio' ]
+        self._comparison_statement_names = [ 'filesize', 'resolution', 'ratio', 'mime', 'num_tags', 'time_imported', 'jpeg_quality', 'pixel_duplicates', 'has_transparency', 'exif_data', 'embedded_metadata', 'icc_profile', 'has_audio' ]
         
         self._comparison_statements_sts = {}
         

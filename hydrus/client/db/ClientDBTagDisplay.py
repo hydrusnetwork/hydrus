@@ -58,7 +58,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return chained_tag_ids
         
     
-    def GeneratePredicatesFromTagIdsAndCounts( self, tag_display_type: int, display_tag_service_id: int, tag_ids_to_full_counts, inclusive, job_key = None ):
+    def GeneratePredicatesFromTagIdsAndCounts( self, tag_display_type: int, display_tag_service_id: int, tag_ids_to_full_counts, inclusive, job_status = None ):
         
         tag_ids = set( tag_ids_to_full_counts.keys() )
         
@@ -102,14 +102,14 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             tag_ids_we_want_to_look_up.update( itertools.chain.from_iterable( ideal_tag_ids_to_sibling_chain_tag_ids.values() ) )
             tag_ids_we_want_to_look_up.update( itertools.chain.from_iterable( ideal_tag_ids_to_ancestor_tag_ids.values() ) )
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 return []
                 
             
             tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = tag_ids_we_want_to_look_up )
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 return []
                 
@@ -182,14 +182,14 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
             tag_ids_we_want_to_look_up = set( tag_ids ).union( itertools.chain.from_iterable( tag_ids_to_known_chain_tag_ids.values() ) )
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 return []
                 
             
             tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = tag_ids_we_want_to_look_up )
             
-            if job_key is not None and job_key.IsCancelled():
+            if job_status is not None and job_status.IsCancelled():
                 
                 return []
                 
@@ -318,7 +318,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         return set( self.modules_tag_siblings.GetInterestedServiceIds( tag_service_id ) ).union( self.modules_tag_parents.GetInterestedServiceIds( tag_service_id ) )
         
     
-    def GetMediaPredicates( self, tag_context: ClientSearch.TagContext, tags_to_counts, inclusive, job_key = None ):
+    def GetMediaPredicates( self, tag_context: ClientSearch.TagContext, tags_to_counts, inclusive, job_status = None ):
         
         if HG.autocomplete_delay_mode:
             
@@ -328,7 +328,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
                 
                 time.sleep( 0.1 )
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     return []
                     
@@ -366,19 +366,19 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
             if i % 100 == 0:
                 
-                if job_key is not None and job_key.IsCancelled():
+                if job_status is not None and job_status.IsCancelled():
                     
                     return []
                     
                 
             
         
-        if job_key is not None and job_key.IsCancelled():
+        if job_status is not None and job_status.IsCancelled():
             
             return []
             
         
-        predicates = self.GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_id, tag_ids_to_full_counts, inclusive, job_key = job_key )
+        predicates = self.GeneratePredicatesFromTagIdsAndCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, display_tag_service_id, tag_ids_to_full_counts, inclusive, job_status = job_status )
         
         return predicates
         

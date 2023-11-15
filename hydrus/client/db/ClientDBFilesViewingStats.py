@@ -173,13 +173,13 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp = None, max_last_viewed_timestamp = None, job_key: typing.Optional[ ClientThreading.JobKey ] = None ) -> typing.Set[ int ]:
+    def GetHashIdsFromLastViewed( self, min_last_viewed_timestamp = None, max_last_viewed_timestamp = None, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Set[ int ]:
         
         cancelled_hook = None
         
-        if job_key is not None:
+        if job_status is not None:
             
-            cancelled_hook = job_key.IsCancelled
+            cancelled_hook = job_status.IsCancelled
             
         
         last_viewed_timestamp_predicates = []

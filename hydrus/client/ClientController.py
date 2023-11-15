@@ -308,19 +308,19 @@ class Controller( HydrusController.HydrusController ):
     
     def _ShowJustWokeToUser( self ):
         
-        def do_it( job_key: ClientThreading.JobKey ):
+        def do_it( job_status: ClientThreading.JobStatus ):
             
             while not HG.started_shutdown:
                 
                 with self._sleep_lock:
                     
-                    if job_key.IsCancelled():
+                    if job_status.IsCancelled():
                         
                         self.TouchTimestamp( 'now_awake' )
                         
-                        job_key.SetStatusText( 'enabling I/O now' )
+                        job_status.SetStatusText( 'enabling I/O now' )
                         
-                        job_key.Delete()
+                        job_status.Delete()
                         
                         return
                         
@@ -330,26 +330,26 @@ class Controller( HydrusController.HydrusController ):
                 
                 if HydrusTime.TimeHasPassed( wake_time ):
                     
-                    job_key.Delete()
+                    job_status.Delete()
                     
                     return
                     
                 else:
                     
-                    job_key.SetStatusText( 'enabling I/O {}'.format( HydrusTime.TimestampToPrettyTimeDelta( wake_time, just_now_threshold = 0 ) ) )
+                    job_status.SetStatusText( 'enabling I/O {}'.format( HydrusTime.TimestampToPrettyTimeDelta( wake_time, just_now_threshold = 0 ) ) )
                     
                 
                 time.sleep( 0.5 )
                 
             
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        job_status = ClientThreading.JobStatus( cancellable = True )
         
-        job_key.SetStatusTitle( 'just woke up from sleep' )
+        job_status.SetStatusTitle( 'just woke up from sleep' )
         
-        self.pub( 'message', job_key )
+        self.pub( 'message', job_status )
         
-        self.CallToThread( do_it, job_key )
+        self.CallToThread( do_it, job_status )
         
     
     def _ShutdownManagers( self ):
@@ -408,7 +408,7 @@ class Controller( HydrusController.HydrusController ):
     
     def CallBlockingToQt( self, win, func, *args, **kwargs ):
         
-        def qt_code( win: QW.QWidget, job_key: ClientThreading.JobKey ):
+        def qt_code( win: QW.QWidget, job_status: ClientThreading.JobStatus ):
             
             try:
                 
@@ -426,32 +426,32 @@ class Controller( HydrusController.HydrusController ):
                 
                 result = func( *args, **kwargs )
                 
-                job_key.SetVariable( 'result', result )
+                job_status.SetVariable( 'result', result )
                 
             except ( HydrusExceptions.QtDeadWindowException, HydrusExceptions.DBCredentialsException, HydrusExceptions.ShutdownException, HydrusExceptions.CancelledException ) as e:
                 
-                job_key.SetErrorException( e )
+                job_status.SetErrorException( e )
                 
             except Exception as e:
                 
-                job_key.SetErrorException( e )
+                job_status.SetErrorException( e )
                 
                 HydrusData.Print( 'CallBlockingToQt just caught this error:' )
                 HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally:
                 
-                job_key.Finish()
+                job_status.Finish()
                 
             
         
-        job_key = ClientThreading.JobKey( cancel_on_shutdown = False )
+        job_status = ClientThreading.JobStatus( cancel_on_shutdown = False )
         
-        QP.CallAfter( qt_code, win, job_key )
+        QP.CallAfter( qt_code, win, job_status )
         
         i = 0
         
-        while not job_key.IsDone() and i < 8:
+        while not job_status.IsDone() and i < 8:
             
             time.sleep( 0.02 )
             
@@ -462,7 +462,7 @@ class Controller( HydrusController.HydrusController ):
         # but I also don't want a hang, as we have seen with some GUI async job that got fired on shutdown and it seems some event queue was halted or deadlocked
         # so, we'll give it 16ms to work, then we'll start testing for shutdown hang
         
-        while not job_key.IsDone():
+        while not job_status.IsDone():
             
             if HG.model_shutdown or not self._qt_app_running:
                 
@@ -472,18 +472,18 @@ class Controller( HydrusController.HydrusController ):
             time.sleep( 0.02 )
             
         
-        if job_key.HasVariable( 'result' ):
+        if job_status.HasVariable( 'result' ):
             
             # result can be None, for qt_code that has no return variable
             
-            result = job_key.GetIfHasVariable( 'result' )
+            result = job_status.GetIfHasVariable( 'result' )
             
             return result
             
         
-        if job_key.HadError():
+        if job_status.HadError():
             
-            e = job_key.GetErrorException()
+            e = job_status.GetErrorException()
             
             raise e
             
@@ -1299,6 +1299,11 @@ class Controller( HydrusController.HydrusController ):
                     HydrusData.Print( 'Could not load Qt stylesheet: {}'.format( repr( e ) ) )
                     
                 
+            
+            from hydrus.client.gui import ClientGUIPopupMessages
+            
+            # got to keep this before gui instantiation, since it uses it
+            self.job_status_popup_queue = ClientGUIPopupMessages.JobStatusPopupQueue()
             
             self.gui = ClientGUI.FrameGUI( self )
             

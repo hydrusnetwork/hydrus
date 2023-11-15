@@ -841,6 +841,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._num_actionable_local_file_services = len( local_file_service_keys.intersection( ( fsk[0] for ( fsk, hashes ) in possible_file_service_keys_and_hashes ) ) )
         
+        possibilities_involve_spicy_physical_delete = False
+        
         all_local_jobs = []
         num_local_services_done = 0
         
@@ -953,6 +955,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             elif deletee_file_service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                 
+                possibilities_involve_spicy_physical_delete = True
+                
                 # do a physical delete now, skipping or force-removing from trash
                 
                 deletee_file_service_key = 'physical_delete'
@@ -991,7 +995,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             self._permitted_action_choices.append( ( text, ( deletee_file_service_key, list_of_service_keys_to_content_updates, save_reason, hashes_physically_deleted, text ) ) )
             
         
-        if self._num_actionable_local_file_services == 1 and not HC.options[ 'confirm_trash' ]:
+        if self._num_actionable_local_file_services == 1 and not possibilities_involve_spicy_physical_delete and not HC.options[ 'confirm_trash' ]:
             
             # this dialog will never show
             self._question_is_already_resolved = True

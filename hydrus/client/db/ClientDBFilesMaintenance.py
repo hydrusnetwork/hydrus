@@ -101,6 +101,19 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                     self.modules_hashes.SetExtraHashes( hash_id, md5, sha1, sha512 )
                     
+                elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY:
+                    
+                    previous_has_transparency = self.modules_files_metadata_basic.GetHasTransparency( hash_id )
+                    
+                    has_transparency = additional_data
+                    
+                    if previous_has_transparency != has_transparency:
+                        
+                        self.modules_files_metadata_basic.SetHasTransparency( hash_id, has_transparency )
+                        
+                    
+                    new_file_info.add( ( hash_id, hash ) )
+                    
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF:
                     
                     previous_has_exif = self.modules_files_metadata_basic.GetHasEXIF( hash_id )

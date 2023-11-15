@@ -697,7 +697,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def _CheckFolder( self, job_key: ClientThreading.JobKey ):
+    def _CheckFolder( self, job_status: ClientThreading.JobStatus ):
     
         ( all_paths, num_sidecars ) = ClientFiles.GetAllFilePaths( [ self._path ] )
         
@@ -707,7 +707,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         for path in all_paths:
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 break
                 
@@ -719,7 +719,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 file_seeds.append( file_seed )
                 
             
-            job_key.SetStatusText( 'checking: found ' + HydrusData.ToHumanInt( len( file_seeds ) ) + ' new files' )
+            job_status.SetStatusText( 'checking: found ' + HydrusData.ToHumanInt( len( file_seeds ) ) + ' new files' )
             
         
         self._file_seed_cache.AddFileSeeds( file_seeds )
@@ -743,7 +743,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return ( self._path, serialisable_file_import_options, serialisable_tag_import_options, serialisable_metadata_routers, serialisable_tag_service_keys_to_filename_tagging_options, action_pairs, action_location_pairs, self._period, self._check_regularly, serialisable_file_seed_cache, self._last_checked, self._paused, self._check_now, self._show_working_popup, self._publish_files_to_popup_button, self._publish_files_to_page )
         
     
-    def _ImportFiles( self, job_key ):
+    def _ImportFiles( self, job_status ):
         
         did_work = False
         
@@ -765,7 +765,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             p1 = HG.client_controller.new_options.GetBoolean( 'pause_import_folders_sync' ) or self._paused
             p2 = HydrusThreading.IsThreadShuttingDown()
-            p3 = job_key.IsCancelled()
+            p3 = job_status.IsCancelled()
             
             if file_seed is None or p1 or p2 or p3:
                 
@@ -783,8 +783,8 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             gauge_num_done = num_files_imported + 1
             
-            job_key.SetStatusText( 'importing file ' + HydrusData.ConvertValueRangeToPrettyString( gauge_num_done, num_total ) )
-            job_key.SetVariable( 'popup_gauge_1', ( gauge_num_done, num_total ) )
+            job_status.SetStatusText( 'importing file ' + HydrusData.ConvertValueRangeToPrettyString( gauge_num_done, num_total ) )
+            job_status.SetVariable( 'popup_gauge_1', ( gauge_num_done, num_total ) )
             
             path = file_seed.file_seed_data
             
@@ -1076,7 +1076,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         stop_time = HydrusTime.GetNow() + 3600
         
-        job_key = ClientThreading.JobKey( pausable = False, cancellable = True, stop_time = stop_time )
+        job_status = ClientThreading.JobStatus( pausable = False, cancellable = True, stop_time = stop_time )
         
         popup_desired = self._show_working_popup or self._check_now
         
@@ -1091,23 +1091,23 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 raise Exception( 'Path "' + self._path + '" does not seem to exist, or is not a directory.' )
                 
             
-            pubbed_job_key = False
+            pubbed_job_status = False
             
-            job_key.SetStatusTitle( 'import folder - ' + self._name )
+            job_status.SetStatusTitle( 'import folder - ' + self._name )
             
             due_by_check_now = self._check_now
             due_by_period = self._check_regularly and HydrusTime.TimeHasPassed( self._last_checked + self._period )
             
             if due_by_check_now or due_by_period:
                 
-                if not pubbed_job_key and popup_desired:
+                if not pubbed_job_status and popup_desired:
                     
-                    HG.client_controller.pub( 'message', job_key )
+                    HG.client_controller.pub( 'message', job_status )
                     
-                    pubbed_job_key = True
+                    pubbed_job_status = True
                     
                 
-                self._CheckFolder( job_key )
+                self._CheckFolder( job_status )
                 
                 checked_folder = True
                 
@@ -1116,14 +1116,14 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if file_seed is not None:
                 
-                if not pubbed_job_key and popup_desired:
+                if not pubbed_job_status and popup_desired:
                     
-                    HG.client_controller.pub( 'message', job_key )
+                    HG.client_controller.pub( 'message', job_status )
                     
-                    pubbed_job_key = True
+                    pubbed_job_status = True
                     
                 
-                did_import_file_work = self._ImportFiles( job_key )
+                did_import_file_work = self._ImportFiles( job_status )
                 
             
         except Exception as e:
@@ -1140,7 +1140,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             HG.client_controller.WriteSynchronous( 'serialisable', self )
             
         
-        job_key.Delete()
+        job_status.Delete()
         
     
     def GetFileSeedCache( self ):

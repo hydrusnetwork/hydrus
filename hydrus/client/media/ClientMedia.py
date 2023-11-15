@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -16,6 +17,40 @@ from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
+
+def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
+    
+    if media is None:
+        
+        return False
+        
+    
+    media = media.GetDisplayMedia()
+    
+    if media is None:
+        
+        return False
+        
+    
+    locations_manager = media.GetLocationsManager()
+    
+    if not locations_manager.IsLocal():
+        
+        return False
+        
+    
+    # note width/height is None for audio etc..
+    
+    ( width, height ) = media.GetResolution()
+    
+    if width == 0 or height == 0: # we cannot display this gonked out svg
+        
+        return False
+        
+    
+    return True
+    
+
 
 def FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, hashes ):
     
@@ -115,6 +150,43 @@ def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     return GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type )
     
 
+def GetShowAction( media: "MediaSingleton", canvas_type: int ):
+    
+    start_paused = False
+    start_with_embed = False
+    
+    bad_result = ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW, start_paused, start_with_embed )
+    
+    if media is None:
+        
+        return bad_result
+        
+    
+    mime = media.GetMime()
+    
+    if mime not in HC.ALLOWED_MIMES: # stopgap to catch a collection or application_unknown due to unusual import order/media moving
+        
+        return bad_result
+        
+    
+    if canvas_type == CC.CANVAS_PREVIEW:
+        
+        action =  HG.client_controller.new_options.GetPreviewShowAction( mime )
+        
+    else:
+        
+        action = HG.client_controller.new_options.GetMediaShowAction( mime )
+        
+    
+    if mime == HC.APPLICATION_PSD and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and not HydrusPSDHandling.PSD_TOOLS_OK:
+        
+        # fallback to open externally button when psd_tools not available 
+        action = ( CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, start_paused, start_with_embed )
+        
+    
+    return action
+    
+
 def GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type ):
     
     current_tags_to_count = collections.Counter()
@@ -133,6 +205,18 @@ def GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type ):
         
     
     return ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count )
+    
+
+def UserWantsUsToDisplayMedia( media: "MediaSingleton", canvas_type: int ) -> bool:
+    
+    ( media_show_action, media_start_paused, media_start_with_embed ) = GetShowAction( media, canvas_type )
+    
+    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+        
+        return False
+        
+    
+    return True
     
 
 class Media( object ):
@@ -841,11 +925,7 @@ class MediaList( object ):
                 
                 if for_media_viewer:
                     
-                    new_options = HG.client_controller.new_options
-                    
-                    ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( media.GetMime() )
-                    
-                    if media_show_action in ( CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, CC.MEDIA_VIEWER_ACTION_DO_NOT_SHOW ):
+                    if not UserWantsUsToDisplayMedia( media, CC.CANVAS_MEDIA_VIEWER ) or not CanDisplayMedia( media ):
                         
                         continue
                         

@@ -39,7 +39,7 @@ def CatchExceptionClient( etype, value, tb ):
             first_line = pretty_value
             
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
         if etype == HydrusExceptions.ShutdownException:
             
@@ -47,20 +47,20 @@ def CatchExceptionClient( etype, value, tb ):
             
         else:
             
-            try: job_key.SetStatusTitle( str( etype.__name__ ) )
-            except: job_key.SetStatusTitle( str( etype ) )
+            try: job_status.SetStatusTitle( str( etype.__name__ ) )
+            except: job_status.SetStatusTitle( str( etype ) )
             
-            job_key.SetStatusText( first_line )
-            job_key.SetTraceback( trace )
+            job_status.SetStatusText( first_line )
+            job_status.SetTraceback( trace )
             
         
-        text = job_key.ToString()
+        text = job_status.ToString()
         
         HydrusData.Print( 'Uncaught exception:' )
         
         HydrusData.DebugPrint( text )
         
-        HG.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_status )
         
     except:
         
@@ -254,7 +254,7 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
         first_line = pretty_value
         
     
-    job_key = ClientThreading.JobKey()
+    job_status = ClientThreading.JobStatus()
     
     if etype == HydrusExceptions.ShutdownException:
         
@@ -264,19 +264,19 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
         
         title = str( getattr( etype, '__name__', etype ) )
         
-        job_key.SetStatusTitle( title )
+        job_status.SetStatusTitle( title )
         
-        job_key.SetStatusText( first_line )
-        job_key.SetTraceback( trace )
+        job_status.SetStatusText( first_line )
+        job_status.SetTraceback( trace )
         
     
-    text = job_key.ToString()
+    text = job_status.ToString()
     
     HydrusData.Print( 'Exception:' )
     
     HydrusData.DebugPrint( text )
     
-    HG.client_controller.pub( 'message', job_key )
+    HG.client_controller.pub( 'message', job_status )
     
     if do_wait:
         
@@ -285,15 +285,15 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
 def ShowTextClient( text ):
     
-    job_key = ClientThreading.JobKey()
+    job_status = ClientThreading.JobStatus()
     
-    job_key.SetStatusText( str( text ) )
+    job_status.SetStatusText( str( text ) )
     
-    text = job_key.ToString()
+    text = job_status.ToString()
     
     HydrusData.Print( text )
     
-    HG.client_controller.pub( 'message', job_key )
+    HG.client_controller.pub( 'message', job_status )
     
 
 def ToHumanBytes( size ):

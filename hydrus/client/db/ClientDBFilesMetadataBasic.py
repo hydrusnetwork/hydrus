@@ -36,7 +36,8 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
             'main.has_exif' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
             'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
-            'external_master.blurhashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, blurhash TEXT );', 545 ),
+            'main.has_transparency' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 552 ),
+            'external_master.blurhashes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, blurhash TEXT );', 545 )
         }
         
     
@@ -116,6 +117,20 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         return has_icc_profile_hash_ids
         
     
+    def GetHasTransparency( self, hash_id: int ):
+        
+        result = self._Execute( 'SELECT hash_id FROM has_transparency WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+        
+        return result is not None
+        
+    
+    def GetHasTransparencyHashIds( self, hash_ids_table_name: str ) -> typing.Set[ int ]:
+        
+        has_transparency_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN has_transparency USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        
+        return has_transparency_hash_ids
+        
+    
     def GetMime( self, hash_id: int ) -> int:
         
         result = self._Execute( 'SELECT mime FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
@@ -170,6 +185,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
                 ( 'has_exif', 'hash_id' ),
                 ( 'has_human_readable_embedded_metadata', 'hash_id' ),
                 ( 'has_icc_profile', 'hash_id' ),
+                ( 'has_transparency', 'hash_id' ),
                 ( 'blurhashes', 'hash_id' )
             ]
             
@@ -231,6 +247,18 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         else:
             
             self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
+        
+    
+    def SetHasTransparency( self, hash_id: int, has_transparency: bool ):
+        
+        if has_transparency:
+            
+            self._Execute( 'INSERT OR IGNORE INTO has_transparency ( hash_id ) VALUES ( ? );', ( hash_id, ) )
+            
+        else:
+            
+            self._Execute( 'DELETE FROM has_transparency WHERE hash_id = ?;', ( hash_id, ) )
+            
         
     
     def SetBlurhash( self, hash_id: int, blurhash: str ):

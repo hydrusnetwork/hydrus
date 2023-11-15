@@ -2136,11 +2136,11 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def AppendGUISessionFreshest( self, name, load_in_a_page_of_pages = True ):
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusText( 'loading session "{}"'.format( name ) + HC.UNICODE_ELLIPSIS )
+        job_status.SetStatusText( 'loading session "{}"'.format( name ) + HC.UNICODE_ELLIPSIS )
         
-        HG.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_status )
         
         # get that message showing before we do the work of loading session
         HG.client_controller.app.processEvents()
@@ -2174,7 +2174,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.freshSessionLoaded.emit( session )
         
-        job_key.Delete()
+        job_status.Delete()
         
     
     def ChooseNewPage( self ):

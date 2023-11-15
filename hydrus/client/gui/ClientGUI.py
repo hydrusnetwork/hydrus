@@ -118,7 +118,7 @@ def THREADUploadPending( service_key ):
     unauthorised_content_types = set()
     content_types_to_request = set()
     
-    job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+    job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
     
     try:
         
@@ -139,7 +139,7 @@ def THREADUploadPending( service_key ):
                 
             
         
-        job_key.SetStatusTitle( 'uploading pending to ' + service_name )
+        job_status.SetStatusTitle( 'uploading pending to ' + service_name )
         
         nums_pending = HG.client_controller.Read( 'nums_pending' )
         
@@ -202,24 +202,24 @@ def THREADUploadPending( service_key ):
                 message += os.linesep * 2
                 message += 'If you think your account does have this permission, try refreshing it under _review services_.'
                 
-                unauthorised_job_key = ClientThreading.JobKey()
+                unauthorised_job_status = ClientThreading.JobStatus()
                 
-                unauthorised_job_key.SetStatusTitle( 'some data was not uploaded!' )
+                unauthorised_job_status.SetStatusTitle( 'some data was not uploaded!' )
                 
-                unauthorised_job_key.SetStatusText( message )
+                unauthorised_job_status.SetStatusText( message )
                 
                 if len( content_types_to_request ) > 0:
                     
-                    unauthorised_job_key.Delete( 120 )
+                    unauthorised_job_status.Delete( 120 )
                     
                 
                 call = HydrusData.Call( HG.client_controller.pub, 'open_manage_services_and_try_to_auto_create_account', service_key )
                 
                 call.SetLabel( 'open manage services and check for auto-creatable accounts' )
                 
-                unauthorised_job_key.SetUserCallable( call )
+                unauthorised_job_status.SetUserCallable( call )
                 
-                HG.client_controller.pub( 'message', unauthorised_job_key )
+                HG.client_controller.pub( 'message', unauthorised_job_status )
                 
             
             if len( paused_content_types ) > 0:
@@ -248,7 +248,7 @@ def THREADUploadPending( service_key ):
         
         result = HG.client_controller.Read( 'pending', service_key, content_types_to_request, ideal_weight = current_ideal_weight )
         
-        HG.client_controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_status )
         
         no_results_found = result is None
         
@@ -267,21 +267,21 @@ def THREADUploadPending( service_key ):
             
             num_done = num_to_do - remaining_num_pending
             
-            job_key.SetStatusText( 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
-            job_key.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
+            job_status.SetStatusText( 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+            job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
             
-            while job_key.IsPaused() or job_key.IsCancelled():
+            while job_status.IsPaused() or job_status.IsCancelled():
                 
                 time.sleep( 0.1 )
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
-                    job_key.DeleteVariable( 'popup_gauge_1' )
-                    job_key.SetStatusText( 'cancelled' )
+                    job_status.DeleteVariable( 'popup_gauge_1' )
+                    job_status.SetStatusText( 'cancelled' )
                     
-                    HydrusData.Print( job_key.ToString() )
+                    HydrusData.Print( job_status.ToString() )
                     
-                    job_key.Delete( 5 )
+                    job_status.Delete( 5 )
                     
                     return
                     
@@ -364,9 +364,9 @@ def THREADUploadPending( service_key ):
                 
             except HydrusExceptions.ServerBusyException:
                 
-                job_key.SetStatusText( service.GetName() + ' was busy. please try again in a few minutes' )
+                job_status.SetStatusText( service.GetName() + ' was busy. please try again in a few minutes' )
                 
-                job_key.Cancel()
+                job_status.Cancel()
                 
                 return
                 
@@ -396,8 +396,8 @@ def THREADUploadPending( service_key ):
             HydrusData.ShowText( 'Hey, your pending menu may have a miscount! It seems like you have pending count, but nothing was found in the database. Please run _database->regenerate->tag storage mappings cache (just pending, instant calculation) when convenient. Make sure it is the "instant, just pending" regeneration!' )
             
         
-        job_key.DeleteVariable( 'popup_gauge_1' )
-        job_key.SetStatusText( 'upload done!' )
+        job_status.DeleteVariable( 'popup_gauge_1' )
+        job_status.SetStatusText( 'upload done!' )
         
     except Exception as e:
         
@@ -412,9 +412,9 @@ def THREADUploadPending( service_key ):
             HG.client_controller.pub( 'imported_files_to_page', [ possible_hash ], 'files that did not upload right' )
             
         
-        job_key.SetStatusText( service.GetName() + ' error' )
+        job_status.SetStatusText( service.GetName() + ' error' )
         
-        job_key.Cancel()
+        job_status.Cancel()
         
         raise
         
@@ -422,17 +422,17 @@ def THREADUploadPending( service_key ):
         
         HG.client_controller.pub( 'notify_pending_upload_finished', service_key )
         
-        HydrusData.Print( job_key.ToString() )
+        HydrusData.Print( job_status.ToString() )
         
-        job_key.Finish()
+        job_status.Finish()
         
         if len( content_types_to_request ) == 0:
             
-            job_key.Delete()
+            job_status.Delete()
             
         else:
             
-            job_key.Delete( 5 )
+            job_status.Delete( 5 )
             
         
     
@@ -516,9 +516,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self.installEventFilter( ClientGUIDragDrop.FileDropTarget( self, self.ImportFiles, self.ImportURLFromDragAndDrop, self._notebook.MediaDragAndDropDropped ) )
         self._notebook.AddSupplementaryTabBarDropTarget( drop_target ) # ugly hack to make the case of files/media dropped onto a tab work
         
-        self._message_manager = ClientGUIPopupMessages.PopupMessageManager( self )
+        self._message_manager = ClientGUIPopupMessages.PopupMessageManager( self, self._controller.job_status_popup_queue )
         
-        self._pending_modal_job_keys = set()
+        self._pending_modal_job_statuses = set()
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -1355,13 +1355,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             network_job = ClientNetworkingJobs.NetworkJob( 'GET', url )
             
-            job_key = ClientThreading.JobKey()
+            job_status = ClientThreading.JobStatus()
             
-            job_key.SetStatusTitle( 'debug network job' )
+            job_status.SetStatusTitle( 'debug network job' )
             
-            job_key.SetNetworkJob( network_job )
+            job_status.SetNetworkJob( network_job )
             
-            self._controller.pub( 'message', job_key )
+            self._controller.pub( 'message', job_status )
             
             self._controller.network_engine.AddJob( network_job )
             
@@ -1371,7 +1371,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
             finally:
                 
-                job_key.Delete( seconds = 3 )
+                job_status.Delete( seconds = 3 )
                 
             
             QP.CallAfter( qt_code, network_job )
@@ -1394,26 +1394,26 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             time.sleep( 5 )
             
-            job_key = ClientThreading.JobKey( cancellable = cancellable )
+            job_status = ClientThreading.JobStatus( cancellable = cancellable )
             
-            job_key.SetStatusTitle( 'debug modal job' )
+            job_status.SetStatusTitle( 'debug modal job' )
             
-            controller.pub( 'modal_message', job_key )
+            controller.pub( 'modal_message', job_status )
             
             for i in range( 10 ):
                 
-                if job_key.IsCancelled():
+                if job_status.IsCancelled():
                     
                     break
                     
                 
-                job_key.SetStatusText( 'Will auto-dismiss in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
-                job_key.SetVariable( 'popup_gauge_1', ( i, 10 ) )
+                job_status.SetStatusText( 'Will auto-dismiss in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( 10 - i ) + '.' )
+                job_status.SetVariable( 'popup_gauge_1', ( i, 10 ) )
                 
                 time.sleep( 1 )
                 
             
-            job_key.Delete()
+            job_status.Delete()
             
         
         self._controller.CallToThread( do_it, self._controller, cancellable )
@@ -1425,11 +1425,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         text = random.choice( words )
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusText( text )
+        job_status.SetStatusText( text )
         
-        self._controller.pub( 'message', job_key )
+        self._controller.pub( 'message', job_status )
         
         t = 0
         
@@ -1439,18 +1439,18 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             t += 0.2
             
-            self._controller.CallLater( t, job_key.SetStatusText, text )
+            self._controller.CallLater( t, job_status.SetStatusText, text )
             
         
         words = [ 'test', 'a', 'longish', 'statictext', 'm8' ]
         
         text = random.choice( words )
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusText( 'test long title' )
+        job_status.SetStatusText( 'test long title' )
         
-        self._controller.pub( 'message', job_key )
+        self._controller.pub( 'message', job_status )
         
         for i in range( 2, 64 ):
             
@@ -1458,7 +1458,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             t += 0.2
             
-            self._controller.CallLater( t, job_key.SetStatusTitle, text )
+            self._controller.CallLater( t, job_status.SetStatusTitle, text )
             
         
     
@@ -1493,29 +1493,29 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         #
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusTitle( 'This popup has a very long title -- it is a subscription that is running with a long "artist sub 123456" kind of name' )
+        job_status.SetStatusTitle( 'This popup has a very long title -- it is a subscription that is running with a long "artist sub 123456" kind of name' )
         
-        job_key.SetStatusText( 'test' )
+        job_status.SetStatusText( 'test' )
         
-        self._controller.pub( 'message', job_key )
+        self._controller.pub( 'message', job_status )
         
         #
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusTitle( 'user call test' )
+        job_status.SetStatusTitle( 'user call test' )
         
-        job_key.SetStatusText( 'click the button m8' )
+        job_status.SetStatusText( 'click the button m8' )
         
         call = HydrusData.Call( HydrusData.ShowText, 'iv damke' )
         
         call.SetLabel( 'cheeki breeki' )
         
-        job_key.SetUserCallable( call )
+        job_status.SetUserCallable( call )
         
-        self._controller.pub( 'message', job_key )
+        self._controller.pub( 'message', job_status )
         
         
         #
@@ -1526,24 +1526,24 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             service_key = service_keys[0]
             
-            job_key = ClientThreading.JobKey()
+            job_status = ClientThreading.JobStatus()
             
-            job_key.SetStatusTitle( 'auto-account creation test' )
+            job_status.SetStatusTitle( 'auto-account creation test' )
             
             call = HydrusData.Call( HG.client_controller.pub, 'open_manage_services_and_try_to_auto_create_account', service_key )
             
             call.SetLabel( 'open manage services and check for auto-creatable accounts' )
             
-            job_key.SetUserCallable( call )
+            job_status.SetUserCallable( call )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             
         
         #
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusTitle( 'sub gap downloader test' )
+        job_status.SetStatusTitle( 'sub gap downloader test' )
         
         from hydrus.client.importing.options import FileImportOptions
         
@@ -1563,41 +1563,41 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         call.SetLabel( 'start a new downloader for this to fill in the gap!' )
         
-        job_key.SetUserCallable( call )
+        job_status.SetUserCallable( call )
         
-        HG.client_controller.pub( 'message', job_key )
-        
-        #
-        
-        job_key = ClientThreading.JobKey()
-        
-        job_key.SetStatusTitle( '\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
-        
-        job_key.SetStatusText( '\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
-        job_key.SetStatusText( 'p\u0250\u05df \u028d\u01dd\u028d', 2 )
-        
-        self._controller.pub( 'message', job_key )
+        HG.client_controller.pub( 'message', job_status )
         
         #
         
-        job_key = ClientThreading.JobKey( pausable = True, cancellable = True )
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusTitle( 'test job' )
+        job_status.SetStatusTitle( '\u24c9\u24d7\u24d8\u24e2 \u24d8\u24e2 \u24d0 \u24e3\u24d4\u24e2\u24e3 \u24e4\u24dd\u24d8\u24d2\u24de\u24d3\u24d4 \u24dc\u24d4\u24e2\u24e2\u24d0\u24d6\u24d4' )
         
-        job_key.SetStatusText( 'Currently processing test job 5/8' )
-        job_key.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
+        job_status.SetStatusText( '\u24b2\u24a0\u24b2 \u24a7\u249c\u249f' )
+        job_status.SetStatusText( 'p\u0250\u05df \u028d\u01dd\u028d', 2 )
         
-        self._controller.pub( 'message', job_key )
+        self._controller.pub( 'message', job_status )
         
-        self._controller.CallLater( 2.0, job_key.SetStatusText, 'Pulsing subjob', 2 )
+        #
         
-        self._controller.CallLater( 2.0, job_key.SetVariable, 'popup_gauge_2', ( 0, None ) )
+        job_status = ClientThreading.JobStatus( pausable = True, cancellable = True )
+        
+        job_status.SetStatusTitle( 'test job' )
+        
+        job_status.SetStatusText( 'Currently processing test job 5/8' )
+        job_status.SetVariable( 'popup_gauge_1', ( 5, 8 ) )
+        
+        self._controller.pub( 'message', job_status )
+        
+        self._controller.CallLater( 2.0, job_status.SetStatusText, 'Pulsing subjob', 2 )
+        
+        self._controller.CallLater( 2.0, job_status.SetVariable, 'popup_gauge_2', ( 0, None ) )
         
         #
         
         e = HydrusExceptions.DataMissing( 'This is a test exception' )
         
-        HydrusData.ShowException( e )
+        HydrusData.ShowException( e, do_wait = False )
         
         #
         
@@ -2017,20 +2017,20 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 return
                 
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
             try:
                 
-                job_key.SetStatusTitle( 'importing updates' )
-                HG.client_controller.pub( 'message', job_key )
+                job_status.SetStatusTitle( 'importing updates' )
+                HG.client_controller.pub( 'message', job_status )
                 
                 for ( i, update_path ) in enumerate( update_paths ):
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                     
                     if should_quit:
                         
-                        job_key.SetStatusText( 'Cancelled!' )
+                        job_status.SetStatusText( 'Cancelled!' )
                         
                         return
                         
@@ -2078,25 +2078,25 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                     finally:
                         
-                        job_key.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
-                        job_key.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+                        job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                        job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
                         
                     
                 
                 if num_errors == 0:
                     
-                    job_key.SetStatusText( 'Done!' )
+                    job_status.SetStatusText( 'Done!' )
                     
                 else:
                     
-                    job_key.SetStatusText( 'Done with ' + HydrusData.ToHumanInt( num_errors ) + ' errors (written to the log).' )
+                    job_status.SetStatusText( 'Done with ' + HydrusData.ToHumanInt( num_errors ) + ' errors (written to the log).' )
                     
                 
             finally:
                 
-                job_key.DeleteVariable( 'popup_gauge_1' )
+                job_status.DeleteVariable( 'popup_gauge_1' )
                 
-                job_key.Finish()
+                job_status.Finish()
                 
             
         
@@ -3844,11 +3844,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         admin_service = HG.client_controller.services_manager.GetService( service_key )
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusText( 'loading account types' + HC.UNICODE_ELLIPSIS )
+        job_status.SetStatusText( 'loading account types' + HC.UNICODE_ELLIPSIS )
         
-        self._controller.pub( job_key )
+        self._controller.pub( job_status )
         
         def work_callable():
             
@@ -3861,7 +3861,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def publish_callable( account_types ):
             
-            job_key.Delete()
+            job_status.Delete()
             
             self._ManageAccountTypes( service_key, account_types )
             
@@ -4039,13 +4039,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     if HG.export_folders_running:
                         
-                        job_key = ClientThreading.JobKey()
+                        job_status = ClientThreading.JobStatus()
                         
                         try:
                             
-                            job_key.SetStatusText( 'Waiting for export folders to finish.' )
+                            job_status.SetStatusText( 'Waiting for export folders to finish.' )
                             
-                            controller.pub( 'message', job_key )
+                            controller.pub( 'message', job_status )
                             
                             while HG.export_folders_running:
                                 
@@ -4059,7 +4059,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                             
                         finally:
                             
-                            job_key.Delete()
+                            job_status.Delete()
                             
                         
                     
@@ -4158,13 +4158,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     if HG.import_folders_running:
                         
-                        job_key = ClientThreading.JobKey()
+                        job_status = ClientThreading.JobStatus()
                         
                         try:
                             
-                            job_key.SetStatusText( 'Waiting for import folders to finish.' )
+                            job_status.SetStatusText( 'Waiting for import folders to finish.' )
                             
-                            controller.pub( 'message', job_key )
+                            controller.pub( 'message', job_status )
                             
                             while HG.import_folders_running:
                                 
@@ -4178,7 +4178,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                             
                         finally:
                             
-                            job_key.Delete()
+                            job_status.Delete()
                             
                         
                     
@@ -4449,12 +4449,12 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     return
                     
                 
-                job_key = ClientThreading.JobKey()
+                job_status = ClientThreading.JobStatus()
                 
-                job_key.SetStatusTitle( 'setting anonymisation period' )
-                job_key.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
+                job_status.SetStatusTitle( 'setting anonymisation period' )
+                job_status.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
                 
-                self._controller.pub( 'message', job_key )
+                self._controller.pub( 'message', job_status )
                 
                 def work_callable():
                     
@@ -4465,20 +4465,20 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 def publish_callable( gumpf ):
                     
-                    job_key.SetStatusText( 'done!' )
+                    job_status.SetStatusText( 'done!' )
                     
-                    job_key.Finish()
+                    job_status.Finish()
                     
-                    job_key.Delete( 5 )
+                    job_status.Delete( 5 )
                     
                     service.SetAccountRefreshDueNow()
                     
                 
                 def errback_ui_cleanup_callable():
                     
-                    job_key.SetStatusText( 'error!' )
+                    job_status.SetStatusText( 'error!' )
                     
-                    job_key.Finish()
+                    job_status.Finish()
                     
                 
                 job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
@@ -4508,12 +4508,12 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 tag_filter = panel.GetValue()
                 
-                job_key = ClientThreading.JobKey()
+                job_status = ClientThreading.JobStatus()
                 
-                job_key.SetStatusTitle( 'setting tag filter' )
-                job_key.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
+                job_status.SetStatusTitle( 'setting tag filter' )
+                job_status.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
                 
-                self._controller.pub( 'message', job_key )
+                self._controller.pub( 'message', job_status )
                 
                 def work_callable():
                     
@@ -4524,20 +4524,20 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 def publish_callable( gumpf ):
                     
-                    job_key.SetStatusText( 'done!' )
+                    job_status.SetStatusText( 'done!' )
                     
-                    job_key.Finish()
+                    job_status.Finish()
                     
-                    job_key.Delete( 5 )
+                    job_status.Delete( 5 )
                     
                     service.SetAccountRefreshDueNow()
                     
                 
                 def errback_ui_cleanup_callable():
                     
-                    job_key.SetStatusText( 'error!' )
+                    job_status.SetStatusText( 'error!' )
                     
-                    job_key.Finish()
+                    job_status.Finish()
                     
                 
                 job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
@@ -4578,12 +4578,12 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     return
                     
                 
-                job_key = ClientThreading.JobKey()
+                job_status = ClientThreading.JobStatus()
                 
-                job_key.SetStatusTitle( 'setting update period' )
-                job_key.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
+                job_status.SetStatusTitle( 'setting update period' )
+                job_status.SetStatusText( 'uploading' + HC.UNICODE_ELLIPSIS )
                 
-                self._controller.pub( 'message', job_key )
+                self._controller.pub( 'message', job_status )
                 
                 def work_callable():
                     
@@ -4594,11 +4594,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 def publish_callable( gumpf ):
                     
-                    job_key.SetStatusText( 'done!' )
+                    job_status.SetStatusText( 'done!' )
                     
-                    job_key.Finish()
+                    job_status.Finish()
                     
-                    job_key.Delete( 5 )
+                    job_status.Delete( 5 )
                     
                     service.DoAFullMetadataResync()
                     
@@ -4607,9 +4607,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 def errback_ui_cleanup_callable():
                     
-                    job_key.SetStatusText( 'error!' )
+                    job_status.SetStatusText( 'error!' )
                     
-                    job_key.Finish()
+                    job_status.Finish()
                     
                 
                 job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
@@ -4723,11 +4723,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def THREAD_do_it( controller ):
             
-            job_key = ClientThreading.JobKey()
+            job_status = ClientThreading.JobStatus()
             
-            job_key.SetStatusText( 'Waiting for current subscription work to finish.' )
+            job_status.SetStatusText( 'Waiting for current subscription work to finish.' )
             
-            controller.pub( 'message', job_key )
+            controller.pub( 'message', job_status )
             
             with self._delayed_dialog_lock:
                 
@@ -4749,7 +4749,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                     finally:
                         
-                        job_key.Delete()
+                        job_status.Delete()
                         
                     
                     subscriptions = HG.client_controller.subscriptions_manager.GetSubscriptions()
@@ -4769,13 +4769,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     try:
                         
-                        done_job_key = ClientThreading.JobKey()
+                        done_job_status = ClientThreading.JobStatus()
                         
                         ( subscriptions, edited_query_log_containers, deletee_query_log_container_names ) = controller.CallBlockingToQt( self, qt_do_it, subscriptions, missing_query_log_container_names, surplus_query_log_container_names )
                         
-                        done_job_key.SetStatusText( 'Saving subscription changes.' )
+                        done_job_status.SetStatusText( 'Saving subscription changes.' )
                         
-                        controller.pub( 'message', done_job_key )
+                        controller.pub( 'message', done_job_status )
                         
                         HG.client_controller.WriteSynchronous(
                         'serialisable_atomic',
@@ -4796,7 +4796,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                     finally:
                         
-                        done_job_key.Delete()
+                        done_job_status.Delete()
                         
                     
                 finally:
@@ -5369,13 +5369,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if result == QW.QDialog.Accepted:
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
-            job_key.SetStatusTitle( 'repairing invalid tags' )
+            job_status.SetStatusTitle( 'repairing invalid tags' )
             
-            self._controller.pub( 'message', job_key )
+            self._controller.pub( 'message', job_status )
             
-            self._controller.Write( 'repair_invalid_tags', job_key = job_key )
+            self._controller.Write( 'repair_invalid_tags', job_status = job_status )
             
         
     
@@ -5391,9 +5391,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if result == QW.QDialog.Accepted:
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
-            job_key.SetVariable( 'popup_text_title', 'repopulating mapping tables' )
+            job_status.SetVariable( 'popup_text_title', 'repopulating mapping tables' )
             
             try:
                 
@@ -5404,9 +5404,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 return
                 
             
-            self._controller.pub( 'modal_message', job_key )
+            self._controller.pub( 'modal_message', job_status )
             
-            self._controller.Write( 'repopulate_mappings_from_cache', tag_service_key = tag_service_key, job_key = job_key )
+            self._controller.Write( 'repopulate_mappings_from_cache', tag_service_key = tag_service_key, job_status = job_status )
             
         
     
@@ -5494,11 +5494,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         admin_service = HG.client_controller.services_manager.GetService( service_key )
         
-        job_key = ClientThreading.JobKey()
+        job_status = ClientThreading.JobStatus()
         
-        job_key.SetStatusText( 'loading accounts' + HC.UNICODE_ELLIPSIS )
+        job_status.SetStatusText( 'loading accounts' + HC.UNICODE_ELLIPSIS )
         
-        self._controller.pub( job_key )
+        self._controller.pub( job_status )
         
         def work_callable():
             
@@ -5511,7 +5511,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def publish_callable( accounts ):
             
-            job_key.Delete()
+            job_status.Delete()
             
             self._ReviewAllAccounts( service_key, accounts )
             
@@ -5610,7 +5610,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _ReviewVacuumData( self ):
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        job_status = ClientThreading.JobStatus( cancellable = True )
         
         def work_callable():
             
@@ -5621,7 +5621,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def publish_callable( vacuum_data ):
             
-            if job_key.IsCancelled():
+            if job_status.IsCancelled():
                 
                 return
                 
@@ -5632,12 +5632,12 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             frame.SetPanel( panel )
             
-            job_key.Delete()
+            job_status.Delete()
             
         
-        job_key.SetStatusText( 'loading database data' )
+        job_status.SetStatusText( 'loading database data' )
         
-        self._controller.pub( 'message', job_key )
+        self._controller.pub( 'message', job_status )
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
         
@@ -5711,11 +5711,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             try:
                 
-                job_key = ClientThreading.JobKey()
+                job_status = ClientThreading.JobStatus()
                 
-                job_key.SetStatusTitle( 'client api test' )
+                job_status.SetStatusTitle( 'client api test' )
                 
-                HG.client_controller.pub( 'message', job_key )
+                HG.client_controller.pub( 'message', job_status )
                 
                 import requests
                 import json
@@ -5751,7 +5751,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 #
                 
-                job_key.SetStatusText( 'add url test' )
+                job_status.SetStatusText( 'add url test' )
                 
                 local_tag_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
                 
@@ -5784,7 +5784,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 #
                 
-                job_key.SetStatusText( 'get session test' )
+                job_status.SetStatusText( 'get session test' )
                 
                 def get_client_api_page():
                     
@@ -5943,7 +5943,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     HG.client_controller.RestartClientServerServices()
                     
                 
-                job_key.Delete()
+                job_status.Delete()
                 
             
         
@@ -6954,16 +6954,16 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         
     
-    def AddModalMessage( self, job_key: ClientThreading.JobKey ):
+    def AddModalMessage( self, job_status: ClientThreading.JobStatus ):
         
-        if job_key.IsCancelled() or job_key.IsDeleted():
+        if job_status.IsCancelled() or job_status.IsDeleted():
             
             return
             
         
-        if job_key.IsDone():
+        if job_status.IsDone():
             
-            self._controller.pub( 'message', job_key )
+            self._controller.pub( 'message', job_status )
             
             return
             
@@ -6972,24 +6972,24 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         if self._CurrentlyMinimisedOrHidden() or dialog_is_open or not ClientGUIFunctions.TLWOrChildIsActive( self ):
             
-            self._pending_modal_job_keys.add( job_key )
+            self._pending_modal_job_statuses.add( job_status )
             
         else:
             
             HG.client_controller.pub( 'pause_all_media' )
             
-            title = job_key.GetStatusTitle()
+            title = job_status.GetStatusTitle()
             
             if title is None:
                 
                 title = 'important job'
                 
             
-            hide_close_button = not job_key.IsCancellable()
+            hide_close_button = not job_status.IsCancellable()
             
             with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, title, hide_buttons = hide_close_button, do_not_activate = True ) as dlg:
                 
-                panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key )
+                panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_status )
                 
                 dlg.SetPanel( panel )
                 
@@ -7125,15 +7125,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._DestroyPages( deletee_pages )
         
     
-    def DoFileStorageRebalance( self, job_key: ClientThreading.JobKey ):
+    def DoFileStorageRebalance( self, job_status: ClientThreading.JobStatus ):
         
-        self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_key )
+        self._controller.CallToThread( self._controller.client_files_manager.Rebalance, job_status )
         
-        job_key.SetStatusTitle( 'rebalancing files' )
+        job_status.SetStatusTitle( 'rebalancing files' )
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( None, 'migrating files' ) as dlg:
             
-            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_key, hide_main_gui = True )
+            panel = ClientGUIPopupMessages.PopupMessageDialogPanel( dlg, job_status, hide_main_gui = True )
             
             dlg.SetPanel( panel )
             
@@ -8095,12 +8095,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             
         
-        if len( self._pending_modal_job_keys ) > 0:
+        if len( self._pending_modal_job_statuses ) > 0:
             
             # another safety thing. normally modal lads are shown immediately, no problem, but sometimes they can be delayed
-            job_key = self._pending_modal_job_keys.pop()
+            job_status = self._pending_modal_job_statuses.pop()
             
-            self._controller.pub( 'modal_message', job_key )
+            self._controller.pub( 'modal_message', job_status )
             
         
     

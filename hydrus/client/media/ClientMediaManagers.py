@@ -74,6 +74,7 @@ class FileInfoManager( object ):
         self.has_audio = has_audio
         self.num_words = num_words
         
+        self.has_transparency = False
         self.has_exif = False
         self.has_human_readable_embedded_metadata = False
         self.has_icc_profile = False
@@ -83,7 +84,16 @@ class FileInfoManager( object ):
     
     def Duplicate( self ):
         
-        return FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
+        fim = FileInfoManager( self.hash_id, self.hash, self.size, self.mime, self.width, self.height, self.duration, self.num_frames, self.has_audio, self.num_words )
+        
+        fim.has_transparency = self.has_transparency
+        fim.has_exif = self.has_exif
+        fim.has_human_readable_embedded_metadata = self.has_human_readable_embedded_metadata
+        fim.has_icc_profile = self.has_icc_profile
+        fim.blurhash = self.blurhash
+        fim.pixel_hash = self.pixel_hash
+        
+        return fim
         
     
     def ToTuple( self ):

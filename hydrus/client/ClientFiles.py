@@ -16,6 +16,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.images import HydrusBlurhash
+from hydrus.core.images import HydrusImageColours
 from hydrus.core.images import HydrusImageHandling
 from hydrus.core.images import HydrusImageMetadata
 from hydrus.core.images import HydrusImageOpening
@@ -28,6 +29,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientSVGHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
 from hydrus.client import ClientPDFHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
 from hydrus.client import ClientThreading
+from hydrus.client import ClientVideoHandling
 from hydrus.client.metadata import ClientTags
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
@@ -53,6 +55,7 @@ REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA = 19
 REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF = 20
 REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_DELETE_RECORD = 21
 REGENERATE_FILE_DATA_JOB_BLURHASH = 22
+REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY = 23
 
 regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_METADATA : 'regenerate file metadata',
@@ -73,6 +76,7 @@ regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 'check for membership in the similar files search system',
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 'regenerate similar files metadata',
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 'regenerate file modified time',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY: 'determine if the file has transparency',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 'determine if the file has EXIF metadata',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 'determine if the file has non-EXIF human-readable embedded metadata',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 'determine if the file has an icc profile',
@@ -131,6 +135,7 @@ All missing/Incorrect files will also have their hashes, tags, and URLs exported
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 'This checks to see if files should be in the similar files system, and if they are falsely in or falsely out, it will remove their record or queue them up for a search as appropriate. It is useful to repair database damage.',
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 'This forces a regeneration of the file\'s similar-files \'phashes\'. It is not useful unless you know there is missing data to repair.',
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 'This rechecks the file\'s modified timestamp and saves it to the database.',
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : 'This loads the file to see if it has an alpha channel with useful data (completely opaque/transparency alpha channels are discarded). Only works for images and animated gif.',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 'This loads the file to see if it has EXIF metadata, which can be shown in the media viewer and searched with "system:image has exif".',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 'This loads the file to see if it has non-EXIF human-readable metadata, which can be shown in the media viewer and searched with "system:image has human-readable embedded metadata".',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 'This loads the file to see if it has an ICC profile, which is used in "system:has icc profile" search.',
@@ -159,6 +164,7 @@ regen_file_enum_to_job_weight_lookup = {
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 1,
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 100,
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 10,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 25,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 25,
@@ -185,6 +191,7 @@ regen_file_enum_to_overruled_jobs = {
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : [],
     REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : [ REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP ],
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : [],
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : [],
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : [],
@@ -211,6 +218,7 @@ ALL_REGEN_JOBS_IN_RUN_ORDER = [
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS,
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP,
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE,
@@ -237,6 +245,7 @@ ALL_REGEN_JOBS_IN_HUMAN_ORDER = [
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP,
     REGENERATE_FILE_DATA_JOB_OTHER_HASHES,
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP,
+    REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE,
@@ -1247,19 +1256,19 @@ class ClientFilesManager( object ):
         
         with self._rwlock.write:
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
-            job_key.SetStatusTitle( 'clearing orphans' )
-            job_key.SetStatusText( 'preparing' )
+            job_status.SetStatusTitle( 'clearing orphans' )
+            job_status.SetStatusText( 'preparing' )
             
-            self._controller.pub( 'message', job_key )
+            self._controller.pub( 'message', job_status )
             
             orphan_paths = []
             orphan_thumbnails = []
             
             for ( i, path ) in enumerate( self._IterateAllFilePaths() ):
                 
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                 
                 if should_quit:
                     
@@ -1270,7 +1279,7 @@ class ClientFilesManager( object ):
                     
                     status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' files, found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans'
                     
-                    job_key.SetStatusText( status )
+                    job_status.SetStatusText( status )
                     
                 
                 try:
@@ -1310,7 +1319,7 @@ class ClientFilesManager( object ):
                             
                             HydrusData.ShowException( e, do_wait = False )
                             
-                            job_key.Cancel()
+                            job_status.Cancel()
                             
                             return
                             
@@ -1324,7 +1333,7 @@ class ClientFilesManager( object ):
             
             for ( i, path ) in enumerate( self._IterateAllThumbnailPaths() ):
                 
-                ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                 
                 if should_quit:
                     
@@ -1335,7 +1344,7 @@ class ClientFilesManager( object ):
                     
                     status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' thumbnails, found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphans'
                     
-                    job_key.SetStatusText( status )
+                    job_status.SetStatusText( status )
                     
                 
                 try:
@@ -1367,13 +1376,13 @@ class ClientFilesManager( object ):
                 
                 status = 'found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans, now deleting'
                 
-                job_key.SetStatusText( status )
+                job_status.SetStatusText( status )
                 
                 time.sleep( 5 )
                 
                 for ( i, path ) in enumerate( orphan_paths ):
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                     
                     if should_quit:
                         
@@ -1384,7 +1393,7 @@ class ClientFilesManager( object ):
                     
                     status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
                     
-                    job_key.SetStatusText( status )
+                    job_status.SetStatusText( status )
                     
                     ClientPaths.DeletePath( path )
                     
@@ -1394,13 +1403,13 @@ class ClientFilesManager( object ):
                 
                 status = 'found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
                 
-                job_key.SetStatusText( status )
+                job_status.SetStatusText( status )
                 
                 time.sleep( 5 )
                 
                 for ( i, path ) in enumerate( orphan_thumbnails ):
                     
-                    ( i_paused, should_quit ) = job_key.WaitIfNeeded()
+                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                     
                     if should_quit:
                         
@@ -1409,7 +1418,7 @@ class ClientFilesManager( object ):
                     
                     status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
                     
-                    job_key.SetStatusText( status )
+                    job_status.SetStatusText( status )
                     
                     HydrusData.Print( 'Deleting the orphan ' + path )
                     
@@ -1426,11 +1435,11 @@ class ClientFilesManager( object ):
                 final_text = HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
                 
             
-            job_key.SetStatusText( final_text )
+            job_status.SetStatusText( final_text )
             
-            HydrusData.Print( job_key.ToString() )
+            HydrusData.Print( job_status.ToString() )
             
-            job_key.Finish()
+            job_status.Finish()
             
         
     
@@ -1652,7 +1661,7 @@ class ClientFilesManager( object ):
         return os.path.exists( path )
         
     
-    def Rebalance( self, job_key ):
+    def Rebalance( self, job_status ):
         
         try:
             
@@ -1669,7 +1678,7 @@ class ClientFilesManager( object ):
                 
                 while rebalance_tuple is not None:
                     
-                    if job_key.IsCancelled():
+                    if job_status.IsCancelled():
                         
                         break
                         
@@ -1680,7 +1689,7 @@ class ClientFilesManager( object ):
                     
                     HydrusData.Print( text )
                     
-                    job_key.SetStatusText( text )
+                    job_status.SetStatusText( text )
                     
                     # these two lines can cause a deadlock because the db sometimes calls stuff in here.
                     self._controller.WriteSynchronous( 'relocate_client_files', source_subfolder, dest_subfolder )
@@ -1695,11 +1704,11 @@ class ClientFilesManager( object ):
             
         finally:
             
-            job_key.SetStatusText( 'done!' )
+            job_status.SetStatusText( 'done!' )
             
-            job_key.Finish()
+            job_status.Finish()
             
-            job_key.Delete()
+            job_status.Delete()
             
         
     
@@ -1861,12 +1870,60 @@ def HasHumanReadableEmbeddedMetadata( path, mime ):
     return has_human_readable_embedded_metadata
     
 
-def add_extra_comments_to_job_key( job_key: ClientThreading.JobKey ):
+def HasTransparency( path, mime, num_frames = None, resolution = None ):
+    
+    if mime not in HC.MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY:
+        
+        return False
+        
+    
+    if mime in HC.IMAGES:
+        
+        numpy_image = HydrusImageHandling.GenerateNumPyImage( path, mime )
+        
+        return HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image )
+        
+    elif mime == HC.ANIMATION_GIF:
+        
+        if num_frames is None or resolution is None:
+            
+            return False # something crazy going on, so let's bail out
+            
+        
+        we_checked_alpha_channel = False
+        
+        renderer = ClientVideoHandling.GIFRenderer( path, num_frames, resolution, force_pil = True )
+        
+        for i in range( num_frames ):
+            
+            numpy_image = renderer.read_frame()
+            
+            if not we_checked_alpha_channel:
+                
+                if not HydrusImageColours.NumPyImageHasAlphaChannel( numpy_image ):
+                    
+                    return False
+                    
+                
+                we_checked_alpha_channel = True
+                
+            
+            if HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image ):
+                
+                return True
+                
+            
+        
+    
+    return False
+    
+
+def add_extra_comments_to_job_status( job_status: ClientThreading.JobStatus ):
     
     extra_comments = []
     
-    num_thumb_refits = job_key.GetIfHasVariable( 'num_thumb_refits' )
-    num_bad_files = job_key.GetIfHasVariable( 'num_bad_files' )
+    num_thumb_refits = job_status.GetIfHasVariable( 'num_thumb_refits' )
+    num_bad_files = job_status.GetIfHasVariable( 'num_bad_files' )
     
     if num_thumb_refits is not None:
         
@@ -1882,7 +1939,7 @@ def add_extra_comments_to_job_key( job_key: ClientThreading.JobKey ):
     
     if len( sub_status_message ) > 0:
         
-        job_key.SetStatusText( sub_status_message, 2 )
+        job_status.SetStatusText( sub_status_message, 2 )
         
     
 
@@ -2358,6 +2415,32 @@ class FilesMaintenanceManager( object ):
             
         
     
+    def _HasTransparency( self, media_result ):
+        
+        hash = media_result.GetHash()
+        mime = media_result.GetMime()
+        
+        if mime not in HC.MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY:
+            
+            return False
+            
+        
+        try:
+            
+            path = self._controller.client_files_manager.GetFilePath( hash, mime )
+            
+            has_transparency = HasTransparency( path, mime, num_frames = media_result.GetNumFrames(), resolution = media_result.GetResolution() )
+            
+            additional_data = has_transparency
+            
+            return additional_data
+            
+        except HydrusExceptions.FileMissingException:
+            
+            return None
+            
+        
+    
     def _RegenFileMetadata( self, media_result ):
         
         hash = media_result.GetHash()
@@ -2464,7 +2547,6 @@ class FilesMaintenanceManager( object ):
         try:
             
             return self._controller.client_files_manager.RegenerateThumbnail( media_result )
-        
             
         except HydrusExceptions.FileMissingException:
             
@@ -2606,7 +2688,7 @@ class FilesMaintenanceManager( object ):
         self._active_work_rules.AddRule( HC.BANDWIDTH_TYPE_REQUESTS, file_maintenance_active_throttle_time_delta, file_maintenance_active_throttle_files * NORMALISED_BIG_JOB_WEIGHT )
         
     
-    def _RunJob( self, media_results_to_job_types, job_key, job_done_hook = None ):
+    def _RunJob( self, media_results_to_job_types, job_status, job_done_hook = None ):
         
         if self._serious_error_encountered:
             
@@ -2627,7 +2709,7 @@ class FilesMaintenanceManager( object ):
                 
                 hash = media_result.GetHash()
                 
-                if job_key.IsCancelled() or self._shutdown:
+                if job_status.IsCancelled() or self._shutdown:
                     
                     return
                     
@@ -2665,6 +2747,10 @@ class FilesMaintenanceManager( object ):
                             
                             additional_data = self._RegenFileOtherHashes( media_result )
                             
+                        elif job_type == REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY:
+                            
+                            additional_data = self._HasTransparency( media_result )
+                            
                         elif job_type == REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF:
                             
                             additional_data = self._HasEXIF( media_result )
@@ -2693,7 +2779,7 @@ class FilesMaintenanceManager( object ):
                             
                             if was_regenerated:
                                 
-                                num_thumb_refits = job_key.GetIfHasVariable( 'num_thumb_refits' )
+                                num_thumb_refits = job_status.GetIfHasVariable( 'num_thumb_refits' )
                                 
                                 if num_thumb_refits is None:
                                     
@@ -2702,7 +2788,7 @@ class FilesMaintenanceManager( object ):
                                 
                                 num_thumb_refits += 1
                                 
-                                job_key.SetVariable( 'num_thumb_refits', num_thumb_refits )
+                                job_status.SetVariable( 'num_thumb_refits', num_thumb_refits )
                                 
                             
                         elif job_type == REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES:
@@ -2741,7 +2827,7 @@ class FilesMaintenanceManager( object ):
                             
                             if file_was_bad:
                                 
-                                num_bad_files = job_key.GetIfHasVariable( 'num_bad_files' )
+                                num_bad_files = job_status.GetIfHasVariable( 'num_bad_files' )
                                 
                                 if num_bad_files is None:
                                     
@@ -2750,7 +2836,7 @@ class FilesMaintenanceManager( object ):
                                 
                                 num_bad_files += 1
                                 
-                                job_key.SetVariable( 'num_bad_files', num_bad_files + 1 )
+                                job_status.SetVariable( 'num_bad_files', num_bad_files + 1 )
                                 
                             
                         
@@ -2844,7 +2930,7 @@ class FilesMaintenanceManager( object ):
             return
             
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        job_status = ClientThreading.JobStatus( cancellable = True )
         
         job_types_to_counts = HG.client_controller.Read( 'file_maintenance_get_job_counts' )
         
@@ -2863,14 +2949,14 @@ class FilesMaintenanceManager( object ):
             
             status_text = '{}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ) )
             
-            job_key.SetStatusText( status_text )
+            job_status.SetStatusText( status_text )
             
-            job_key.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
+            job_status.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
             
-            add_extra_comments_to_job_key( job_key )
+            add_extra_comments_to_job_status( job_status )
             
         
-        job_key.SetStatusTitle( 'file maintenance' )
+        job_status.SetStatusTitle( 'file maintenance' )
         
         message_pubbed = False
         work_done = False
@@ -2895,12 +2981,12 @@ class FilesMaintenanceManager( object ):
                     
                     if not message_pubbed:
                         
-                        self._controller.pub( 'message', job_key )
+                        self._controller.pub( 'message', job_status )
                         
                         message_pubbed = True
                         
                     
-                    if job_key.IsCancelled():
+                    if job_status.IsCancelled():
                         
                         return
                         
@@ -2915,7 +3001,7 @@ class FilesMaintenanceManager( object ):
                     
                     with self._lock:
                         
-                        self._RunJob( media_results_to_job_types, job_key, job_done_hook = job_done_hook )
+                        self._RunJob( media_results_to_job_types, job_status, job_done_hook = job_done_hook )
                         
                     
                     time.sleep( 0.0001 )
@@ -2923,13 +3009,13 @@ class FilesMaintenanceManager( object ):
                 
             finally:
                 
-                job_key.SetStatusText( 'done!' )
+                job_status.SetStatusText( 'done!' )
                 
-                job_key.DeleteVariable( 'popup_gauge_1' )
+                job_status.DeleteVariable( 'popup_gauge_1' )
                 
-                job_key.Finish()
+                job_status.Finish()
                 
-                job_key.Delete( 5 )
+                job_status.Delete( 5 )
                 
                 if not work_done:
                     
@@ -3005,7 +3091,7 @@ class FilesMaintenanceManager( object ):
                         
                         did_work = True
                         
-                        job_key = ClientThreading.JobKey()
+                        job_status = ClientThreading.JobStatus()
                         
                         i = 0
                         
@@ -3030,7 +3116,7 @@ class FilesMaintenanceManager( object ):
                                 
                                 with self._lock:
                                     
-                                    self._RunJob( { media_result : job_types }, job_key )
+                                    self._RunJob( { media_result : job_types }, job_status )
                                     
                                 
                             
@@ -3077,16 +3163,16 @@ class FilesMaintenanceManager( object ):
             
         
     
-    def RunJobImmediately( self, media_results, job_type, pub_job_key = True ):
+    def RunJobImmediately( self, media_results, job_type, pub_job_status = True ):
         
-        if self._serious_error_encountered and pub_job_key:
+        if self._serious_error_encountered and pub_job_status:
             
             HydrusData.ShowText( 'Sorry, the file maintenance system has encountered a serious error and will perform no more jobs this boot. Please shut down and check your hard drive health immediately.' )
             
             return
             
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        job_status = ClientThreading.JobStatus( cancellable = True )
         
         total_num_jobs_to_do = len( media_results )
         
@@ -3103,18 +3189,18 @@ class FilesMaintenanceManager( object ):
             
             status_text = '{} - {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ), regen_file_enum_to_str_lookup[ job_type ] )
             
-            job_key.SetStatusText( status_text )
+            job_status.SetStatusText( status_text )
             
-            job_key.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
+            job_status.SetVariable( 'popup_gauge_1', ( num_jobs_done, total_num_jobs_to_do ) )
             
-            add_extra_comments_to_job_key( job_key )
+            add_extra_comments_to_job_status( job_status )
             
         
-        job_key.SetStatusTitle( 'regenerating file data' )
+        job_status.SetStatusTitle( 'regenerating file data' )
         
-        if pub_job_key:
+        if pub_job_status:
             
-            self._controller.pub( 'message', job_key )
+            self._controller.pub( 'message', job_status )
             
         
         self._reset_background_event.set()
@@ -3125,18 +3211,18 @@ class FilesMaintenanceManager( object ):
             
             with self._lock:
                 
-                self._RunJob( media_results_to_job_types, job_key, job_done_hook = job_done_hook )
+                self._RunJob( media_results_to_job_types, job_status, job_done_hook = job_done_hook )
                 
             
         finally:
             
-            job_key.SetStatusText( 'done!' )
+            job_status.SetStatusText( 'done!' )
             
-            job_key.DeleteVariable( 'popup_gauge_1' )
+            job_status.DeleteVariable( 'popup_gauge_1' )
             
-            job_key.Finish()
+            job_status.Finish()
             
-            job_key.Delete( 5 )
+            job_status.Delete( 5 )
             
             self._controller.pub( 'notify_files_maintenance_done' )
             

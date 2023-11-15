@@ -2259,13 +2259,13 @@ class HydrusResourceClientAPIRestrictedAddTagsSearchTags( HydrusResourceClientAP
             
             file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context )
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
-            request.disconnect_callables.append( job_key.Cancel )
+            request.disconnect_callables.append( job_status.Cancel )
             
             search_namespaces_into_full_tags = parsed_autocomplete_text.GetTagAutocompleteOptions().SearchNamespacesIntoFullTags()
             
-            predicates = HG.client_controller.Read( 'autocomplete_predicates', tag_display_type, file_search_context, search_text = autocomplete_search_text, job_key = job_key, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
+            predicates = HG.client_controller.Read( 'autocomplete_predicates', tag_display_type, file_search_context, search_text = autocomplete_search_text, job_status = job_status, search_namespaces_into_full_tags = search_namespaces_into_full_tags )
             
             display_tag_service_key = tag_context.display_service_key
             
@@ -2815,11 +2815,11 @@ class HydrusResourceClientAPIRestrictedGetFilesSearchFiles( HydrusResourceClient
                 return_file_ids = request.parsed_request_args.GetValue( 'return_file_ids', bool )
                 
             
-            job_key = ClientThreading.JobKey( cancellable = True )
+            job_status = ClientThreading.JobStatus( cancellable = True )
             
-            request.disconnect_callables.append( job_key.Cancel )
+            request.disconnect_callables.append( job_status.Cancel )
             
-            hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, job_key = job_key, sort_by = sort_by, apply_implicit_limit = False )
+            hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, job_status = job_status, sort_by = sort_by, apply_implicit_limit = False )
             
         
         request.client_api_permissions.SetLastSearchResults( hash_ids )
@@ -3237,6 +3237,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                     metadata_row[ 'is_trashed' ] = locations_manager.IsTrashed()
                     metadata_row[ 'is_deleted' ] = CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in locations_manager.GetDeleted() or locations_manager.IsTrashed()
                     
+                    metadata_row[ 'has_transparency' ] = file_info_manager.has_transparency
                     metadata_row[ 'has_exif' ] = file_info_manager.has_exif
                     metadata_row[ 'has_human_readable_embedded_metadata' ] = file_info_manager.has_human_readable_embedded_metadata
                     metadata_row[ 'has_icc_profile' ] = file_info_manager.has_icc_profile
@@ -3556,13 +3557,13 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetCookies( HydrusResourceCl
                 message = '{} ({} set)'.format( message, ', '.join( domains_set ) )
                 
             
-            job_key = ClientThreading.JobKey()
+            job_status = ClientThreading.JobStatus()
             
-            job_key.SetStatusText( message )
+            job_status.SetStatusText( message )
             
-            job_key.Delete( 5 )
+            job_status.Delete( 5 )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
@@ -3804,13 +3805,13 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetHeaders( HydrusResourceCl
             
             message = os.linesep.join( message_lines )
             
-            job_key = ClientThreading.JobKey()
+            job_status = ClientThreading.JobStatus()
             
-            job_key.SetStatusText( message )
+            job_status.SetStatusText( message )
             
-            job_key.Delete( 5 )
+            job_status.Delete( 5 )
             
-            HG.client_controller.pub( 'message', job_key )
+            HG.client_controller.pub( 'message', job_status )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
@@ -3896,11 +3897,11 @@ class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClie
         
         file_search_context = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context, predicates = predicates )
         
-        job_key = ClientThreading.JobKey( cancellable = True )
+        job_status = ClientThreading.JobStatus( cancellable = True )
         
-        request.disconnect_callables.append( job_key.Cancel )
+        request.disconnect_callables.append( job_status.Cancel )
         
-        boned_stats = HG.client_controller.Read( 'boned_stats', file_search_context = file_search_context, job_key = job_key )
+        boned_stats = HG.client_controller.Read( 'boned_stats', file_search_context = file_search_context, job_status = job_status )
         
         body_dict = { 'boned_stats' : boned_stats }
         
@@ -3916,9 +3917,15 @@ class HydrusResourceClientAPIRestrictedManageDatabaseMrBones( HydrusResourceClie
 class HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( HydrusResourceClientAPIRestrictedManageDatabase ):
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
-                
+        
+        from hydrus.client import ClientDefaults
+        
+        OLD_OPTIONS_DEFAULT = ClientDefaults.GetClientDefaultOptions()
+        
         old_options = HG.client_controller.options
-
+        
+        old_options = { key : value for ( key, value ) in old_options if key in OLD_OPTIONS_DEFAULT }
+        
         new_options: ClientOptions.ClientOptions = HG.client_controller.new_options
 
         options_dict = {
