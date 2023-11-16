@@ -154,7 +154,8 @@ class HydrusServiceClientAPI( HydrusClientService ):
         manage_popups.putChild( b'dismiss_popup', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( self._service, self._client_requests_domain ) )
         manage_popups.putChild( b'cancel_popup', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePopupsCancelPopup( self._service, self._client_requests_domain ) )
         manage_popups.putChild( b'call_user_callable', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( self._service, self._client_requests_domain ) )
-        
+        manage_popups.putChild( b'add_popup', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePopupsAddPopup( self._service, self._client_requests_domain ) )
+        manage_popups.putChild( b'update_popup', ClientLocalServerResources.HydrusResourceClientAPIRestrictedManagePopupsUpdatePopup( self._service, self._client_requests_domain ) )
         
         return root
         

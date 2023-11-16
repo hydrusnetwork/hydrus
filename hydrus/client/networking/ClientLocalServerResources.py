@@ -707,7 +707,7 @@ def ParseLocationContext( request: HydrusServerRequest.HydrusRequest, default: C
         
     
 
-def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
+def ParseHashes( request: HydrusServerRequest.HydrusRequest, optional = False ):
     
     something_was_set = False
     
@@ -756,14 +756,16 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
         hashes.extend( [ hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] )
         
     
-    if not something_was_set: # subtly different to 'no hashes'
+    if not something_was_set and not optional: # subtly different to 'no hashes'
         
         raise HydrusExceptions.BadRequestException( 'Please include some files in your request--file_id or hash based!' )
         
     
     hashes = HydrusData.DedupeList( hashes )
     
-    CheckHashLength( hashes )
+    if not optional or len(hashes) > 0:
+        
+        CheckHashLength( hashes )
     
     return hashes
     
@@ -4472,7 +4474,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
         job_statuses = job_status_queue.GetJobStatuses()
         
         body_dict = {
-            'jobs' : [JobStatusToDict( job ) for job in job_statuses]
+            'job_statuses' : [JobStatusToDict( job ) for job in job_statuses]
          }
         
         body = Dumps( body_dict, request.preferred_mime )
@@ -4482,23 +4484,32 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
         return response_context
         
     
+def GetJobStatusFromRequest( request: HydrusServerRequest.HydrusRequest ) -> ClientThreading.JobStatus:
+    
+    job_status_key = request.parsed_request_args.GetValue( 'job_status_key', bytes )
+            
+    job_status_queue: ClientGUIPopupMessages.JobStatusPopupQueue = HG.client_controller.job_status_popup_queue
+    
+    job_status = job_status_queue.GetJobStatus( job_status_key )
+    
+    if job_status is None:
+            
+            raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
+            
+        
+    
+    return job_status
+    
+
 class HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
-        
-        job_status_key = request.parsed_request_args.GetValue( 'job_status_key', bytes )
-        
+
         # TODO add 'seconds' to delay dismissal
         #seconds = request.parsed_request_args.GetValue( 'seconds', int )
-            
-        job_status_queue: ClientGUIPopupMessages.JobStatusPopupQueue = HG.client_controller.job_status_popup_queue
+
+        job_status = GetJobStatusFromRequest( request )
         
-        job_status = job_status_queue.GetJobStatus( job_status_key )
-        
-        if job_status is None:
-                
-                raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
-            
         if not job_status.IsDeletable():
             
             raise HydrusExceptions.BadRequestException('This job can\'t be dismissed!')
@@ -4514,15 +4525,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsCancelPopup( HydrusResourceCl
     
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
         
-        job_status_key = request.parsed_request_args.GetValue( 'job_status_key', bytes )
-            
-        job_status_queue: ClientGUIPopupMessages.JobStatusPopupQueue = HG.client_controller.job_status_popup_queue
-        
-        job_status = job_status_queue.GetJobStatus( job_status_key )
-        
-        if job_status is None:
-                
-                raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
+        job_status = GetJobStatusFromRequest( request )
             
         if not job_status.IsCancellable():
             
@@ -4539,15 +4542,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
     
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
         
-        job_status_key = request.parsed_request_args.GetValue( 'job_status_key', bytes )
-            
-        job_status_queue: ClientGUIPopupMessages.JobStatusPopupQueue = HG.client_controller.job_status_popup_queue
-        
-        job_status = job_status_queue.GetJobStatus( job_status_key )
-        
-        if job_status is None:
-                
-                raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
+        job_status = GetJobStatusFromRequest( request )
             
         user_callable = job_status.GetUserCallable()
             
@@ -4560,3 +4555,72 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
         response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
+    
+def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusServerRequest.HydrusRequest ):
+    
+    status_title = request.parsed_request_args.GetValueOrNone( 'status_title', str )
+        
+    if status_title:
+        
+        job_status.SetStatusTitle( status_title )
+        
+    status_text = request.parsed_request_args.GetValueOrNone( 'status_text', str )
+    
+    if status_text:
+        
+        job_status.SetStatusText( status_text )
+        
+    status_text_2 = request.parsed_request_args.GetValueOrNone( 'status_text_2', str )
+    
+    if status_text_2:
+        
+        job_status.SetStatusText( status_text_2, 2 )
+        
+    files_label = request.parsed_request_args.GetValueOrNone( 'files_label', str )
+    
+    hashes = ParseHashes( request, True )
+    
+    if len(hashes) > 0 and files_label:
+        
+        job_status.SetFiles( hashes, files_label )
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsAddPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = ClientThreading.JobStatus()
+        
+        HandlePopupUpdate( job_status, request )
+            
+        HG.client_controller.pub( 'message', job_status )
+        
+        body_dict = {
+            'job_status': JobStatusToDict( job_status )
+        }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+                
+        return response_context
+
+class HydrusResourceClientAPIRestrictedManagePopupsUpdatePopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = GetJobStatusFromRequest( request )
+        
+        HandlePopupUpdate( job_status, request )
+          
+        body_dict = {
+            'job_status': JobStatusToDict( job_status )
+        }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+                
+        return response_context
+    
+
