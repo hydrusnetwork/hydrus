@@ -4504,17 +4504,17 @@ def GetJobStatusFromRequest( request: HydrusServerRequest.HydrusRequest ) -> Cli
 class HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
-
-        # TODO add 'seconds' to delay dismissal
-        #seconds = request.parsed_request_args.GetValue( 'seconds', int )
-
+        
         job_status = GetJobStatusFromRequest( request )
         
         if not job_status.IsDeletable():
             
             raise HydrusExceptions.BadRequestException('This job can\'t be dismissed!')
+            
+                
+        seconds = request.parsed_request_args.GetValueOrNone( 'seconds', int )
         
-        job_status.Delete()
+        job_status.Delete( seconds )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -4526,12 +4526,15 @@ class HydrusResourceClientAPIRestrictedManagePopupsCancelPopup( HydrusResourceCl
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
         
         job_status = GetJobStatusFromRequest( request )
-            
+        
         if not job_status.IsCancellable():
             
             raise HydrusExceptions.BadRequestException('This job can\'t be cancelled!')
+            
         
-        job_status.Cancel()
+        seconds = request.parsed_request_args.GetValueOrNone( 'seconds', int )
+        
+        job_status.Cancel( seconds )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -4543,12 +4546,13 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
         
         job_status = GetJobStatusFromRequest( request )
-            
+        
         user_callable = job_status.GetUserCallable()
             
         if not user_callable:
             
             raise HydrusExceptions.BadRequestException('This job doesn\'t have a user callable!')
+            
         
         user_callable()
                 
@@ -4564,18 +4568,21 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
         
         job_status.SetStatusTitle( status_title )
         
+    
     status_text = request.parsed_request_args.GetValueOrNone( 'status_text', str )
     
     if status_text:
         
         job_status.SetStatusText( status_text )
         
+    
     status_text_2 = request.parsed_request_args.GetValueOrNone( 'status_text_2', str )
     
     if status_text_2:
         
         job_status.SetStatusText( status_text_2, 2 )
         
+    
     files_label = request.parsed_request_args.GetValueOrNone( 'files_label', str )
     
     hashes = ParseHashes( request, True )
@@ -4604,6 +4611,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsAddPopup( HydrusResourceClien
         response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
                 
         return response_context
+    
 
 class HydrusResourceClientAPIRestrictedManagePopupsUpdatePopup( HydrusResourceClientAPIRestrictedManagePages ):
     
