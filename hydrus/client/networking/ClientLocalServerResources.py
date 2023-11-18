@@ -4579,7 +4579,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
         
         user_callable = job_status.GetUserCallable()
             
-        if not user_callable:
+        if user_callable is None:
             
             raise HydrusExceptions.BadRequestException('This job doesn\'t have a user callable!')
             
@@ -4701,7 +4701,7 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
         
         if len(hashes) > 0 and files_label is None:
             
-            raise HydrusExceptions.BadRequestException( '"files_label" is required to set "hashes"!' )
+            raise HydrusExceptions.BadRequestException( '"files_label" is required to add files to a popup!' )
             
         
         job_status.SetFiles( hashes, files_label )
