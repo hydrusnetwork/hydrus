@@ -4569,8 +4569,8 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
             raise HydrusExceptions.BadRequestException('This job doesn\'t have a user callable!')
             
         
-        user_callable()
-                
+        HG.client_controller.CallBlockingToQt( HG.client_controller.gui, user_callable )
+        
         response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
@@ -4608,7 +4608,7 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
     
     pausable = request.parsed_request_args.GetValueOrNone( 'pausable', bool )
     
-    if cancellable is not None:
+    if pausable is not None:
         
         job_status.SetPausable( pausable )
         
