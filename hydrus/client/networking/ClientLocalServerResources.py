@@ -71,7 +71,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key', 'job_status_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system', 'only_in_view' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -4482,7 +4482,9 @@ class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClie
         
         job_status_queue: ClientGUIPopupMessages.JobStatusPopupQueue = HG.client_controller.job_status_popup_queue        
         
-        job_statuses = job_status_queue.GetJobStatuses()
+        only_in_view = request.parsed_request_args.GetValue( 'only_in_view', bool, default_value = False )
+        
+        job_statuses = job_status_queue.GetJobStatuses( only_in_view )
         
         body_dict = {
             'job_statuses' : [JobStatusToDict( job ) for job in job_statuses]
