@@ -756,7 +756,11 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest, optional = False ):
         hashes.extend( [ hash_ids_to_hashes[ hash_id ] for hash_id in hash_ids ] )
         
     
-    if not something_was_set and not optional: # subtly different to 'no hashes'
+    if not something_was_set: # subtly different to 'no hashes'
+        
+        if optional:
+            
+            return None
         
         raise HydrusExceptions.BadRequestException( 'Please include some files in your request--file_id or hash based!' )
         
@@ -4406,7 +4410,8 @@ def JobStatusToDict( job_key: ClientThreading.JobStatus ):
         return_dict = {
             'key' : job_key.GetKey().hex(),
             'creation_time': job_key.GetCreationTime(),
-            'status_text' : job_key.GetStatusText(),
+            'status_text' : job_key.GetStatusText( 1 ),
+            'status_text_2' : job_key.GetStatusText( 2 ),
             'status_title' : job_key.GetStatusTitle(),
             'traceback' : job_key.GetTraceback(),
             'had_error' : job_key.HadError(),
@@ -4420,6 +4425,7 @@ def JobStatusToDict( job_key: ClientThreading.JobStatus ):
             'nice_string' : job_key.ToString(),
             'popup_gauge_1' : job_key.GetIfHasVariable( 'popup_gauge_1' ),
             'popup_gauge_2' : job_key.GetIfHasVariable( 'popup_gauge_2' ),
+            'api_data' : job_key.GetIfHasVariable( 'api_data' ),
         }
         
         files_object = job_key.GetFiles()
@@ -4578,25 +4584,60 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
     
 def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusServerRequest.HydrusRequest ):
     
-    status_title = request.parsed_request_args.GetValueOrNone( 'status_title', str )
+    def HandleGenericVariable(name: str, type: type = object ):
         
-    if status_title is not None:
-        
-        job_status.SetStatusTitle( status_title )
+        if name in request.parsed_request_args:
+            
+            value = request.parsed_request_args.GetValueOrNone( name, type )
+            
+            if value is not None:
+                
+                job_status.SetVariable( name, value )
+                
+            else:
+                
+                job_status.DeleteVariable( name )
+                
+            
         
     
-    status_text = request.parsed_request_args.GetValueOrNone( 'status_text', str )
+    if 'status_title' in request.parsed_request_args:
     
-    if status_text is not None:
+        status_title = request.parsed_request_args.GetValueOrNone( 'status_title', str )
+            
+        if status_title is not None:
+            
+            job_status.SetStatusTitle( status_title )
+            
+        else:
+            
+            job_status.DeleteStatusTitle()
+            
+    
+    if 'status_text' in request.parsed_request_args:
         
-        job_status.SetStatusText( status_text )
+        status_text = request.parsed_request_args.GetValueOrNone( 'status_text', str )
+    
+        if status_text is not None:
+            
+            job_status.SetStatusText( status_text )
+            
+        else:
+            
+            job_status.DeleteStatusText()
         
     
-    status_text_2 = request.parsed_request_args.GetValueOrNone( 'status_text_2', str )
+    if 'status_text_2' in request.parsed_request_args:
     
-    if status_text_2 is not None:
+        status_text_2 = request.parsed_request_args.GetValueOrNone( 'status_text_2', str )
         
-        job_status.SetStatusText( status_text_2, 2 )
+        if status_text_2 is not None:
+            
+            job_status.SetStatusText( status_text_2, 2 )
+            
+        else:
+            
+            job_status.DeleteStatusText( 2 )
         
     
     cancellable = request.parsed_request_args.GetValueOrNone( 'cancellable', bool )
@@ -4613,13 +4654,39 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
         job_status.SetPausable( pausable )
         
     
+    HandleGenericVariable( 'attached_files_mergable', str )
+    
+    HandleGenericVariable( 'api_data' )
+    
+    for name in ['popup_gauge_1', 'popup_gauge_2']:
+        
+        if name in request.parsed_request_args:
+            
+            value = request.parsed_request_args.GetValueOrNone( name, list, expected_list_type = int )
+            
+            if value is not None:
+                
+                if len(value) != 2:
+                    
+                    raise HydrusExceptions.BadRequestException( 'The parameter "{}" had an invalid number of items!'.format( name ) )
+                    
+                
+                job_status.SetVariable( name, value )
+                
+            else:
+                
+                job_status.DeleteVariable( name )
+            
+        
+    
     files_label = request.parsed_request_args.GetValueOrNone( 'files_label', str )
     
     hashes = ParseHashes( request, True )
     
-    if len(hashes) > 0 and files_label:
+    if hashes is not None and ( len(hashes) == 0 or files_label is not None):
         
         job_status.SetFiles( hashes, files_label )
+        
     
 
 class HydrusResourceClientAPIRestrictedManagePopupsAddPopup( HydrusResourceClientAPIRestrictedManagePages ):
@@ -4629,7 +4696,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsAddPopup( HydrusResourceClien
         job_status = ClientThreading.JobStatus()
         
         HandlePopupUpdate( job_status, request )
-            
+        
         HG.client_controller.pub( 'message', job_status )
         
         body_dict = {
