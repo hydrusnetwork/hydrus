@@ -4574,28 +4574,43 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
         response_context = HydrusServerResources.ResponseContext( 200 )
         
         return response_context
+        
     
 def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusServerRequest.HydrusRequest ):
     
     status_title = request.parsed_request_args.GetValueOrNone( 'status_title', str )
         
-    if status_title:
+    if status_title is not None:
         
         job_status.SetStatusTitle( status_title )
         
     
     status_text = request.parsed_request_args.GetValueOrNone( 'status_text', str )
     
-    if status_text:
+    if status_text is not None:
         
         job_status.SetStatusText( status_text )
         
     
     status_text_2 = request.parsed_request_args.GetValueOrNone( 'status_text_2', str )
     
-    if status_text_2:
+    if status_text_2 is not None:
         
         job_status.SetStatusText( status_text_2, 2 )
+        
+    
+    cancellable = request.parsed_request_args.GetValueOrNone( 'cancellable', bool )
+    
+    if cancellable is not None:
+        
+        job_status.SetCancellable( cancellable )
+        
+    
+    pausable = request.parsed_request_args.GetValueOrNone( 'pausable', bool )
+    
+    if cancellable is not None:
+        
+        job_status.SetPausable( pausable )
         
     
     files_label = request.parsed_request_args.GetValueOrNone( 'files_label', str )
