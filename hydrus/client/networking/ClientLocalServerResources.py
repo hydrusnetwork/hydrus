@@ -4541,6 +4541,21 @@ class HydrusResourceClientAPIRestrictedManagePopupsCancelPopup( HydrusResourceCl
         return response_context
         
     
+class HydrusResourceClientAPIRestrictedManagePopupsFinishPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = GetJobStatusFromRequest( request )
+        
+        seconds = request.parsed_request_args.GetValueOrNone( 'seconds', int )
+        
+        job_status.Finish( seconds )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
 class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResourceClientAPIRestrictedManagePages ):
     
     def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
