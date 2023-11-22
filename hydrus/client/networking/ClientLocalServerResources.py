@@ -4411,7 +4411,7 @@ def JobStatusToDict( job_key: ClientThreading.JobStatus ):
         return_dict = {
             'key' : job_key.GetKey().hex(),
             'creation_time': job_key.GetCreationTime(),
-            'status_text' : job_key.GetStatusText( 1 ),
+            'status_text_1' : job_key.GetStatusText( 1 ),
             'status_text_2' : job_key.GetStatusText( 2 ),
             'status_title' : job_key.GetStatusTitle(),
             'traceback' : job_key.GetTraceback(),
@@ -4596,7 +4596,7 @@ class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResou
 
 def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusServerRequest.HydrusRequest ):
     
-    def HandleGenericVariable(name: str, type: type = object ):
+    def HandleGenericVariable( name: str, type: type ):
         
         if name in request.parsed_request_args:
             
@@ -4627,13 +4627,13 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
             
         
     
-    if 'status_text' in request.parsed_request_args:
+    if 'status_text_1' in request.parsed_request_args:
         
-        status_text = request.parsed_request_args.GetValueOrNone( 'status_text', str )
+        status_text = request.parsed_request_args.GetValueOrNone( 'status_text_1', str )
     
         if status_text is not None:
             
-            job_status.SetStatusText( status_text )
+            job_status.SetStatusText( status_text, 1 )
             
         else:
             
@@ -4671,7 +4671,7 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
     
     HandleGenericVariable( 'attached_files_mergable', bool )
     
-    HandleGenericVariable( 'api_data' )
+    HandleGenericVariable( 'api_data', dict )
     
     for name in ['popup_gauge_1', 'popup_gauge_2']:
         
