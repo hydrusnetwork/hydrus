@@ -356,6 +356,7 @@ Arguments:
         *   7 - Edit File Notes
         *   8 - Edit File Relationships
         *   9 - Edit File Ratings
+        *   10 - Manage Popups
     
     ``` title="Example request"
     /request_new_permissions?name=my%20import%20script&basic_permissions=[0,1]
