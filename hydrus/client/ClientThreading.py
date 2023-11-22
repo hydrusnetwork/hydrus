@@ -135,11 +135,6 @@ class JobStatus( object ):
     
     def Delete( self, seconds = None ) -> bool:
         
-        if not self.IsDeletable():
-            
-            return False
-            
-        
         if seconds is None:
             
             self._deleted.set()
