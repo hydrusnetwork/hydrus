@@ -4406,30 +4406,31 @@ class HydrusResourceClientAPIRestrictedManagePopups( HydrusResourceClientAPIRest
         
     
 
-def JobStatusToDict( job_key: ClientThreading.JobStatus ):
+def JobStatusToDict( job_status: ClientThreading.JobStatus ):
         
         return_dict = {
-            'key' : job_key.GetKey().hex(),
-            'creation_time': job_key.GetCreationTime(),
-            'status_text_1' : job_key.GetStatusText( 1 ),
-            'status_text_2' : job_key.GetStatusText( 2 ),
-            'status_title' : job_key.GetStatusTitle(),
-            'traceback' : job_key.GetTraceback(),
-            'had_error' : job_key.HadError(),
-            'is_cancellable' : job_key.IsCancellable(),
-            'is_cancelled' : job_key.IsCancelled(),
-            'is_deleted' : job_key.IsDeleted(),
-            'is_done' : job_key.IsDone(),
-            'is_pauseable' : job_key.IsPausable(),
-            'is_paused' : job_key.IsPaused(),
-            'is_working' : job_key.IsWorking(),
-            'nice_string' : job_key.ToString(),
-            'popup_gauge_1' : job_key.GetIfHasVariable( 'popup_gauge_1' ),
-            'popup_gauge_2' : job_key.GetIfHasVariable( 'popup_gauge_2' ),
-            'api_data' : job_key.GetIfHasVariable( 'api_data' ),
+            'key' : job_status.GetKey().hex(),
+            'creation_time': job_status.GetCreationTime(),
+            'status_title' : job_status.GetStatusTitle(),
+            'status_text_1' : job_status.GetStatusText( 1 ),
+            'status_text_2' : job_status.GetStatusText( 2 ),
+            'traceback' : job_status.GetTraceback(),
+            'had_error' : job_status.HadError(),
+            'is_cancellable' : job_status.IsCancellable(),
+            'is_cancelled' : job_status.IsCancelled(),
+            'is_deleted' : job_status.IsDeleted(),
+            'is_done' : job_status.IsDone(),
+            'is_pauseable' : job_status.IsPausable(),
+            'is_paused' : job_status.IsPaused(),
+            'is_working' : job_status.IsWorking(),
+            'nice_string' : job_status.ToString(),
+            'popup_gauge_1' : job_status.GetIfHasVariable( 'popup_gauge_1' ),
+            'popup_gauge_2' : job_status.GetIfHasVariable( 'popup_gauge_2' ),
+            'attached_files_mergable': job_status.GetIfHasVariable( 'attached_files_mergable' ),
+            'api_data' : job_status.GetIfHasVariable( 'api_data' ),
         }
         
-        files_object = job_key.GetFiles()
+        files_object = job_status.GetFiles()
         
         if files_object is not None:
             
@@ -4441,14 +4442,14 @@ def JobStatusToDict( job_key: ClientThreading.JobStatus ):
             }
             
         
-        user_callable = job_key.GetUserCallable()
+        user_callable = job_status.GetUserCallable()
         
         if user_callable is not None:
             
             return_dict[ 'user_callable_label' ] = user_callable.GetLabel()
             
         
-        network_job: ClientNetworkingJobs.NetworkJob = job_key.GetNetworkJob()
+        network_job: ClientNetworkingJobs.NetworkJob = job_status.GetNetworkJob()
         
         if network_job is not None:
             
@@ -4655,18 +4656,18 @@ def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusSer
             
         
     
-    cancellable = request.parsed_request_args.GetValueOrNone( 'cancellable', bool )
+    is_cancellable = request.parsed_request_args.GetValueOrNone( 'is_cancellable', bool )
     
-    if cancellable is not None:
+    if is_cancellable is not None:
         
-        job_status.SetCancellable( cancellable )
+        job_status.SetCancellable( is_cancellable )
         
     
-    pausable = request.parsed_request_args.GetValueOrNone( 'pausable', bool )
+    is_pausable = request.parsed_request_args.GetValueOrNone( 'is_pausable', bool )
     
-    if pausable is not None:
+    if is_pausable is not None:
         
-        job_status.SetPausable( pausable )
+        job_status.SetPausable( is_pausable )
         
     
     HandleGenericVariable( 'attached_files_mergable', bool )
