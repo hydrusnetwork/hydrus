@@ -2789,6 +2789,9 @@ Poll the `page_state` in [/manage\_pages/get\_pages](#manage_pages_get_pages) or
 
 ## Managing Popups
 
+!!! warning "Under Construction"
+    This is under construction. The popup managment APIs and data structures may change in future versions.
+
 ### Job Status Objects { id="job_status_objects" }
 
 Job statuses represent shared information about a job in hydrus. In the API they are currently only used for popups.
