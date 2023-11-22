@@ -2925,6 +2925,7 @@ Response:
 }
 ```
 
+
 ### **POST `/manage_popups/add_popup`** { id="manage_popups_add_popuip" }
 
 _Add a popup._
@@ -2974,7 +2975,6 @@ Response:
 :   A JSON Object containing `job_status`, the [job status object](#job_status_objects) that was added.
 
 
-
 ### **POST `/manage_popups/update_popup`** { id="manage_popups_update_popuip" }
 
 _Update a popup._
@@ -3017,6 +3017,7 @@ The specified job status will be updated with the new values submitted. Any fiel
 Response:
 :   A JSON Object containing `job_status`, the [job status object](#job_status_objects) that was updated.
 
+
 ### **POST `/manage_popups/dismiss_popup`** { id="manage_popups_dismiss_popup" }
 
 _Dismiss a popup._
@@ -3043,6 +3044,7 @@ The job status must not be cancellable or pausable to be dismissed.
 
 Response:
 :   200 with no content.
+
 
 ### **POST `/manage_popups/finish_popup`** { id="manage_popups_finish_popup" }
 
@@ -3124,6 +3126,8 @@ The job status must have a user callable (the `user_callable_label` in the [job 
 
 Response:
 :   200 with no content.
+
+
 ## Managing the Database
 
 ### **POST `/manage_database/lock_on`** { id="manage_database_lock_on" }
