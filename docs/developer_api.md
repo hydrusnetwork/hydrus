@@ -2785,6 +2785,345 @@ Response:
 
 Poll the `page_state` in [/manage\_pages/get\_pages](#manage_pages_get_pages) or [/manage\_pages/get\_page\_info](#manage_pages_get_page_info) to see when the search is complete.
 
+
+## Managing Popups
+
+### Job Status Objects { id="job_status_objects" }
+
+Job statuses represent shared information about a job in hydrus. In the API they are currently only used for popups.
+
+Job statuses have these fields:
+
+- `key`: the generated hex key identifying the job status
+- `creation_time`: the UNIX timestamp when the job status was created, as a floating point number in seconds.
+- `status_title`: the title for the job status
+- `status_text_1` and `status_text_2`: Two fields for body text
+- `had_error`: a boolean indiciating if the job status has an error.
+- `traceback`: if the job status has an error this will contain the traceback text.
+- `is_cancellable`: a boolean indicating the job can be canceled.
+- `is_cancelled`: a boolean indicating the job has been cancelled. 
+- `is_deleted`: a boolean indicating the job status has been dismissed but not removed yet.
+- `is_pausable`: a boolean indicating the job can be paused
+- `is_paused`: a boolean indicating the job is paused.
+- `is_working`: a boolean indicating whether the job is currently working.
+- `nice_string`: a string representing the job status. This is generated using the `status_title`, `status_text_1`, `status_text_2`, and `traceback` if present.
+- `attached_files_mergable`: a boolean indicating whether the files in the job status can be merged with the files of another submitted job status with the same label.
+- `popup_gauge_1` and `popup_gauge_2`: each of these is a 2 item array of numbers representing a progress bar shown in the client. The first number is the current value and the second is the maximum of the range. The minimum is always 0. When using these in combination with the `status_text` fields they are shown in this order: `status_text_1`, `popup_gauge_1`, `status_text_2`, `popup_gauge_2`.
+- `api_data`: an arbitrary object for use by API clients.
+- `files`: an object representing the files attached to this job status, shown as a button in the client that opens a search page for the given hashes. It has these fields:
+    - `hashes`: an array of sha256 hashes.
+    - `label`: the label for the show files button.
+- `user_callable_label`: if the job status has a user callable function this will be the label for the button that triggers it.
+- `network_job`: An object represneting the current network job. It has these fields:
+    - `url`: the url being downloaded.
+    - `waiting_on_connection_error`: boolean
+    - `domain_ok`: boolean
+    - `waiting_on_serverside_bandwidth`: boolean
+    - `no_engine_yet`: boolean
+    - `has_error`: boolean
+    - `total_data_used`: integer number of bytes
+    - `is_done`: boolean
+    - `status_text`: string
+    - `current_speed`: integer number of bytes per second
+    - `bytes_read`: integer number of bytes
+    - `bytes_to_read`: integer number of bytes
+
+All fields other than `key` and `creation_time` are optional and will only be returned if they're set.
+
+
+### **GET `/manage_popups/get_popups`** { id="manage_popups_get_popups" }
+_Get a list of popups from the client._
+
+Restricted access: 
+:   YES. Manage Popups permission needed.
+    
+Required Headers: n/a
+    
+Arguments:
+:   
+    *   `only_in_view`: whether to show only the popups currently in view in the client, true or false (optional, defaulting to false)
+    
+
+Response: 
+:   A JSON Object containing `job_statuses`, a list of [job status objects](#job_status_objects) and [the services object](#services_object)
+
+```json title="Example response"
+{
+  "job_statuses": [
+    {
+      "key": "e57d42d53f957559ecaae3054417d28bfef3cd84bbced352be75dedbefb9a40e",
+      "creation_time": 1700348905.7647762,
+      "status_text_1": "This is a test popup message",
+      "had_error": false,
+      "is_cancellable": false,
+      "is_cancelled": false,
+      "is_deleted": false,
+      "is_done": false,
+      "is_pauseable": false,
+      "is_paused": false,
+      "is_working": true,
+      "nice_string": "This is a test popup message"
+    },
+    {
+      "key": "0d9e134fe0b30b05f39062b48bd60c35cb3bf3459c967d4cf95dde4d01bbc801",
+      "creation_time": 1700348905.7667763,
+      "status_title": "sub gap downloader test",
+      "had_error": false,
+      "is_cancellable": false,
+      "is_cancelled": false,
+      "is_deleted": false,
+      "is_done": false,
+      "is_pauseable": false,
+      "is_paused": false,
+      "is_working": true,
+      "nice_string": "sub gap downloader test",
+      "user_callable_label": "start a new downloader for this to fill in the gap!"
+    },
+    {
+      "key": "d59173b59c96b841ab82a08a05556f04323f8446abbc294d5a35851fa01035e6",
+      "creation_time": 1700689162.6635988,
+      "status_text_1": "downloading files for \"elf\" (1/1)",
+      "status_text_2": "file 4/27: downloading file",
+      "status_title": "subscriptions - safebooru",
+      "had_error": false,
+      "is_cancellable": true,
+      "is_cancelled": false,
+      "is_deleted": false,
+      "is_done": false,
+      "is_pauseable": false,
+      "is_paused": false,
+      "is_working": true,
+      "nice_string": "subscriptions - safebooru\r\ndownloading files for \"elf\" (1/1)\r\nfile 4/27: downloading file",
+      "popup_gauge_2": [
+        3,
+        27
+      ],
+      "files": {
+        "hashes": [
+          "9b5485f83948bf369892dc1234c0a6eef31a6293df3566f3ee6034f2289fe984",
+          "cd6ebafb8b39b3455fe382cba0daeefea87848950a6af7b3f000b05b43f2d4f2",
+          "422cebabc95fabcc6d9a9488060ea88fd2f454e6eb799de8cafa9acd83595d0d"
+        ],
+        "label": "safebooru: elf"
+      },
+      "network_job": {
+        "url": "https://safebooru.org//images/4425/17492ccf2fe97591e14531d4b070e922c70384c9.jpg",
+        "waiting_on_connection_error": false,
+        "domain_ok": true,
+        "waiting_on_serverside_bandwidth": false,
+        "no_engine_yet": false,
+        "has_error": false,
+        "total_data_used": 2031616,
+        "is_done": false,
+        "status_text": "downloading…",
+        "current_speed": 2031616,
+        "bytes_read": 2031616,
+        "bytes_to_read": 3807369
+      }
+    }
+  ]
+}
+```
+
+### **POST `/manage_popups/add_popup`** { id="manage_popups_add_popuip" }
+
+_Add a popup._
+
+Restricted access: 
+:   YES. Manage Popups permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   it accepts these fields of a [job status object](#job_status_objects):
+        *   `status_title`
+        *   `status_text_1` and `status_text_2`
+        *   `is_cancellable`
+        *   `is_pausable`
+        *   `attached_files_mergable`
+        *   `popup_gauge_1` and `popup_gauge_2`
+        *   `api_data`
+    *   `files_label`: the label for the files attached to the job status. It will be returned as `label` in the `files` object in the [job status object](#job_status_objects).
+    *   [files](#parameters_files) that will be added to the job status. They will be returned as `hashes` in the `files` object in the [job status object](#job_status_objects). `files_label` is required to add files.
+
+A new job status will be created and submitted as a popup. 
+
+```json title="Example request body"
+{
+  "status_title": "Example Popup",
+  "popup_gauge_1": [35, 120],
+  "popup_gauge_2": [9, 10],
+  "status_text_1": "Doing things",
+  "status_text_2": "Doing other things",
+  "cancellable": true,
+  "api_data": {
+    "whatever": "stuff"
+  },
+  "files_label": "test files",
+  "hashes": [
+    "ad6d3599a6c489a575eb19c026face97a9cd6579e74728b0ce94a601d232f3c3",
+    "4b15a4a10ac1d6f3d143ba5a87f7353b90bb5567d65065a8ea5b211c217f77c6"
+  ]
+}
+```
+
+Response:
+:   A JSON Object containing `job_status`, the [job status object](#job_status_objects) that was added.
+
+
+
+### **POST `/manage_popups/update_popup`** { id="manage_popups_update_popuip" }
+
+_Update a popup._
+
+Restricted access: 
+:   YES. Manage Popups permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The hex key of the job status to update.
+    *   It accepts these fields of a [job status object](#job_status_objects):
+        *   `status_title`
+        *   `status_text_1` and `status_text_2`
+        *   `is_cancellable`
+        *   `is_pausable`
+        *   `attached_files_mergable`
+        *   `popup_gauge_1` and `popup_gauge_2`
+        *   `api_data`
+    *   `files_label`: the label for the files attached to the job status. It will be returned as `label` in the `files` object in the [job status object](#job_status_objects).
+    *   [files](#parameters_files) that will be added to the job status. They will be returned as `hashes` in the `files` object in the [job status object](#job_status_objects). `files_label` is required to add files.
+
+The specified job status will be updated with the new values submitted. Any field without a value will be left alone and any field set to `null` will be removed from the job status.
+
+```json title="Example request body"
+{
+  "job_status_key": "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86",
+  "status_title": "Example Popup",
+  "status_text_1": null,
+  "popup_gauge_1": [12, 120],
+  "api_data": {
+    "whatever": "other stuff"
+  }
+}
+```
+
+Response:
+:   A JSON Object containing `job_status`, the [job status object](#job_status_objects) that was updated.
+
+### **POST `/manage_popups/dismiss_popup`** { id="manage_popups_dismiss_popup" }
+
+_Dismiss a popup._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to dismiss
+    *   `seconds`: (optional) an integer number of seconds to wait before dismissing the job status, defaults to happening immediately 
+
+The job status must not be cancellable or pausable to be dismissed.
+
+```json title="Example request body"
+{
+  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
+}
+```
+
+Response:
+:   200 with no content.
+
+### **POST `/manage_popups/finish_popup`** { id="manage_popups_finish_popup" }
+
+_Mark a popup as done._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to finish
+    *   `seconds`: (optional) an integer number of seconds to wait before finishing the job status, defaults to happening immediately 
+
+
+```json title="Example request body"
+{
+  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
+}
+```
+
+Response:
+:   200 with no content.
+
+
+### **POST `/manage_popups/cancel_popup`** { id="manage_popups_cancel_popup" }
+
+_Cancel a popup._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to cancel
+    *   `seconds`: (optional) an integer number of seconds to wait before cancelling the job status, defaults to happening immediately 
+
+The job status must be cancellable to be cancelled.
+
+```json title="Example request body"
+{
+  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
+}
+```
+
+Response:
+:   200 with no content.
+
+
+### **POST `/manage_popups/call_user_callable`** { id="manage_popups_call_user_callable" }
+
+_Call the user callable function of a popup._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to call the user callable of
+
+The job status must have a user callable (the `user_callable_label` in the [job status object](#job_status_objects) indicates this) to call it.
+
+```json title="Example request body"
+{
+  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
+}
+```
+
+Response:
+:   200 with no content.
 ## Managing the Database
 
 ### **POST `/manage_database/lock_on`** { id="manage_database_lock_on" }
