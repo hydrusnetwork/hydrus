@@ -292,7 +292,7 @@ class FileViewingStatsManager( object ):
         if media.HasDuration() and viewtime_max is not None:
             
             # if user is watching a long vid, save that whole time mate
-            viewtime_max = max( viewtime_max, ( media.GetDurationMS() / 1000 ) * 5 )
+            viewtime_max = max( viewtime_max, ( media.GetMediaResult().GetDuration() ) * 5 )
             
         
         if do_it:
@@ -434,7 +434,7 @@ class UndoManager( object ):
                 
                 if data_type == HC.CONTENT_TYPE_FILES:
                     
-                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD ):
+                    if action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_UNDELETE, HC.CONTENT_UPDATE_RESCIND_PETITION, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                         
                         continue
                         

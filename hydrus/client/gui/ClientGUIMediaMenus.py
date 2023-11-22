@@ -84,7 +84,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
                 
                 label = '-for {}-'.format( job_location_context.ToString( HG.client_controller.services_manager.GetName ) )
                 
-                ClientGUIMenus.AppendMenuLabel( duplicates_menu, label, label )
+                ClientGUIMenus.AppendMenuLabel( duplicates_menu, label )
                 
             
             if HC.DUPLICATE_MEMBER in file_duplicate_types_to_counts:
@@ -636,7 +636,7 @@ def AddPrettyInfoLines( menu, pretty_info_lines ):
     
     def add_pretty_info_str( m, line ):
         
-        ClientGUIMenus.AppendMenuLabel( m, line, line )
+        ClientGUIMenus.AppendMenuLabel( m, line )
         
     
     def add_pretty_info_rows( m, rows ):

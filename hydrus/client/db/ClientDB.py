@@ -5712,9 +5712,16 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 self.modules_files_inbox.InboxFiles( hash_ids )
                                 
-                            elif action == HC.CONTENT_UPDATE_DELETE:
+                            elif action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                                 
-                                actual_delete_hash_ids = self.modules_file_delete_lock.FilterForFileDeleteLock( service_id, hash_ids )
+                                if action == HC.CONTENT_UPDATE_DELETE:
+                                    
+                                    actual_delete_hash_ids = self.modules_file_delete_lock.FilterForFileDeleteLock( service_id, hash_ids )
+                                    
+                                else:
+                                    
+                                    actual_delete_hash_ids = hash_ids
+                                    
                                 
                                 if len( actual_delete_hash_ids ) < len( hash_ids ):
                                     

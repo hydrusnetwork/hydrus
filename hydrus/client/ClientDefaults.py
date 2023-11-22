@@ -16,7 +16,6 @@ def GetClientDefaultOptions():
     
     options = {}
     
-    options[ 'play_dumper_noises' ] = True
     options[ 'export_path' ] = None
     options[ 'hpos' ] = 400
     options[ 'vpos' ] = -240
@@ -28,14 +27,13 @@ def GetClientDefaultOptions():
     options[ 'idle_normal' ] = True
     options[ 'idle_shutdown' ] = CC.IDLE_ON_SHUTDOWN_ASK_FIRST
     options[ 'idle_shutdown_max_minutes' ] = 5
-    options[ 'maintenance_delete_orphans_period' ] = 86400 * 3
     options[ 'trash_max_age' ] = 72
     options[ 'trash_max_size' ] = 2048
     options[ 'remove_trashed_files' ] = False
     options[ 'remove_filtered_files' ] = False
-    options[ 'gallery_file_limit' ] = 2000
     options[ 'confirm_trash' ] = True
     options[ 'confirm_archive' ] = True
+    options[ 'gallery_file_limit' ] = 2000
     options[ 'delete_to_recycle_bin' ] = True
     options[ 'animation_start_position' ] = 0.0
     options[ 'hide_preview' ] = False

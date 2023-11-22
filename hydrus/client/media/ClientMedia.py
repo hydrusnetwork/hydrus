@@ -1137,7 +1137,7 @@ class MediaList( object ):
                 
                 if data_type == HC.CONTENT_TYPE_FILES:
                     
-                    if action == HC.CONTENT_UPDATE_DELETE:
+                    if action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                         
                         local_file_domains = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                         all_local_file_services = set( list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY ] )
@@ -1924,28 +1924,27 @@ class MediaSingleton( Media ):
             
             lines.append( ( True, 'deleted from this client {} ({})'.format( ClientTime.TimestampToPrettyTimeDelta( timestamp ), local_file_deletion_reason ) ) )
             
-        elif len( deleted_local_file_services ) > 0:
+        elif CC.TRASH_SERVICE_KEY in current_service_keys:
             
-            if CC.TRASH_SERVICE_KEY in current_service_keys or not only_interesting_lines:
+            # I used to list these always as part of 'interesting' lines, but without the trash qualifier, you get spammy 'removed from x 5 years ago' lines for migrations. not helpful!
+            
+            for local_file_service in deleted_local_file_services:
                 
-                for local_file_service in deleted_local_file_services:
+                timestamp = timestamps_manager.GetDeletedTimestamp( local_file_service.GetServiceKey() )
+                
+                line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) )
+                
+                if len( deleted_local_file_services ) == 1:
                     
-                    timestamp = timestamps_manager.GetDeletedTimestamp( local_file_service.GetServiceKey() )
-                    
-                    line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) )
-                    
-                    if len( deleted_local_file_services ) == 1:
-                        
-                        line = f'{line} ({local_file_deletion_reason})'
-                        
-                    
-                    lines.append( ( True, line ) )
+                    line = f'{line} ({local_file_deletion_reason})'
                     
                 
-                if len( deleted_local_file_services ) > 1:
-                    
-                    lines.append( ( False, 'Deletion reason: {}'.format( local_file_deletion_reason ) ) )
-                    
+                lines.append( ( True, line ) )
+                
+            
+            if len( deleted_local_file_services ) > 1:
+                
+                lines.append( ( False, 'Deletion reason: {}'.format( local_file_deletion_reason ) ) )
                 
             
         
@@ -2027,6 +2026,31 @@ class MediaSingleton( Media ):
                 
             
             lines.append( ( True, '{} to {} {}'.format( status_label, service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) ) ) )
+            
+        
+        if self.GetFileInfoManager().has_audio:
+            
+            lines.append( ( False, 'has audio' ) )
+            
+        
+        if self.GetFileInfoManager().has_transparency:
+            
+            lines.append( ( False, 'has transparency' ) )
+            
+        
+        if self.GetFileInfoManager().has_exif:
+            
+            lines.append( ( False, 'has exif data' ) )
+            
+        
+        if self.GetFileInfoManager().has_human_readable_embedded_metadata:
+            
+            lines.append( ( False, 'has human-readable embedded metadata' ) )
+            
+        
+        if self.GetFileInfoManager().has_icc_profile:
+            
+            lines.append( ( False, 'has icc profile' ) )
             
         
         lines = [ line for ( interesting, line ) in lines if interesting or not only_interesting_lines ]

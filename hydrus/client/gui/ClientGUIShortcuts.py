@@ -214,6 +214,7 @@ def SetMouseLabels( call_mouse_buttons_primary_secondary ):
         shortcut_mouse_string_lookup[ SHORTCUT_MOUSE_RIGHT ] = 'right-click'
         
     
+
 shortcut_names_to_pretty_names = {
     'global' : 'global',
     'main_gui' : 'the main window',

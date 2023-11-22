@@ -4825,7 +4825,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         # we'll keep the current since the user is looking, but otherwise we'll be good for now
         # maybe add a hard refresh button in future? we'll see how common these issues are
         
-        if self._current_petition is not None:
+        if self._current_petition is not None and len( petitions_summary ) > 0:
             
             current_petition_header = self._current_petition.GetPetitionHeader()
             

@@ -48,3 +48,6 @@ warnings.simplefilter( 'ignore', PILImage.DecompressionBombError )
 # PIL moaning about weirdo TIFFs
 warnings.filterwarnings( "ignore", "(Possibly )?corrupt EXIF data", UserWarning )
 warnings.filterwarnings( "ignore", "Metadata Warning", UserWarning )
+
+# PIL moaning about weirdo PNGs
+warnings.filterwarnings( "ignore", "iTXt: chunk data is too large", UserWarning )

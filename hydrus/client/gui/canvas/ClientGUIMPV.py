@@ -15,6 +15,7 @@ from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
@@ -86,7 +87,8 @@ def log_handler( loglevel, component, message ):
     # so my mapping here to preserve the mpv widget for a particular log message and then dump out the player in emergency is only going to work half the time
     
     nah_it_is_fine_bro_tests = [
-        'rescan-external-files' in message
+        'rescan-external-files' in message,
+        'LZW decode failed' in message # borked gif headers
     ]
     
     if True in nah_it_is_fine_bro_tests and not HG.mpv_report_mode:
@@ -529,7 +531,12 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 QP.CallAfter( QW.QMessageBox.critical, self, 'Error', f'{message}\n\nThe first error was:\n\n{reason}' )
                 
-            
+                job_status = ClientThreading.JobStatus()
+                
+                job_status.SetFiles( [ original_media.GetHash() ], 'MPV-crasher' )
+                
+                HG.client_controller.pub( 'message', job_status )
+                
             else:
                 
                 message = f'A media loaded in MPV appears to have had an error. This may be not a big deal, or it may be a crash. The specific errors should be written after this message. They are not positively known as crashy, but if you are getting crashes, please send the file and these errors to hydev so he can test his end.{media_line}'
@@ -900,7 +907,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._player.loadfile( self._black_png_path )
                 
-                # old method. this does 'work', but null seems to be subtly dangerous in these cursed lands 
+                # old method. this does 'work', but null seems to be subtly dangerous in these accursed lands 
                 '''
                 if len( self._player.playlist ) > 0:
                     

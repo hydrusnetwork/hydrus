@@ -736,12 +736,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         
         query_headers_to_do = [ query_header for query_header in self._query_headers if query_header.WantsToResyncWithLogContainer() ]
         
-        for query_header in self._query_headers:
-            
-            if not query_header.WantsToResyncWithLogContainer():
-                
-                continue
-                
+        for query_header in query_headers_to_do:
             
             try:
                 
@@ -1172,7 +1167,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if len( presentation_hashes ) > 0:
                     
-                    job_status.SetFiles( list( presentation_hashes ), query_summary_name )
+                    job_status.SetFiles( presentation_hashes, query_summary_name )
                     
                 else:
                     
@@ -1568,7 +1563,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                 
-                query_header.SetQueryLogContainerStatus( ClientImportSubscriptionQuery.LOG_CONTAINER_UNSYNCED, pretty_velocity_override = 'will recalculate on next run' )
+                query_header.SetQueryLogContainerStatus( ClientImportSubscriptionQuery.LOG_CONTAINER_UNSYNCED, pretty_velocity_override = 'will recalculate when next fully loaded' )
                 
             
         

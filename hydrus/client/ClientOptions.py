@@ -300,6 +300,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'fade_thumbnails' ] = True
         
+        self._dictionary[ 'booleans' ][ 'slideshow_always_play_duration_media_once_through' ] = False
+        
         from hydrus.client.gui.canvas import ClientGUIMPV
         
         self._dictionary[ 'booleans' ][ 'mpv_available_at_start' ] = ClientGUIMPV.MPV_IS_AVAILABLE
@@ -592,6 +594,13 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'noneable_integers' ][ 'animated_scanbar_hide_height' ] = 5
         
         self._dictionary[ 'noneable_integers' ][ 'last_backup_time' ] = None
+        
+        self._dictionary[ 'noneable_integers' ][ 'slideshow_short_duration_loop_percentage' ] = 20
+        self._dictionary[ 'noneable_integers' ][ 'slideshow_short_duration_loop_seconds' ] = 10
+        
+        self._dictionary[ 'noneable_integers' ][ 'slideshow_short_duration_cutoff_percentage' ] = 75
+        
+        self._dictionary[ 'noneable_integers' ][ 'slideshow_long_duration_overspill_percentage' ] = 50
         
         #
         

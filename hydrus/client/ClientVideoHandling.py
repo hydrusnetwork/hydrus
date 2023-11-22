@@ -50,6 +50,7 @@ def GetCVVideoProperties( path ):
     
     return ( ( width, height ), duration, num_frames )
     
+
 # the cv code was initially written by @fluffy_cub
 class GIFRenderer( object ):
     
@@ -64,6 +65,7 @@ class GIFRenderer( object ):
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         self._force_pil = force_pil
+        self._pil_dangerzone_frame = None
         
         new_options = HG.client_controller.new_options
         
@@ -92,7 +94,14 @@ class GIFRenderer( object ):
             
         else:
             
-            current_frame = HydrusImageNormalisation.DequantizePILImage( self._pil_image )
+            try:
+                
+                current_frame = HydrusImageNormalisation.DequantizePILImage( self._pil_image )
+                
+            except:
+                
+                raise HydrusExceptions.UnsupportedFileException( f'PIL could not move to frame {self._next_render_index - 1}.' )
+                
             
             if current_frame.mode == 'RGBA':
                 
@@ -102,7 +111,19 @@ class GIFRenderer( object ):
                     
                 else:
                     
-                    self._pil_canvas.paste( current_frame, None, current_frame ) # use the rgba image as its own mask
+                    try:
+                        
+                        self._pil_canvas.paste( current_frame, None, current_frame ) # use the rgba image as its own mask
+                        
+                    except:
+                        
+                        # the 'paste' can produce an OSError(!!!) on a truncated file, lfg
+                        # so let's just bail out in that case mate
+                        
+                        self._pil_dangerzone_frame = self._next_render_index
+                        
+                        self._pil_canvas = current_frame
+                        
                     
                 
             elif current_frame.mode == 'RGB':
@@ -115,7 +136,9 @@ class GIFRenderer( object ):
         
         self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
         
-        if self._next_render_index == 0:
+        dangerzone = self._pil_dangerzone_frame is not None and self._next_render_index >= self._pil_dangerzone_frame
+        
+        if self._next_render_index == 0 or dangerzone:
             
             self._RewindGIF()
             
@@ -123,18 +146,16 @@ class GIFRenderer( object ):
             
             if not self._cv_mode:
                 
-                self._pil_image.seek( self._next_render_index )
-                
-                if self._pil_global_palette is not None and self._pil_image.palette == self._pil_global_palette: # for some reason, when pil falls back from local palette to global palette, a bunch of important variables reset!
+                try:
                     
-                    pass
+                    self._pil_image.seek( self._next_render_index )
                     
-                    # this got nuked in some rewrite. I guess I was caching from the first frame?
-                    '''
-                    self._pil_image.palette.dirty = self._pil_dirty
-                    self._pil_image.palette.mode = self._pil_mode
-                    self._pil_image.palette.rawmode = self._pil_rawmode
-                    '''
+                except:
+                    
+                    # this can raise OSError in some 'trancated file' circumstances, lmao
+                    # trying to render beyond with PIL is rife with trouble, so we won't try
+                    self._RewindGIF()
+                    
                 
             
         
@@ -178,9 +199,19 @@ class GIFRenderer( object ):
         self._next_render_index = 0
         self._last_frame = None
         
+        # years-old weirdo fix, taking it out 2023-11
+        '''
         # believe it or not, doing this actually fixed a couple of gifs!
-        self._pil_image.seek( 1 )
-        self._pil_image.seek( 0 )
+        try:
+            
+            self._pil_image.seek( 1 )
+            self._pil_image.seek( 0 )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.UnsupportedFileException( 'Could not initialise GIF!' ) from e 
+            
+        '''
         
     
     def _RenderCurrentFrame( self ):
@@ -239,6 +270,8 @@ class GIFRenderer( object ):
             
             self._pil_image.seek( 0 )
             
+            self._pil_canvas = None
+            
         
         self._next_render_index = 0
         
@@ -249,6 +282,11 @@ class GIFRenderer( object ):
         
     
     def set_position( self, index ):
+        
+        if self._pil_dangerzone_frame is not None and index >= self._pil_dangerzone_frame:
+            
+            return
+            
         
         if index == self._next_render_index: return
         elif index < self._next_render_index: self._RewindGIF()

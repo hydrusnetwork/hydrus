@@ -539,8 +539,6 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
                 do_yes_no = False
                 
-                num_applicable_media = len( applicable_media )
-                
                 choice_tuples = []
                 
                 for potential_source_service_key in potential_source_service_keys:
@@ -646,7 +644,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
                 block_of_hashes = [ m.GetHash() for m in block_of_media ]
                 
-                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_hashes, reason = 'Moved to {}'.format( dest_service_name ) ) ]
+                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE, block_of_hashes, reason = 'Moved to {}'.format( dest_service_name ) ) ]
                 
                 HG.client_controller.WriteSynchronous( 'content_updates', { source_service_key : content_updates } )
                 

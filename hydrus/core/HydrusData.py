@@ -923,7 +923,7 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
     
     if do_wait:
         
-        time.sleep( 1 )
+        time.sleep( 0.2 )
         
     
 
