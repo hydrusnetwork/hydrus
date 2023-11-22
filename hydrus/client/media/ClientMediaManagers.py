@@ -1129,7 +1129,7 @@ class LocationsManager( object ):
                     self._service_keys_to_filenames[ service_key ] = multihash
                     
                 
-            elif action == HC.CONTENT_UPDATE_DELETE:
+            elif action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                 
                 if content_update.HasReason():
                     

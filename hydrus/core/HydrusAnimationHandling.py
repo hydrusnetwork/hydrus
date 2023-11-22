@@ -205,24 +205,63 @@ def GetFrameDurationsPILAnimation( path ):
     
     times_to_play = GetTimesToPlayPILAnimationFromPIL( pil_image )
     
+    assumed_num_frames = -1
+    
+    if hasattr( pil_image, 'n_frames' ):
+        
+        assumed_num_frames = pil_image.n_frames
+        
+    
+    assumed_num_frames_is_sensible = assumed_num_frames > 0
+    
+    fallback_frame_duration = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+    
     frame_durations = []
     
     i = 0
     
     while True:
         
-        try:
-            
-            pil_image.seek( i )
-            
-        except:
+        if assumed_num_frames_is_sensible and i >= assumed_num_frames:
             
             break
             
         
+        try:
+            
+            pil_image.seek( i )
+            
+        except EOFError:
+            
+            break
+            
+        except:
+            
+            # seek and fellows can raise OSError on a truncated file lmao
+            # trying to keep walking through such a gif using PIL is rife with trouble (although mpv may be ok at a later stage), so let's fudge a solution
+            
+            if len( frame_durations ) > 0:
+                
+                fill_in_duration = int( sum( frame_durations ) / len( frame_durations ) )
+                
+            else:
+                
+                fill_in_duration = fallback_frame_duration
+                
+            
+            if assumed_num_frames_is_sensible:
+                
+                num_frames_remaining = assumed_num_frames - len( frame_durations )
+                
+                frame_durations.extend( [ fill_in_duration for j in range( num_frames_remaining ) ] )
+                
+            
+            return ( frame_durations, times_to_play )
+            
+        
         if 'duration' not in pil_image.info:
             
-            duration = 83 # (83ms -- 1000 / 12) Set a 12 fps default when duration is missing or too funky to extract. most stuff looks ok at this.
+            duration = fallback_frame_duration
             
         else:
             
@@ -231,7 +270,7 @@ def GetFrameDurationsPILAnimation( path ):
             # In the gif frame header, 10 is stored as 1ms. This 1 is commonly as utterly wrong as 0.
             if duration in ( 0, 10 ):
                 
-                duration = 83
+                duration = fallback_frame_duration
                 
             
         
@@ -296,10 +335,14 @@ def PILAnimationHasDuration( path ):
     
     try:
         
-        pil_image.seek( 1 )
-        pil_image.seek( 0 )
-        
-        return True
+        if hasattr( pil_image, 'is_animated' ):
+            
+            return pil_image.is_animated
+            
+        else:
+            
+            return False
+            
         
     except:
         

@@ -102,7 +102,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         return death_file_velocity_period
         
     
-    def GetNextCheckTime( self, file_seed_cache, last_check_time, last_next_check_time ):
+    def GetNextCheckTime( self, file_seed_cache, last_check_time, previous_next_check_time ):
         
         if len( file_seed_cache ) == 0:
             
@@ -117,18 +117,20 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         elif self._never_faster_than == self._never_slower_than:
             
-            if last_next_check_time is None or last_next_check_time == 0:
+            # fixed check period
+            check_period = self._never_slower_than
+            
+            # ok the issue here is that, if the thing is supposed to check every seven days, we want to persist in saturday night rather than slowly creep forward a few hours every week due to delays
+            # thus, if the 'last' next check time is 'reasonable' (which for now we really simplified to just mean "it happened already"), we'll add to that instead of our actual last check time
+            # but if the user reduces the check time to one day on Wednesday, we want to notice that and reset immediately, not wait until next saturday to recalculate!
+            
+            if HydrusTime.TimeHasPassed( previous_next_check_time - 5 ):
                 
-                next_check_time = last_check_time - 5
+                next_check_time = previous_next_check_time + check_period
                 
             else:
                 
-                next_check_time = last_next_check_time
-                
-            
-            while HydrusTime.TimeHasPassed( next_check_time ):
-                
-                next_check_time += self._never_slower_than
+                next_check_time = last_check_time + check_period
                 
             
             return next_check_time

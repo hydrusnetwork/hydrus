@@ -633,7 +633,7 @@ class ThumbnailCache( object ):
             job_status = ClientThreading.JobStatus()
             
             job_status.SetStatusText( message )
-            job_status.SetFiles( { hash }, 'broken thumbnail' )
+            job_status.SetFiles( [ hash ], 'broken thumbnail' )
             
             HG.client_controller.pub( 'message', job_status )
             

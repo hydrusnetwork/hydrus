@@ -419,14 +419,15 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         try:
             
             ( width, height ) = HydrusPSDHandling.GetPSDResolution( path )
-
+            
         except Exception as e:
-
+            
             HydrusData.Print( 'Problem calculating resolution for "{}":'.format( path ) )
             HydrusData.PrintException( e )
             HydrusData.Print( 'Attempting PSD resolution fallback' )
 
             ( width, height ) = HydrusPSDHandling.GetPSDResolutionFallback( path )
+            
         
     elif mime in HC.VIDEO or mime in HC.HEIF_TYPE_SEQUENCES:
         

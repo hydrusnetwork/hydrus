@@ -2922,7 +2922,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
                     
                     job_status.SetVariable( 'script_status', 'Network error! Details written to log.' )
                     
-                    HydrusData.Print( 'Problem fetching ' + HydrusText.ElideText( search_url, 32 ) + ':' )
+                    HydrusData.Print( 'Problem fetching ' + HydrusText.ElideText( search_url, 256 ) + ':' )
                     HydrusData.PrintException( e )
                     
                     time.sleep( 2 )

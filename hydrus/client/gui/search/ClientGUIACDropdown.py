@@ -1866,8 +1866,8 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._or_basic.hide()
             
         
-        self._or_advanced = ClientGUICommon.BetterButton( self._dropdown_window, 'OR*', self._AdvancedORInput )
-        self._or_advanced.setToolTip( 'Advanced OR input.' )
+        self._or_advanced = ClientGUICommon.BetterButton( self._dropdown_window, 'advanced', self._AdvancedORInput )
+        self._or_advanced.setToolTip( 'You can paste complicated predicate strings in here and it will parse into proper logic.' )
         
         if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -1918,7 +1918,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _AdvancedORInput( self ):
         
-        title = 'enter advanced OR predicates'
+        title = 'parse advanced predicate string'
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             

@@ -811,6 +811,8 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _InitialisePermittedActionChoices( self ):
         
+        we_are_advanced_delete_dialog = HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' )
+        
         possible_file_service_keys = []
         
         local_file_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
@@ -820,7 +822,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         possible_file_service_keys.append( ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
         
-        if HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
+        if we_are_advanced_delete_dialog:
             
             possible_file_service_keys.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
             
@@ -995,7 +997,9 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             self._permitted_action_choices.append( ( text, ( deletee_file_service_key, list_of_service_keys_to_content_updates, save_reason, hashes_physically_deleted, text ) ) )
             
         
-        if self._num_actionable_local_file_services == 1 and not possibilities_involve_spicy_physical_delete and not HC.options[ 'confirm_trash' ]:
+        unnatural_spicy_physical_delete = possibilities_involve_spicy_physical_delete and not we_are_advanced_delete_dialog
+        
+        if self._num_actionable_local_file_services == 1 and not unnatural_spicy_physical_delete and not HC.options[ 'confirm_trash' ]:
             
             # this dialog will never show
             self._question_is_already_resolved = True

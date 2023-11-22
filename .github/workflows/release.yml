@@ -126,13 +126,13 @@ jobs:
         name: Compress Client
         run: |
             mv dist/hydrus_client "dist/Hydrus Network"
-            tar --zstd -cvf Ubuntu-Extract.tar.gz -C dist "Hydrus Network"
+            tar --zstd -cvf Ubuntu-Extract.tar.zst -C dist "Hydrus Network"
       -
         name: Upload a Build Artifact
         uses: actions/upload-artifact@v3
         with:
           name: Ubuntu-Extract
-          path: Ubuntu-Extract.tar.gz
+          path: Ubuntu-Extract.tar.zst
           if-no-files-found: error
           retention-days: 2
 
@@ -244,7 +244,7 @@ jobs:
           mkdir ubuntu windows
           mv Windows-Install/HydrusInstaller.exe    Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
           mv Windows-Extract/Windows-Extract.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
-          mv Ubuntu-Extract/Ubuntu-Extract.tar.gz Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.gz
+          mv Ubuntu-Extract/Ubuntu-Extract.tar.zst Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst
           mv MacOS-DMG/HydrusNetwork.dmg          Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
       - 
         name: Upload Files
@@ -254,5 +254,5 @@ jobs:
           files: |
             Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
             Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
-            Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.gz
+            Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst
             Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg

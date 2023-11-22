@@ -4198,8 +4198,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         
         CanvasMediaListNavigable.__init__( self, parent, page_key, location_context, media_results )
         
-        self._timer_slideshow_job = None
-        self._timer_slideshow_interval = 0.0
+        self._slideshow_is_running = False
+        self._last_slideshow_switch_time = 0
+        self._normal_slideshow_period = 0.0
+        self._special_slideshow_period_for_current_media = None
         
         if first_hash is None:
             
@@ -4227,36 +4229,185 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
         self.userChangedMedia.connect( self.NotifyUserChangedMedia )
         
     
+    def _CalculateAnySpecialSlideshowPeriodForCurrentMedia( self ):
+        
+        if self._media_container.CurrentlyPresentingMediaWithDuration():
+            
+            stop_after_one_play = False
+            
+            duration_s = self._current_media.GetMediaResult().GetDuration()
+            
+            if duration_s is None:
+                
+                self._StopSlideshow()
+                
+                return
+                
+            
+            new_options = HG.client_controller.new_options
+            
+            if duration_s < self._normal_slideshow_period:
+                
+                # ok, we have a short video. maybe we want to move the slideshow on early
+                
+                short_cutoff_periods = []
+                
+                slideshow_short_duration_loop_percentage = new_options.GetNoneableInteger( 'slideshow_short_duration_loop_percentage' )
+                
+                if slideshow_short_duration_loop_percentage is not None:
+                    
+                    short_cutoff_periods.append( self._normal_slideshow_period * ( slideshow_short_duration_loop_percentage / 100 ) )
+                    
+                
+                slideshow_short_duration_loop_seconds = new_options.GetNoneableInteger( 'slideshow_short_duration_loop_seconds' )
+                
+                if slideshow_short_duration_loop_seconds is not None:
+                    
+                    short_cutoff_periods.append( slideshow_short_duration_loop_seconds )
+                    
+                
+                short_cutoff_periods.sort( reverse = True )
+                
+                for short_cutoff_period in short_cutoff_periods:
+                    
+                    if short_cutoff_period > self._normal_slideshow_period:
+                        
+                        continue
+                        
+                    
+                    if duration_s <= short_cutoff_period: # will it play once in this shorter time?
+                        
+                        self._special_slideshow_period_for_current_media = short_cutoff_period
+                        
+                    
+                
+                slideshow_short_duration_cutoff_percentage = new_options.GetNoneableInteger( 'slideshow_short_duration_cutoff_percentage' )
+                
+                if slideshow_short_duration_cutoff_percentage is not None:
+                    
+                    if self._normal_slideshow_period * ( slideshow_short_duration_cutoff_percentage / 100 ) < duration_s < self._normal_slideshow_period:
+                        
+                        self._special_slideshow_period_for_current_media = duration_s
+                        
+                        stop_after_one_play = True
+                        
+                        
+                    
+                
+                # ok, if we are a shorter vid, we have now moved to the earliest valid time to switch
+                
+            else:
+                
+                # ok, we have a longer vid. maybe we want to permit a little overspill to show the whole thing
+                
+                slideshow_long_duration_overspill_percentage = new_options.GetNoneableInteger( 'slideshow_long_duration_overspill_percentage' )
+                
+                if slideshow_long_duration_overspill_percentage is not None:
+                    
+                    potential_overspill_quotient = 1 + ( slideshow_long_duration_overspill_percentage / 100 )
+                    
+                    if duration_s < self._normal_slideshow_period * potential_overspill_quotient: # ok it fits in this time
+                        
+                        self._special_slideshow_period_for_current_media = duration_s
+                        
+                        stop_after_one_play = True
+                        
+                    
+                
+                # ok, if we have a long overspill video, we have now moved to the earliest valid time to switch
+                
+            
+            if stop_after_one_play:
+                
+                self._media_container.StopForSlideshow( True )
+                
+            
+        
+    
+    def _DoSlideshowWork( self ):
+        
+        if self._slideshow_is_running:
+            
+            if self._current_media is None:
+                
+                return
+                
+            
+            if CGC.core().MenuIsOpen():
+                
+                return
+                
+            
+            if self._media_container.CurrentlyPresentingMediaWithDuration():
+                
+                if HG.client_controller.new_options.GetBoolean( 'slideshow_always_play_duration_media_once_through' ):
+                    
+                    if not self._media_container.HasPlayedOnceThrough():
+                        
+                        return
+                        
+                    
+                
+            
+            if self._special_slideshow_period_for_current_media is None:
+                
+                time_to_switch = self._last_slideshow_switch_time + self._normal_slideshow_period
+                
+            else:
+                
+                time_to_switch = self._last_slideshow_switch_time + self._special_slideshow_period_for_current_media
+                
+            
+            if not HydrusTime.TimeHasPassedFloat( time_to_switch ):
+                
+                return
+                
+            
+            self._ShowNext()
+            
+            self._RegisterNextSlideshowPresentation()
+            
+        
+    
     def _PausePlaySlideshow( self ):
         
-        if self._SlideshowIsRunning():
+        if self._slideshow_is_running:
             
             self._StopSlideshow()
             
-        elif self._timer_slideshow_interval > 0:
+        elif self._normal_slideshow_period > 0.0:
             
-            self._StartSlideshow( interval = self._timer_slideshow_interval )
+            self._StartSlideshow( self._normal_slideshow_period )
             
         
     
-    def _SlideshowIsRunning( self ):
+    def _RegisterNextSlideshowPresentation( self ):
         
-        return self._timer_slideshow_job is not None
+        if self._slideshow_is_running:
+            
+            self._last_slideshow_switch_time = HydrusTime.GetNowFloat()
+            
+            self._special_slideshow_period_for_current_media = None
+            
+            self._CalculateAnySpecialSlideshowPeriodForCurrentMedia()
+            
         
     
-    def _StartSlideshow( self, interval: float ):
+    def _StartSlideshow( self, period: float ):
         
         self._StopSlideshow()
         
-        if interval > 0:
+        if period > 0.0:
             
-            self._timer_slideshow_interval = interval
+            self._normal_slideshow_period = period
             
-            self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, 'slideshow', self.DoSlideshow )
+            self._slideshow_is_running = True
+            
+            self._RegisterNextSlideshowPresentation()
             
         
     
-    def _StartSlideshowCustomInterval( self ):
+    def _StartSlideshowCustomPeriod( self ):
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter the interval, in seconds.', default = '15', min_char_width = 12 ) as dlg:
             
@@ -4264,9 +4415,9 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 try:
                     
-                    interval = float( dlg.GetValue() )
+                    period = float( dlg.GetValue() )
                     
-                    self._StartSlideshow( interval )
+                    self._StartSlideshow( period )
                     
                 except:
                     
@@ -4278,46 +4429,12 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def _StopSlideshow( self ):
         
-        if self._SlideshowIsRunning():
+        if self._slideshow_is_running:
             
-            self._timer_slideshow_job.Cancel()
-            
-            self._timer_slideshow_job = None
+            self._slideshow_is_running = False
+            self._special_slideshow_period_for_current_media = None
             
             self._media_container.StopForSlideshow( False )
-            
-        
-    
-    def DoSlideshow( self ):
-        
-        try:
-            
-            # we are due for a slideshow change, so tell movie to stop for it once it has played once through
-            # if short movie, it has prob played through a lot and will shift immediately
-            # if longer movie, it has prob not played through but will now stop when it has and wait for us to change it then
-            self._media_container.StopForSlideshow( True )
-            
-            if self._current_media is not None and self._SlideshowIsRunning():
-                
-                if self._media_container.ReadyToSlideshow() and not CGC.core().MenuIsOpen():
-                    
-                    self._media_container.StopForSlideshow( False )
-                    
-                    self._ShowNext()
-                    
-                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, self._timer_slideshow_interval, 'slideshow', self.DoSlideshow )
-                    
-                else:
-                    
-                    self._timer_slideshow_job = HG.client_controller.CallLaterQtSafe( self, 0.1, 'slideshow', self.DoSlideshow )
-                    
-                
-            
-        except:
-            
-            self._timer_slideshow_job = None
-            
-            raise
             
         
     
@@ -4331,11 +4448,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
     
     def NotifyUserChangedMedia( self ):
         
-        # reset the timer if user overrode
-        if self._SlideshowIsRunning():
-            
-            self._StartSlideshow( interval = self._timer_slideshow_interval )
-            
+        self._RegisterNextSlideshowPresentation()
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
@@ -4459,11 +4572,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
             
             ClientGUIMenus.AppendMenuItem( slideshow, 'very fast', 'Start a very fast slideshow.', self._StartSlideshow, 0.08 )
-            ClientGUIMenus.AppendMenuItem( slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshowCustomInterval )
+            ClientGUIMenus.AppendMenuItem( slideshow, 'custom interval', 'Start a slideshow with a custom interval.', self._StartSlideshowCustomPeriod )
             
             ClientGUIMenus.AppendMenu( menu, slideshow, 'start slideshow' )
             
-            if self._SlideshowIsRunning():
+            if self._slideshow_is_running:
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'stop slideshow', 'Stop the current slideshow.', self._PausePlaySlideshow )
                 
@@ -4615,6 +4728,16 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
             
             CGC.core().PopupMenu( self, menu )
+            
+        
+    
+    def TIMERUIUpdate( self ):
+        
+        CanvasMediaListNavigable.TIMERUIUpdate( self )
+        
+        if self._slideshow_is_running:
+            
+            self._DoSlideshowWork()
             
         
     

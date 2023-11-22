@@ -2852,11 +2852,17 @@ class FilesMaintenanceManager( object ):
                         
                         HydrusData.PrintException( e )
                         
-                        message = 'Hey, while performing file maintenance task "{}" on file {}, the client ran into a serious I/O Error! This is a significant hard drive problem, and as such you should shut the client down and check your hard drive health immediately. No more file maintenance jobs will be run this boot, and a full traceback has been written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
+                        job_status = ClientThreading.JobStatus()
+                        
+                        message = 'Hey, while performing file maintenance task "{}" on file {}, the client ran into an I/O Error! This could be just some media library moaning about a weird (probably truncated) file, but it could also be a significant hard drive problem. Look at the error yourself. If it looks serious, you should shut the client down and check your hard drive health immediately. Just to be safe, no more file maintenance jobs will be run this boot, and a full traceback has been written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
                         message += os.linesep * 2
                         message += str( e )
                         
-                        HydrusData.ShowText( message )
+                        job_status.SetStatusText( message )
+                        
+                        job_status.SetFiles( [ hash ], 'I/O error file' )
+                        
+                        HG.client_controller.pub( 'message', job_status )
                         
                         self._serious_error_encountered = True
                         self._shutdown = True
@@ -2867,11 +2873,17 @@ class FilesMaintenanceManager( object ):
                         
                         HydrusData.PrintException( e )
                         
+                        job_status = ClientThreading.JobStatus()
+                        
                         message = 'There was an unexpected problem performing maintenance task "{}" on file {}! The job will not be reattempted. A full traceback of this error should be written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
                         message += os.linesep * 2
                         message += str( e )
                         
-                        HydrusData.ShowText( message )
+                        job_status.SetStatusText( message )
+                        
+                        job_status.SetFiles( [ hash ], 'failed file' )
+                        
+                        HG.client_controller.pub( 'message', job_status )
                         
                     finally:
                         

@@ -2136,11 +2136,23 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
     
     def _SetLabelAndToolTip( self ):
         
+        all_are_default = True
+        all_are_set = False
+        
         summaries = []
         
         single_label = 'initialising'
         
         if self._file_import_options is not None:
+            
+            if self._file_import_options.IsDefault():
+                
+                all_are_set = False
+                
+            else:
+                
+                all_are_default = False
+                
             
             single_label = 'file import options'
             
@@ -2149,12 +2161,30 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if self._tag_import_options is not None:
             
+            if self._tag_import_options.IsDefault():
+                
+                all_are_set = False
+                
+            else:
+                
+                all_are_default = False
+                
+            
             single_label = 'tag import options'
             
             summaries.append( self._tag_import_options.GetSummary( self._show_downloader_options ) )
             
         
         if self._note_import_options is not None:
+            
+            if self._note_import_options.IsDefault():
+                
+                all_are_set = False
+                
+            else:
+                
+                all_are_default = False
+                
             
             single_label = 'note import options'
             
@@ -2165,9 +2195,37 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             label = 'import options'
             
+            if self._allow_default_selection:
+                
+                if all_are_default:
+                    
+                    label = f'{label} (all default)'
+                    
+                elif all_are_set:
+                    
+                    label = f'{label} (all set)'
+                    
+                else:
+                    
+                    label = f'{label} (some set)'
+                    
+                
+            
         else:
             
             label = single_label
+            
+            if self._allow_default_selection:
+                
+                if all_are_default:
+                    
+                    label = f'{label} (default)'
+                    
+                else:
+                    
+                    label = f'{label} (set)'
+                    
+                
             
         
         my_action = self.defaultAction()

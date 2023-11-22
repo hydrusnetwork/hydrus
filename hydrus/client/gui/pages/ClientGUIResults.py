@@ -4203,16 +4203,12 @@ class MediaPanelThumbnails( MediaPanel ):
             
             regen_menu = ClientGUIMenus.GenerateMenu( manage_menu )
             
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails, but only if wrong size', 'Regenerate the selected files\' thumbnails, but only if they are the wrong size.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_REFIT_THUMBNAIL )
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'thumbnails', 'Regenerate the selected files\'s thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'file metadata', 'Regenerated the selected files\' metadata and thumbnails.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'similar files data', 'Regenerated the selected files\' perceptual hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA )
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'duplicate pixel data', 'Regenerated the selected files\' pixel hashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_PIXEL_HASH )
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'blurhash', 'Regenerated the selected files\' blurhashes.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_BLURHASH )
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'full presence check', 'Check file presence and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_TRY_URL_ELSE_REMOVE_RECORD )
-            ClientGUIMenus.AppendMenuItem( regen_menu, 'full integrity check', 'Check file integrity and try to fix.', self._RegenerateFileData, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
+            for job_type in ClientFiles.ALL_REGEN_JOBS_IN_HUMAN_ORDER:
+                
+                ClientGUIMenus.AppendMenuItem( regen_menu, ClientFiles.regen_file_enum_to_str_lookup[ job_type ], ClientFiles.regen_file_enum_to_description_lookup[ job_type ], self._RegenerateFileData, job_type )
+                
             
-            ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'regenerate' )
+            ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'maintenance' )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             

@@ -1,6 +1,7 @@
 import collections
 import os
 import sys
+import threading
 import traceback
 import typing
 
@@ -645,83 +646,115 @@ class JobStatusPopupQueue( object ):
         
         self._job_statuses_in_view: typing.Set[ ClientThreading.JobStatus ] = set()
         
+        self._lock = threading.Lock()
+        
     
     def AddJobStatus( self, job_status: ClientThreading.JobStatus ):
         
-        self._job_status_ordered_dict_queue[ job_status.GetKey() ] = job_status
+        with self._lock:
+            
+            self._job_status_ordered_dict_queue[ job_status.GetKey() ] = job_status
+            
         
     
     def ClearAllDeleted( self ):
         
-        removees = [ job_status.GetKey() for job_status in self._job_status_ordered_dict_queue.values() if job_status.IsDeleted() ]
-        
-        for job_status_key in removees:
+        with self._lock:
             
-            del self._job_status_ordered_dict_queue[ job_status_key ]
+            removees = [ job_status.GetKey() for job_status in self._job_status_ordered_dict_queue.values() if job_status.IsDeleted() ]
             
-        
-        self._job_statuses_in_view = { job_status for job_status in self._job_statuses_in_view if not job_status.IsDeleted() }
+            for job_status_key in removees:
+                
+                del self._job_status_ordered_dict_queue[ job_status_key ]
+                
+            
+            self._job_statuses_in_view = { job_status for job_status in self._job_statuses_in_view if not job_status.IsDeleted() }
+            
         
     
     def DeleteAllPossible( self ):
         
-        for job_status in self._job_status_ordered_dict_queue.values():
+        with self._lock:
             
-            if job_status.IsDeletable():
+            for job_status in self._job_status_ordered_dict_queue.values():
                 
-                job_status.Delete()
+                if job_status.IsDeletable():
+                    
+                    job_status.Delete()
+                    
                 
             
         
     
     def GetCount( self ) -> int:
         
-        return len( self._job_status_ordered_dict_queue )
+        with self._lock:
+                
+            return len( self._job_status_ordered_dict_queue )
+            
         
     
     def GetInViewCount( self ) -> int:
         
-        return len( self._job_statuses_in_view )
+        with self._lock:
+            
+            return len( self._job_statuses_in_view )
+            
         
     
     def GetJobStatus( self, job_status_key: bytes ) -> typing.Optional[ ClientThreading.JobStatus ]:
         
-        return self._job_status_ordered_dict_queue.get( job_status_key, None )
+        with self._lock:
+            
+            return self._job_status_ordered_dict_queue.get( job_status_key, None )
+            
         
     
     def GetJobStatuses( self, only_in_view = False ) -> typing.List[ ClientThreading.JobStatus ]:
         
-        if only_in_view:
+        with self._lock:
             
-            return [ job_status for job_status in self._job_status_ordered_dict_queue.values() if job_status in self._job_statuses_in_view ]
-            
-        else:
-            
-            return list( self._job_status_ordered_dict_queue.values() )
+            if only_in_view:
+                
+                return [ job_status for job_status in self._job_status_ordered_dict_queue.values() if job_status in self._job_statuses_in_view ]
+                
+            else:
+                
+                return list( self._job_status_ordered_dict_queue.values() )
+                
             
         
     
     def GetNextJobStatusToShow( self ) -> typing.Optional[ ClientThreading.JobStatus ]:
         
-        for job_status in self._job_status_ordered_dict_queue.values():
+        with self._lock:
             
-            if job_status not in self._job_statuses_in_view:
+            for job_status in self._job_status_ordered_dict_queue.values():
                 
-                return job_status
+                if job_status not in self._job_statuses_in_view:
+                    
+                    return job_status
+                    
                 
             
-        
-        return None
+            return None
+            
         
     
     def HavePendingToShow( self ):
         
-        return len( self._job_status_ordered_dict_queue ) > len( self._job_statuses_in_view )
+        with self._lock:
+            
+            return len( self._job_status_ordered_dict_queue ) > len( self._job_statuses_in_view )
+            
         
     
     def PutJobStatusInView( self, job_status ):
         
-        self._job_statuses_in_view.add( job_status )
+        with self._lock:
+            
+            self._job_statuses_in_view.add( job_status )
+            
         
     
     def TryToMergeJobStatus( self, job_status: ClientThreading.JobStatus ) -> bool:
@@ -749,14 +782,14 @@ class JobStatusPopupQueue( object ):
                         
                         if existing_label == label:
                             
-                            if isinstance( existing_hashes, list ):
-                                
-                                existing_hashes.extend( hashes )
-                                
-                            elif isinstance( existing_hashes, set ):
-                                
-                                existing_hashes.update( hashes )
-                                
+                            # could extend it in place, but let's be safe and make and set back a new one to catch errant sets and other list-tracking weirdness
+                            new_hashes = list( existing_hashes )
+                            
+                            new_hashes.extend( hashes )
+                            
+                            new_hashes = HydrusData.DedupeList( new_hashes )
+                            
+                            existing_job_status.SetFiles( new_hashes, existing_label )
                             
                             return True
                             

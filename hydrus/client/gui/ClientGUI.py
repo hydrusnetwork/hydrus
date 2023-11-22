@@ -1517,7 +1517,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._controller.pub( 'message', job_status )
         
-        
         #
         
         service_keys = list( HG.client_controller.services_manager.GetServiceKeys( ( HC.TAG_REPOSITORY, ) ) )
@@ -1538,6 +1537,34 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             HG.client_controller.pub( 'message', job_status )
             
+        
+        #
+        
+        job_status = ClientThreading.JobStatus()
+        
+        job_status.SetStatusTitle( 'Popup file merge test' )
+        
+        job_status.SetStatusText( 'hey I should have five files' )
+        
+        job_status.SetVariable( 'attached_files_mergable', True )
+        
+        hashes = [ HydrusData.GenerateKey() for i in range( 3 ) ]
+        
+        job_status.SetFiles( hashes, 'cool pics' )
+        
+        self._controller.pub( 'message', job_status )
+        
+        job_status = ClientThreading.JobStatus()
+        
+        job_status.SetStatusTitle( 'Popup file merge test' )
+        
+        job_status.SetStatusText( 'hey you should not see me, I should be merged' )
+        
+        job_status.SetVariable( 'attached_files_mergable', True )
+        
+        job_status.SetFiles( [ HydrusData.GenerateKey() for i in range( 2 ) ] + [ hashes[0] ], 'cool pics' )
+        
+        self._controller.pub( 'message', job_status )
         
         #
         

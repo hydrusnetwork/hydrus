@@ -1930,11 +1930,6 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryConvertPetitionIdsToSummary( self, content_type: int, status: int, petition_ids: typing.Collection[ typing.Tuple[ int, int ] ], limit: int ) -> typing.List[ HydrusNetwork.PetitionHeader ]:
         
-        if len( petition_ids ) == 0:
-            
-            raise HydrusExceptions.NotFoundException( 'No petitions!' )
-            
-        
         if len( petition_ids ) > limit:
             
             # we don't want a random sample, we want to sample grouped by account id, so let's be a bit more clever about it

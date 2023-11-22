@@ -1771,6 +1771,11 @@ class MediaContainer( QW.QWidget ):
         self.hide()
         
     
+    def CurrentlyPresentingMediaWithDuration( self ):
+        
+        return isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget, QtMediaPlayer ) )
+        
+    
     def DoEdgePan( self, pan_type: int ):
         
         if self._media is None:
@@ -1932,6 +1937,16 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def HasPlayedOnceThrough( self ):
+        
+        if self.CurrentlyPresentingMediaWithDuration():
+            
+            return self._media_window.HasPlayedOnceThrough()
+            
+        
+        return True
+        
+    
     def IsAtMaxZoom( self ):
         
         possible_zooms = HG.client_controller.new_options.GetMediaZooms()
@@ -1945,7 +1960,7 @@ class MediaContainer( QW.QWidget ):
     
     def IsPaused( self ):
         
-        if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
+        if self.CurrentlyPresentingMediaWithDuration():
             
             return self._media_window.IsPaused()
             
@@ -2009,7 +2024,7 @@ class MediaContainer( QW.QWidget ):
         
         if self._media is not None:
             
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
+            if self.CurrentlyPresentingMediaWithDuration():
                 
                 self._media_window.Pause()
                 
@@ -2020,38 +2035,10 @@ class MediaContainer( QW.QWidget ):
         
         if self._media is not None:
             
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
+            if self.CurrentlyPresentingMediaWithDuration():
                 
                 self._media_window.PausePlay()
                 
-            
-        
-    
-    def ReadyToSlideshow( self ):
-        
-        if self._media is None:
-            
-            return False
-            
-        else:
-            
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
-                
-                if not self._media_window.HasPlayedOnceThrough():
-                    
-                    return False
-                    
-                
-            
-            if isinstance( self._media_window, StaticImage ):
-                
-                if not self._media_window.IsRendered():
-                    
-                    return False
-                    
-                
-            
-            return True
             
         
     
@@ -2133,7 +2120,7 @@ class MediaContainer( QW.QWidget ):
         
         if self._media is not None:
             
-            if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
+            if self.CurrentlyPresentingMediaWithDuration():
                 
                 self._media_window.SeekDelta( direction, duration_ms )
                 
@@ -2233,7 +2220,7 @@ class MediaContainer( QW.QWidget ):
     
     def StopForSlideshow( self, value ):
         
-        if isinstance( self._media_window, ( Animation, ClientGUIMPV.MPVWidget ) ):
+        if self.CurrentlyPresentingMediaWithDuration():
             
             self._media_window.StopForSlideshow( value )
             
@@ -2899,6 +2886,8 @@ class QtMediaPlayer( QW.QWidget ):
         
         self._we_are_initialised = True
         
+        self._stop_for_slideshow = False
+        
         vbox = QP.VBoxLayout( margin = 0 )
         
         QP.AddToLayout( vbox, self._my_video_output, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
@@ -2933,7 +2922,10 @@ class QtMediaPlayer( QW.QWidget ):
             
             self._media_player.setPosition( 0 )
             
-            self._media_player.play()
+            if not self._stop_for_slideshow:
+                
+                self._media_player.play()
+                
             
         
     
@@ -3135,6 +3127,8 @@ class QtMediaPlayer( QW.QWidget ):
         
         self._media = media
         
+        self._stop_for_slideshow = False
+        
         has_audio = self._media.HasAudio()
         is_audio = self._media.GetMime() in HC.AUDIO
         
@@ -3162,6 +3156,11 @@ class QtMediaPlayer( QW.QWidget ):
         
         self._my_audio_output.setVolume( ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type ) )
         self._my_audio_output.setMuted( ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type ) )
+        
+    
+    def StopForSlideshow( self, value ):
+        
+        self._stop_for_slideshow = value
         
     
     def TryToUnload( self ):

@@ -1995,6 +1995,7 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( HydrusResourceClientAPIRestrictedAddNotes ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2002,7 +2003,7 @@ class HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( HydrusResourceClient
         if 'hash' in request.parsed_request_args:
             
             hash = request.parsed_request_args.GetValue( 'hash', bytes )
-        
+            
         elif 'file_id' in request.parsed_request_args:
             
             hash_id = request.parsed_request_args.GetValue( 'file_id', int )
@@ -2010,10 +2011,11 @@ class HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( HydrusResourceClient
             hash_ids_to_hashes = HG.client_controller.Read( 'hash_ids_to_hashes', hash_ids = [ hash_id ] )
             
             hash = hash_ids_to_hashes[ hash_id ]
-        
+            
         else:
             
             raise HydrusExceptions.BadRequestException( 'There was no file identifier or hash given!' )
+            
         
         note_names = request.parsed_request_args.GetValue( 'note_names', list, expected_list_type = str )
         
@@ -2028,6 +2030,7 @@ class HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( HydrusResourceClient
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddTags( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2035,6 +2038,7 @@ class HydrusResourceClientAPIRestrictedAddTags( HydrusResourceClientAPIRestricte
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_TAGS )
         
     
+
 class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRestrictedAddTags ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):

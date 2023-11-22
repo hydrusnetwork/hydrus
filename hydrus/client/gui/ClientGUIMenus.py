@@ -85,7 +85,13 @@ def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
     
     return menu_item
     
+
 def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
+    
+    if description == label:
+        
+        description = ''
+        
     
     if copy_text == '':
         
@@ -272,7 +278,7 @@ def SetMenuTexts( menu_item: QW.QAction, label: str, description: str ):
         
         menu_item.setToolTip( label )
         
-    elif description != '':
+    elif description != label and description != '':
         
         menu_item.setToolTip( description )
         

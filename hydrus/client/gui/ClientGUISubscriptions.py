@@ -393,7 +393,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                query_header.SetQueryLogContainerStatus( ClientImportSubscriptionQuery.LOG_CONTAINER_UNSYNCED, pretty_velocity_override = 'will recalculate on next run' )
+                query_header.SetQueryLogContainerStatus( ClientImportSubscriptionQuery.LOG_CONTAINER_UNSYNCED, pretty_velocity_override = 'will recalculate when next fully loaded' )
                 
             
         
@@ -1192,7 +1192,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_import_options = query_header.GetTagImportOptions()
         show_downloader_options = False # just for additional tags, no parsing gubbins needed
-        allow_default_selection = True
+        allow_default_selection = False
         
         self._import_options_button = ClientGUIImportOptions.ImportOptionsButton( self, show_downloader_options, allow_default_selection )
         

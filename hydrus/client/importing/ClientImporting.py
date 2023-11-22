@@ -1,4 +1,5 @@
 import random
+import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
@@ -114,18 +115,19 @@ def GetRepeatingJobInitialDelay():
     
     return 0.5 + ( random.random() * 0.5 )
     
-def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button, publish_files_to_page ):
+
+def PublishPresentationHashes( publishing_label: str, hashes: typing.List[ bytes ], publish_to_popup_button: bool, publish_files_to_page: bool ):
     
     if publish_to_popup_button:
         
-        files_job_status = ClientThreading.JobStatus()
+        job_status = ClientThreading.JobStatus()
         
-        files_job_status.SetVariable( 'attached_files_mergable', True )
-        files_job_status.SetFiles( list( hashes ), publishing_label )
+        job_status.SetVariable( 'attached_files_mergable', True )
+        job_status.SetFiles( list( hashes ), publishing_label )
         
-        files_job_status.Finish() # important to later make it auto-dismiss on all files disappearing
+        job_status.Finish() # important to later make it auto-dismiss on all files disappearing
         
-        HG.client_controller.pub( 'message', files_job_status )
+        HG.client_controller.pub( 'message', job_status )
         
     
     if publish_files_to_page:
@@ -133,6 +135,7 @@ def PublishPresentationHashes( publishing_label, hashes, publish_to_popup_button
         HG.client_controller.pub( 'imported_files_to_page', list( hashes ), publishing_label )
         
     
+
 def THREADDownloadURL( job_status, url, url_string ):
     
     job_status.SetStatusTitle( url_string )
