@@ -2849,7 +2849,7 @@ Arguments:
     
 
 Response: 
-:   A JSON Object containing `job_statuses`, a list of [job status objects](#job_status_objects) and [the services object](#services_object)
+:   A JSON Object containing `job_statuses` which is a list of [job status objects](#job_status_objects)
 
 ```json title="Example response"
 {

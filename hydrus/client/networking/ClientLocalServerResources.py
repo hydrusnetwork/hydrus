@@ -4414,7 +4414,7 @@ def JobStatusToDict( job_status: ClientThreading.JobStatus ):
         
         return_dict = {
             'key' : job_status.GetKey().hex(),
-            'creation_time': job_status.GetCreationTime(),
+            'creation_time' : job_status.GetCreationTime(),
             'status_title' : job_status.GetStatusTitle(),
             'status_text_1' : job_status.GetStatusText( 1 ),
             'status_text_2' : job_status.GetStatusText( 2 ),
@@ -4430,7 +4430,7 @@ def JobStatusToDict( job_status: ClientThreading.JobStatus ):
             'nice_string' : job_status.ToString(),
             'popup_gauge_1' : job_status.GetIfHasVariable( 'popup_gauge_1' ),
             'popup_gauge_2' : job_status.GetIfHasVariable( 'popup_gauge_2' ),
-            'attached_files_mergable': job_status.GetIfHasVariable( 'attached_files_mergable' ),
+            'attached_files_mergable' : job_status.GetIfHasVariable( 'attached_files_mergable' ),
             'api_data' : job_status.GetIfHasVariable( 'api_data' ),
         }
         
