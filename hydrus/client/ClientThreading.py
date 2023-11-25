@@ -164,6 +164,11 @@ class JobStatus( object ):
         self.DeleteVariable( 'status_text_{}'.format( level ) )
         
     
+    def DeleteStatusTitle( self ):
+        
+        self.DeleteVariable( 'status_title' )
+        
+    
     def DeleteVariable( self, name ):
         
         with self._variable_lock:

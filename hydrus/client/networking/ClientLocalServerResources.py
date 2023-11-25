@@ -51,9 +51,12 @@ from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.search import ClientSearch
 from hydrus.client.search import ClientSearchAutocomplete
 from hydrus.client.search import ClientSearchParseSystemPredicates
+from hydrus.client.gui import ClientGUIPopupMessages
+
 
 local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
 
@@ -66,9 +69,9 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 # if a variable name isn't defined here, a GET with it won't work
 
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
-CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key' }
+CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key', 'job_status_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system', 'only_in_view' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -704,7 +707,7 @@ def ParseLocationContext( request: HydrusServerRequest.HydrusRequest, default: C
         
     
 
-def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
+def ParseHashes( request: HydrusServerRequest.HydrusRequest, optional = False ):
     
     something_was_set = False
     
@@ -755,12 +758,18 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest ):
     
     if not something_was_set: # subtly different to 'no hashes'
         
+        if optional:
+            
+            return None
+        
         raise HydrusExceptions.BadRequestException( 'Please include some files in your request--file_id or hash based!' )
         
     
     hashes = HydrusData.DedupeList( hashes )
     
-    CheckHashLength( hashes )
+    if not optional or len(hashes) > 0:
+        
+        CheckHashLength( hashes )
     
     return hashes
     
@@ -4393,3 +4402,358 @@ class HydrusResourceClientAPIRestrictedManagePagesRefreshPage( HydrusResourceCli
         return response_context
         
     
+class HydrusResourceClientAPIRestrictedManagePopups( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_MANAGE_POPUPS )
+        
+    
+
+def JobStatusToDict( job_status: ClientThreading.JobStatus ):
+        
+        return_dict = {
+            'key' : job_status.GetKey().hex(),
+            'creation_time' : job_status.GetCreationTime(),
+            'status_title' : job_status.GetStatusTitle(),
+            'status_text_1' : job_status.GetStatusText( 1 ),
+            'status_text_2' : job_status.GetStatusText( 2 ),
+            'traceback' : job_status.GetTraceback(),
+            'had_error' : job_status.HadError(),
+            'is_cancellable' : job_status.IsCancellable(),
+            'is_cancelled' : job_status.IsCancelled(),
+            'is_deleted' : job_status.IsDeleted(),
+            'is_done' : job_status.IsDone(),
+            'is_pauseable' : job_status.IsPausable(),
+            'is_paused' : job_status.IsPaused(),
+            'is_working' : job_status.IsWorking(),
+            'nice_string' : job_status.ToString(),
+            'popup_gauge_1' : job_status.GetIfHasVariable( 'popup_gauge_1' ),
+            'popup_gauge_2' : job_status.GetIfHasVariable( 'popup_gauge_2' ),
+            'attached_files_mergable' : job_status.GetIfHasVariable( 'attached_files_mergable' ),
+            'api_data' : job_status.GetIfHasVariable( 'api_data' ),
+        }
+        
+        files_object = job_status.GetFiles()
+        
+        if files_object is not None:
+            
+            ( hashes, label ) = files_object
+            
+            return_dict[ 'files' ] = {
+                'hashes' : [ hash.hex() for hash in hashes ],
+                'label': label
+            }
+            
+        
+        user_callable = job_status.GetUserCallable()
+        
+        if user_callable is not None:
+            
+            return_dict[ 'user_callable_label' ] = user_callable.GetLabel()
+            
+        
+        network_job: ClientNetworkingJobs.NetworkJob = job_status.GetNetworkJob()
+        
+        if network_job is not None:
+            
+            ( status_text, current_speed, bytes_read, bytes_to_read ) = network_job.GetStatus()
+            
+            network_job_dict = {
+                'url' : network_job.GetURL(),
+                'waiting_on_connection_error' : network_job.CurrentlyWaitingOnConnectionError(),
+                'domain_ok' : network_job.DomainOK(),
+                'waiting_on_serverside_bandwidth' : network_job.CurrentlyWaitingOnServersideBandwidth(),
+                'no_engine_yet' : network_job.NoEngineYet(),
+                'has_error' : network_job.HasError(),
+                'total_data_used' : network_job.GetTotalDataUsed(),
+                'is_done' : network_job.IsDone(),
+                'status_text' : status_text,
+                'current_speed' : current_speed,
+                'bytes_read' : bytes_read,
+                'bytes_to_read' : bytes_to_read
+            }
+            
+            return_dict[ 'network_job' ] = network_job_dict
+            
+        
+        return { k: v for k, v in return_dict.items() if v is not None }
+        
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsGetPopups( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status_queue: ClientGUIPopupMessages.JobStatusPopupQueue = HG.client_controller.job_status_popup_queue        
+        
+        only_in_view = request.parsed_request_args.GetValue( 'only_in_view', bool, default_value = False )
+        
+        job_statuses = job_status_queue.GetJobStatuses( only_in_view )
+        
+        body_dict = {
+            'job_statuses' : [JobStatusToDict( job ) for job in job_statuses]
+         }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        return response_context
+        
+    
+
+def GetJobStatusFromRequest( request: HydrusServerRequest.HydrusRequest ) -> ClientThreading.JobStatus:
+    
+    job_status_key = request.parsed_request_args.GetValue( 'job_status_key', bytes )
+            
+    job_status_queue: ClientGUIPopupMessages.JobStatusPopupQueue = HG.client_controller.job_status_popup_queue
+    
+    job_status = job_status_queue.GetJobStatus( job_status_key )
+    
+    if job_status is None:
+            
+            raise HydrusExceptions.BadRequestException('This job key doesn\'t exist!')
+            
+        
+    
+    return job_status
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsDismissPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = GetJobStatusFromRequest( request )
+        
+        if not job_status.IsDeletable():
+            
+            raise HydrusExceptions.BadRequestException('This job can\'t be dismissed!')
+            
+        
+        seconds = request.parsed_request_args.GetValueOrNone( 'seconds', int )
+        
+        job_status.Delete( seconds )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsCancelPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = GetJobStatusFromRequest( request )
+        
+        if not job_status.IsCancellable():
+            
+            raise HydrusExceptions.BadRequestException('This job can\'t be cancelled!')
+            
+        
+        seconds = request.parsed_request_args.GetValueOrNone( 'seconds', int )
+        
+        job_status.Cancel( seconds )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsFinishPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = GetJobStatusFromRequest( request )
+        
+        seconds = request.parsed_request_args.GetValueOrNone( 'seconds', int )
+        
+        job_status.Finish( seconds )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsCallUserCallable( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = GetJobStatusFromRequest( request )
+        
+        user_callable = job_status.GetUserCallable()
+            
+        if user_callable is None:
+            
+            raise HydrusExceptions.BadRequestException('This job doesn\'t have a user callable!')
+            
+        
+        HG.client_controller.CallBlockingToQt( HG.client_controller.gui, user_callable )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
+def HandlePopupUpdate( job_status: ClientThreading.JobStatus, request: HydrusServerRequest.HydrusRequest ):
+    
+    def HandleGenericVariable( name: str, type: type ):
+        
+        if name in request.parsed_request_args:
+            
+            value = request.parsed_request_args.GetValueOrNone( name, type )
+            
+            if value is not None:
+                
+                job_status.SetVariable( name, value )
+                
+            else:
+                
+                job_status.DeleteVariable( name )
+                
+            
+        
+    
+    if 'status_title' in request.parsed_request_args:
+    
+        status_title = request.parsed_request_args.GetValueOrNone( 'status_title', str )
+            
+        if status_title is not None:
+            
+            job_status.SetStatusTitle( status_title )
+            
+        else:
+            
+            job_status.DeleteStatusTitle()
+            
+        
+    
+    if 'status_text_1' in request.parsed_request_args:
+        
+        status_text = request.parsed_request_args.GetValueOrNone( 'status_text_1', str )
+    
+        if status_text is not None:
+            
+            job_status.SetStatusText( status_text, 1 )
+            
+        else:
+            
+            job_status.DeleteStatusText()
+            
+        
+    
+    if 'status_text_2' in request.parsed_request_args:
+    
+        status_text_2 = request.parsed_request_args.GetValueOrNone( 'status_text_2', str )
+        
+        if status_text_2 is not None:
+            
+            job_status.SetStatusText( status_text_2, 2 )
+            
+        else:
+            
+            job_status.DeleteStatusText( 2 )
+            
+        
+    
+    is_cancellable = request.parsed_request_args.GetValueOrNone( 'is_cancellable', bool )
+    
+    if is_cancellable is not None:
+        
+        job_status.SetCancellable( is_cancellable )
+        
+    
+    is_pausable = request.parsed_request_args.GetValueOrNone( 'is_pausable', bool )
+    
+    if is_pausable is not None:
+        
+        job_status.SetPausable( is_pausable )
+        
+    
+    HandleGenericVariable( 'attached_files_mergable', bool )
+    
+    HandleGenericVariable( 'api_data', dict )
+    
+    for name in ['popup_gauge_1', 'popup_gauge_2']:
+        
+        if name in request.parsed_request_args:
+            
+            value = request.parsed_request_args.GetValueOrNone( name, list, expected_list_type = int )
+            
+            if value is not None:
+                
+                if len(value) != 2:
+                    
+                    raise HydrusExceptions.BadRequestException( 'The parameter "{}" had an invalid number of items!'.format( name ) )
+                    
+                
+                job_status.SetVariable( name, value )
+                
+            else:
+                
+                job_status.DeleteVariable( name )
+                
+            
+        
+    
+    files_label = request.parsed_request_args.GetValueOrNone( 'files_label', str )
+    
+    hashes = ParseHashes( request, True )
+    
+    if hashes is not None:
+        
+        if len(hashes) > 0 and files_label is None:
+            
+            raise HydrusExceptions.BadRequestException( '"files_label" is required to add files to a popup!' )
+            
+        
+        job_status.SetFiles( hashes, files_label )
+        
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsAddPopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = ClientThreading.JobStatus()
+        
+        HandlePopupUpdate( job_status, request )
+        
+        HG.client_controller.pub( 'message', job_status )
+        
+        body_dict = {
+            'job_status': JobStatusToDict( job_status )
+        }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+                
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedManagePopupsUpdatePopup( HydrusResourceClientAPIRestrictedManagePages ):
+    
+    def _threadDoPOSTJob(self, request: HydrusServerRequest.HydrusRequest ):
+        
+        job_status = GetJobStatusFromRequest( request )
+        
+        HandlePopupUpdate( job_status, request )
+          
+        body_dict = {
+            'job_status': JobStatusToDict( job_status )
+        }
+        
+        body = Dumps( body_dict, request.preferred_mime )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+                
+        return response_context
+        
+    
+

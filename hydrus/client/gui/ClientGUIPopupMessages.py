@@ -759,7 +759,7 @@ class JobStatusPopupQueue( object ):
     
     def TryToMergeJobStatus( self, job_status: ClientThreading.JobStatus ) -> bool:
         
-        if not job_status.HasVariable( 'attached_files_mergable' ):
+        if not job_status.GetIfHasVariable( 'attached_files_mergable' ):
             
             return False
             
@@ -772,7 +772,7 @@ class JobStatusPopupQueue( object ):
             
             for existing_job_status in self._job_status_ordered_dict_queue.values():
                 
-                if existing_job_status.HasVariable( 'attached_files_mergable' ):
+                if existing_job_status.GetIfHasVariable( 'attached_files_mergable' ):
                     
                     result = existing_job_status.GetFiles()
                     
