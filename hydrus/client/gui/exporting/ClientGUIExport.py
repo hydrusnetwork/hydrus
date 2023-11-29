@@ -924,9 +924,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             job_status.DeleteVariable( 'popup_gauge_1' )
             job_status.SetStatusText( 'Done!' )
             
-            job_status.Finish()
-            
-            job_status.Delete( 5 )
+            job_status.FinishAndDismiss( 5 )
             
             QP.CallAfter( qt_update_label, 'done!' )
             

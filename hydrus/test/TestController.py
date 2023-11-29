@@ -65,6 +65,7 @@ from hydrus.test import TestFunctions
 from hydrus.test import TestHydrusData
 from hydrus.test import TestHydrusNATPunch
 from hydrus.test import TestHydrusNetworking
+from hydrus.test import TestHydrusPaths
 from hydrus.test import TestHydrusSerialisable
 from hydrus.test import TestHydrusServer
 from hydrus.test import TestHydrusSessions
@@ -418,7 +419,7 @@ class Controller( object ):
                 
             
         
-        job_status = ClientThreading.JobStatus()
+        job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )
         
         QP.CallAfter( qt_code, win, job_status )
         
@@ -800,6 +801,7 @@ class Controller( object ):
             TestClientDBDuplicates,
             TestClientDBTags,
             TestHydrusData,
+            TestHydrusPaths,
             TestHydrusTime,
             TestHydrusNATPunch,
             TestClientNetworking,
@@ -835,6 +837,7 @@ class Controller( object ):
             TestClientThreading,
             TestFunctions,
             TestHydrusData,
+            TestHydrusPaths,
             TestHydrusTags,
             TestHydrusTime,
             TestHydrusSerialisable,

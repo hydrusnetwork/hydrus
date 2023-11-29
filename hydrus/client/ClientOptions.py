@@ -130,8 +130,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False
         self._dictionary[ 'booleans' ][ 'secret_discord_dnd_fix' ] = False
         
-        self._dictionary[ 'booleans' ][ 'disable_cv_for_gifs' ] = False
-        
         self._dictionary[ 'booleans' ][ 'show_unmatched_urls_in_media_viewer' ] = False
         
         self._dictionary[ 'booleans' ][ 'set_search_focus_on_page_change' ] = False
@@ -774,7 +772,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         allow_decompression_bombs = True
         min_size = None
         max_size = None
-        max_gif_size = 32 * 1048576
+        max_gif_size = None
         min_resolution = None
         max_resolution = None
         

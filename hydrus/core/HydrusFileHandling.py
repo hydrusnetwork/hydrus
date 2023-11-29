@@ -2,9 +2,8 @@ import hashlib
 import os
 
 from hydrus.core import HydrusAnimationHandling
-from hydrus.core import HydrusPSDHandling
-from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusArchiveHandling
+from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDocumentHandling
@@ -12,12 +11,14 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusFlashHandling
 from hydrus.core import HydrusKritaHandling
 from hydrus.core import HydrusProcreateHandling
+from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusSVGHandling
 from hydrus.core import HydrusPDFHandling
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
+from hydrus.core import HydrusUgoiraHandling
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
@@ -51,36 +52,27 @@ def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames,
 
 def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
     
-    if mime == HC.APPLICATION_PSD:
+    if mime == HC.APPLICATION_CBZ:
+        
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
         
         try:
             
-            thumbnail_numpy = HydrusPSDHandling.GenerateThumbnailNumPyFromPSDPath( path, target_resolution )
+            HydrusArchiveHandling.ExtractCoverPage( path, temp_path )
             
-        except Exception as e:
+            cover_mime = GetMime( temp_path )
             
-            HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
-            HydrusData.PrintException( e )
-            HydrusData.Print( 'Attempting ffmpeg PSD thumbnail fallback' )
+            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, cover_mime )
             
-            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
+        except:
             
-            try:
-                
-                HydrusVideoHandling.RenderImageToImagePath( path, temp_path )
-                
-                thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG )
-                
-            except Exception as e: 
-                
-                thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
-                
-                thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
-                
-            finally:
-                
-                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
-                
+            thumb_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
+            
+            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
     elif mime == HC.APPLICATION_CLIP:
@@ -144,6 +136,38 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
+    elif mime == HC.APPLICATION_PSD:
+        
+        try:
+            
+            thumbnail_numpy = HydrusPSDHandling.GenerateThumbnailNumPyFromPSDPath( path, target_resolution )
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'Problem generating thumbnail for "{}":'.format( path ) )
+            HydrusData.PrintException( e )
+            HydrusData.Print( 'Attempting ffmpeg PSD thumbnail fallback' )
+            
+            ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath( suffix = '.png' )
+            
+            try:
+                
+                HydrusVideoHandling.RenderImageToImagePath( path, temp_path )
+                
+                thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, HC.IMAGE_PNG )
+                
+            except Exception as e: 
+                
+                thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
+                
+                thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+                
+            finally:
+                
+                HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+                
+            
+        
     elif mime == HC.IMAGE_SVG: 
         
         try:
@@ -203,7 +227,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
-    elif mime in HC.IMAGES or mime == HC.ANIMATION_GIF: # not apng atm
+    elif mime in HC.IMAGES:
         
         # TODO: it would be nice to have gif and apng generating their thumb x frames in, like with videos. maybe we should add animation thumb fetcher to hydrusanimationhandling
         
@@ -221,27 +245,52 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
             
         
-    else:
+    elif mime == HC.ANIMATION_UGOIRA:
         
-        renderer = None
-        
-        desired_thumb_frame = int( ( percentage_in / 100.0 ) * num_frames )
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
         
         try:
             
-            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, start_pos = desired_thumb_frame )
+            desired_thumb_frame_index = int( ( percentage_in / 100.0 ) * ( num_frames - 1 ) )
+            
+            HydrusUgoiraHandling.ExtractFrame( path, desired_thumb_frame_index, temp_path )
+            
+            cover_mime = GetMime( temp_path )
+            
+            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( temp_path, target_resolution, cover_mime )
+            
+        except:
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
+            
+            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
+    else: # animations and video
+        
+        renderer = None
+        
+        desired_thumb_frame_index = int( ( percentage_in / 100.0 ) * ( num_frames - 1 ) )
+        
+        try:
+            
+            renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, target_resolution, start_pos = desired_thumb_frame_index )
             
             numpy_image = renderer.read_frame()
             
         except Exception as e:
             
-            HydrusData.Print( 'Problem generating thumbnail for "{}" at frame {} ({})--FFMPEG could not render it.'.format( path, desired_thumb_frame, HydrusData.ConvertFloatToPercentage( percentage_in / 100.0 ) ) )
+            HydrusData.Print( 'Problem generating thumbnail for "{}" at frame {} ({})--FFMPEG could not render it.'.format( path, desired_thumb_frame_index, HydrusData.ConvertFloatToPercentage( percentage_in / 100.0 ) ) )
             HydrusData.PrintException( e )
             
             numpy_image = None
             
         
-        if numpy_image is None and desired_thumb_frame != 0:
+        if numpy_image is None and desired_thumb_frame_index != 0:
             
             if renderer is not None:
                 
@@ -358,7 +407,28 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
     
     # keep this in the specific-first, general-last test order
-    if mime == HC.APPLICATION_CLIP:
+    if mime == HC.APPLICATION_CBZ:
+        
+        ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
+        
+        try:
+            
+            HydrusArchiveHandling.ExtractCoverPage( path, temp_path )
+            
+            cover_mime = GetMime( temp_path )
+            
+            ( width, height ) = HydrusImageHandling.GetImageResolution( temp_path, cover_mime )
+            
+        except:
+            
+            ( width, height ) = ( 100, 100 )
+            
+        finally:
+            
+            HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
+            
+        
+    elif mime == HC.APPLICATION_CLIP:
         
         ( ( width, height ), duration, num_frames ) = HydrusClipHandling.GetClipProperties( path )
         
@@ -433,9 +503,13 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames, has_audio ) = HydrusVideoHandling.GetFFMPEGVideoProperties( path )
         
-    elif mime in HC.ANIMATIONS:
+    elif mime in HC.VIEWABLE_ANIMATIONS:
         
         ( ( width, height ), duration, num_frames ) = HydrusAnimationHandling.GetAnimationProperties( path, mime )
+        
+    elif mime == HC.ANIMATION_UGOIRA:
+        
+        ( ( width, height ), num_frames ) = HydrusUgoiraHandling.GetUgoiraProperties( path )
         
     elif mime in HC.IMAGES:
         
@@ -628,6 +702,16 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 if HydrusProcreateHandling.ZipLooksLikeProcreate( path ):
                     
                     return HC.APPLICATION_PROCREATE
+                    
+                
+                if HydrusUgoiraHandling.ZipLooksLikeUgoira( path ):
+                    
+                    return HC.ANIMATION_UGOIRA
+                    
+                
+                if HydrusArchiveHandling.ZipLooksLikeCBZ( path ):
+                    
+                    return HC.APPLICATION_CBZ
                     
                 
                 return HC.APPLICATION_ZIP

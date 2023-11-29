@@ -94,6 +94,8 @@ if USERPATH_DB_DIR == desired_userpath_db_dir:
     USERPATH_DB_DIR = None
     
 
+WE_SWITCHED_TO_USERPATH = False
+
 LICENSE_PATH = os.path.join( BASE_DIR, 'license.txt' )
 
 #
@@ -103,8 +105,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 553
-CLIENT_API_VERSION = 56
+SOFTWARE_VERSION = 554
+CLIENT_API_VERSION = 57
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -123,7 +125,7 @@ noneable_str = typing.Optional[ str ]
 
 BANDWIDTH_TYPE_DATA = 0
 BANDWIDTH_TYPE_REQUESTS = 1
-
+    
 bandwidth_type_string_lookup = {
     BANDWIDTH_TYPE_DATA : 'data',
     BANDWIDTH_TYPE_REQUESTS : 'requests'
@@ -736,6 +738,8 @@ APPLICATION_PROCREATE = 69
 IMAGE_QOI = 70
 APPLICATION_EPUB = 71
 APPLICATION_DJVU = 72
+APPLICATION_CBZ = 73
+ANIMATION_UGOIRA = 74
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -767,6 +771,7 @@ SEARCHABLE_MIMES = {
     IMAGE_AVIF,
     IMAGE_AVIF_SEQUENCE,
     IMAGE_BMP,
+    ANIMATION_UGOIRA,
     APPLICATION_FLASH,
     VIDEO_AVI,
     VIDEO_FLV,
@@ -777,6 +782,7 @@ SEARCHABLE_MIMES = {
     VIDEO_WEBM,
     VIDEO_OGV,
     VIDEO_MPEG,
+    APPLICATION_CBZ,
     APPLICATION_CLIP,
     APPLICATION_PSD,
     APPLICATION_SAI2,
@@ -827,6 +833,15 @@ IMAGES = [
 ]
 
 ANIMATIONS = [
+    ANIMATION_GIF,
+    ANIMATION_APNG,
+    IMAGE_AVIF_SEQUENCE,
+    IMAGE_HEIC_SEQUENCE,
+    IMAGE_HEIF_SEQUENCE,
+    ANIMATION_UGOIRA
+]
+
+VIEWABLE_ANIMATIONS = [
     ANIMATION_GIF,
     ANIMATION_APNG,
     IMAGE_AVIF_SEQUENCE,
@@ -885,6 +900,7 @@ IMAGE_PROJECT_FILES = [
 ]
 
 ARCHIVES = [
+    APPLICATION_CBZ,
     APPLICATION_7Z,
     APPLICATION_GZIP,
     APPLICATION_RAR,
@@ -939,7 +955,8 @@ MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY = {
     IMAGE_AVIF,
     IMAGE_HEIF,
     IMAGE_HEIC,
-    ANIMATION_GIF
+    ANIMATION_GIF,
+    ANIMATION_APNG
 }
 
 MIMES_THAT_MAY_THEORETICALLY_HAVE_TRANSPARENCY = MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY.union( {
@@ -956,7 +973,7 @@ MIMES_THAT_MAY_THEORETICALLY_HAVE_TRANSPARENCY = MIMES_THAT_WE_CAN_CHECK_FOR_TRA
     ANIMATION_APNG
 } )
 
-APPLICATIONS_WITH_THUMBNAILS = { IMAGE_SVG, APPLICATION_PDF, APPLICATION_FLASH, APPLICATION_CLIP, APPLICATION_PROCREATE }.union( VIEWABLE_IMAGE_PROJECT_FILES )
+APPLICATIONS_WITH_THUMBNAILS = { IMAGE_SVG, APPLICATION_PDF, APPLICATION_FLASH, APPLICATION_CLIP, APPLICATION_PROCREATE }.union( VIEWABLE_IMAGE_PROJECT_FILES ).union( { APPLICATION_CBZ } )
 
 MIMES_WITH_THUMBNAILS = set( IMAGES ).union( ANIMATIONS ).union( VIDEO ).union( APPLICATIONS_WITH_THUMBNAILS )
 
@@ -1013,6 +1030,7 @@ mime_enum_lookup = {
     'image/vnd.djvu' : APPLICATION_DJVU,
     'image/vnd.djvu+multipage' : APPLICATION_DJVU,
     'image/x-djvu' : APPLICATION_DJVU,
+    'application/vnd.comicbook+zip' : APPLICATION_CBZ,
     'application/zip' : APPLICATION_ZIP,
     'application/vnd.rar' : APPLICATION_RAR,
     'application/x-7z-compressed' : APPLICATION_7Z,
@@ -1064,12 +1082,14 @@ mime_string_lookup = {
     IMAGE_QOI : 'qoi',
     IMAGE_ICON : 'icon',
     IMAGE_SVG : 'svg',
-    IMAGE_HEIF: 'heif',
-    IMAGE_HEIF_SEQUENCE: 'heif sequence',
-    IMAGE_HEIC: 'heic',
-    IMAGE_HEIC_SEQUENCE: 'heic sequence',
-    IMAGE_AVIF: 'avif',
-    IMAGE_AVIF_SEQUENCE: 'avif sequence',
+    IMAGE_HEIF : 'heif',
+    IMAGE_HEIF_SEQUENCE : 'heif sequence',
+    IMAGE_HEIC : 'heic',
+    IMAGE_HEIC_SEQUENCE : 'heic sequence',
+    IMAGE_AVIF : 'avif',
+    IMAGE_AVIF_SEQUENCE : 'avif sequence',
+    ANIMATION_UGOIRA : 'ugoira',
+    APPLICATION_CBZ : 'cbz',
     APPLICATION_FLASH : 'flash',
     APPLICATION_OCTET_STREAM : 'application/octet-stream',
     APPLICATION_YAML : 'yaml',
@@ -1149,8 +1169,10 @@ mime_mimetype_string_lookup = {
     IMAGE_HEIC_SEQUENCE: 'image/heic-sequence',
     IMAGE_AVIF: 'image/avif',
     IMAGE_AVIF_SEQUENCE: 'image/avif-sequence',
+    ANIMATION_UGOIRA : 'application/zip',
     APPLICATION_FLASH : 'application/x-shockwave-flash',
     APPLICATION_OCTET_STREAM : 'application/octet-stream',
+    APPLICATION_CBZ: 'application/vnd.comicbook+zip',
     APPLICATION_YAML : 'application/x-yaml',
     APPLICATION_JSON : 'application/json',
     APPLICATION_CBOR : 'application/cbor',
@@ -1227,6 +1249,8 @@ mime_ext_lookup = {
     IMAGE_HEIC_SEQUENCE: '.heics',
     IMAGE_AVIF: '.avif',
     IMAGE_AVIF_SEQUENCE: '.avifs',
+    ANIMATION_UGOIRA : '.zip',
+    APPLICATION_CBZ : '.cbz',   
     APPLICATION_FLASH : '.swf',
     APPLICATION_OCTET_STREAM : '.bin',
     APPLICATION_YAML : '.yaml',
@@ -1273,6 +1297,9 @@ mime_ext_lookup = {
     VIDEO_WEBM : '.webm',
     APPLICATION_UNKNOWN : ''
 }
+
+IMAGE_FILE_EXTS = { mime_ext_lookup[ mime ] for mime in IMAGES }
+IMAGE_FILE_EXTS.update( ( '.jpe', '.jpeg' ) )
 
 ALLOWED_MIME_EXTENSIONS = [ mime_ext_lookup[ mime ] for mime in ALLOWED_MIMES ]
 

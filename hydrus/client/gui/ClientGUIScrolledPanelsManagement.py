@@ -2369,9 +2369,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg = QW.QCheckBox( system_panel )
             self._use_system_ffmpeg.setToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
-            self._disable_cv_for_gifs = QW.QCheckBox( system_panel )
-            self._disable_cv_for_gifs.setToolTip( 'OpenCV is good at rendering gifs, but if you have problems with it and your graphics card, check this and the less reliable and slower PIL will be used instead. EDIT: OpenCV is much better these days--this is mostly not needed.' )
-            
             self._load_images_with_pil = QW.QCheckBox( system_panel )
             self._load_images_with_pil.setToolTip( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
             
@@ -2457,7 +2454,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
             self._hide_uninteresting_local_import_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_local_import_time' ) )
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
-            self._disable_cv_for_gifs.setChecked( self._new_options.GetBoolean( 'disable_cv_for_gifs' ) )
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
@@ -2560,7 +2556,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
-            rows.append( ( 'BUGFIX: Load gifs with PIL instead of OpenCV (slower, bad transparency):', self._disable_cv_for_gifs ) )
             rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
             
             gridbox = ClientGUICommon.WrapInGrid( system_panel, rows )
@@ -2799,7 +2794,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'hide_uninteresting_local_import_time', self._hide_uninteresting_local_import_time.isChecked() )
             self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
-            self._new_options.SetBoolean( 'disable_cv_for_gifs', self._disable_cv_for_gifs.isChecked() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
@@ -2897,7 +2891,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = new_options
             
             self._start_note_editing_at_end = QW.QCheckBox( self )
-            self._start_note_editing_at_end.setToolTip( 'Otherwise, start with the caret at the start of the document.' )
+            self._start_note_editing_at_end.setToolTip( 'Otherwise, start the text cursor at the start of the document.' )
             
             self._start_note_editing_at_end.setChecked( self._new_options.GetBoolean( 'start_note_editing_at_end' ) )
             
@@ -2905,7 +2899,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Start editing notes with caret at the end of the document: ', self._start_note_editing_at_end ) )
+            rows.append( ( 'Start editing notes with the text cursor at the end of the document: ', self._start_note_editing_at_end ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self, rows )
             

@@ -2174,7 +2174,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         self.freshSessionLoaded.emit( session )
         
-        job_status.Delete()
+        job_status.FinishAndDismiss()
         
     
     def ChooseNewPage( self ):

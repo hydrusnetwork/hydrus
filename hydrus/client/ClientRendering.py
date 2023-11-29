@@ -11,6 +11,7 @@ from hydrus.core import HydrusAnimationHandling
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusVideoHandling
 from hydrus.core.images import HydrusImageColours
@@ -68,8 +69,16 @@ def GenerateHydrusBitmapFromPILImage( pil_image, compressed = True ):
         depth = 3
         
     
-    return HydrusBitmap( pil_image.tobytes(), pil_image.size, depth, compressed = compressed )
+    try:
+        
+        return HydrusBitmap( pil_image.tobytes(), pil_image.size, depth, compressed = compressed )
+        
+    except IOError:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Looks like a truncated file that PIL could not handle!' )
+        
     
+
 class ImageRenderer( ClientCachesBase.CacheableObject ):
     
     def __init__( self, media, this_is_for_metadata_alone = False ):
@@ -631,170 +640,11 @@ class RasterContainerVideo( RasterContainer ):
             
         
     
-    def THREADRender( self ):
-        
-        mime = self._media.GetMime()
-        duration = self._media.GetDurationMS()
-        num_frames_in_video = self._media.GetNumFrames()
-        
-        time.sleep( 0.00001 )
-        
-        if self._media.GetMime() == HC.ANIMATION_GIF:
-            
-            ( self._durations, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsPILAnimation( self._path )
-            
-            self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames_in_video, self._target_resolution )
-            
-        else:
-            
-            if self._media.GetMime() == HC.ANIMATION_APNG:
-                
-                self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
-                
-            
-            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames_in_video, self._target_resolution )
-            
-        
-        # give ui a chance to draw a blank frame rather than hard-charge right into CPUland
-        time.sleep( 0.00001 )
-        
-        self.GetReadyForFrame( self._init_position )
+    def CanHaveVariableFramerate( self ):
         
         with self._lock:
             
-            self._initialised = True
-            
-        
-        while True:
-            
-            if self._stop or HG.started_shutdown:
-                
-                self._renderer.Stop()
-                
-                self._renderer = None
-                
-                with self._lock:
-                    
-                    self._frames = {}
-                    
-                
-                return
-                
-            
-            #
-            
-            with self._lock:
-                
-                # lets see if we should move the renderer to a new position
-                
-                next_render_is_out_of_buffer = FrameIndexOutOfRange( self._next_render_index, self._buffer_start_index, self._buffer_end_index )
-                buffer_not_fully_rendered = self._last_index_rendered != self._buffer_end_index
-                
-                currently_rendering_out_of_buffer = next_render_is_out_of_buffer and buffer_not_fully_rendered
-                
-                will_render_ideal_frame_soon = self._IndexInRange( self._next_render_index, self._buffer_start_index, self._ideal_next_frame )
-                
-                need_ideal_next_frame = not self._HasFrame( self._ideal_next_frame )
-                
-                will_not_get_to_ideal_frame = need_ideal_next_frame and not will_render_ideal_frame_soon
-                
-                if currently_rendering_out_of_buffer or will_not_get_to_ideal_frame:
-                    
-                    # we cannot get to the ideal next frame, so we need to rewind/reposition
-                    
-                    self._renderer.set_position( self._buffer_start_index )
-                    
-                    self._last_index_rendered = -1
-                    
-                    self._next_render_index = self._buffer_start_index
-                    
-                
-                #
-                
-                need_to_render = self._last_index_rendered != self._buffer_end_index
-                
-            
-            if need_to_render:
-                
-                with self._lock:
-                    
-                    self._rendered_first_frame = True
-                    
-                    frame_index = self._next_render_index # keep this before the get call, as it increments in a clock arithmetic way afterwards
-                    
-                    renderer = self._renderer
-                    
-                
-                try:
-                    
-                    numpy_image = renderer.read_frame()
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
-                    
-                    return
-                    
-                finally:
-                    
-                    with self._lock:
-                        
-                        self._last_index_rendered = frame_index
-                        
-                        self._next_render_index = ( self._next_render_index + 1 ) % num_frames_in_video
-                        
-                    
-                
-                with self._lock:
-                    
-                    if self._next_render_index == 0 and self._buffer_end_index != num_frames_in_video - 1:
-                        
-                        # we need to rewind renderer
-                        
-                        self._renderer.set_position( 0 )
-                        
-                        self._last_index_rendered = -1
-                        
-                    
-                    should_save_frame = not self._HasFrame( frame_index )
-                    
-                
-                if should_save_frame:
-                    
-                    frame = GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = False )
-                    
-                    with self._lock:
-                        
-                        self._frames[ frame_index ] = frame
-                        
-                        self._MaintainBuffer()
-                        
-                    
-                
-                with self._lock:
-                    
-                    work_still_to_do = self._last_index_rendered != self._buffer_end_index
-                    
-                
-                if work_still_to_do:
-                    
-                    time.sleep( 0.0001 )
-                    
-                else:
-                    
-                    half_a_frame = ( self._average_frame_duration / 1000.0 ) * 0.5
-                    
-                    sleep_duration = min( 0.1, half_a_frame ) # for 10s-long 3-frame gifs, wew
-                    
-                    time.sleep( sleep_duration ) # just so we don't spam cpu
-                    
-                
-            else:
-                
-                self._render_event.wait( 1 )
-                
-                self._render_event.clear()
-                
+            return self._media.GetMime() == HC.ANIMATION_GIF
             
         
     
@@ -1007,14 +857,6 @@ class RasterContainerVideo( RasterContainer ):
             
         
     
-    def CanHaveVariableFramerate( self ):
-        
-        with self._lock:
-            
-            return self._media.GetMime() == HC.ANIMATION_GIF
-            
-        
-    
     def IsInitialised( self ):
         
         with self._lock:
@@ -1033,6 +875,175 @@ class RasterContainerVideo( RasterContainer ):
         self._stop = True
         
     
+    def THREADRender( self ):
+        
+        mime = self._media.GetMime()
+        duration = self._media.GetDurationMS()
+        num_frames_in_video = self._media.GetNumFrames()
+        
+        time.sleep( 0.00001 )
+        
+        # OK so just a note, you can switch GIF to the FFMPEG renderer these days and it works fine mate, transparency included
+        if self._media.GetMime() == HC.ANIMATION_GIF:
+            
+            ( self._durations, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsPILAnimation( self._path )
+            
+            self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames_in_video, self._target_resolution )
+            
+        else:
+            
+            if self._media.GetMime() == HC.ANIMATION_APNG:
+                
+                self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
+                
+            
+            self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames_in_video, self._target_resolution )
+            
+        
+        # give ui a chance to draw a blank frame rather than hard-charge right into CPUland
+        time.sleep( 0.00001 )
+        
+        self.GetReadyForFrame( self._init_position )
+        
+        with self._lock:
+            
+            self._initialised = True
+            
+        
+        while True:
+            
+            if self._stop or HG.started_shutdown:
+                
+                self._renderer.Stop()
+                
+                self._renderer = None
+                
+                with self._lock:
+                    
+                    self._frames = {}
+                    
+                
+                return
+                
+            
+            #
+            
+            with self._lock:
+                
+                # lets see if we should move the renderer to a new position
+                
+                next_render_is_out_of_buffer = FrameIndexOutOfRange( self._next_render_index, self._buffer_start_index, self._buffer_end_index )
+                buffer_not_fully_rendered = self._last_index_rendered != self._buffer_end_index
+                
+                currently_rendering_out_of_buffer = next_render_is_out_of_buffer and buffer_not_fully_rendered
+                
+                will_render_ideal_frame_soon = self._IndexInRange( self._next_render_index, self._buffer_start_index, self._ideal_next_frame )
+                
+                need_ideal_next_frame = not self._HasFrame( self._ideal_next_frame )
+                
+                will_not_get_to_ideal_frame = need_ideal_next_frame and not will_render_ideal_frame_soon
+                
+                if currently_rendering_out_of_buffer or will_not_get_to_ideal_frame:
+                    
+                    # we cannot get to the ideal next frame, so we need to rewind/reposition
+                    
+                    self._renderer.set_position( self._buffer_start_index )
+                    
+                    self._last_index_rendered = -1
+                    
+                    self._next_render_index = self._buffer_start_index
+                    
+                
+                #
+                
+                need_to_render = self._last_index_rendered != self._buffer_end_index
+                
+            
+            if need_to_render:
+                
+                with self._lock:
+                    
+                    self._rendered_first_frame = True
+                    
+                    frame_index = self._next_render_index # keep this before the get call, as it increments in a clock arithmetic way afterwards
+                    
+                    renderer = self._renderer
+                    
+                
+                try:
+                    
+                    numpy_image = renderer.read_frame()
+                    
+                except Exception as e:
+                    
+                    HydrusData.ShowException( e )
+                    
+                    return
+                    
+                finally:
+                    
+                    with self._lock:
+                        
+                        self._last_index_rendered = frame_index
+                        
+                        self._next_render_index = ( self._next_render_index + 1 ) % num_frames_in_video
+                        
+                    
+                
+                with self._lock:
+                    
+                    if self._next_render_index == 0 and self._buffer_end_index != num_frames_in_video - 1:
+                        
+                        # we need to rewind renderer
+                        
+                        self._renderer.set_position( 0 )
+                        
+                        self._last_index_rendered = -1
+                        
+                    
+                    should_save_frame = not self._HasFrame( frame_index )
+                    
+                
+                if should_save_frame:
+                    
+                    frame = GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = False )
+                    
+                    with self._lock:
+                        
+                        self._frames[ frame_index ] = frame
+                        
+                        self._MaintainBuffer()
+                        
+                    
+                
+                with self._lock:
+                    
+                    work_still_to_do = self._last_index_rendered != self._buffer_end_index
+                    
+                
+                if work_still_to_do:
+                    
+                    time.sleep( 0.0001 )
+                    
+                else:
+                    
+                    half_a_frame = ( self._average_frame_duration / 1000.0 ) * 0.5
+                    
+                    sleep_duration = min( 0.1, half_a_frame ) # for 10s-long 3-frame gifs, wew
+                    
+                    time.sleep( sleep_duration ) # just so we don't spam cpu
+                    
+                
+            else:
+                
+                self._render_event.wait( 1 )
+                
+                self._render_event.clear()
+                
+            
+        
+    
+
 class HydrusBitmap( ClientCachesBase.CacheableObject ):
     
     def __init__( self, data, size, depth, compressed = True ):

@@ -224,7 +224,7 @@ media_viewer_capabilities = {
 
 for mime in HC.SEARCHABLE_MIMES:
     
-    if mime in HC.ANIMATIONS:
+    if mime in HC.VIEWABLE_ANIMATIONS:
         
         media_viewer_capabilities[ mime ] = animated_full_support
         

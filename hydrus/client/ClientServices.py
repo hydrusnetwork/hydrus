@@ -1986,8 +1986,7 @@ class ServiceRepository( ServiceRestricted ):
                 
             finally:
                 
-                job_status.Finish()
-                job_status.Delete( 5 )
+                job_status.FinishAndDismiss( 5 )
                 
             
         
@@ -2362,8 +2361,7 @@ class ServiceRepository( ServiceRestricted ):
             job_status.DeleteStatusText( 2 )
             job_status.DeleteVariable( 'popup_gauge_1' )
             
-            job_status.Finish()
-            job_status.Delete( 3 )
+            job_status.FinishAndDismiss( 3 )
             
         
     
@@ -2860,8 +2858,7 @@ class ServiceRepository( ServiceRestricted ):
                 
             finally:
                 
-                job_status.Finish()
-                job_status.Delete( 5 )
+                job_status.FinishAndDismiss( 5 )
                 
             
         
@@ -3095,13 +3092,13 @@ class ServiceIPFS( ServiceRemote ):
                     
                     if not urls_good:
                         
-                        job_status.Delete()
+                        job_status.FinishAndDismiss()
                         
                     
                 
             except:
                 
-                job_status.Delete()
+                job_status.FinishAndDismiss()
                 
                 raise
                 
@@ -3152,7 +3149,7 @@ class ServiceIPFS( ServiceRemote ):
                 
             except:
                 
-                job_status.Delete()
+                job_status.FinishAndDismiss()
                 
                 raise
                 

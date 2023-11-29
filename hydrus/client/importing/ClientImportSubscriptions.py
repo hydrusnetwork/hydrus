@@ -1712,7 +1712,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             else:
                 
-                job_status.Delete()
+                job_status.FinishAndDismiss()
                 
             
         

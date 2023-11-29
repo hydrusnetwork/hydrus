@@ -401,9 +401,7 @@ class QuickDownloadManager( object ):
                     
                     job_status_pub_job.Cancel()
                     
-                    job_status.Finish()
-                    
-                    job_status.Delete( 1 )
+                    job_status.FinishAndDismiss( 1 )
                     
                 
             

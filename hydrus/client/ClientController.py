@@ -297,7 +297,7 @@ class Controller( HydrusController.HydrusController ):
                         
                         job_status.SetStatusText( 'enabling I/O now' )
                         
-                        job_status.Delete()
+                        job_status.FinishAndDismiss()
                         
                         return
                         
@@ -307,7 +307,7 @@ class Controller( HydrusController.HydrusController ):
                 
                 if HydrusTime.TimeHasPassed( wake_time ):
                     
-                    job_status.Delete()
+                    job_status.FinishAndDismiss()
                     
                     return
                     
@@ -422,18 +422,9 @@ class Controller( HydrusController.HydrusController ):
                 
             
         
-        job_status = ClientThreading.JobStatus( cancel_on_shutdown = False )
+        job_status = ClientThreading.JobStatus( cancellable = True, cancel_on_shutdown = False )
         
         QP.CallAfter( qt_code, win, job_status )
-        
-        i = 0
-        
-        while not job_status.IsDone() and i < 8:
-            
-            time.sleep( 0.02 )
-            
-            i += 1
-            
         
         # I think in some cases with the splash screen we may actually be pushing stuff here after model shutdown
         # but I also don't want a hang, as we have seen with some GUI async job that got fired on shutdown and it seems some event queue was halted or deadlocked
@@ -1353,12 +1344,23 @@ class Controller( HydrusController.HydrusController ):
         if self.db.IsFirstStart():
             
             message = 'Hi, this looks like the first time you have started the hydrus client.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Don\'t forget to check out the help if you haven\'t already, by clicking help->help--it has an extensive \'getting started\' section, including how to update and the importance of backing up your database.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'To dismiss popup messages like this, right-click them.'
             
             HydrusData.ShowText( message )
+            
+            if HC.WE_SWITCHED_TO_USERPATH:
+                
+                message = f'Hey, furthermore, it looks like the original desired database location was not writable-to, so the client has fallen back to using your userpath at:'
+                message += '\n' * 2
+                message += HC.USERPATH_DB_DIR
+                message += '\n' * 2
+                message += 'If that is fine with you, no problem. But if you were expecting to load an existing database and the above "first start" popup is a surprise, then your old db path is probably read-only. Fix that and try again. If it helps, hit up help->about to see the directories hydrus is currently using.'
+                
+                HydrusData.ShowText( message )
+                
             
         
         if self.db.IsDBUpdated():

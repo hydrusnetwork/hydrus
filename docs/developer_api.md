@@ -2861,9 +2861,8 @@ Response:
       "had_error": false,
       "is_cancellable": false,
       "is_cancelled": false,
-      "is_deleted": false,
-      "is_done": false,
-      "is_pauseable": false,
+      "is_done": true,
+      "is_pausable": false,
       "is_paused": false,
       "is_working": true,
       "nice_string": "This is a test popup message"
@@ -2875,9 +2874,8 @@ Response:
       "had_error": false,
       "is_cancellable": false,
       "is_cancelled": false,
-      "is_deleted": false,
-      "is_done": false,
-      "is_pauseable": false,
+      "is_done": true,
+      "is_pausable": false,
       "is_paused": false,
       "is_working": true,
       "nice_string": "sub gap downloader test",
@@ -2892,9 +2890,8 @@ Response:
       "had_error": false,
       "is_cancellable": true,
       "is_cancelled": false,
-      "is_deleted": false,
       "is_done": false,
-      "is_pauseable": false,
+      "is_pausable": false,
       "is_paused": false,
       "is_working": true,
       "nice_string": "subscriptions - safebooru\r\ndownloading files for \"elf\" (1/1)\r\nfile 4/27: downloading file",
@@ -2944,17 +2941,35 @@ Required Headers:
 Arguments (in JSON):
 :   
     *   it accepts these fields of a [job status object](#job_status_objects):
-        *   `status_title`
-        *   `status_text_1` and `status_text_2`
         *   `is_cancellable`
         *   `is_pausable`
         *   `attached_files_mergable`
+        *   `status_title`
+        *   `status_text_1` and `status_text_2`
         *   `popup_gauge_1` and `popup_gauge_2`
         *   `api_data`
-    *   `files_label`: the label for the files attached to the job status. It will be returned as `label` in the `files` object in the [job status object](#job_status_objects).
-    *   [files](#parameters_files) that will be added to the job status. They will be returned as `hashes` in the `files` object in the [job status object](#job_status_objects). `files_label` is required to add files.
+        *   `files_label`: the label for the files attached to the job status. It will be returned as `label` in the `files` object in the [job status object](#job_status_objects).
+        *   [files](#parameters_files) that will be added to the job status. They will be returned as `hashes` in the `files` object in the [job status object](#job_status_objects). `files_label` is required to add files.
 
-A new job status will be created and submitted as a popup. 
+A new job status will be created and submitted as a popup. Set a `status_title` on bigger ongoing jobs that will take a while and receive many updates--and leave it alone, even when the job is done. For simple notes, just set `status_text_1`.
+
+!!! danger "Finishing Jobs"
+    The pausable, cancellable, and files-mergable status of a job is only settable at creation. A pausable or cancellable popup represents an ongoing and unfinished job. The popup will exist indefinitely and will not be user-dismissable unless the user can first cancel it.
+    
+    **You, as the creator, _must_ plan to call Finish once your work is done. Yes, even if there is an error!**
+
+!!! note "Pausing and Cancelling"
+    If the user pauses a job, you should recognise that and pause your work. Resume when they do.
+    
+    If the user cancels a job, you should recognise that and stop work. Either call `finish` with an appropriate status update, or `finish_and_dismiss` if you have nothing more to say.
+    
+    If your long-term job has a main loop, place this at the top of the loop, along with your status update calls.
+
+```json title="Example request body"
+{
+  "status_text_1": "Note to user"
+}
+```
 
 ```json title="Example request body"
 {
@@ -2963,7 +2978,7 @@ A new job status will be created and submitted as a popup.
   "popup_gauge_2": [9, 10],
   "status_text_1": "Doing things",
   "status_text_2": "Doing other things",
-  "cancellable": true,
+  "is_cancellable": true,
   "api_data": {
     "whatever": "stuff"
   },
@@ -2977,132 +2992,6 @@ A new job status will be created and submitted as a popup.
 
 Response:
 :   A JSON Object containing `job_status`, the [job status object](#job_status_objects) that was added.
-
-
-### **POST `/manage_popups/update_popup`** { id="manage_popups_update_popuip" }
-
-_Update a popup._
-
-Restricted access: 
-:   YES. Manage Popups permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `job_status_key`: The hex key of the job status to update.
-    *   It accepts these fields of a [job status object](#job_status_objects):
-        *   `status_title`
-        *   `status_text_1` and `status_text_2`
-        *   `is_cancellable`
-        *   `is_pausable`
-        *   `attached_files_mergable`
-        *   `popup_gauge_1` and `popup_gauge_2`
-        *   `api_data`
-    *   `files_label`: the label for the files attached to the job status. It will be returned as `label` in the `files` object in the [job status object](#job_status_objects).
-    *   [files](#parameters_files) that will be added to the job status. They will be returned as `hashes` in the `files` object in the [job status object](#job_status_objects). `files_label` is required to add files.
-
-The specified job status will be updated with the new values submitted. Any field without a value will be left alone and any field set to `null` will be removed from the job status.
-
-```json title="Example request body"
-{
-  "job_status_key": "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86",
-  "status_title": "Example Popup",
-  "status_text_1": null,
-  "popup_gauge_1": [12, 120],
-  "api_data": {
-    "whatever": "other stuff"
-  }
-}
-```
-
-Response:
-:   A JSON Object containing `job_status`, the [job status object](#job_status_objects) that was updated.
-
-
-### **POST `/manage_popups/dismiss_popup`** { id="manage_popups_dismiss_popup" }
-
-_Dismiss a popup._
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `job_status_key`: The job status key to dismiss
-    *   `seconds`: (optional) an integer number of seconds to wait before dismissing the job status, defaults to happening immediately 
-
-The job status must not be cancellable or pausable to be dismissed.
-
-```json title="Example request body"
-{
-  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
-}
-```
-
-Response:
-:   200 with no content.
-
-
-### **POST `/manage_popups/finish_popup`** { id="manage_popups_finish_popup" }
-
-_Mark a popup as done._
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `job_status_key`: The job status key to finish
-    *   `seconds`: (optional) an integer number of seconds to wait before finishing the job status, defaults to happening immediately 
-
-
-```json title="Example request body"
-{
-  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
-}
-```
-
-Response:
-:   200 with no content.
-
-
-### **POST `/manage_popups/cancel_popup`** { id="manage_popups_cancel_popup" }
-
-_Cancel a popup._
-
-Restricted access: 
-:   YES. Manage Pages permission needed.
-    
-Required Headers:
-:   
-    *   `Content-Type`: application/json
-
-Arguments (in JSON):
-:   
-    *   `job_status_key`: The job status key to cancel
-    *   `seconds`: (optional) an integer number of seconds to wait before cancelling the job status, defaults to happening immediately 
-
-The job status must be cancellable to be cancelled.
-
-```json title="Example request body"
-{
-  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
-}
-```
-
-Response:
-:   200 with no content.
 
 
 ### **POST `/manage_popups/call_user_callable`** { id="manage_popups_call_user_callable" }
@@ -3130,6 +3019,168 @@ The job status must have a user callable (the `user_callable_label` in the [job 
 
 Response:
 :   200 with no content.
+
+
+### **POST `/manage_popups/cancel_popup`** { id="manage_popups_cancel_popup" }
+
+_Try to cancel a popup._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to cancel 
+
+The job status must be cancellable to be cancelled. If it isn't, this is nullipotent.
+
+```json title="Example request body"
+{
+  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
+}
+```
+
+Response:
+:   200 with no content.
+
+
+### **POST `/manage_popups/dismiss_popup`** { id="manage_popups_dismiss_popup" }
+
+_Try to dismiss a popup._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to dismiss 
+
+This is a call an 'observer' (i.e. not the job creator) makes. In the client UI, it would be a user right-clicking a popup to dismiss it. If the job is dismissable (i.e. it `is_done`), the popup disappears, but if it is pausable/cancellable--an ongoing job--then this action is nullipotent.
+
+You should call this on jobs you did not create yourself.
+
+```json title="Example request body"
+{
+  "job_status_key": "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
+}
+```
+
+Response:
+:   200 with no content.
+
+
+### **POST `/manage_popups/finish_popup`** { id="manage_popups_finish_popup" }
+
+_Mark a popup as done._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to finish 
+
+!!! danger "Important"
+    **You may only call this on jobs you created yourself.**
+
+You only need to call it on jobs that you created pausable or cancellable. It clears those statuses, sets `is_done`, and allows the user to dismiss the job with a right-click.
+
+Once called, the popup will remain indefinitely. You should marry this call with an `update` that clears the texts and gauges you were using and leaves a "Done, processed x files with y errors!" or similar statement to let the user know how the job went. 
+
+```json title="Example request body"
+{
+  "job_status_key" : "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86"
+}
+```
+
+Response:
+:   200 with no content.
+
+
+### **POST `/manage_popups/finish_and_dismiss_popup`** { id="manage_popups_finish_and_dismiss_popup" }
+
+_Finish and dismiss a popup._
+
+Restricted access: 
+:   YES. Manage Pages permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The job status key to dismiss
+    *   `seconds`: (optional) an integer number of seconds to wait before dismissing the job status, defaults to happening immediately 
+
+!!! danger "Important"
+    **You may only call this on jobs you created yourself.**
+
+This will call `finish` immediately and flag the message for auto-dismissal (i.e. removing it from the popup toaster) either immediately or after the given number of seconds.
+
+You would want this instead of just `finish` for when you either do not need to leave a 'Done!' summary, or if the summary is not so important, and is only needed if the user happens to glance that way. If you did boring work for ten minutes, you might like to set a simple 'Done!' and auto-dismiss after thirty seconds or so. 
+
+```json title="Example request body"
+{
+  "job_status_key": "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86",
+  "seconds": 5
+}
+```
+
+Response:
+:   200 with no content.
+
+
+### **POST `/manage_popups/update_popup`** { id="manage_popups_update_popuip" }
+
+_Update a popup._
+
+Restricted access: 
+:   YES. Manage Popups permission needed.
+    
+Required Headers:
+:   
+    *   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+    *   `job_status_key`: The hex key of the job status to update.
+    *   It accepts these fields of a [job status object](#job_status_objects):
+        *   `status_title`
+        *   `status_text_1` and `status_text_2`
+        *   `popup_gauge_1` and `popup_gauge_2`
+        *   `api_data`
+        *   `files_label`: the label for the files attached to the job status. It will be returned as `label` in the `files` object in the [job status object](#job_status_objects).
+        *   [files](#parameters_files) that will be added to the job status. They will be returned as `hashes` in the `files` object in the [job status object](#job_status_objects). `files_label` is required to add files.
+
+The specified job status will be updated with the new values submitted. Any field without a value will be left alone and any field set to `null` will be removed from the job status.
+
+```json title="Example request body"
+{
+  "job_status_key": "abee8b37d47dba8abf82638d4afb1d11586b9ef7be634aeb8ae3bcb8162b2c86",
+  "status_title": "Example Popup",
+  "status_text_1": null,
+  "popup_gauge_1": [12, 120],
+  "api_data": {
+    "whatever": "other stuff"
+  }
+}
+```
+
+Response:
+:   A JSON Object containing `job_status`, the [job status object](#job_status_objects) that was updated.
 
 
 ## Managing the Database

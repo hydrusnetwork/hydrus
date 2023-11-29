@@ -35,6 +35,60 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_554"><a href="#version_554">version 554</a></h2>
+                    <ul>
+                        <li><h3>checker options fixes</h3></li>
+                        <li>**sorry for any jank 'static check interval' watcher or subscription timings you saw last week! I screwed something up and it slipped through testing**</li>
+                        <li>the 'static check interval' logic is much much simpler. rather than try to always keep to the same check period, even if the actual check is delayed, it just works off 'last check time + period', every time. the clever stuff was generally confusing and failing in a variety of ways</li>
+                        <li>fixed a bug in the new static check time code that was stopping certain in-limbo watchers from calculating their correct next check time on program load</li>
+                        <li>fixed a bug in the new static check time code that was causing too many checks in long-paused-and-now-unpaused downloaders</li>
+                        <li>some new unit tests will make sure these errors do not happen again</li>
+                        <li>in the checker options UI, if you uncheck 'just check at a static, regular interval', and leave the faster/slower values as the same when you OK, then the dialog now asks you if that is what you want</li>
+                        <li>in the checker options UI, the 'slower than' value will now automatically update itself to be no smaller than the 'faster than' value</li>
+                        <li><h3>job status fixes and cleanup (mostly boring)</h3></li>
+                        <li>**sorry for any 'Cancel/IsCancellable' related errors you saw last week! I screwed something else up**</li>
+                        <li>fixed a dumb infinite recursion error in the new job status cancellable 'safety' checks that was happening when it was time to auto-dismiss a cancellable job due to program/thread shutdown or a maintenance mode change. this also fixes some non-dismissing popup messages (usually subscriptions) that weren't setting their cancel status correctly</li>
+                        <li>this happened because the code here was ancient and ugly. I have renamed, simplified, and reworked the logical dangerzone variables and methods in the job status object so we don't run into this problem again. 'Cancel' and 'Finish' no longer take a seconds parameter, 'Delete' is now 'FinishAndDismiss', 'IsDeleted' is now 'IsDismissed', 'IsDeletable' is now merged into a cleaner 'IsDone', 'IsWorking' is removed, 'SetCancellable' and 'SetPausable' are removed (these will always be in the init, and will determine what type of job we have), and the various new Client API calls and help are updated for this</li>
+                        <li>also, the job status methods now check their backstop 'cancel' tests far less often, and there's a throttle to make sure they can only run once a second anyway</li>
+                        <li>also ditched the needless threading events for simple bools</li>
+                        <li>also cleared up about 40 pointless Finish/FinishAndDismiss duplicate calls across the program</li>
+                        <li>also fixed up the job status object to do its various yield pauses more sanely</li>
+                        <li><h3>cbz and ugoira detection and thumbnails</h3></li>
+                        <li>CBZ files are now detected! there is no very strict standard of what is or isn't a CBZ (it is basically just a zip of images and maybe some metadata files), but I threw together a 'yeah that looks like a cbz' test that now runs on every zip. there will probably be several false positives, but with luck fewer false negatives, which I think is the way we want to lean here. if you have just some zip of similarly named images, it'll now be counted as a CBZ, but I think we'll nonetheless want to give those all the upcoming CBZ tech anyway, even if they aren't technically intended to be 'CBZ', whatever that actually means here other than the different file extension</li>
+                        <li>the client looks for the cover image in your CBZ and uses that for the thumbnail! it also uses this file's resolution as the CBZ resolution</li>
+                        <li>Ugoira files are now detected! there is a firmer standard of what an Ugoira is, but it is still tricky as we are just talking about a different list of zipped image files here. I expect zero false negatives and some false positives (unfortunately, it'll be CBZs with zero-padded numerical-only filenames). as all ugoiras are valid CBZs but few CBZs are valid ugoiras, the Ugoira test runs first</li>
+                        <li>the client now gets a thumbnail for Ugoiras. It'll also use the x%-in setting that other animations and videos use! it also fetches resolution and 'num frames'. duration can't be inferred just yet, but we hope to have some options (and actual rendering) happening in the medium-term future</li>
+                        <li>this is all an experiment. let me know how it goes, and send in any examples of it failing awfully. there is lots more to do. if things don't explode with this much, I'll see about .cbr and cb7, which seems totally doable, and then I can seriously plan out UI for actual view and internal navigation. I can't promise proper reader features like bookmarks or anything, but I'll keep on pushing</li>
+                        <li>all your existing zips will be scheduled for a filetype re-scan on update</li>
+                        <li><h3>animations</h3></li>
+                        <li>the native FFMPEG renderer pipeline is now capable of transparency. APNGs rendered in the native viewer now have correct transparency and can pass 'has transparency' checks</li>
+                        <li>all your apngs will be scheduled for the 'has transparency' check, just like pngs and gifs and stuff a couple weeks ago. thanks to the user who submitted some transparency-having apngs to test with!</li>
+                        <li>the thumbnails for animated gifs are now taken using the FFMPEG renderer, which puts them x% in, just like APNG and other video. transparency in these thumbnails also seems to be good!  am not going to regen everyone's animated gif thumbs yet--I'll do some more IRL testing--but this will probably come in a few weeks. let me know if you see a bevy of newly imported gifs with crazy thumbs</li>
+                        <li>I also overhauled the native GIF renderer. what used to be a cobbled-together RGB OpenCV solution with a fallback to bad PIL code is now a proper only-PIL RGBA solution, and the transparency seems to be great now (the OpenCV code had no transparency, and the PIL fallback tried but generally drew the last frame on top of the previous, giving a noclip effect). the new renderer also skips to an unrendered area faster</li>
+                        <li>given the file maintenance I/O Error problems we had the past couple weeks, I also made this cleaner GIF renderer much more robust; it will generally just rewind itself or give a black frame if it runs into truncation problems, no worries, and for gifs that just have one weird frame that doesn't break seek, it should be able to skip past those now, repeating the last good frame until it hits something valid</li>
+                        <li>as a side thing, the FFMPEG GIF renderer seems capable of doing almost everything the PIL renderer can now. I can flip the code to using the FFMPEG pipeline and gifs come through fine, transparency included. I prefer the PIL for now, but depending on how things go, I may add options to use the FFMPEG bridge as a testbed/fallback in future</li>
+                        <li>added some PIL animated gif rendering tech to handle a gif that out of nowhere produces a giga 85171x53524 frame, eating up multiple GB of memory and taking twenty seconds to failrender</li>
+                        <li>fixed yet another potential source of the false positive I/O Errors caused by the recent 'has transparency' checking, this time not just in malformed animated gif frames, but some busted static images too</li>
+                        <li>improved the PIL loading code a little more, converting more possible I/O Errors and other weird damaged file states to the correct hydrus-internal exception types with nicer error texts</li>
+                        <li>the 'disable CV for gifs' option is removed</li>
+                        <li><h3>file pre-import checks</h3></li>
+                        <li>the 'is this file free to work on' test that runs before files are added to the manual or import folder file list now has an additional file-open check. this improves reliability over NAS connections, where the file may be used by a remote process, and also improves detection for files where the current user only has read permissions</li>
+                        <li>import folders now have a 'recent modified time skip period' setting, defaulting to 60 seconds. any file that has a modified date newer than that many seconds ago will not be imported on the current check. this helps to avoid importing files that are currently being downloaded/copied into the folder when the import folder runs (when that folder/download process is otherwise immune to the existing 'already in use' checks)</li>
+                        <li>import folders now repeat-check folders that have many previously-seen files much faster</li>
+                        <li><h3>misc</h3></li>
+                        <li>the 'max gif size' setting in the quiet and loud file import options now defaults to 'no limit'. it used to be 32MB, to catch various trash webm re-encodes, but these days it catches more false positives than it is worth, and 32MB is less of a deal these days too</li>
+                        <li>the test on boot to see if the given database location is writeable-to should now give an error when that location is on a non--existing location (e.g. a removable usb drive that is not currently plugged in). previously, it could, depending on the situation, either proceed and go crazy later or wait indefinitely on a CPU-heavy busy-wait for the drive to be plugged back in. unfortunately, because at this stage there is no logfile location and no UI, if your custom db dir does not and cannot exist, the program terminates instantly and silently writes a crash log to your desktop. I have made a plan to improve this in future</li>
+                        <li>also cleaned up all the db_dir boot code generally. the various validity tests should now only happen once per potential location</li>
+                        <li>the function that converts an export phrase into a filename will now elide long unicode filenames correctly. filenames with complex unicode characters will take more than one byte per character (and most OSes have ~255 byte filename limit), which requires a trickier check. also, on Windows, where there is a 260-character total path limit, the combined directory+filename length is checked better, and just checked on Windows. all errors raised here are better</li>
+                        <li>added some unit tests to check the new path eliding tech</li>
+                        <li>brushed up the 'getting started with ratings' help a little</li>
+                        <li><h3>client api</h3></li>
+                        <li>thanks to a user, the Client API now has the ability to see and interact with the current popup messages in the popup toaster!</li>
+                        <li>fixed a stupid typo that I made in the new Client API options call. added a unit test to catch this in future, too</li>
+                        <li>the client api version is now 57</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_553"><a href="#version_553">version 553</a></h2>
                     <ul>
                         <li><h3>animated gif fixes</h3></li>

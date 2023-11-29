@@ -9,7 +9,6 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientLocation
 
 def GetClientDefaultOptions():

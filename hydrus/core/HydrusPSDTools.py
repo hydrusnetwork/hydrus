@@ -23,7 +23,7 @@ def MergedPILImageFromPSD( path: str ) -> PILImage:
 
     if not psd.has_preview():
         
-        raise HydrusExceptions.UnsupportedFileException('PSD file has no embedded preview!')
+        raise HydrusExceptions.DamagedOrUnusualFileException('PSD file has no embedded preview!')
         
     
     pil_image = convert_image_data_to_pil( psd )

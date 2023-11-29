@@ -1,12 +1,6 @@
 import unittest
 
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
-
-from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
-from hydrus.client.metadata import ClientTags
 
 class TestHydrusTime( unittest.TestCase ):
     

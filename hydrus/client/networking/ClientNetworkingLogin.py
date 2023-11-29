@@ -969,9 +969,7 @@ class LoginProcessDomain( LoginProcess ):
         
         job_status.SetStatusText( result )
         
-        job_status.Finish()
-        
-        job_status.Delete( 4 )
+        job_status.FinishAndDismiss( 4 )
         
     
 class LoginProcessHydrus( LoginProcess ):

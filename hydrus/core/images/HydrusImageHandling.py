@@ -258,8 +258,15 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
     
 def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alpha = True ) -> numpy.array:
     
-    # this seems to magically work, I guess asarray either has a match for Image or Image provides some common shape/datatype properties that it can hook into
-    numpy_image = numpy.asarray( pil_image )
+    try:
+        
+        # this seems to magically work, I guess asarray either has a match for Image or Image provides some common shape/datatype properties that it can hook into
+        numpy_image = numpy.asarray( pil_image )
+        
+    except IOError:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Looks like a truncated file that PIL could not handle!' )
+        
     
     if strip_useless_alpha:
         
@@ -268,43 +275,27 @@ def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alp
     
     return numpy_image
     
-    # old method:
-    '''
-    ( w, h ) = pil_image.size
-    
-    try:
-        
-        s = pil_image.tobytes()
-        
-    except OSError as e: # e.g. OSError: unrecognized data stream contents when reading image file
-        
-        raise HydrusExceptions.UnsupportedFileException( str( e ) )
-        
-    
-    depth = len( s ) // ( w * h )
-    
-    return numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, depth ) )
-    '''
-    
 
 def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = True ) -> PILImage.Image:
     
     pil_image = HydrusImageOpening.RawOpenPILImage( path )
     
-    if pil_image is None:
+    try:
         
-        raise Exception( 'The file at {} could not be rendered!'.format( path ) )
+        pil_image = HydrusImageNormalisation.RotateEXIFPILImage( pil_image )
         
-    
-    pil_image = HydrusImageNormalisation.RotateEXIFPILImage( pil_image )
-    
-    if dequantize:
+        if dequantize:
+            
+            # note this destroys animated gifs atm, it collapses down to one frame
+            pil_image = HydrusImageNormalisation.DequantizePILImage( pil_image )
+            
         
-        # note this destroys animated gifs atm, it collapses down to one frame
-        pil_image = HydrusImageNormalisation.DequantizePILImage( pil_image )
+        return pil_image
         
-    
-    return pil_image
+    except IOError:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Looks like a truncated file that PIL could not handle!' )
+        
     
 
 def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image:

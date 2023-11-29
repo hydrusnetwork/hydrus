@@ -15,6 +15,7 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
+from hydrus.core import HydrusVideoHandling
 from hydrus.core.images import HydrusBlurhash
 from hydrus.core.images import HydrusImageColours
 from hydrus.core.images import HydrusImageHandling
@@ -1706,9 +1707,7 @@ class ClientFilesManager( object ):
             
             job_status.SetStatusText( 'done!' )
             
-            job_status.Finish()
-            
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
         
     
@@ -1870,49 +1869,66 @@ def HasHumanReadableEmbeddedMetadata( path, mime ):
     return has_human_readable_embedded_metadata
     
 
-def HasTransparency( path, mime, num_frames = None, resolution = None ):
+def HasTransparency( path, mime, duration = None, num_frames = None, resolution = None ):
     
     if mime not in HC.MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY:
         
         return False
         
     
-    if mime in HC.IMAGES:
+    try:
         
-        numpy_image = HydrusImageHandling.GenerateNumPyImage( path, mime )
-        
-        return HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image )
-        
-    elif mime == HC.ANIMATION_GIF:
-        
-        if num_frames is None or resolution is None:
+        if mime in HC.IMAGES:
             
-            return False # something crazy going on, so let's bail out
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( path, mime )
             
-        
-        we_checked_alpha_channel = False
-        
-        renderer = ClientVideoHandling.GIFRenderer( path, num_frames, resolution, force_pil = True )
-        
-        for i in range( num_frames ):
+            return HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image )
             
-            numpy_image = renderer.read_frame()
+        elif mime in ( HC.ANIMATION_GIF, HC.ANIMATION_APNG ):
             
-            if not we_checked_alpha_channel:
+            if num_frames is None or resolution is None:
                 
-                if not HydrusImageColours.NumPyImageHasAlphaChannel( numpy_image ):
+                return False # something crazy going on, so let's bail out
+                
+            
+            we_checked_alpha_channel = False
+            
+            if mime == HC.ANIMATION_GIF:
+                
+                renderer = ClientVideoHandling.GIFRenderer( path, num_frames, resolution )
+                
+            else: # HC.ANIMATION_APNG
+                
+                renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, resolution )
+                
+            
+            for i in range( num_frames ):
+                
+                numpy_image = renderer.read_frame()
+                
+                if not we_checked_alpha_channel:
                     
-                    return False
+                    if not HydrusImageColours.NumPyImageHasAlphaChannel( numpy_image ):
+                        
+                        return False
+                        
+                    
+                    we_checked_alpha_channel = True
                     
                 
-                we_checked_alpha_channel = True
+                if HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image ):
+                    
+                    return True
+                    
                 
             
-            if HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image ):
-                
-                return True
-                
-            
+        
+    except HydrusExceptions.DamagedOrUnusualFileException as e:
+        
+        HydrusData.Print( 'Problem determining transparency for "{}":'.format( path ) )
+        HydrusData.PrintException( e )
+        
+        return False
         
     
     return False
@@ -2429,7 +2445,7 @@ class FilesMaintenanceManager( object ):
             
             path = self._controller.client_files_manager.GetFilePath( hash, mime )
             
-            has_transparency = HasTransparency( path, mime, num_frames = media_result.GetNumFrames(), resolution = media_result.GetResolution() )
+            has_transparency = HasTransparency( path, mime, duration = media_result.GetDurationMS(), num_frames = media_result.GetNumFrames(), resolution = media_result.GetResolution() )
             
             additional_data = has_transparency
             
@@ -3025,9 +3041,7 @@ class FilesMaintenanceManager( object ):
                 
                 job_status.DeleteVariable( 'popup_gauge_1' )
                 
-                job_status.Finish()
-                
-                job_status.Delete( 5 )
+                job_status.FinishAndDismiss( 5 )
                 
                 if not work_done:
                     
@@ -3232,9 +3246,7 @@ class FilesMaintenanceManager( object ):
             
             job_status.DeleteVariable( 'popup_gauge_1' )
             
-            job_status.Finish()
-            
-            job_status.Delete( 5 )
+            job_status.FinishAndDismiss( 5 )
             
             self._controller.pub( 'notify_files_maintenance_done' )
             

@@ -996,7 +996,7 @@ def VideoHasAudio( path, info_lines ) -> bool:
 # This was built from moviepy's FFMPEG_VideoReader
 class VideoRendererFFMPEG( object ):
     
-    def __init__( self, path, mime, duration, num_frames, target_resolution, pix_fmt = "rgb24", clip_rect = None, start_pos = None ):
+    def __init__( self, path, mime, duration, num_frames, target_resolution, clip_rect = None, start_pos = None ):
         
         self._path = path
         self._mime = mime
@@ -1004,6 +1004,15 @@ class VideoRendererFFMPEG( object ):
         self._num_frames = num_frames
         self._target_resolution = target_resolution
         self._clip_rect = clip_rect
+        
+        if self._mime in HC.MIMES_THAT_WE_CAN_CHECK_FOR_TRANSPARENCY:
+            
+            self.pix_fmt = 'rgba'
+            
+        else:
+            
+            self.pix_fmt = 'rgb24'
+            
         
         self.lastread = None
         
@@ -1014,10 +1023,14 @@ class VideoRendererFFMPEG( object ):
             self.fps = 24
             
         
-        self.pix_fmt = pix_fmt
-        
-        if pix_fmt == 'rgba': self.depth = 4
-        else: self.depth = 3
+        if self.pix_fmt == 'rgba':
+            
+            self.depth = 4
+            
+        else:
+            
+            self.depth = 3
+            
         
         ( x, y ) = self._target_resolution
         
@@ -1170,7 +1183,7 @@ class VideoRendererFFMPEG( object ):
             
             s = self.process.stdout.read( nbytes )
             
-            if len(s) != nbytes:
+            if len( s ) != nbytes:
                 
                 if self.lastread is None:
                     
@@ -1188,7 +1201,7 @@ class VideoRendererFFMPEG( object ):
                         return self.read_frame()
                         
                     
-                    raise Exception( 'Unable to render that video! Please send it to hydrus dev so he can look at it!' )
+                    raise HydrusExceptions.DamagedOrUnusualFileException( 'Unable to render that video! Please send it to hydrus dev so he can look at it!' )
                     
                 
                 result = self.lastread
@@ -1197,7 +1210,7 @@ class VideoRendererFFMPEG( object ):
                 
             else:
                 
-                result = numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, len( s ) // ( w * h ) ) )
+                result = numpy.fromstring( s, dtype = 'uint8' ).reshape( ( h, w, self.depth ) )
                 
                 self.lastread = result
                 

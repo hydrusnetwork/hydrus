@@ -17,6 +17,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusTime
 
 mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: os.path.join( HC.STATIC_DIR, 'hydrus.png' ) )
 
@@ -32,23 +33,23 @@ mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = os.path.join( HC.STATIC_DIR, 
 
 for mime in HC.AUDIO:
     
-    path = os.path.join( HC.STATIC_DIR, 'audio.png' )
+    png_path = os.path.join( HC.STATIC_DIR, 'audio.png' )
     
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( path )
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( png_path )
     
 
 for mime in HC.VIDEO:
     
-    path = os.path.join( HC.STATIC_DIR, 'video.png' )
+    png_path = os.path.join( HC.STATIC_DIR, 'video.png' )
     
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( path )
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( png_path )
     
 
 for mime in HC.ARCHIVES:
     
-    path = os.path.join( HC.STATIC_DIR, 'zip.png' )
+    png_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
     
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( path )
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( png_path )
     
 
 def AppendPathUntilNoConflicts( path ):
@@ -179,18 +180,16 @@ def DeletePath( path ) -> bool:
     
     return True
     
+
 def DirectoryIsWriteable( path ):
     
-    while not os.path.exists( path ):
+    try:
         
-        try:
-            
-            path = os.path.dirname( path )
-            
-        except:
-            
-            return False
-            
+        MakeSureDirectoryExists( path )
+        
+    except:
+        
+        raise Exception( f'While trying to determine if a directory, "{path}", has write permissions, I could not even ensure that it exists!' )
         
     
     if not os.access( path, os.W_OK | os.X_OK ):
@@ -198,7 +197,7 @@ def DirectoryIsWriteable( path ):
         return False
         
     
-    # we'll actually do a file, since Program Files passes the above test lmaoooo
+    # we'll actually do a file, since Windows Program Files passes the above test lmaoooo
     
     try:
         
@@ -221,10 +220,59 @@ def DirectoryIsWriteable( path ):
     
     return True
     
+
+def ElideFilenameOrDirectorySafely( name: str, num_characters_used_in_other_components: typing.Optional[ int ] = None, num_characters_already_used_in_this_component: typing.Optional[ int ] = None ):
+    
+    # most OSes cannot handle a filename or dirname with more than 255 characters
+    # Windows cannot handle a _total_ pathname more than 260
+    # to be safe and deal with surprise extensions like (11) or .txt sidecars, we use 240
+    # moreover, unicode paths are encoded to bytes, so we have to count differently
+    
+    MAX_PATH_LENGTH = 240
+    
+    num_characters_available = MAX_PATH_LENGTH
+    
+    if num_characters_used_in_other_components is not None:
+        
+        if HC.PLATFORM_WINDOWS:
+            
+            num_characters_available -= num_characters_used_in_other_components
+            
+            if num_characters_available <= 0:
+                
+                raise Exception( 'Sorry, it looks like the combined export filename or directory would be too long! Try shortening the export directory name!' )
+                
+            
+        
+    
+    if num_characters_already_used_in_this_component is not None:
+        
+        num_characters_available -= num_characters_already_used_in_this_component
+        
+        if num_characters_available <= 0:
+            
+            raise Exception( 'Sorry, it looks like the export filename would be too long! Try shortening the export phrase or directory!' )
+            
+        
+    
+    while len( name.encode( 'utf-8' ) ) > num_characters_available:
+        
+        name = name[:-1]
+        
+    
+    if name == '':
+        
+        raise Exception( 'Sorry, it looks like the export filename would be too long! Try shortening the export phrase or directory!' )
+        
+    
+    return name
+    
+
 def FileisWriteable( path: str ):
     
     return os.access( path, os.W_OK )
     
+
 def FilterFreePaths( paths ):
     
     free_paths = []
@@ -241,6 +289,31 @@ def FilterFreePaths( paths ):
     
     return free_paths
     
+
+def FilterOlderModifiedFiles( paths: typing.Collection[ str ], grace_period: int ) -> typing.List[ str ]:
+    
+    only_older_than = HydrusTime.GetNow() - grace_period
+    
+    good_paths = []
+    
+    for path in paths:
+        
+        try:
+            
+            if os.path.getmtime( path ) < only_older_than:
+                
+                good_paths.append( path )
+                
+            
+        except:
+            
+            continue
+            
+        
+    
+    return good_paths
+    
+
 def GetDefaultLaunchPath():
     
     if HC.PLATFORM_WINDOWS:
@@ -463,11 +536,10 @@ def LaunchFile( path, launch_path = None ):
     
     thread.start()
     
+
 def MakeSureDirectoryExists( path ):
     
-    it_exists_already = os.path.exists( path )
-    
-    if it_exists_already:
+    if os.path.exists( path ):
         
         if os.path.isdir( path ):
             
@@ -475,11 +547,13 @@ def MakeSureDirectoryExists( path ):
             
         else:
             
-            raise Exception( 'Sorry, the desired directory "{}" already exists as a normal file!'.format( path ) )
+            raise Exception( f'Sorry, the directory "{path}" already exists as a normal file!' )
             
         
-    
-    os.makedirs( path, exist_ok = True )
+    else:
+        
+        os.makedirs( path, exist_ok = True )
+        
     
 
 def FileModifiedTimeIsOk( mtime: int ):
@@ -860,30 +934,46 @@ def PathsHaveSameSizeAndDate( path1, path2 ):
     
 def PathIsFree( path ):
     
+    if not os.path.exists( path ):
+        
+        return False
+        
+    
     try:
         
         stat_result = os.stat( path )
         
         current_bits = stat_result.st_mode
         
-        if not current_bits & stat.S_IWRITE:
+        if current_bits & stat.S_IWRITE:
             
-            # read-only file, cannot do the rename check
+            os.rename( path, path ) # rename a path to itself
             
             return True
             
-        
-        os.rename( path, path ) # rename a path to itself
-        
-        return True
         
     except OSError as e: # 'already in use by another process' or an odd filename too long error
         
         HydrusData.Print( 'Already in use/inaccessible: ' + path )
         
+        return False
+        
     
-    return False
+    try:
+        
+        with open( path, 'rb' ) as f:
+            
+            return True
+            
+        
+    except:
+        
+        HydrusData.Print( 'Could not open the file: ' + path )
+        
+        return False
+        
     
+
 def ReadFileLikeAsBlocks( f ):
     
     next_block = f.read( HC.READ_BLOCK_SIZE )

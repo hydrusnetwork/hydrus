@@ -4082,6 +4082,56 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( result, expected_result )
         
     
+    def _test_options( self, connection, set_up_permissions ):
+        
+        # first fail
+        
+        api_permissions = set_up_permissions[ 'add_urls' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/manage_database/get_client_options'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 403 )
+        
+        # now good
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        #
+        
+        path = '/manage_database/get_client_options'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        text = str( data, 'utf-8' )
+        
+        d = json.loads( text )
+        
+        self.assertIn( 'old_options', d )
+        self.assertIn( 'options', d )
+        
+    
     def _test_search_files( self, connection, set_up_permissions ):
         
         hash_ids = [ 1, 2, 3, 4, 5, 10, 15, 16, 17, 18, 19, 20, 21, 25, 100, 101, 150 ]
@@ -5858,6 +5908,7 @@ class TestClientAPI( unittest.TestCase ):
         set_up_permissions = self._test_client_api_basics( connection )
         self._test_get_services( connection, set_up_permissions )
         self._test_manage_database( connection, set_up_permissions )
+        self._test_options( connection, set_up_permissions )
         self._test_add_files_add_file( connection, set_up_permissions )
         self._test_add_files_other_actions( connection, set_up_permissions )
         self._test_add_notes( connection, set_up_permissions )

@@ -770,7 +770,7 @@ class DuplicatesManager( object ):
                 time.sleep( reasonable_work_time * rest_ratio )
                 
             
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
         finally:
             

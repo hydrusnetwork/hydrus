@@ -21,8 +21,6 @@ from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
-MAX_PATH_LENGTH = 240 # bit of padding from 255 for .txt neigbouring and other surprises
-
 def GenerateExportFilename( destination_directory, media, terms, file_index, do_not_use_filenames = None ):
     
     def clean_tag_text( t ):
@@ -39,10 +37,23 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         return t
         
     
-    if len( destination_directory ) > ( MAX_PATH_LENGTH - 10 ):
+    decent_expected_filename_length = 16
+    
+    try:
         
-        raise Exception( 'The destination directory is too long!' )
+        destination_directory_elided = HydrusPaths.ElideFilenameOrDirectorySafely( destination_directory, num_characters_used_in_other_components = decent_expected_filename_length )
         
+    except Exception as e:
+        
+        raise Exception( 'Sorry, the destination directory path is way too long! Try shortening it.' ) from e
+        
+    
+    if destination_directory_elided != destination_directory:
+        
+        raise Exception( 'Sorry, the destination directory path is too long! Try shortening it.' )
+        
+    
+    destination_directory_num_characters_in_filesystem = len( destination_directory.encode( 'utf-8' ) )
     
     filename = ''
     
@@ -140,14 +151,7 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         filename = filename[ : - len( ext ) ]
         
     
-    example_dest_path = os.path.join( destination_directory, filename + ext )
-    
-    excess_chars = len( example_dest_path ) - MAX_PATH_LENGTH
-    
-    if excess_chars > 0:
-        
-        filename = filename[ : - excess_chars ]
-        
+    filename = HydrusPaths.ElideFilenameOrDirectorySafely( filename, num_characters_used_in_other_components = destination_directory_num_characters_in_filesystem )
     
     if do_not_use_filenames is not None:
         
@@ -816,7 +820,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             HG.client_controller.WriteSynchronous( 'serialisable', self )
             
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
         
     

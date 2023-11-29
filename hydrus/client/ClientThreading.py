@@ -26,25 +26,29 @@ class JobStatus( object ):
         self._stop_time = stop_time
         self._cancel_on_shutdown = cancel_on_shutdown and maintenance_mode != HC.MAINTENANCE_SHUTDOWN
         
-        self._start_time = HydrusTime.GetNow()
+        self._cancelled = False
+        self._paused = False
+        self._dismissed = False
+        self._finish_and_dismiss_time = None
         
-        self._deleted = threading.Event()
-        self._deletion_time = None
-        self._done = threading.Event()
-        self._cancelled = threading.Event()
-        self._paused = threading.Event()
+        self._i_am_an_ongoing_job = self._pausable or self._cancellable
         
-        self._ui_update_pause_period = 0.1
-        self._next_ui_update_pause = HydrusTime.GetNowFloat() + self._ui_update_pause_period
+        if self._i_am_an_ongoing_job:
+            
+            self._i_am_done = False
+            self._job_finish_time = None
+            
+        else:
+            
+            self._i_am_done = True
+            self._job_finish_time = HydrusTime.GetNowFloat()
+            
         
-        self._yield_pause_period = 10
-        self._next_yield_pause = HydrusTime.GetNow() + self._yield_pause_period
+        self._ui_update_pauser = HydrusThreading.BigJobPauser( 0.1, 0.00001 )
         
-        self._bigger_pause_period = 100
-        self._next_bigger_pause = HydrusTime.GetNow() + self._bigger_pause_period
+        self._yield_pauser = HydrusThreading.BigJobPauser()
         
-        self._longer_pause_period = 1000
-        self._next_longer_pause = HydrusTime.GetNow() + self._longer_pause_period
+        self._cancel_tests_regular_checker = HydrusThreading.RegularJobChecker( 1.0 )
         
         self._exception = None
         
@@ -70,35 +74,33 @@ class JobStatus( object ):
     
     def _CheckCancelTests( self ):
         
-        if not self._cancelled.is_set():
+        if self._cancel_tests_regular_checker.Due():
             
-            should_cancel = False
-            
-            if self._cancel_on_shutdown and HydrusThreading.IsThreadShuttingDown():
+            if not self._i_am_done:
                 
-                should_cancel = True
-                
-            
-            if HG.client_controller.ShouldStopThisWork( self._maintenance_mode, self._stop_time ):
-                
-                should_cancel = True
-                
-            
-            if should_cancel:
-                
-                self.Cancel()
-                
-            
-        
-        if not self._deleted.is_set():
-            
-            if self._deletion_time is not None:
-                
-                if HydrusTime.TimeHasPassed( self._deletion_time ):
+                if self._cancel_on_shutdown and HydrusThreading.IsThreadShuttingDown():
                     
-                    self.Finish()
+                    self.Cancel()
                     
-                    self._deleted.set()
+                    return
+                    
+                
+                if HG.client_controller.ShouldStopThisWork( self._maintenance_mode, self._stop_time ):
+                    
+                    self.Cancel()
+                    
+                    return
+                    
+                
+            
+            if not self._dismissed:
+                
+                if self._finish_and_dismiss_time is not None:
+                    
+                    if HydrusTime.TimeHasPassed( self._finish_and_dismiss_time ):
+                        
+                        self.FinishAndDismiss()
+                        
                     
                 
             
@@ -112,41 +114,11 @@ class JobStatus( object ):
             
         
     
-    def Cancel( self, seconds = None ) -> bool:
+    def Cancel( self ):
         
-        if not self.IsCancellable():
-            
-            return False
-            
+        self._cancelled = True
         
-        if seconds is None:
-            
-            self._cancelled.set()
-            
-            self.Finish()
-            
-        else:
-            
-            HG.client_controller.CallLater( seconds, self.Cancel )
-            
-        
-        return True
-        
-    
-    def Delete( self, seconds = None ) -> bool:
-        
-        if seconds is None:
-            
-            self._deleted.set()
-            
-            self.Finish()
-            
-        else:
-            
-            self._deletion_time = HydrusTime.GetNow() + seconds
-            
-        
-        return True
+        self.Finish()
         
     
     def DeleteFiles( self ):
@@ -168,7 +140,7 @@ class JobStatus( object ):
         
         self.DeleteVariable( 'status_title' )
         
-    
+
     def DeleteVariable( self, name ):
         
         with self._variable_lock:
@@ -179,23 +151,31 @@ class JobStatus( object ):
                 
             
         
-        if HydrusTime.TimeHasPassedFloat( self._next_ui_update_pause ):
-            
-            time.sleep( 0.00001 )
-            
-            self._next_ui_update_pause = HydrusTime.GetNowFloat() + self._ui_update_pause_period
-            
+        self._ui_update_pauser.Pause()
         
     
-    def Finish( self, seconds = None ):
+    def Finish( self ):
+        
+        self._i_am_done = True
+        self._job_finish_time = HydrusTime.GetNowFloat()
+        
+        self._paused = False
+        
+        self._pausable = False
+        self._cancellable = False
+        
+    
+    def FinishAndDismiss( self, seconds = None ):
+        
+        self.Finish()
         
         if seconds is None:
             
-            self._done.set()
+            self._dismissed = True
             
         else:
             
-            HG.client_controller.CallLater( seconds, self.Finish )
+            self._finish_and_dismiss_time = HydrusTime.GetNow() + seconds
             
         
     
@@ -286,73 +266,43 @@ class JobStatus( object ):
     
     def IsCancellable( self ):
         
-        self._CheckCancelTests()
-        
-        return self._cancellable and not self.IsDone()
+        return self._cancellable
         
     
     def IsCancelled( self ):
         
         self._CheckCancelTests()
         
-        return self._cancelled.is_set()
+        return self._cancelled
         
     
-    def IsDeletable( self ):
-        
-        return not ( self.IsPausable() or self.IsCancellable() )
-        
-    
-    def IsDeleted( self ):
+    def IsDismissed( self ):
         
         self._CheckCancelTests()
         
-        return self._deleted.is_set()
+        return self._dismissed
         
     
     def IsDone( self ):
         
         self._CheckCancelTests()
         
-        return self._done.is_set()
+        return self._i_am_done
         
     
     def IsPausable( self ):
         
-        self._CheckCancelTests()
-        
-        return self._pausable and not self.IsDone()
+        return self._pausable
         
     
     def IsPaused( self ):
         
-        self._CheckCancelTests()
-        
-        return self._paused.is_set() and not self.IsDone()
-        
-    
-    def IsWorking( self ):
-        
-        self._CheckCancelTests()
-        
-        return not self.IsDone()
+        return self._paused
         
     
     def PausePlay( self ):
         
-        if self._paused.is_set():
-            
-            self._paused.clear()
-            
-        else:
-            
-            self._paused.set()
-            
-        
-    
-    def SetCancellable( self, value ):
-        
-        self._cancellable = value
+        self._paused = not self._paused
         
     
     def SetErrorException( self, e: Exception ):
@@ -381,8 +331,6 @@ class JobStatus( object ):
         self.SetVariable( 'network_job', network_job )
         
     
-    def SetPausable( self, value ): self._pausable = value
-    
     def SetStatusText( self, text: str, level = 1 ):
         
         self.SetVariable( 'status_text_{}'.format( level ), text )
@@ -407,17 +355,19 @@ class JobStatus( object ):
         
         with self._variable_lock: self._variables[ name ] = value
         
-        if HydrusTime.TimeHasPassed( self._next_ui_update_pause ):
-            
-            time.sleep( 0.00001 )
-            
-            self._next_ui_update_pause = HydrusTime.GetNow() + self._ui_update_pause_period
-            
+        self._ui_update_pauser.Pause()
         
     
     def TimeRunning( self ):
         
-        return HydrusTime.GetNow() - self._start_time
+        if self._job_finish_time is None:
+            
+            return HydrusTime.GetNowFloat() - self._creation_time
+            
+        else:
+            
+            return self._job_finish_time - self._creation_time
+            
         
     
     def ToString( self ):
@@ -466,26 +416,7 @@ class JobStatus( object ):
     
     def WaitIfNeeded( self ):
         
-        if HydrusTime.TimeHasPassed( self._next_yield_pause ):
-            
-            time.sleep( 0.1 )
-            
-            self._next_yield_pause = HydrusTime.GetNow() + self._yield_pause_period
-            
-            if HydrusTime.TimeHasPassed( self._next_bigger_pause ):
-                
-                time.sleep( 1 )
-                
-                self._next_bigger_pause = HydrusTime.GetNow() + self._bigger_pause_period
-                
-                if HydrusTime.TimeHasPassed( self._longer_pause_period ):
-                    
-                    time.sleep( 10 )
-                    
-                    self._next_longer_pause = HydrusTime.GetNow() + self._longer_pause_period
-                    
-                
-            
+        self._yield_pauser.Pause()
         
         i_paused = False
         should_quit = False
@@ -510,6 +441,7 @@ class JobStatus( object ):
         return ( i_paused, should_quit )
         
     
+
 class FileRWLock( object ):
     
     class RLock( object ):

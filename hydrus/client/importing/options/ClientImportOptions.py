@@ -5,7 +5,6 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientTags
 
@@ -102,7 +101,12 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         return death_file_velocity_period
         
     
-    def GetNextCheckTime( self, file_seed_cache, last_check_time, previous_next_check_time ):
+    def GetNextCheckTime( self, file_seed_cache, last_check_time: int, previous_next_check_time: typing.Optional[ int ] ) -> int:
+        
+        if previous_next_check_time is None:
+            
+            previous_next_check_time = last_check_time + self._never_faster_than
+            
         
         if len( file_seed_cache ) == 0:
             
@@ -115,27 +119,26 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
                 return HydrusTime.GetNow() + self._never_slower_than
                 
             
-        elif self._never_faster_than == self._never_slower_than:
+        
+        
+        if self._never_faster_than == self._never_slower_than:
             
             # fixed check period
-            check_period = self._never_slower_than
+            fixed_check_period = self._never_slower_than
             
-            # ok the issue here is that, if the thing is supposed to check every seven days, we want to persist in saturday night rather than slowly creep forward a few hours every week due to delays
-            # thus, if the 'last' next check time is 'reasonable' (which for now we really simplified to just mean "it happened already"), we'll add to that instead of our actual last check time
-            # but if the user reduces the check time to one day on Wednesday, we want to notice that and reset immediately, not wait until next saturday to recalculate!
+            # I had a bunch of complicated logic to try and make sure a saturday check stayed on saturday, even if the check was delayed to sunday, and it just wasn't worth the trouble
+            # KISS
             
-            if HydrusTime.TimeHasPassed( previous_next_check_time - 5 ):
-                
-                next_check_time = previous_next_check_time + check_period
-                
-            else:
-                
-                next_check_time = last_check_time + check_period
-                
+            next_check_time = last_check_time + fixed_check_period
             
-            return next_check_time
+            while HydrusTime.TimeHasPassed( next_check_time + fixed_check_period ):
+                
+                next_check_time += fixed_check_period
+                
             
         else:
+            
+            # dynamic check period
             
             ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( file_seed_cache, last_check_time )
             
@@ -163,8 +166,10 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
                 check_period = min( max( never_faster_than, ideal_check_period ), self._never_slower_than )
                 
             
-            return last_check_time + check_period
+            next_check_time = last_check_time + check_period
             
+        
+        return next_check_time
         
     
     def GetPrettyCurrentVelocity( self, file_seed_cache, last_check_time, no_prefix = False ):

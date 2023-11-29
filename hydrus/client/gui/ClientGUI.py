@@ -210,7 +210,7 @@ def THREADUploadPending( service_key ):
                 
                 if len( content_types_to_request ) > 0:
                     
-                    unauthorised_job_status.Delete( 120 )
+                    unauthorised_job_status.FinishAndDismiss( 120 )
                     
                 
                 call = HydrusData.Call( HG.client_controller.pub, 'open_manage_services_and_try_to_auto_create_account', service_key )
@@ -281,7 +281,7 @@ def THREADUploadPending( service_key ):
                     
                     HydrusData.Print( job_status.ToString() )
                     
-                    job_status.Delete( 5 )
+                    job_status.FinishAndDismiss( 5 )
                     
                     return
                     
@@ -424,15 +424,13 @@ def THREADUploadPending( service_key ):
         
         HydrusData.Print( job_status.ToString() )
         
-        job_status.Finish()
-        
         if len( content_types_to_request ) == 0:
             
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
         else:
             
-            job_status.Delete( 5 )
+            job_status.FinishAndDismiss( 5 )
             
         
     
@@ -1371,7 +1369,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
             finally:
                 
-                job_status.Delete( seconds = 3 )
+                job_status.FinishAndDismiss( seconds = 3 )
                 
             
             QP.CallAfter( qt_code, network_job )
@@ -1413,7 +1411,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 time.sleep( 1 )
                 
             
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
         
         self._controller.CallToThread( do_it, self._controller, cancellable )
@@ -3888,7 +3886,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def publish_callable( account_types ):
             
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
             self._ManageAccountTypes( service_key, account_types )
             
@@ -4086,7 +4084,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                             
                         finally:
                             
-                            job_status.Delete()
+                            job_status.FinishAndDismiss()
                             
                         
                     
@@ -4205,7 +4203,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                             
                         finally:
                             
-                            job_status.Delete()
+                            job_status.FinishAndDismiss()
                             
                         
                     
@@ -4494,9 +4492,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     job_status.SetStatusText( 'done!' )
                     
-                    job_status.Finish()
-                    
-                    job_status.Delete( 5 )
+                    job_status.FinishAndDismiss( 5 )
                     
                     service.SetAccountRefreshDueNow()
                     
@@ -4553,9 +4549,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     job_status.SetStatusText( 'done!' )
                     
-                    job_status.Finish()
-                    
-                    job_status.Delete( 5 )
+                    job_status.FinishAndDismiss( 5 )
                     
                     service.SetAccountRefreshDueNow()
                     
@@ -4623,9 +4617,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     job_status.SetStatusText( 'done!' )
                     
-                    job_status.Finish()
-                    
-                    job_status.Delete( 5 )
+                    job_status.FinishAndDismiss( 5 )
                     
                     service.DoAFullMetadataResync()
                     
@@ -4776,7 +4768,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                     finally:
                         
-                        job_status.Delete()
+                        job_status.FinishAndDismiss()
                         
                     
                     subscriptions = HG.client_controller.subscriptions_manager.GetSubscriptions()
@@ -4823,7 +4815,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                     finally:
                         
-                        done_job_status.Delete()
+                        done_job_status.FinishAndDismiss()
                         
                     
                 finally:
@@ -5538,7 +5530,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         def publish_callable( accounts ):
             
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
             self._ReviewAllAccounts( service_key, accounts )
             
@@ -5659,7 +5651,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             frame.SetPanel( panel )
             
-            job_status.Delete()
+            job_status.FinishAndDismiss()
             
         
         job_status.SetStatusText( 'loading database data' )
@@ -5970,7 +5962,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     HG.client_controller.RestartClientServerServices()
                     
                 
-                job_status.Delete()
+                job_status.FinishAndDismiss()
                 
             
         
@@ -6983,7 +6975,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def AddModalMessage( self, job_status: ClientThreading.JobStatus ):
         
-        if job_status.IsCancelled() or job_status.IsDeleted():
+        if job_status.IsDismissed():
             
             return
             

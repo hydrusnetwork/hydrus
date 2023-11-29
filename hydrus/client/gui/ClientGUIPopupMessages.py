@@ -212,7 +212,7 @@ class PopupMessage( PopupWindow ):
         
         self._job_status.SetVariable( 'popup_yes_no_answer', False )
         
-        self._job_status.Delete()
+        self._job_status.FinishAndDismiss()
         
         self._yes.hide()
         self._no.hide()
@@ -240,7 +240,7 @@ class PopupMessage( PopupWindow ):
         
         self._job_status.SetVariable( 'popup_yes_no_answer', True )
         
-        self._job_status.Delete()
+        self._job_status.FinishAndDismiss()
         
         self._yes.hide()
         self._no.hide()
@@ -327,10 +327,7 @@ class PopupMessage( PopupWindow ):
                     
                     if len( presented_hashes ) == 0:
                         
-                        if self._job_status.IsDone():
-                            
-                            self.TryToDismiss()
-                            
+                        self.TryToDismiss()
                         
                     
                 
@@ -381,16 +378,16 @@ class PopupMessage( PopupWindow ):
         return self._job_status
         
     
-    def IsDeleted( self ):
+    def IsDismissed( self ):
         
-        return self._job_status.IsDeleted()
+        return self._job_status.IsDismissed()
         
     
     def TryToDismiss( self ):
         
-        if self._job_status.IsDeletable():
+        if self._job_status.IsDone():
             
-            self._job_status.Delete()
+            self._job_status.FinishAndDismiss()
             
             PopupWindow.TryToDismiss( self )
             
@@ -661,14 +658,14 @@ class JobStatusPopupQueue( object ):
         
         with self._lock:
             
-            removees = [ job_status.GetKey() for job_status in self._job_status_ordered_dict_queue.values() if job_status.IsDeleted() ]
+            removees = [ job_status.GetKey() for job_status in self._job_status_ordered_dict_queue.values() if job_status.IsDismissed() ]
             
             for job_status_key in removees:
                 
                 del self._job_status_ordered_dict_queue[ job_status_key ]
                 
             
-            self._job_statuses_in_view = { job_status for job_status in self._job_statuses_in_view if not job_status.IsDeleted() }
+            self._job_statuses_in_view = { job_status for job_status in self._job_statuses_in_view if not job_status.IsDismissed() }
             
         
     
@@ -678,9 +675,9 @@ class JobStatusPopupQueue( object ):
             
             for job_status in self._job_status_ordered_dict_queue.values():
                 
-                if job_status.IsDeletable():
+                if job_status.IsDone():
                     
-                    job_status.Delete()
+                    job_status.FinishAndDismiss()
                     
                 
             
@@ -863,7 +860,7 @@ class PopupMessageManager( QW.QFrame ):
         
         HG.client_controller.CallLaterQtSafe( self, 0.5, 'initialise message', self.AddMessage, job_status )
         
-        HG.client_controller.CallLaterQtSafe( self, 1.0, 'delete initial message', job_status.Delete )
+        HG.client_controller.CallLaterQtSafe( self, 1.0, 'delete initial message', job_status.FinishAndDismiss )
         
     
     def _CheckPending( self ):
@@ -1065,7 +1062,7 @@ class PopupMessageManager( QW.QFrame ):
             
             if message_window:
                 
-                if message_window.IsDeleted():
+                if message_window.IsDismissed():
                     
                     self._RemovePopupWindow( message_window )
                     
@@ -1141,12 +1138,12 @@ class PopupMessageManager( QW.QFrame ):
         
         job_status = window.GetJobStatus()
         
-        if not job_status.IsDeletable():
+        if not job_status.IsDone():
             
             return
             
         
-        job_status.Delete()
+        job_status.FinishAndDismiss()
         
         self._message_vbox.removeWidget( window )
         
@@ -1188,7 +1185,7 @@ class PopupMessageManager( QW.QFrame ):
                 continue
                 
             
-            if message_window.GetJobStatus().IsDeleted():
+            if message_window.GetJobStatus().IsDismissed():
                 
                 removees.append( message_window )
                 

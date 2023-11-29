@@ -11,7 +11,12 @@ def RawOpenPILImage( path: typing.Union[ str, typing.BinaryIO ] ) -> PILImage.Im
         
     except Exception as e:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not load the image--it was likely malformed!' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( f'Could not load the image at "{path}"--it was likely malformed!' ) from e
+        
+    
+    if pil_image is None:
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( f'Could not load the image at "{path}"--it was likely malformed!' )
         
     
     return pil_image

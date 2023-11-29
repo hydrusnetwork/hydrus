@@ -112,7 +112,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
         
         HG.client_controller.pub( 'message', job_status )
         
-        job_status.Delete( 2 )
+        job_status.FinishAndDismiss( 2 )
         
     
 def CopyMediaURLs( medias ):
@@ -357,9 +357,7 @@ def OpenURLs( urls ):
             
             if job_status is not None:
                 
-                job_status.Finish()
-                
-                job_status.Delete( 1 )
+                job_status.FinishAndDismiss( 1 )
                 
             
         

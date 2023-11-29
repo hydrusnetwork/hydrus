@@ -1785,7 +1785,7 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 if should_quit:
                     
-                    job_status.Delete()
+                    job_status.FinishAndDismiss()
                     
                     return
                     

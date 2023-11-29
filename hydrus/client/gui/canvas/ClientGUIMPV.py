@@ -949,7 +949,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._player.pause = True
                 
-                if mime in HC.ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                if mime in HC.VIEWABLE_ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
                     
                     if mime == HC.ANIMATION_GIF:
                         

@@ -141,6 +141,30 @@ def SubprocessCommunicate( process: subprocess.Popen ):
         
     
 
+class RegularJobChecker( object ):
+    
+    def __init__( self, period = 10 ):
+        
+        self._period = period
+        
+        self._next_check = HydrusTime.GetNowFloat()
+        
+    
+    def Due( self ) -> bool:
+        
+        if HydrusTime.TimeHasPassedFloat( self._next_check ):
+            
+            self._next_check = HydrusTime.GetNowFloat() + self._period
+            
+            return True
+            
+        else:
+            
+            return False
+            
+        
+    
+
 class BigJobPauser( object ):
     
     def __init__( self, period = 10, wait_time = 0.1 ):
@@ -148,16 +172,16 @@ class BigJobPauser( object ):
         self._period = period
         self._wait_time = wait_time
         
-        self._next_pause = HydrusTime.GetNow() + self._period
+        self._next_pause = HydrusTime.GetNowFloat() + self._period
         
     
     def Pause( self ):
         
-        if HydrusTime.TimeHasPassed( self._next_pause ):
+        if HydrusTime.TimeHasPassedFloat( self._next_pause ):
             
             time.sleep( self._wait_time )
             
-            self._next_pause = HydrusTime.GetNow() + self._period
+            self._next_pause = HydrusTime.GetNowFloat() + self._period
             
         
     

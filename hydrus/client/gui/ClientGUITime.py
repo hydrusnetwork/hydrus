@@ -183,6 +183,9 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         
         self._flat_check_period_checkbox.clicked.connect( self.EventFlatPeriodCheck )
         
+        self._never_faster_than.timeDeltaChanged.connect( self._UpdateTimeDeltas )
+        self._never_slower_than.timeDeltaChanged.connect( self._UpdateTimeDeltas )
+        
     
     def _ShowHelp( self ):
         
@@ -216,6 +219,44 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
             
             self._reactive_check_panel.show()
             self._static_check_panel.hide()
+        
+        self._UpdateTimeDeltas()
+        
+    
+    def _UpdateTimeDeltas( self ):
+        
+        if not self._flat_check_period_checkbox.isChecked():
+            
+            never_faster_than = self._never_faster_than.GetValue()
+            never_slower_than = self._never_slower_than.GetValue()
+            
+            if never_slower_than < never_faster_than:
+                
+                self._never_slower_than.SetValue( never_faster_than )
+                
+            
+        
+    
+    def UserIsOKToOK( self ):
+        
+        if not self._flat_check_period_checkbox.isChecked():
+            
+            if self._never_faster_than.GetValue() == self._never_slower_than.GetValue():
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
+                message = 'The "never check faster/slower than" values are the same, which means this checker will always check at a static, regular interval. Is that OK?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.Accepted:
+                    
+                    return False
+                    
+                
+            
+        
+        return True
         
     
     def EventFlatPeriodCheck( self ):

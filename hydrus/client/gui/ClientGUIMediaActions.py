@@ -652,7 +652,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
             pauser.Pause()
             
         
-        job_status.Delete()
+        job_status.FinishAndDismiss()
         
     
     def publish_callable( result ):

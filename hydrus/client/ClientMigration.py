@@ -394,9 +394,7 @@ class MigrationJob( object ):
             
             job_status.SetStatusText( 'done!' )
             
-            job_status.Finish()
-            
-            job_status.Delete( 3 )
+            job_status.FinishAndDismiss( 3 )
             
         
     

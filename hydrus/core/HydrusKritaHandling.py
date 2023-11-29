@@ -21,7 +21,7 @@ def MergedPILImageFromKra( path ):
         
     except FileNotFoundError:
         
-        raise HydrusExceptions.UnsupportedFileException( f'Could not read {KRITA_FILE_MERGED} from this Krita file' )
+        raise HydrusExceptions.DamagedOrUnusualFileException( f'Could not read {KRITA_FILE_MERGED} from this Krita file' )
         
     
 

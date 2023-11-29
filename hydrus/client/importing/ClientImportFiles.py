@@ -406,7 +406,7 @@ class FileImportJob( object ):
         
         #
         
-        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, num_frames = num_frames, resolution = ( width, height ) )
+        self._has_transparency = ClientFiles.HasTransparency( self._temp_path, mime, duration = duration, num_frames = num_frames, resolution = ( width, height ) )
         
         has_exif = False
         

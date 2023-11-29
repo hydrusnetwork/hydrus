@@ -191,7 +191,7 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertEqual( fast_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, 0 ), last_check_time + 600 )
         self.assertEqual( slow_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, 0 ), last_check_time + 600 )
         
-        # Let's test these new static timings, where if faster_than == slower_than, we just add that period to the 'previous_next_check_time' (e.g. checking every sunday night)
+        # Let's test the static timings, where if faster_than == slower_than
         
         static_checker_options = ClientImportOptions.CheckerOptions( intended_files_per_check = 5, never_faster_than = 3600, never_slower_than = 3600, death_file_velocity = ( 1, 3600 ) )
         
@@ -203,6 +203,19 @@ class TestCheckerOptions( unittest.TestCase ):
             
             self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, previous_next_check_time ), previous_next_check_time + 3600 )
             
+            self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, None ), last_check_time + 3600 )
+            
+            # user just changed the check period, and previous next check time is in the future
+            last_check_time = HydrusTime.GetNow() - 600
+            previous_next_check_time = HydrusTime.GetNow() + 1800
+            
+            self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, previous_next_check_time ), last_check_time + 3600 )
+            
+        
+        last_check_time = HydrusTime.GetNow() - 100000
+        previous_next_check_time = last_check_time - 600
+        
+        self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, previous_next_check_time ), HydrusTime.GetNow() + 3600 )
         
     
 class TestFileImportOptions( unittest.TestCase ):

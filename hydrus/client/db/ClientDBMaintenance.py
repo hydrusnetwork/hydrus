@@ -292,9 +292,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 
             finally:
                 
-                job_status.Finish()
-                
-                job_status.Delete( 10 )
+                job_status.FinishAndDismiss( 10 )
                 
             
         

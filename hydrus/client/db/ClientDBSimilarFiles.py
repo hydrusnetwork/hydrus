@@ -714,9 +714,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             job_status.DeleteVariable( 'popup_gauge_1' )
             job_status.DeleteStatusText( 2 ) # used in the regenbranch call
             
-            job_status.Finish()
-            
-            job_status.Delete( 5 )
+            job_status.FinishAndDismiss( 5 )
             
         
     
@@ -778,9 +776,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             job_status.SetStatusText( 'done!' )
             job_status.DeleteStatusText( 2 )
             
-            job_status.Finish()
-            
-            job_status.Delete( 5 )
+            job_status.FinishAndDismiss( 5 )
             
         
     

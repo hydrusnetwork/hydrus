@@ -279,7 +279,7 @@ def ShouldHaveAnimationBar( media, show_action ):
         return False
         
     
-    is_animation = media.GetMime() in HC.ANIMATIONS
+    is_animation = media.GetMime() in HC.VIEWABLE_ANIMATIONS
     is_audio = media.GetMime() in HC.AUDIO
     is_video = media.GetMime() in HC.VIDEO
     
@@ -448,18 +448,13 @@ class Animation( QW.QWidget ):
             
             self._canvas_qt_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( my_raw_width, my_raw_height )
             
-            self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
-            
-            painter = QG.QPainter( self._canvas_qt_pixmap )
-            
-            self._DrawABlankFrame( painter )
-            
-        else:
-            
-            self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
-            
-            painter = QG.QPainter( self._canvas_qt_pixmap )
-            
+        
+        self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
+        
+        painter = QG.QPainter( self._canvas_qt_pixmap )
+        
+        # this makes transparency work nice, so just force it
+        self._DrawABlankFrame( painter )
         
         current_frame = self._video_container.GetFrame( self._current_frame_index )
         
@@ -840,7 +835,7 @@ class Animation( QW.QWidget ):
                             
                             do_times_to_play_animation_pause = False
                             
-                            if self._media.GetMime() in HC.ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                            if self._media.GetMime() in HC.VIEWABLE_ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
                                 
                                 times_to_play_animation = self._video_container.GetTimesToPlayAnimation()
                                 
