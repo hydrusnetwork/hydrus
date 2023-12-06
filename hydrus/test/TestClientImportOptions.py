@@ -122,7 +122,7 @@ class TestCheckerOptions( unittest.TestCase ):
         
         self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( empty_file_seed_cache, 0 ), 'no files yet' )
         
-        self.assertEqual( regular_checker_options.GetNextCheckTime( empty_file_seed_cache, 0, 0 ), 0 )
+        self.assertEqual( regular_checker_options.GetNextCheckTime( empty_file_seed_cache, 0 ), 0 )
         
         self.assertTrue( regular_checker_options.IsDead( empty_file_seed_cache, last_check_time ) )
         
@@ -141,9 +141,9 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertEqual( slow_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), 'at last check, found 50 files in previous 1 day' )
         self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( file_seed_cache, last_check_time ), 'at last check, found 0 files in previous 1 minute' )
         
-        self.assertEqual( regular_checker_options.GetNextCheckTime( file_seed_cache, last_check_time, 0 ), last_check_time + 8640 )
-        self.assertEqual( fast_checker_options.GetNextCheckTime( file_seed_cache, last_check_time, 0 ), last_check_time + 3456 )
-        self.assertEqual( slow_checker_options.GetNextCheckTime( file_seed_cache, last_check_time, 0 ), last_check_time + 17280 )
+        self.assertEqual( regular_checker_options.GetNextCheckTime( file_seed_cache, last_check_time ), last_check_time + 8640 )
+        self.assertEqual( fast_checker_options.GetNextCheckTime( file_seed_cache, last_check_time ), last_check_time + 3456 )
+        self.assertEqual( slow_checker_options.GetNextCheckTime( file_seed_cache, last_check_time ), last_check_time + 17280 )
         
         # bare
         # 1 files per day
@@ -153,9 +153,9 @@ class TestCheckerOptions( unittest.TestCase ):
         
         self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( bare_file_seed_cache, last_check_time ), 'at last check, found 1 files in previous 1 day' )
         
-        self.assertEqual( regular_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time, 0 ), last_check_time + 86400 )
-        self.assertEqual( fast_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time, 0 ), last_check_time + 86400 )
-        self.assertEqual( slow_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time, 0 ), last_check_time + 86400 )
+        self.assertEqual( regular_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time ), last_check_time + 86400 )
+        self.assertEqual( fast_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time ), last_check_time + 86400 )
+        self.assertEqual( slow_checker_options.GetNextCheckTime( bare_file_seed_cache, last_check_time ), last_check_time + 86400 )
         
         # busy
         # 8640 files per day, 6 files per minute
@@ -168,10 +168,10 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertEqual( regular_checker_options.GetPrettyCurrentVelocity( busy_file_seed_cache, last_check_time ), 'at last check, found 8,640 files in previous 1 day' )
         self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( busy_file_seed_cache, last_check_time ), 'at last check, found 6 files in previous 1 minute' )
         
-        self.assertEqual( regular_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time, 0 ), last_check_time + 50 )
-        self.assertEqual( fast_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time, 0 ), last_check_time + 30 )
-        self.assertEqual( slow_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time, 0 ), last_check_time + 100 )
-        self.assertEqual( callous_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time, 0 ), last_check_time + 50 )
+        self.assertEqual( regular_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time ), last_check_time + 50 )
+        self.assertEqual( fast_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time ), last_check_time + 30 )
+        self.assertEqual( slow_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time ), last_check_time + 100 )
+        self.assertEqual( callous_checker_options.GetNextCheckTime( busy_file_seed_cache, last_check_time ), last_check_time + 50 )
         
         # new thread
         # only had files from ten mins ago, so timings are different
@@ -187,9 +187,9 @@ class TestCheckerOptions( unittest.TestCase ):
         self.assertEqual( callous_checker_options.GetPrettyCurrentVelocity( new_thread_file_seed_cache, last_check_time ), 'at last check, found 0 files in previous 1 minute' )
         
         # these would be 360, 120, 600, but the 'don't check faster the time since last file post' bumps this up
-        self.assertEqual( regular_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, 0 ), last_check_time + 600 )
-        self.assertEqual( fast_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, 0 ), last_check_time + 600 )
-        self.assertEqual( slow_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, 0 ), last_check_time + 600 )
+        self.assertEqual( regular_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 600 )
+        self.assertEqual( fast_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 600 )
+        self.assertEqual( slow_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 600 )
         
         # Let's test the static timings, where if faster_than == slower_than
         
@@ -197,25 +197,15 @@ class TestCheckerOptions( unittest.TestCase ):
         
         self.assertTrue( static_checker_options.IsDead( bare_file_seed_cache, last_check_time ) )
         
-        previous_next_check_time = last_check_time - 200
+        # normal situation
+        last_check_time = HydrusTime.GetNow() - 5
         
-        with patch.object( HydrusTime, 'GetNow', return_value = last_check_time + 10 ):
-            
-            self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, previous_next_check_time ), previous_next_check_time + 3600 )
-            
-            self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, None ), last_check_time + 3600 )
-            
-            # user just changed the check period, and previous next check time is in the future
-            last_check_time = HydrusTime.GetNow() - 600
-            previous_next_check_time = HydrusTime.GetNow() + 1800
-            
-            self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, previous_next_check_time ), last_check_time + 3600 )
-            
+        self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 3600 )
         
+        # after a long pause
         last_check_time = HydrusTime.GetNow() - 100000
-        previous_next_check_time = last_check_time - 600
         
-        self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time, previous_next_check_time ), HydrusTime.GetNow() + 3600 )
+        self.assertEqual( static_checker_options.GetNextCheckTime( new_thread_file_seed_cache, last_check_time ), last_check_time + 3600 * ( 100000 // 3600 ) )
         
     
 class TestFileImportOptions( unittest.TestCase ):

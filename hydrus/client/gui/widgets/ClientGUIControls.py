@@ -12,6 +12,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITime
@@ -468,7 +469,9 @@ class TextAndPasteCtrl( QW.QWidget ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             

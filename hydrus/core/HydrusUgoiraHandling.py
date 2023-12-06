@@ -77,7 +77,8 @@ def GetUgoiraProperties( path_to_zip ):
 def ZipLooksLikeUgoira( path_to_zip ):
     
     # what does an Ugoira look like? it has a standard, but this is not always followed, so be somewhat forgiving
-    # it is a list of images named in the format 000123.jpg. this is very typically 6-figure, starting at 000000, but it may be shorter and start at 0001
+    # it is a list of images named in the format 000123.jpg. this is 6-figure, starting at 000000
+    # I have seen 'Ugoiras' that are zero-padded with 4 digits and/or 1-indexed instead of 0-indexed, but this is so atypical we are assuming these are ancient handmade artifacts and actually incorrect
     # no directories
     # we can forgive a .json or .js file, nothing else
     
@@ -129,34 +130,21 @@ def ZipLooksLikeUgoira( path_to_zip ):
             image_number_strings.append( number )
             
         
-        if len( image_number_strings ) == 0:
+        if len( image_number_strings ) <= 1:
             
             return False
             
         
-        image_number_strings.sort()
+        number_of_digits = 6
         
-        try:
+        for ( expected_image_number, image_number_string ) in enumerate( image_number_strings ):
             
-            current_image_number = int( image_number_strings[0] )
-            
-        except:
-            
-            return False
-            
-        
-        number_of_digits = len( image_number_strings[0] )
-        
-        for image_number_string in image_number_strings:
-            
-            string_we_expect = str( current_image_number ).zfill( number_of_digits )
+            string_we_expect = str( expected_image_number ).zfill( number_of_digits )
             
             if image_number_string != string_we_expect:
                 
                 return False
                 
-            
-            current_image_number += 1
             
         
     

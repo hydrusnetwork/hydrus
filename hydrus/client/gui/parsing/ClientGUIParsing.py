@@ -1,6 +1,5 @@
 import itertools
 import os
-import threading
 import traceback
 import typing
 
@@ -12,14 +11,13 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
-from hydrus.client import ClientPaths
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUISerialisable
@@ -111,7 +109,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            QW.QMessageBox.information( self, 'Information', 'No headers/bandwidth rules found!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No headers/bandwidth rules found!' )
             
         
     
@@ -398,7 +396,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         for domain_metadata in domain_metadatas:
             
-            QW.QMessageBox.information( self, 'Information', domain_metadata.GetDetailedSafeSummary() )
+            ClientGUIDialogsMessage.ShowInformation( self, domain_metadata.GetDetailedSafeSummary() )
             
         
         return domain_metadatas

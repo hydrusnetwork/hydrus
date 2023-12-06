@@ -101,12 +101,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
         return death_file_velocity_period
         
     
-    def GetNextCheckTime( self, file_seed_cache, last_check_time: int, previous_next_check_time: typing.Optional[ int ] ) -> int:
-        
-        if previous_next_check_time is None:
-            
-            previous_next_check_time = last_check_time + self._never_faster_than
-            
+    def GetNextCheckTime( self, file_seed_cache, last_check_time: int ) -> int:
         
         if len( file_seed_cache ) == 0:
             

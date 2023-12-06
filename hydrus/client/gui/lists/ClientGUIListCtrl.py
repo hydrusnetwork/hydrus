@@ -14,6 +14,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
@@ -1316,13 +1317,13 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except HydrusExceptions.SerialisationException as e:
                 
-                QW.QMessageBox.critical( self, 'Problem loading', 'Problem loading that object: {}'.format( repr( e ) ) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', f'Problem loading that object: {e}' )
                 
                 return
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was in the clipboard: {}'.format( repr( e ) ) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', f'I could not understand what was in the clipboard: {e}' )
                 
                 return
                 
@@ -1335,7 +1336,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
                 
                 return
                 
@@ -1358,7 +1359,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Problem importing: {}'.format( repr( e ) ) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str( e ) )
             
         
         self._listctrl.Sort()
@@ -1433,14 +1434,14 @@ class BetterListCtrlPanel( QW.QWidget ):
             message += os.linesep * 2
             message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
             
-            QW.QMessageBox.critical( self, 'Error', message )
+            ClientGUIDialogsMessage.ShowWarning( self, message )
             
         
         if can_present_messages and num_added > 0:
             
             message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
             
-            QW.QMessageBox.information( self, 'Success', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
         return ( num_added, bad_object_type_names )
@@ -1461,7 +1462,9 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', str(e) )
                 
                 return
                 
@@ -1474,6 +1477,8 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except HydrusExceptions.SerialisationException as e:
                 
+                HydrusData.PrintException( e )
+                
                 if not have_shown_load_error:
                     
                     message = str( e )
@@ -1484,14 +1489,16 @@ class BetterListCtrlPanel( QW.QWidget ):
                         message += 'If there are more objects in this import with similar load problems, they will now be skipped silently.'
                         
                     
-                    QW.QMessageBox.critical( self, 'Problem loading', str( e ) )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str( e ) )
                     
                     have_shown_load_error = True
                     
                 
-            except:
+            except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in "{}"!'.format( path ) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', f'I could not understand what was encoded in "{path}"!' )
                 
                 return
                 
@@ -1510,7 +1517,9 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
                 
                 return
                 
@@ -1523,6 +1532,8 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except HydrusExceptions.SerialisationException as e:
                 
+                HydrusData.PrintException( e )
+                
                 if not have_shown_load_error:
                     
                     message = str( e )
@@ -1533,14 +1544,16 @@ class BetterListCtrlPanel( QW.QWidget ):
                         message += 'If there are more objects in this import with similar load problems, they will now be skipped silently.'
                         
                     
-                    QW.QMessageBox.critical( self, 'Problem loading', str( e ) )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str( e ) )
                     
                     have_shown_load_error = True
                     
                 
             except:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in "{}"!'.format( path ) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'I could not understand what was encoded in "{path}"!' )
                 
                 return
                 

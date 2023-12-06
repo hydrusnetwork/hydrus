@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -398,7 +399,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if service_key in existing_service_keys:
             
-            QW.QMessageBox.critical( self, 'Error', 'You already have an entry for that service key! Please try editing it instead!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'You already have an entry for that service key! Please try editing it instead!' )
             
             return
             
@@ -472,7 +473,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if not os.path.exists( path ):
             
-            QW.QMessageBox.warning( self, 'Warning', 'The path you have entered--"'+path+'"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
+            ClientGUIDialogsMessage.ShowWarning( self, f'The path you have entered--"{path}"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
             
         
         if HC.BASE_DIR.startswith( path ) or HG.client_controller.GetDBDir().startswith( path ):
@@ -491,7 +492,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your successful file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                ClientGUIDialogsMessage.ShowWarning( self, f'The path you have entered for your successful file move location--"{path}"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         
@@ -506,7 +507,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your redundant file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                ClientGUIDialogsMessage.ShowWarning( self, f'The path you have entered for your redundant file move location--"{path}"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         
@@ -521,7 +522,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your deleted file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                ClientGUIDialogsMessage.ShowWarning( self, f'The path you have entered for your deleted file move location--"{path}"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         
@@ -536,7 +537,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if not os.path.exists( path ):
                 
-                QW.QMessageBox.warning( self, 'Warning', 'The path you have entered for your failed file move location--"'+path+'"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
+                ClientGUIDialogsMessage.ShowWarning( self, f'The path you have entered for your failed file move location--"{path}"--does not exist! The dialog will not force you to correct it, but you should not let this import folder run until you have corrected or created it!' )
                 
             
         

@@ -14,7 +14,7 @@ from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIAsync
-from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -288,7 +288,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if True in ( at.IsNullAccount() for at in account_types_about_to_delete ):
                 
-                QW.QMessageBox.critical( self, 'Error', 'You cannot delete the null account type!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'You cannot delete the null account type!' )
                 
                 return
                 
@@ -299,7 +299,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( account_types_can_move_to ) == 0:
                 
-                QW.QMessageBox.critical( self, 'Error', 'You cannot delete every account type!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'You cannot delete every account type!' )
                 
                 return
                 
@@ -342,7 +342,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if True in ( at.IsNullAccount() for at in datas ):
             
-            QW.QMessageBox.critical( self, 'Error', 'You cannot edit the null account type!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'You cannot edit the null account type!' )
             
             return
             
@@ -699,7 +699,7 @@ class ReviewAccountsPanel( QW.QWidget ):
                 
                 account_errors = sorted( account_errors )
                 
-                QW.QMessageBox.information( self, 'Information', 'Errors were encountered during account fetch:{}{}'.format( os.linesep * 2, os.linesep.join( account_errors ) ) )
+                ClientGUIDialogsMessage.ShowInformation( self, 'Errors were encountered during account fetch:{}{}'.format( os.linesep * 2, os.linesep.join( account_errors ) ) )
                 
             
             if not self._done_first_fetch:
@@ -1039,14 +1039,14 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if num_unchecked > 0:
             
-            QW.QMessageBox.information( self, 'Information', '{} accounts do not expire, so could not have time added!'.format( HydrusData.ToHumanInt( num_unchecked ) ) )
+            ClientGUIDialogsMessage.ShowInformation( self, '{} accounts do not expire, so could not have time added!'.format( HydrusData.ToHumanInt( num_unchecked ) ) )
             
         
         subject_accounts = self._account_panel.GetCheckedAccounts()
         
         if len( subject_accounts ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             
@@ -1089,7 +1089,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_account_keys ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             
@@ -1121,7 +1121,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( gumpf ):
             
-            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Done!' )
             
             self._account_panel.RefreshAccounts()
             
@@ -1141,7 +1141,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_accounts ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             
@@ -1166,7 +1166,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if reason == '':
             
-            QW.QMessageBox.information( self, 'Information', 'The ban reason is empty!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'The ban reason is empty!' )
             
             return
             
@@ -1201,7 +1201,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( gumpf ):
             
-            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Done!' )
             
             self._account_panel.RefreshAccounts()
             
@@ -1221,7 +1221,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_accounts ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             
@@ -1278,7 +1278,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 message = 'Not everything was deleted--this may be a big account. You can keep trying to chip away at what needs to be deleted, or wait for hydev to figure out a solution for big accounts.'
                 
             
-            QW.QMessageBox.information( self, 'Information', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
             self._account_panel.RefreshAccounts()
             
@@ -1294,7 +1294,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_account_keys_and_new_expires ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             
@@ -1313,7 +1313,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( gumpf ):
             
-            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Done!' )
             
             self._account_panel.RefreshAccounts()
             
@@ -1333,7 +1333,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_accounts ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             
@@ -1372,7 +1372,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( gumpf ):
             
-            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Done!' )
             
             self._account_panel.RefreshAccounts()
             
@@ -1392,7 +1392,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_accounts ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             
@@ -1401,7 +1401,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_accounts ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'None of the selected accounts are banned!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'None of the selected accounts are banned!' )
             
             return
             
@@ -1431,7 +1431,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( gumpf ):
             
-            QW.QMessageBox.information( self, 'Information', 'Done!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Done!' )
             
             self._account_panel.RefreshAccounts()
             
@@ -1508,7 +1508,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( subject_account_keys_and_new_expires ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'No accounts selected for action!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'No accounts selected for action!' )
             
             return
             

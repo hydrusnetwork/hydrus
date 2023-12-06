@@ -75,13 +75,13 @@ regen_file_enum_to_str_lookup = {
     REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_SILENT_DELETE : 'if file is incorrect, move file out',
     REGENERATE_FILE_DATA_JOB_FIX_PERMISSIONS : 'fix file read/write permissions',
     REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP : 'check for membership in the similar files search system',
-    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 'regenerate similar files metadata',
+    REGENERATE_FILE_DATA_JOB_SIMILAR_FILES_METADATA : 'regenerate perceptual hashes',
     REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP : 'regenerate file modified time',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_TRANSPARENCY: 'determine if the file has transparency',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_EXIF : 'determine if the file has EXIF metadata',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_HUMAN_READABLE_EMBEDDED_METADATA : 'determine if the file has non-EXIF human-readable embedded metadata',
     REGENERATE_FILE_DATA_JOB_FILE_HAS_ICC_PROFILE : 'determine if the file has an icc profile',
-    REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 'regenerate pixel duplicate data',
+    REGENERATE_FILE_DATA_JOB_PIXEL_HASH : 'regenerate pixel hashes',
     REGENERATE_FILE_DATA_JOB_BLURHASH: 'regenerate blurhash'
 }
 
@@ -512,7 +512,7 @@ class ClientFilesManager( object ):
             
             message = 'Hydrus found multiple missing locations in your file storage. Some of these locations seemed to be fixable, others did not. The client will now inform you about both problems.'
             
-            self._controller.SafeShowCriticalMessage( 'Multiple file location problems.', message )
+            self._controller.BlockingSafeShowCriticalMessage( 'Multiple file location problems.', message )
             
         
         if len( correct_rows ) > 0:
@@ -527,7 +527,7 @@ class ClientFilesManager( object ):
             
             HydrusData.Print( summary_message )
             
-            self._controller.SafeShowCriticalMessage( 'About to auto-heal client file folders.', summary_message )
+            self._controller.BlockingSafeShowCriticalMessage( 'About to auto-heal client file folders.', summary_message )
             
             HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
             
@@ -1070,7 +1070,7 @@ class ClientFilesManager( object ):
                         
                         text = 'Attempting to create the database\'s client_files folder structure in {} failed!'.format( dir_to_test )
                         
-                        self._controller.SafeShowCriticalMessage( 'unable to create file structure', text )
+                        self._controller.BlockingSafeShowCriticalMessage( 'unable to create file structure', text )
                         
                         raise
                         
@@ -1080,7 +1080,7 @@ class ClientFilesManager( object ):
                 
                 text = 'Attempting to create the database\'s client_files folder structure failed!'
                 
-                self._controller.SafeShowCriticalMessage( 'unable to create file structure', text )
+                self._controller.BlockingSafeShowCriticalMessage( 'unable to create file structure', text )
                 
                 raise
                 
@@ -1130,7 +1130,7 @@ class ClientFilesManager( object ):
                     text += os.linesep * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
-                    self._controller.SafeShowCriticalMessage( 'missing locations', text )
+                    self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
                     
                     HydrusData.DebugPrint( 'Missing locations follow:' )
                     HydrusData.DebugPrint( missing_string )
@@ -1143,7 +1143,7 @@ class ClientFilesManager( object ):
                     text += os.linesep * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
-                    self._controller.SafeShowCriticalMessage( 'missing locations', text )
+                    self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
                     
                 
             

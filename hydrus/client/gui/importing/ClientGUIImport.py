@@ -14,9 +14,9 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIFunctions
@@ -370,7 +370,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                     text += os.linesep * 2
                     text += str( e )
                     
-                    QW.QMessageBox.critical( self, 'Error', text )
+                    ClientGUIDialogsMessage.ShowWarning( self, text )
                     
                     return
                     
@@ -594,7 +594,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
                 
                 return
                 
@@ -623,7 +625,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
                 
                 return
                 
@@ -639,7 +643,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
                 
                 return
                 

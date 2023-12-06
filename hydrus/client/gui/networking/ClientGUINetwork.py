@@ -17,6 +17,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICharts
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -781,7 +782,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         help_text += os.linesep * 2
         help_text += 'If you do not understand what is going on here, you can safely leave it alone. The default settings make for a _reasonable_ and polite profile that will not accidentally cause you to download way too much in one go or piss off servers by being too aggressive. If you want to throttle your client, the simplest way is to add a simple rule like \'500MB per day\' to the global context.'
         
-        QW.QMessageBox.information( self, 'Information', help_text )
+        ClientGUIDialogsMessage.ShowInformation( self, help_text )
         
     
     def _Update( self ):
@@ -1317,7 +1318,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 HydrusData.ShowException( e )
                 
-                QW.QMessageBox.critical( self, 'Error', 'It looks like that cookies.txt failed to load. Unfortunately, not all formats are supported (for now!).' )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', 'It looks like that cookies.txt failed to load. Unfortunately, not all formats are supported.' )
                 
                 return
                 
@@ -1332,7 +1333,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        QW.QMessageBox.information( self, 'Information', 'Added '+HydrusData.ToHumanInt(num_added)+' cookies!' )
+        ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusData.ToHumanInt(num_added)} cookies!' )
         
         self._Update()
         
@@ -1573,7 +1574,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 HydrusData.ShowException( e )
                 
-                QW.QMessageBox.critical( self, 'Error', 'It looks like that cookies.txt failed to load. Unfortunately, not all formats are supported (for now!).' )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', 'It looks like that cookies.txt failed to load. Unfortunately, not all formats are supported.' )
                 
                 return
                 
@@ -1586,7 +1587,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        QW.QMessageBox.information( self, 'Information', 'Added '+HydrusData.ToHumanInt(num_added)+' cookies!' )
+        ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusData.ToHumanInt(num_added)} cookies!' )
         
         self._Update()
         

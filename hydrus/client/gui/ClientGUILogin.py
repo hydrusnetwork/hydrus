@@ -14,8 +14,8 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientParsing
-from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -317,7 +317,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( self._login_scripts ) == 0:
             
-            QW.QMessageBox.critical( self, 'Error', 'You have no login scripts, so you cannot add a new login!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'You have no login scripts, so you cannot add a new login!' )
             
             return
             
@@ -374,7 +374,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     if login_domain in domains_in_use:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'That domain is already in use!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'That domain is already in use!' )
                         
                         return
                         
@@ -759,7 +759,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( domains_to_login ) == 0:
             
-            QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, none of the selected domains appear able to log in. Do you need to activate or scrub something somewhere?' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Unfortunately, none of the selected domains appear able to log in. Do you need to activate or scrub something somewhere?' )
             
         else:
             
@@ -800,7 +800,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except HydrusExceptions.DataMissing:
                 
-                QW.QMessageBox.information( self, 'Information', 'Could not find a login script for "'+login_domain+'"! Please re-add the login script in the other dialog or update the entry here to a new one!' )
+                ClientGUIDialogsMessage.ShowWarning( self, f'Could not find a login script for "{login_domain}"! Please re-add the login script in the other dialog or update the entry here to a new one!' )
                 
                 return
                 
@@ -1466,7 +1466,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if domain in existing_domains:
             
-            QW.QMessageBox.critical( self, 'Error', 'That domain already exists!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'That domain already exists!' )
             
             return
             
@@ -1637,7 +1637,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 return
                 
             
-            QW.QMessageBox.information( self, 'Information', final_result )
+            ClientGUIDialogsMessage.ShowInformation( self, final_result )
             
             self._final_test_result.setText( final_result )
             
@@ -1685,7 +1685,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if self._currently_testing:
             
-            QW.QMessageBox.warning( self, 'Warning', 'Currently testing already! Please cancel current job!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Currently testing already! Please cancel current job!' )
             
             return
             
@@ -1783,7 +1783,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if domain != original_domain and domain in existing_domains:
                 
-                QW.QMessageBox.critical( self, 'Error', 'That domain already exists!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'That domain already exists!' )
                 
                 break
                 

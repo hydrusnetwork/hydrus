@@ -52,6 +52,7 @@ from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDownloaders
 from hydrus.client.gui import ClientGUIDragDrop
@@ -986,14 +987,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if path is None:
             
-            QW.QMessageBox.warning( self, 'Warning', 'No backup path is set!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'No backup path is set!' )
             
             return
             
         
         if not os.path.exists( path ):
             
-            QW.QMessageBox.information( self, 'Information', 'The backup path does not exist--creating it now.' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'The backup path does not exist--creating it now.' )
             
             HydrusPaths.MakeSureDirectoryExists( path )
             
@@ -1160,7 +1161,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
             
-            QW.QMessageBox.information( self, 'Information', 'Delete done! Please restart the client to see the changes in the UI.' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Delete done! Please restart the client to see the changes in the UI.' )
             
         
     
@@ -1288,7 +1289,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             self._controller.WriteSynchronous( 'cull_file_viewing_statistics' )
             
-            QW.QMessageBox.information( self, 'Information', 'Cull done! Please restart the client to see the changes in the UI.' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Cull done! Please restart the client to see the changes in the UI.' )
             
         
     
@@ -1476,6 +1477,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             dlg.exec()
             
+        
+    
+    def _DebugMakeQMessageBox( self ):
+        
+        ClientGUIDialogsMessage.ShowWarning( self, 'This is a test message!\n\nI have a second line of information to give! I will repeat it! I have a second line of information to give! I will repeat it! I have a second line of information to give! I will repeat it! I have a second line of information to give! I will repeat it! I have a second line of information to give! I will repeat it!' )
         
     
     def _DebugMakeSomePopups( self ):
@@ -1795,7 +1801,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if not result:
             
-            QW.QMessageBox.critical( self, 'Error', 'Could not turn on--perhaps your version of PIL does not support it?' )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not turn on--perhaps your version of PIL does not support it?' )
             
         
     
@@ -1837,7 +1843,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 HydrusData.Print( text )
                 
-                QW.QMessageBox.information( self, 'Information', text+os.linesep*2+'This has been written to the log.' )
+                ClientGUIDialogsMessage.ShowInformation( self, text + '\n' * 2 + 'This has been written to the log.' )
                 
             
         
@@ -2037,7 +2043,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if num_to_do == 0:
                 
-                QP.CallAfter( QW.QMessageBox.warning, self, 'Warning', 'No files in that directory!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'No files in that directory!' )
                 
                 return
                 
@@ -2127,7 +2133,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         message = 'This lets you manually import a directory of update files for your repositories. Any update files that match what your repositories are looking for will be automatically linked so they do not have to be downloaded.'
         
-        QW.QMessageBox.information( self, 'Information', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
         with QP.DirDialog( self, 'Select location.' ) as dlg:
             
@@ -3341,7 +3347,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         profile_mode_message += os.linesep * 2
         profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
         
-        ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', QW.QMessageBox.information, self, 'Profile modes', profile_mode_message )
+        ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', ClientGUIDialogsMessage.ShowInformation, self, profile_mode_message )
         ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, HG.client_controller.FlipProfileMode )
         ClientGUIMenus.AppendMenuCheckItem( profiling, 'query planner mode', 'Run detailed \'query plans\'.', HG.query_planner_mode, HG.client_controller.FlipQueryPlannerMode )
         
@@ -3395,6 +3401,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a popup in five seconds', 'Throw a delayed popup at the message manager, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, HydrusData.ShowText, 'This is a delayed popup message.' )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, True )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a non-cancellable modal popup in five seconds', 'Throw up a delayed modal popup to test with. It will stay alive for five seconds.', self._DebugMakeDelayedModalPopup, False )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'make a QMessageBox', 'Open a modal message dialog.', self._DebugMakeQMessageBox )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a new page in five seconds', 'Throw a delayed page at the main notebook, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._controller.pub, 'new_page_query', default_location_context )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: HG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
@@ -3516,7 +3523,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             message += os.linesep * 2
             message += 'You are likely running from source, so I recommend you close the client, run \'pip install html5lib\' (or whatever is appropriate for your environment) and try again. You can double-check what imported ok under help->about.'
             
-            ClientGUIMenus.AppendMenuItem( submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', QW.QMessageBox.warning, self, 'Warning', message )
+            ClientGUIMenus.AppendMenuItem( submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', ClientGUIDialogsMessage.ShowWarning, self, message )
             
             ClientGUIMenus.AppendSeparator( submenu )
             
@@ -4469,7 +4476,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 if nullification_period > HydrusNetwork.MAX_NULLIFICATION_PERIOD:
                     
-                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_NULLIFICATION_PERIOD ) ) )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_NULLIFICATION_PERIOD ) ) )
                     
                     return
                     
@@ -4594,7 +4601,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 if update_period > HydrusNetwork.MAX_UPDATE_PERIOD:
                     
-                    QW.QMessageBox.information( self, 'Information', 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, the value you entered was too high. The max is {}.'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HydrusNetwork.MAX_UPDATE_PERIOD ) ) )
                     
                     return
                     
@@ -4991,7 +4998,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                 except:
                     
-                    QW.QMessageBox.critical( self, 'Error', 'Could not parse that account id' )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not parse that account id' )
                     
                     return
                     
@@ -6457,7 +6464,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             backup_intro += 'If your client is getting large and/or complicated, I recommend you start backing up with a proper external program like FreeFileSync. If you would like some more info on making or restoring backups, please consult the help\'s \'installing and updating\' page.'
             
         
-        QW.QMessageBox.information( self, 'Information', backup_intro )
+        ClientGUIDialogsMessage.ShowInformation( self, backup_intro )
         
         with QP.DirDialog( self, 'Select backup location.' ) as dlg:
             
@@ -6472,14 +6479,14 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if path == self._controller.GetDBDir():
                     
-                    QW.QMessageBox.critical( self, 'Error', 'That directory is your current database directory! You cannot backup to the same location you are backing up from!' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'That directory is your current database directory! You cannot backup to the same location you are backing up from!' )
                     
                     return
                     
                 
                 if path == existing_backup_path:
                     
-                    QW.QMessageBox.information( self, 'Already in use!', 'The path you chose is your current saved backup path. No changes have been made.' )
+                    ClientGUIDialogsMessage.ShowInformation( self, 'The path you chose is your current saved backup path. No changes have been made.' )
                     
                     return
                     
@@ -6542,7 +6549,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             message = 'Sorry, you do not have QtCharts available, so this chart cannot be shown!'
             
-            QW.QMessageBox.warning( self, 'Warning', message )
+            ClientGUIDialogsMessage.ShowWarning( self, message )
             
             return
             
@@ -6592,7 +6599,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             HydrusData.ToHumanInt( total_closed_num_seeds_weight )
         )
         
-        QW.QMessageBox.information( self, 'Information', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _StartIPFSDownload( self ):
@@ -6811,7 +6818,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', 'Unfortunately, there is a problem with starting the upload: ' + str( e ) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Unfortunately, there is a problem with starting the upload: ' + str( e ) )
             
             return
             
@@ -7865,7 +7872,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         if name in ClientGUISession.RESERVED_SESSION_NAMES:
                             
-                            QW.QMessageBox.critical( self, 'Error', 'Sorry, you cannot have that name! Try another.' )
+                            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, you cannot have that name! Try another.' )
                             
                         else:
                             
@@ -8482,7 +8489,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
             except Exception as e:
                 
-                self._controller.SafeShowCriticalMessage( 'shutdown error', 'There was a problem trying to review pending shutdown maintenance work. No shutdown maintenance work will be done, and info has been written to the log. Please let hydev know.' )
+                self._controller.BlockingSafeShowCriticalMessage( 'shutdown error', 'There was a problem trying to review pending shutdown maintenance work. No shutdown maintenance work will be done, and info has been written to the log. Please let hydev know.' )
                 
                 HydrusData.PrintException( e )
                 

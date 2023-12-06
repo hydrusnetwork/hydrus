@@ -10,6 +10,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -449,7 +450,7 @@ class StringToStringDictControl( QW.QWidget ):
                 
                 if key in self._GetExistingKeys():
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
                     
                     return
                     
@@ -487,7 +488,7 @@ class StringToStringDictControl( QW.QWidget ):
                         
                         if edited_key != key and edited_key in self._GetExistingKeys():
                             
-                            QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
+                            ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
                             
                             break
                             
@@ -617,7 +618,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
                 
                 if key in self._GetExistingKeys():
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
                     
                     return
                     
@@ -659,7 +660,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
                     
                     if edited_key != key and edited_key in self._GetExistingKeys():
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'That {} already exists!'.format( self._key_name ) )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
                         
                         break
                         

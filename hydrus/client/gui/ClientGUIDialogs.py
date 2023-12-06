@@ -11,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
@@ -371,7 +372,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         if internal_port is None:
             
-            QW.QMessageBox.warning( self, 'Warning', 'The local booru is not currently running!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'The local booru is not currently running!' )
             
         
         try:
@@ -382,7 +383,7 @@ class DialogInputLocalBooruShare( Dialog ):
             
             HydrusData.ShowException( e )
             
-            QW.QMessageBox.critical( self, 'Error', 'Unfortunately, could not generate an external URL: {}'.format(e) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Unfortunately, could not generate an external URL: {}'.format(e) )
             
             return
             
@@ -478,7 +479,7 @@ class DialogInputNamespaceRegex( Dialog ):
         
         if namespace == '':
             
-            QW.QMessageBox.warning( self, 'Warning', 'Please enter something for the namespace.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Please enter something for the namespace.' )
             
             return
             
@@ -493,7 +494,7 @@ class DialogInputNamespaceRegex( Dialog ):
             text += os.linesep * 2
             text += str( e )
             
-            QW.QMessageBox.critical( self, 'Error', text )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', text )
             
             return
             

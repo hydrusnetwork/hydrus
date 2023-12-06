@@ -18,7 +18,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -28,6 +27,7 @@ from hydrus.client import ClientManagers
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -484,7 +484,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             
             if len( allowed_services ) == 0:
                 
-                QW.QMessageBox.information( self, 'Information', 'You have all the current tag services applied to this service.' )
+                ClientGUIDialogsMessage.ShowInformation( self, 'You have all the current tag services applied to this service.' )
                 
                 raise HydrusExceptions.VetoException()
                 
@@ -1071,7 +1071,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
             
             return
             
@@ -1089,7 +1091,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if not isinstance( obj, HydrusTags.TagFilter ):
             
-            QW.QMessageBox.critical( self, 'Error', 'That object was not a Tag Filter! It seemed to be a "{}".'.format(type(obj)) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', f'That object was not a Tag Filter! It seemed to be a "{type(obj)}".' )
             
             return
             
@@ -1435,7 +1437,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         help += os.linesep
         help += '"" (i.e. an empty string) - all unnamespaced tags'
         
-        QW.QMessageBox.information( self, 'Information', help )
+        ClientGUIDialogsMessage.ShowInformation( self, help )
         
     
     def _ShowRedundantError( self, text ):
@@ -2722,7 +2724,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             if len( tags ) == 0:
                 
-                QW.QMessageBox.information( self, 'No tags selected!', 'Please select some tags first!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'Please select some tags first!' )
                 
                 return
                 
@@ -2756,7 +2758,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             except HydrusExceptions.DataMissing as e:
                 
-                QW.QMessageBox.warning( self, 'Warning', str(e) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting tags!', str(e) )
                 
                 return
                 
@@ -3511,7 +3513,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if ClientManagers.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
                     
-                    QW.QMessageBox.critical( self, 'Error', 'Adding '+potential_child+'->'+potential_parent+' would create a loop!' )
+                    ClientGUIDialogsMessage.ShowWarning( self, f'Adding {potential_child}->{potential_parent} would create a loop!' )
                     
                     return False
                     
@@ -3575,7 +3577,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( tags ) % 2 == 1:
                 
-                QW.QMessageBox.information( self, 'Information', 'Uneven number of tags in clipboard!' )
+                ClientGUIDialogsMessage.ShowInformation( self, 'Uneven number of tags in clipboard!' )
                 
             
             pairs = []
@@ -3648,7 +3650,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
                 
                 return
                 
@@ -4736,13 +4740,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         if next_new in seen_tags:
                             
-                            QW.QMessageBox.warning( self, 'Loop Problem!', 'While trying to test the new pair(s) for potential loops, I think I ran across an existing loop! Please review everything and see if you can break any loops yourself.' )
-                            
                             message = 'The pair you mean to add seems to connect to a sibling loop already in your database! Please undo this loop manually. The tags involved in the loop are:'
                             message += os.linesep * 2
                             message += ', '.join( seen_tags )
                             
-                            QW.QMessageBox.critical( self, 'Error', message )
+                            ClientGUIDialogsMessage.ShowCritical( self, 'Loop problem!', message )
                             
                             break
                             
@@ -4785,7 +4787,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if potential_old in current_dict:
                 
-                QW.QMessageBox.critical( self, 'Error', 'There already is a relationship set for the tag '+potential_old+'.' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'There already is a relationship set for the tag {potential_old}.' )
                 
                 return False
                 
@@ -4804,7 +4806,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if next_new == potential_old:
                         
-                        QW.QMessageBox.critical( self, 'Error', 'Adding '+potential_old+'->'+potential_new+' would create a loop!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, f'Adding {potential_old}->{potential_new} would create a loop!' )
                         
                         return False
                         
@@ -4815,7 +4817,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         message += os.linesep * 2
                         message += ', '.join( seen_tags )
                         
-                        QW.QMessageBox.critical( self, 'Error', message )
+                        ClientGUIDialogsMessage.ShowWarning( self, message )
                         
                         return False
                         
@@ -4917,7 +4919,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( tags ) % 2 == 1:
                 
-                QW.QMessageBox.information( self, 'Information', 'Uneven number of tags in clipboard!' )
+                ClientGUIDialogsMessage.ShowInformation( self, 'Uneven number of tags in clipboard!' )
                 
             
             pairs = []
@@ -4990,7 +4992,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
                 
                 return
                 

@@ -1,5 +1,6 @@
 from functools import reduce
 
+import math
 import numpy
 import numpy.core.multiarray # important this comes before cv!
 
@@ -49,6 +50,23 @@ def GenerateShapePerceptualHashes( path, mime ):
         
         return set()
         
+    
+
+def PILDCT( greyscale_numpy_image: numpy.array ):
+    # this emulates cv2.dct and was figured out by prkc. there is some OpenCV secret magic that differs from 'typical' DCT
+    # it should be a complete drop-in other than tiny floating-point calc differences 3.9204849e+02 vs 3.92048486e+02
+    # experimentally, I ran the final phash on 500 different files and every single one was exactly the same!
+    # also, W and Norm can be precomputed if you like!
+    w, h = 2 * greyscale_numpy_image.shape[0], 2 * greyscale_numpy_image.shape[1]
+    extended = numpy.zeros((w,h), numpy.float64)
+    extended[0:w//2,0:h//2] = greyscale_numpy_image
+    extended[0:w//2,h//2:h] = numpy.fliplr(greyscale_numpy_image)
+    extended[w//2:w,:] = numpy.flipud(extended[0:w//2,:])
+    dct_ = numpy.fft.fft2(extended, norm="ortho")[0:w//2,0:h//2]
+    invsqrt2 = 1/math.sqrt(2)
+    W = lambda N, k: numpy.exp(-1j*k*math.pi/N)*(invsqrt2 if k == 0 else 1.0)
+    Norm = numpy.fromfunction(numpy.vectorize(lambda i,j: W(w,i)*W(h,j)), (w//2,h//2), dtype=numpy.cdouble)
+    return numpy.real(numpy.multiply(Norm,dct_))
     
 
 def GenerateShapePerceptualHashesNumPy( numpy_image ):
@@ -126,7 +144,7 @@ def GenerateShapePerceptualHashesNumPy( numpy_image ):
         HydrusData.ShowText( 'phash generation: generating dct' )
         
     
-    dct = cv2.dct( numpy_image_tiny_float )
+    dct = PILDCT( numpy_image_tiny_float )
     
     # take top left 8x8 of dct
     

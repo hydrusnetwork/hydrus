@@ -20,6 +20,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -2237,7 +2238,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.warning( self, 'Warning', str(e) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -2950,7 +2951,9 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             

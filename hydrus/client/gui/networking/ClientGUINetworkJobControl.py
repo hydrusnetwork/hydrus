@@ -3,14 +3,13 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -393,7 +392,7 @@ class NetworkJobControl( QW.QFrame ):
             return
             
         
-        QW.QMessageBox.critical( self, 'network error', self._error_text )
+        ClientGUIDialogsMessage.ShowCritical( self, 'Network Error', self._error_text )
         
     
     def TIMERUIUpdate( self ):

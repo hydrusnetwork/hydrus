@@ -52,7 +52,7 @@ Q: Does that mean I can't do anything about the size?
 ---
 
 ## Janitors
-Janitors are the people that review petitions. You can meet us at the community [Discord](https://discord.gg/3H8UTpb) to ask questions or see us bitch about some of the silly stuff boorus and users cause to end up in the PTR.
+Janitors are the people that review petitions. You can meet us at the community [Discord](https://discord.gg/wPHPCUZ) to ask questions or see us bitch about some of the silly stuff boorus and users cause to end up in the PTR.
 
 ## Tag Guidelines
 

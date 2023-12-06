@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -97,6 +98,7 @@ class DialogNullipotent( DialogThatTakesScrollablePanel ):
             
         
     
+
 class DialogApplyCancel( DialogThatTakesScrollablePanel ):
     
     def _GetButtonBox( self ):
@@ -145,12 +147,14 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
             
             if len( message ) > 0:
                 
-                QW.QMessageBox.warning( self, 'Cannot OK!', message )
+                ClientGUIDialogsMessage.ShowWarning( self, message )
                 
             
             return False
             
         
+    
+
 class DialogEdit( DialogApplyCancel ):
     
     def __init__( self, parent, title, frame_key = 'regular_dialog', hide_buttons = False ):
@@ -158,6 +162,7 @@ class DialogEdit( DialogApplyCancel ):
         DialogApplyCancel.__init__( self, parent, title, frame_key = frame_key, hide_buttons = hide_buttons )
         
     
+
 class DialogManage( DialogApplyCancel ):
     
     def _DoClose( self, value ):
@@ -174,12 +179,13 @@ class DialogManage( DialogApplyCancel ):
                 
                 if len( message ) > 0:
                     
-                    QW.QMessageBox.critical( self, 'Error', message )
+                    ClientGUIDialogsMessage.ShowWarning( self, message )
                     
                 
             
         
     
+
 class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
     
     def __init__( self, parent, title, frame_key = 'regular_center_dialog' ):
@@ -197,6 +203,7 @@ class DialogCustomButtonQuestion( DialogThatTakesScrollablePanel ):
         pass
         
     
+
 class FrameThatTakesScrollablePanel( ClientGUITopLevelWindows.FrameThatResizes ):
     
     def __init__( self, parent, title, frame_key = 'regular_dialog' ):

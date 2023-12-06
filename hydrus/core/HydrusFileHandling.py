@@ -692,6 +692,11 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             
             if mime == HC.APPLICATION_ZIP:
                 
+                if not HydrusArchiveHandling.IsOpenableZip( path ):
+                    
+                    return HC.APPLICATION_ZIP
+                    
+                
                 opendoc_mime = HydrusArchiveHandling.MimeFromOpenDocument( path )
 
                 if opendoc_mime is not None:

@@ -7,8 +7,8 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtPorting as QP
 
 # this does one thing neatly
@@ -35,7 +35,7 @@ class AsyncQtJob( object ):
         message += os.linesep * 2
         message += 'Error summary: {}'.format( value )
         
-        QW.QMessageBox.warning( self._win, 'Error', message )
+        ClientGUIDialogsMessage.ShowCritical( self._win, 'Error', message )
         
         if self._errback_ui_cleanup_callable is not None:
             

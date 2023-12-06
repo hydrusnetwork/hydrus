@@ -18,6 +18,7 @@ from hydrus.client import ClientData
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -940,9 +941,9 @@ class PopupMessageManager( QW.QFrame ):
     
     def _SizeAndPositionAndShow( self ):
         
+        gui_frame = self.parentWidget()
+        
         try:
-            
-            gui_frame = self.parentWidget()
             
             gui_is_hidden = not gui_frame.isVisible()
             
@@ -1000,7 +1001,7 @@ class PopupMessageManager( QW.QFrame ):
             
             HydrusData.Print( traceback.format_exc() )
             
-            QW.QMessageBox.critical( gui_frame, 'Error', text )
+            ClientGUIDialogsMessage.ShowCritical( gui_frame, 'Popup Message Manager failure!', text )
             
             self._update_job.Cancel()
             
@@ -1430,7 +1431,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
             
         else:
             
-            QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, this job cannot be cancelled. If it really is taking too long, please kill the client through task manager.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Unfortunately, this job cannot be cancelled. If it really is taking too long, please kill the client through task manager.' )
             
             return False
             

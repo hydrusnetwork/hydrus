@@ -13,6 +13,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientTime
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -205,7 +206,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         help += os.linesep * 2
         help += 'If you are still not comfortable with how this system works, the \'reasonable defaults\' are good fallbacks. Most of the time, setting some reasonable rules and leaving checkers to do their work is the best way to deal with this stuff, rather than obsessing over the exact perfect values you want for each situation.'
         
-        QW.QMessageBox.information( self, 'Information', help )
+        ClientGUIDialogsMessage.ShowInformation( self, help )
         
     
     def _UpdateEnabledControls( self ):
@@ -558,7 +559,9 @@ class DateTimeCtrl( QW.QWidget ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             

@@ -11,6 +11,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITime
@@ -153,7 +154,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'Sorry, you can only have this one!'
             
-            QW.QMessageBox.information( self, 'Information', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
         try:
@@ -342,7 +343,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 message = 'Hey, the tag service for your exporter does not seem to exist! Maybe it was deleted. Please select a new one that does.'
                 
-                QW.QMessageBox.warning( self, 'Warning', message )
+                ClientGUIDialogsMessage.ShowWarning( self, message )
                 
             
         elif isinstance( exporter, ( ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ) ):
@@ -391,7 +392,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         message += os.linesep * 2
         message += 'If there is no content to write, no new file will be created.'
         
-        QW.QMessageBox.information( self, 'Sidecars', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _UpdateServiceKeyButtonLabel( self ):

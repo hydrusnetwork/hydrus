@@ -26,6 +26,7 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAPI
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIPanels
@@ -186,7 +187,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 message = 'Unfortunately, you must have at least one service of the type "{}". You cannot delete them all.'.format( HC.service_string_lookup[ service_type ] )
                 
-                QW.QMessageBox.information( self, "Information", message )
+                ClientGUIDialogsMessage.ShowInformation( self, message )
                 
                 return
                 
@@ -206,7 +207,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         message = 'The service {} needs to be empty before it can be deleted, but it seems to have {} files in it! Please delete or migrate all the files from it and then try again.'.format( service.GetName(), HydrusData.ToHumanInt( num_files ) )
                         
-                        QW.QMessageBox.information( self, "Information", message )
+                        ClientGUIDialogsMessage.ShowInformation( self, message )
                         
                         return
                         
@@ -516,7 +517,7 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
                 return
                 
             
-            QW.QMessageBox.information( self, 'Information', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
             self._test_address_button.setEnabled( True )
             self._test_address_button.setText( 'test address' )
@@ -566,7 +567,7 @@ class EditServiceRemoteSubPanel( ClientGUICommon.StaticBox ):
             
             if len( message ) > 0:
                 
-                QW.QMessageBox.critical( self, 'Error', message )
+                ClientGUIDialogsMessage.ShowWarning( self, message )
                 
             
             return
@@ -785,9 +786,11 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 
                 registration_key = bytes.fromhex( registration_key_encoded )
                 
-            except:
+            except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Could not parse that registration token!' )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem parsing!', 'Could not parse that registration token!' )
                 
                 return
                 
@@ -886,7 +889,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
             self._EnableDisableButtons( True )
             
-            QW.QMessageBox.information( self, 'Information', 'Looks good!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Looks good!' )
             
         
         def errback_ui_cleanup_callable():
@@ -905,7 +908,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         
         if len( account_types ) == 0:
             
-            QW.QMessageBox.information( self, 'No auto account creation', 'Sorry, this server does not support automatic account creation!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Sorry, this server does not support automatic account creation!' )
             
         else:
             
@@ -982,7 +985,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 return
                 
             
-            QW.QMessageBox.information( self, 'Information', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
             self._test_credentials_button.setEnabled( True )
             self._test_credentials_button.setText( 'test access key' )
@@ -1027,7 +1030,7 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
             
             self._EnableDisableButtons( True )
             
-            QW.QMessageBox.information( self, 'Information', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
         def errback_ui_cleanup_callable():
@@ -1571,7 +1574,7 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         message += os.linesep * 2
         message += 'e.g. If you symlink E:\\hydrus\\files to C:\\users\\you\\ipfs_maps\\e_media, then put that same C:\\users\\you\\ipfs_maps\\e_media in the right column for that hydrus file location, and you _should_ be good.'
         
-        QW.QMessageBox.information( self, 'Information', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _UpdateButtons( self ):
@@ -1742,7 +1745,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             message = 'The service id is: {}'.format( service_id )
             
-            QP.CallAfter( QW.QMessageBox.information, None, 'Service ID', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
         job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
@@ -1961,7 +1964,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         if port is None:
             
-            QW.QMessageBox.warning( self, 'Warning', 'The service is not running, so you cannot add new access via the API!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'The service is not running, so you cannot add new access via the API!' )
             
             return
             
@@ -2094,7 +2097,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         if port is None:
             
-            QW.QMessageBox.warning( self, 'Warning', 'The service is not running, so you cannot view it in a web browser!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'The service is not running, so you cannot view it in a web browser!' )
             
         else:
             
@@ -2662,21 +2665,21 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                 HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
                 
             
-            QW.QMessageBox.critical( self, 'Error', str( value ) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', str( value ) )
             
             self._my_updater.Update()
             
         
         if HG.client_controller.new_options.GetBoolean( 'pause_repo_sync' ):
             
-            QW.QMessageBox.warning( self, 'Warning', 'All repositories are currently paused under the services->pause menu! Please unpause them and then try again!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'All repositories are currently paused under the services->pause menu! Please unpause them and then try again!' )
             
             return
             
         
         if self._service.IsPausedNetworkSync():
             
-            QW.QMessageBox.warning( self, 'Warning', 'Account sync is paused for this service! Please unpause it to refresh its account.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Account sync is paused for this service! Please unpause it to refresh its account.' )
             
             return
             
@@ -2863,7 +2866,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             message = 'This service is already due a full metadata resync.'
             
-            QW.QMessageBox.information( self, "Information", message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
             return
             
@@ -2907,7 +2910,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 
                 if num_to_do == 0:
                     
-                    QP.CallAfter( QW.QMessageBox.information, None, 'Information', 'No updates to export!' )
+                    ClientGUIDialogsMessage.ShowInformation( self, 'No updates to export!' )
                     
                 else:
                     
@@ -3010,7 +3013,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             
             message += os.linesep.join( string_rows )
             
-            QW.QMessageBox.information( self, 'Service Info', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
             self._my_updater.Update()
             
@@ -3022,7 +3025,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
                 
             
-            QW.QMessageBox.critical( self, 'Error', str( value ) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', str( value ) )
             
             self._my_updater.Update()
             
@@ -3751,7 +3754,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
         
         if internal_port is None:
             
-            QW.QMessageBox.warning( self, 'Warning', 'The local booru is not currently running!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'The local booru is not currently running!' )
             
         
         urls = []
@@ -3766,7 +3769,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
                 
                 HydrusData.ShowException( e )
                 
-                QW.QMessageBox.critical( self, 'Error', 'Unfortunately, could not generate an external URL: {}'.format(e) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', f'Unfortunately, could not generate an external URL: {e}' )
                 
                 return
                 
@@ -3785,7 +3788,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
         
         if internal_port is None:
             
-            QW.QMessageBox.warning( self, 'Warning', 'The local booru is not currently running!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'The local booru is not currently running!' )
             
         
         urls = []

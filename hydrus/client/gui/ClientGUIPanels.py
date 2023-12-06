@@ -1,9 +1,8 @@
-from qtpy import QtWidgets as QW
-
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 
@@ -185,7 +184,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
                 
             else:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Unfortunately, was unable to set nocopy configuration.' )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Unfortunately, was unable to set nocopy configuration.' )
                 
                 self._enable_nocopy.setEnabled( True )
                 
@@ -203,7 +202,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
                 
                 message = 'Problem: {}'.format( str( e ) )
                 
-                QP.CallAfter( QW.QMessageBox.critical, None, 'Error', message )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', message )
                 
                 success = False
                 

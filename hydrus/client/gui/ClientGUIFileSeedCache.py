@@ -10,13 +10,13 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientTime
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -96,7 +96,7 @@ def ImportFromClipboard( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds
         
     except HydrusExceptions.DataMissing as e:
         
-        QW.QMessageBox.critical( win, 'Error', str(e) )
+        ClientGUIDialogsMessage.ShowCritical( win, 'Problem pasting!', str(e) )
         
         return
         
@@ -129,15 +129,16 @@ def ImportFromPNG( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileS
                 
                 ImportSources( file_seed_cache, sources )
                 
-            except:
+            except Exception as e:
                 
-                QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
+                ClientGUIDialogsMessage.ShowCritical( win, 'Could not import!', str( e ) )
                 
                 raise
                 
             
         
     
+
 def ImportSources( file_seed_cache, sources ):
     
     if sources[0].startswith( 'http' ):
@@ -153,6 +154,7 @@ def ImportSources( file_seed_cache, sources ):
     
     file_seed_cache.AddFileSeeds( file_seeds )
     
+
 def RetryErrors( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
     message = 'Are you sure you want to retry all the files that encountered errors?'
@@ -178,6 +180,7 @@ def RetryIgnored( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSe
     
     file_seed_cache.RetryIgnored( ignored_regex = ignored_regex )
     
+
 def ReverseFileSeedCache( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
     message = 'Reverse this file log? Any outstanding imports will process in the opposite order.'
@@ -212,6 +215,7 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
         HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
         
     
+
 def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
     num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
@@ -635,7 +639,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except Exception as e:
                     
-                    QW.QMessageBox.critical( self, 'Error', str(e) )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem opening files!', str(e) )
                     
                 
             

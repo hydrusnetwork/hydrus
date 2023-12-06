@@ -37,6 +37,7 @@ from hydrus.client import ClientSerialisable
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICharts
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFunctions
@@ -235,14 +236,14 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if base_location in self._media_base_locations:
             
-            QW.QMessageBox.warning( self, 'Warning', 'You already have that location entered!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'You already have that location entered!' )
             
             return
             
         
         if self._ideal_thumbnails_base_location_override is not None and base_location.path == self._ideal_thumbnails_base_location_override.path:
             
-            QW.QMessageBox.warning( self, 'Warning', 'That path is already used as the special thumbnail location--please choose another.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'That path is already used as the special thumbnail location--please choose another.' )
             
             return
             
@@ -663,7 +664,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 message = 'The path "{}" does not exist! Please ensure all the locations on this dialog are valid before trying to rebalance your files.'.format( base_location )
                 
-                QW.QMessageBox.critical( self, 'Error', message )
+                ClientGUIDialogsMessage.ShowWarning( self, message )
                 
                 return
                 
@@ -712,14 +713,14 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if base_location not in self._media_base_locations:
             
-            QW.QMessageBox.warning( self, 'Warning', 'Please select a location with weight.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Please select a location with weight.' )
             
             return
             
         
         if len( self._media_base_locations ) == 1:
             
-            QW.QMessageBox.warning( self, 'Warning', 'You cannot empty every single current file location--please add a new place for the files to be moved to and then try again.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'You cannot empty every single current file location--please add a new place for the files to be moved to and then try again.' )
             
         
         if os.path.exists( base_location.path ):
@@ -856,7 +857,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if path in all_paths:
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'That path already exists as a regular file location! Please choose another.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'That path already exists as a regular file location! Please choose another.' )
                     
                 else:
                     
@@ -1184,7 +1185,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if self._dest_archive_path is None:
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'Please set a path for the destination Hydrus Tag Archive.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Please set a path for the destination Hydrus Tag Archive.' )
                     
                     return
                     
@@ -1236,7 +1237,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if self._source_archive_path is None:
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'Please set a path for the source Hydrus Tag Archive.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Please set a path for the source Hydrus Tag Archive.' )
                     
                     return
                     
@@ -1254,7 +1255,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if self._dest_archive_path is None:
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'Please set a path for the destination Hydrus Tag Pair Archive.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Please set a path for the destination Hydrus Tag Pair Archive.' )
                     
                     return
                     
@@ -1289,7 +1290,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if self._source_archive_path is None:
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'Please set a path for the source Hydrus Tag Archive.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Please set a path for the source Hydrus Tag Archive.' )
                     
                     return
                     
@@ -1358,7 +1359,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                             
                         except Exception as e:
                             
-                            QW.QMessageBox.critical( self, 'Error', 'Could not load that path as an Archive! {}'.format(str(e)) )
+                            ClientGUIDialogsMessage.ShowCritical( self, 'Problem with HTA!', f'Could not load that path as an Archive!\n\n{e}' )
                             
                         
                         try:
@@ -1386,20 +1387,20 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                             
                         except Exception as e:
                             
-                            QW.QMessageBox.warning( self, 'Warning', 'Could not load that file as a Hydrus Tag Pair Archive! {}'.format(str(e)) )
+                            ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', f'Could not load that file as a Hydrus Tag Pair Archive! {e}' )
                             
                             return
                             
                         
                         if content_type == HC.CONTENT_TYPE_TAG_PARENTS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_PARENTS:
                             
-                            QW.QMessageBox.warning( self, 'Warning', 'This Hydrus Tag Pair Archive is not a tag parents archive!' )
+                            ClientGUIDialogsMessage.ShowWarning( self, 'This Hydrus Tag Pair Archive is not a tag parents archive!' )
                             
                             return
                             
                         elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS:
                             
-                            QW.QMessageBox.warning( self, 'Warning', 'This Hydrus Tag Pair Archive is not a tag siblings archive!' )
+                            ClientGUIDialogsMessage.ShowWarning( self, 'This Hydrus Tag Pair Archive is not a tag siblings archive!' )
                             
                             return
                             
@@ -1444,7 +1445,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                     except Exception as e:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'Could not load that file as a Hydrus Tag Archive! {}'.format(str(e)) )
+                        ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', f'Could not load that file as a Hydrus Tag Archive! {e}' )
                         
                         return
                         
@@ -1463,27 +1464,27 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                     except Exception as e:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'Could not load that file as a Hydrus Tag Pair Archive! {}'.format(str(e)) )
+                        ClientGUIDialogsMessage.ShowCritical( self, 'Problem!', f'Could not load that file as a Hydrus Tag Pair Archive! {e}' )
                         
                         return
                         
                     
                     if pair_type is None:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'This Hydrus Tag Pair Archive does not have a pair type set!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'This Hydrus Tag Pair Archive does not have a pair type set!' )
                         
                         return
                         
                     
                     if content_type == HC.CONTENT_TYPE_TAG_PARENTS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_PARENTS:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'This Hydrus Tag Pair Archive is not a tag parents archive!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'This Hydrus Tag Pair Archive is not a tag parents archive!' )
                         
                         return
                         
                     elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS and pair_type != HydrusTagArchive.TAG_PAIR_TYPE_SIBLINGS:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'This Hydrus Tag Pair Archive is not a tag siblings archive!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'This Hydrus Tag Pair Archive is not a tag siblings archive!' )
                         
                         return
                         
@@ -1784,7 +1785,9 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading PNG!', str(e) )
                 
                 return
                 
@@ -1829,16 +1832,18 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                         message += 'If there are more unloadable objects in this import, they will be skipped silently.'
                         
                     
-                    QW.QMessageBox.critical( self, 'Error', message )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Serialisation Object Load Error!', message )
                     
                     have_shown_load_error = True
                     
                 
                 continue
                 
-            except:
+            except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in {}!'.format( payload_description ) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'I could not understand what was encoded in {}!'.format( payload_description ) )
                 
                 continue
                 
@@ -1850,7 +1855,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             if not isinstance( obj_list, HydrusSerialisable.SerialisableList ):
                 
-                QW.QMessageBox.warning( self, 'Warning', 'Unfortunately, {} did not look like a package of download data! Instead, it looked like: {}'.format( payload_description, obj_list.SERIALISABLE_NAME ) )
+                ClientGUIDialogsMessage.ShowWarning( self, 'Unfortunately, {} did not look like a package of download data! Instead, it looked like: {}'.format( payload_description, obj_list.SERIALISABLE_NAME ) )
                 
                 continue
                 
@@ -1888,7 +1893,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             if num_misc_objects > 0:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'I found '+HydrusData.ToHumanInt(num_misc_objects)+' misc objects in that png, but nothing downloader related.' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'I found '+HydrusData.ToHumanInt(num_misc_objects)+' misc objects in that png, but nothing downloader related.' )
                 
             
             return
@@ -2062,7 +2067,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         if len( new_gugs ) + len( new_url_classes ) + len( new_parsers ) + len( new_domain_metadatas ) + len( new_login_scripts ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'All '+HydrusData.ToHumanInt(total_num_dupes)+' downloader objects in that package appeared to already be in the client, so nothing need be added.' )
+            ClientGUIDialogsMessage.ShowInformation( self, f'All {HydrusData.ToHumanInt( total_num_dupes )} downloader objects in that package appeared to already be in the client, so nothing need be added.' )
             
             return
             
@@ -2118,7 +2123,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             for new_dm in new_domain_metadatas_to_show:
                 
-                QW.QMessageBox.information( self, 'Information', new_dm.GetDetailedSafeSummary() )
+                ClientGUIDialogsMessage.ShowInformation( self, new_dm.GetDetailedSafeSummary() )
                 
             
         
@@ -2176,7 +2181,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             final_message += ' ' + HydrusData.ToHumanInt( total_num_dupes ) + ' duplicate objects were not added (but some additional metadata may have been merged).'
             
         
-        QW.QMessageBox.information( self, 'Information', final_message )
+        ClientGUIDialogsMessage.ShowInformation( self, final_message )
         
     
     def _Paste( self ):
@@ -2192,7 +2197,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( repr( e ) ) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting image!', f'Sorry, seemed to be a problem: {e}' )
                 
                 return
                 
@@ -2208,7 +2213,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                QW.QMessageBox.critical( self, 'Error', str(e) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting text!', f'Sorry, seemed to be a problem: {e}' )
                 
                 return
                 
@@ -2740,7 +2745,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def publish_callable( result ):
             
-            QW.QMessageBox.information( self, 'Information', 'Jobs added!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Jobs added!' )
             
             self._add_new_job.setEnabled( True )
             
@@ -2898,7 +2903,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         message += os.linesep * 2
         message += 'This job has weight {}, where a normalised unit of file work has value {}.'.format( HydrusData.ToHumanInt( ClientFiles.regen_file_enum_to_job_weight_lookup[ job_type ] ), HydrusData.ToHumanInt( ClientFiles.NORMALISED_BIG_JOB_WEIGHT ) )
         
-        QW.QMessageBox.information( self, 'Information', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _SelectAllMediaFiles( self ):
@@ -3660,7 +3665,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             message = 'Please wait for the cancel to clear.'
             
-            QW.QMessageBox.warning( self, 'Warning', message )
+            ClientGUIDialogsMessage.ShowWarning( self, message )
             
             return
             

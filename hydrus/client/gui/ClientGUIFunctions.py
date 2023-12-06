@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.core.images import HydrusImageNormalisation
@@ -401,7 +402,7 @@ def PresentClipboardParseError( win: QW.QWidget, content: str, expected_content_
     
     message = 'Sorry, I could not understand what was in the clipboard. I was expecting "{}" but received this text:\n\n{}\n\nMore details have been written to the log, but the general error was:\n\n{}'.format( expected_content_description, HydrusText.ElideText( content, 64 ), repr( e ) )
     
-    QW.QMessageBox.critical( win, 'Clipboard Error!', message )
+    ClientGUIDialogsMessage.ShowCritical( win, 'Clipboard Error!', message )
     
 
 def SetBitmapButtonBitmap( button, bitmap ):

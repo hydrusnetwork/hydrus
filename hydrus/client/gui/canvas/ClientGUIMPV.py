@@ -16,6 +16,7 @@ from hydrus.core import HydrusPaths
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
@@ -529,7 +530,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 HydrusData.DebugPrint( message )
                 
-                QP.CallAfter( QW.QMessageBox.critical, self, 'Error', f'{message}\n\nThe first error was:\n\n{reason}' )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', f'{message}\n\nThe first error was:\n\n{reason}' )
                 
                 job_status = ClientThreading.JobStatus()
                 
@@ -809,6 +810,11 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
     
     def SeekDelta( self, direction, duration_ms ):
+        
+        if self._media is None:
+            
+            return
+            
         
         if self._currently_in_media_load_error_state:
             

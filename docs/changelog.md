@@ -7,6 +7,52 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 555](https://github.com/hydrusnetwork/hydrus/releases/tag/v555)
+
+### Ugoira/CBZ/Zip
+
+* the Ugoira/CBZ conversion last week went ok! we found too many false-positive Ugoiras, however, so I have decided to make that test stricter. Ugoiras now have to have zero-indexed filesnames, and always zero-filled to six digits. all your Ugoiras will get scanned again to see if they should better be CBZ
+* all zip files that are not openable (passworded, corrupt) are now detected early and just set as 'zip'
+
+### OpenCV
+
+* after discussing it with users, I have made the decision to slowly remove the image library OpenCV from the program. it has served us well, but it has always been a difficult-to-install bloat, and the super-compatible PIL actually does the job better these days. we'll simplify our rendering pipeline while also, with luck, improving HDR format support in future
+* thanks to a user, a critical OpenCV call involved in generating similar-files search metadata (perceptual hashes DCT) is now replaced with non-OpenCV tech
+* PIL can now load images in int32 or float32 greyscale, with or without ICC Profiles, and it shouldn't look too crazy (OpenCV was handling these before)
+* deleted all the old OpenCV gif rendering and metadata scanning tech
+* **if you would like to help test, please turn on `options->media->IN TESTING: Load images with PIL`. this used to be just a BUGFIX thing, but now it emulates where we actually want to end up. please send me any image files that render weird**
+
+### better boot error handling
+
+* if an error happens very early during boot, before the main Application event loop and splash screen are started, hydrus will now try and spin up a very small App and text dialog to show you the error visually! of course, if the error is Qt-related, then this won't work, ha ha ha, but you'll still always get the crash log
+* the client will now boot if the 'already-running' file exists but is incomprehensible--it'll just log that it was. also, if any other problem occurs during the 'already-running' check, hydrus assumes it is not already running and prints the error to the log
+* improved the 'can we write to the database folder?' test a little more. previously, if the db directory on boot was both missing and its parent was read-only, it would raise an error. now we correctly recognise that state as 'not writeable'
+* also, the fallback to the userpath db directory now only happens if you do not set a `-d/--db_dir` launch parameter. if you specifically set a launch path and that place is missing or read only, the program will not boot! I am more comfortable doing this now that we have the dialog to better display what happened
+* unified the 'what db dir are we using?' tests to one place
+* also cleaned up some of the boot failure code, which was spamming things haphazardly
+
+### string splitting and joining
+
+* the String Splitter and Joiner now interpret `\n` in their splitter/joiner text as newline (and other replacements like `\t` for tab; anything python supports). in order to not break existing parsers, the old splitter and joiner strings will be encoded on update (any `\` will become `\\`)
+* added some unit tests to test this behaviour for both String Processor types
+
+### misc
+
+* the system predicate parser is now plugged into the excellent `dateparser` library that we already use in downloader parsing. this thing can eat pretty much any date string you can throw at it, so if you type "system:archived time: since 01/05/2011" or "system:archived time: before 30 hours ago", it'll all work for almost any combination you can think of. it'll probably even work in your native language! the one big caveat is if you give a longer duration timestamp in the form 'x time units( ago)', rather than a specific date, it'll convert it to days/hours, ignoring years and months. since this stuff causes a ton of headaches, I am likely going to switch all the time-delta time predicates here to work on days/hours/seconds, and if you want to put 60 or 365 days, knowing what inaccuracy that implies means, then you can, rather than have me continually fret over and fail to deliver various leap year calculation problems. _calendarium delenda est_
+* fixed some thumbnail rendering for another class of damaged gif--this time, gifs that are so garbagified that they change their resolution from one frame to the next and/or produce a sizeless, shapeless frame of a handful of bytes. this is now detected and the bad data discarded!
+* if a video seems to have 0/None duration, the main native ffmpeg renderer (which is also used for thumbnail generation) can now handle it. the 'start x% in' value will be crazy, but it'll work
+* fixed an error with mpv trying to inspect the duration of null media during various states of media viewer transition
+
+### boring cleanup
+
+* gave a quick pass over the ~250 small 'just show some text and a system icon' dialogs work across the program. unified all calls through one location, improved some strings and string formatting, added more exception logging, unified the dialog titles, differentiated information/warning/critical flags better, made 'critical' messages log their titles and text, and made it all thread safe in a nice invisible way to callers
+* fixed some borked page/popup permission checks in the client api
+* if a file transitions from 'no transparency' to 'has transparency', the client will now queue a thumbnail regen, just in case that tech has been recently added
+* improved the formatting of what the main error-logging method actually prints to the log
+* slimmed down some of the watcher/subscription fixed-checking-time code
+* misc formatting cleanup and surplus import clearout
+* fixed the discord link in the PTR help document
+
 ## [Version 554](https://github.com/hydrusnetwork/hydrus/releases/tag/v554)
 
 ### checker options fixes
@@ -387,52 +433,3 @@ title: Changelog
 * cleaned up some image loading code
 * deleted ancient and no-longer-used client db code regarding imageboard definitions, status texts, and more
 * removed the ancient `OPENCV_OK` fallback code, which was only used, superfluously, in a couple of final places. OpenCV is not optional to run hydrus, server or client
-
-## [Version 545](https://github.com/hydrusnetwork/hydrus/releases/tag/v545)
-
-### blurhash
-
-* thanks to a user's work, hydrus now calculates the [blurhash](https://blurha.sh/) of files with a thumbnail! (issue #394)
-* if a file has no thumbnail but does have a blurhash (e.g. missing files, or files you previously deleted and are looking at in a clever view), it now presents a thumbnail generated from that blurhash
-* all existing thumbnail-having files are scheduled for a blurhash calculation (this is a new job in the file maintenance system). if you have hundreds of thousands of files, expect it to take a couple of weeks/months to clear. if you need to hurry this along, the queue is under _database->file maintenance_
-* any time a file's thumbnail changes, the blurhash is scheduled for a regen
-* for this first version, the blurhash is very small and simple, either 15 or 16 cells for ~34 bytes. if we end up using it a lot somewhere, I'd be open to making a size setting so you can set 8x8 or higher grids for actually decent blur-thumbs
-* a new _help->debug_ report mode switches to blurhashes instead of normal thumbs
-
-### file history search
-
-* I did to the file history chart (_help->view file history_) what I did to mr bones a couple weeks ago. you can now search your history of imports, archives, and deletes for creator x, filetype y, or any other search you can think of
-* I hacked this all together right at the end of my week, so please bear with me if there are bugs or dumb permitted domains/results. the default action when you first open it up should all work the same way as before, no worries™, but let me know how you get on and I'll fix it!
-* there's more to do here. we'll want a hideable search panel, a widget to control the resolution of the chart (currently fixed at 7680 to look good blown up on a 4k), and it'd be nice to have a selectable date range
-* in the longer term future, it'd be nice to have more lines of data and that chart tech you see on financial sites where it shows you the current value where your mouse is
-
-### client api
-
-* the `file_metadata` call now says the new blurhash. if you pipe it into a blurhash library and blow it up to an appopriate ratio canvas, it _should_ just work. the typical use is as a placeholder while you wait for thumbs/files to download
-* a new `include_blurhash` parameter will include the blurhash when `only_return_basic_information` is true
-* `file_metadata` also shows the file's `pixel_hash` now. the algorithm here is proprietary to hydrus, but you can throw it into 'system:similar files' to find pixel dupes. I expect to add perceptual hashes too
-* the help is updated to talk about this
-* I updated the unit tests to deal with this
-* the error when the api fails to parse the client api header is now a properly handled 400 (previously it was falling to the 500 backstop)
-* the client api version is now 53
-
-### misc
-
-* I'm sorry to say I'm removing the Deviant Art artist search and login script for all new users, since they are both broken. DA have been killing their nice old API in pieces, and they finally took down the old artist gallery fetch. :(. there may be a way to finagle-parse their new phone-friendly, live-loading, cloud-deployed engine, but when I look at it, it seems like a much bigger mess than hydrus's parsing system can happily handle atm. the 'correct' way to programatically parse DA is through their new OAuth API, which we simply do not support. individual page URLs seem to still work, but I expect them to go soon too. Sorry folks, try gallery-dl for now--they have a robust OAuth solution
-* thanks to a user, we now have 'epub' ebook support! no 'num_words' support yet, but it looks like epubs are really just zips with some weird metadata files and a bunch of html inside, so I think this'll be doable with a future hacky parser. all your existing zip files wil be scheduled for a metadata rescan to see if they are actually epubs (this'll capture any secret kritas and procreates, too, I think)
-* the main UI-level media object is now aware of a file's pixel hash. this is now used in the duplicate filter's 'these are pixel duplicates' statements to save CPU. the jank old on-the-fly calculation code is all removed now, and if these values are missing from the media object, a message will now be shown saying the pixel dupe status could not be determined. we have had multiple rounds of regen over the past year and thus almost all clients have full database data here, so fingers crossed we won't see this error state much if at all, but let me know if you do and I'll figure out a button to accelerate the fix
-* the thumbnail _right-click->open->similar files_ menu now has an entry for 'open the selection in a new duplicate filter page', letting you quickly resolve the duplicates that involve the selected files
-* pixel hash and blurhash are now listed, with the actual hash value, in the _share->copy->hash_ thumbnail right-click menu
-* thanks to a user, 'MPO' jpegs (some weird multi-picture jpeg that we can't page through yet) now parse their EXIF correctly and should rotate on a metadata-reparse. since these are rare, I'm not going to schedule a rescan over everyone's jpegs, but if you see a jpeg that is rotated wrong, try hitting _manage->regenerate->file metadata_ on its thumbnail menu
-* I may have fixed a rare hang when highlighting a downloader/watcher during very busy network time that involves that includes that importer
-* added a warning to the 'getting started with installing' and 'database migration' help about running the SQLite database off a compressed filesystem--don't do it!
-* fixed thumbnail generation for greyspace PSDs (and perhaps some others)
-
-### boring cleanup
-
-* I cleaned some code and added some tests around the new blurhash tech and thumbs in general
-* a variety of metadata changes such as 'has exif', 'has icc profile' now trigger a live update on thumbnails currently loaded into the UI
-* cleaned up some old file metadata loading code
-* re-sorted the job list dropdown in the file maintenance dialog
-* some file maintenance database work should be a bit faster
-* fixed some behind the scenes stuff when the file history chart has no file info to show

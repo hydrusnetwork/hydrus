@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
@@ -808,7 +809,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'The service that this command relies upon no longer exists! This command will reset to a default form.' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'The service that this command relies upon no longer exists! This command will reset to a default form.' )
                 
                 local_tag_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
                 

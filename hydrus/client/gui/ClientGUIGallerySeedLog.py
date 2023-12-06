@@ -1,20 +1,17 @@
 import os
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientTime
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -63,7 +60,7 @@ def ImportFromClipboard( win: QW.QWidget, gallery_seed_log: ClientImportGalleryS
         
     except HydrusExceptions.DataMissing as e:
         
-        QW.QMessageBox.critical( win, 'Error', str(e) )
+        ClientGUIDialogsMessage.ShowCritical( win, 'Problem importing from clipboard!', str(e) )
         
         return
         
@@ -96,9 +93,9 @@ def ImportFromPNG( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.G
                 
                 ImportURLs( win, gallery_seed_log, urls, can_generate_more_pages )
                 
-            except:
+            except Exception as e:
                 
-                QW.QMessageBox.critical( win, 'Error', 'Could not import!' )
+                ClientGUIDialogsMessage.ShowCritical( win, 'Could not import!', str( e ) )
                 
                 raise
                 

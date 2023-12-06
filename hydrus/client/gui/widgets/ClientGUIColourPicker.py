@@ -6,9 +6,9 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIStyle
@@ -129,7 +129,9 @@ class ColourPickerButton( QW.QPushButton ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -145,7 +147,7 @@ class ColourPickerButton( QW.QPushButton ):
         
         if len( import_string ) != 7:
             
-            QW.QMessageBox.critical( self, 'Error', 'That did not appear to be a hex string!' )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', f'"{raw_text}" did not appear to be a hex string!' )
             
             return
             

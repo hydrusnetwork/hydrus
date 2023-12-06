@@ -183,13 +183,24 @@ def DeletePath( path ) -> bool:
 
 def DirectoryIsWriteable( path ):
     
+    if not PotentialPathDeviceIsConnected( path ):
+        
+        raise Exception( f'Cannot figure out if "{path}" is writeable-to because its device does not seem to be mounted!' )
+        
+    
     try:
         
         MakeSureDirectoryExists( path )
         
-    except:
+    except ( PermissionError, OSError ) as e:
         
-        raise Exception( f'While trying to determine if a directory, "{path}", has write permissions, I could not even ensure that it exists!' )
+        return False
+        
+    
+    if not os.path.exists( path ):
+        
+        # the makedirs failed, probably permission related
+        return False
         
     
     if not os.access( path, os.W_OK | os.X_OK ):
@@ -197,7 +208,7 @@ def DirectoryIsWriteable( path ):
         return False
         
     
-    # we'll actually do a file, since Windows Program Files passes the above test lmaoooo
+    # we'll actually try making a file, since Windows Program Files passes the above test lmaoooo
     
     try:
         
@@ -266,6 +277,66 @@ def ElideFilenameOrDirectorySafely( name: str, num_characters_used_in_other_comp
         
     
     return name
+    
+
+def FigureOutDBDir( arg_db_dir: str ):
+    
+    switching_to_userpath_is_ok = False
+    
+    if arg_db_dir is None:
+        
+        if HC.RUNNING_FROM_MACOS_APP:
+            
+            if HC.USERPATH_DB_DIR is None:
+                
+                raise Exception( 'The userpath (for macOS App database) could not be determined!' )
+                
+            
+            db_dir = HC.USERPATH_DB_DIR
+            
+        else:
+            
+            db_dir = HC.DEFAULT_DB_DIR
+            
+            switching_to_userpath_is_ok = True
+            
+        
+    else:
+        
+        db_dir = arg_db_dir
+        
+        db_dir = ConvertPortablePathToAbsPath( db_dir, HC.BASE_DIR )
+        
+    
+    if not DirectoryIsWriteable( db_dir ):
+        
+        if switching_to_userpath_is_ok:
+            
+            if HC.USERPATH_DB_DIR is None:
+                
+                raise Exception( f'The db path "{db_dir}" was not writeable-to, and the userpath could not be determined!' )
+                
+            else:
+                
+                if not DirectoryIsWriteable( HC.USERPATH_DB_DIR ):
+                    
+                    raise Exception( f'Neither the default db path "{db_dir}", nor the userpath fallback "{HC.USERPATH_DB_DIR}", were writeable-to!' )
+                    
+                
+                HydrusData.Print( f'The given db path "{db_dir}" is not writeable-to! Falling back to userpath at "{HC.USERPATH_DB_DIR}".' )
+                
+                HC.WE_SWITCHED_TO_USERPATH = True
+                
+                db_dir = HC.USERPATH_DB_DIR
+                
+            
+        else:
+            
+            raise Exception( f'The chosen db path "{db_dir}" is not writeable-to!' )
+            
+        
+    
+    return db_dir
     
 
 def FileisWriteable( path: str ):
@@ -547,12 +618,19 @@ def MakeSureDirectoryExists( path ):
             
         else:
             
-            raise Exception( f'Sorry, the directory "{path}" already exists as a normal file!' )
+            raise Exception( f'Cannot create the directory "{path}" because it already exists as a normal file!' )
             
         
     else:
         
-        os.makedirs( path, exist_ok = True )
+        try:
+            
+            os.makedirs( path, exist_ok = True )
+            
+        except FileNotFoundError as e:
+            
+            raise FileNotFoundError( f'While trying to ensure the directory "{path}" exists, none of the possible parent folders seem to exist either! Is the device not plugged in?' ) from e
+            
         
     
 
@@ -969,6 +1047,22 @@ def PathIsFree( path ):
     except:
         
         HydrusData.Print( 'Could not open the file: ' + path )
+        
+        return False
+        
+    
+
+def PotentialPathDeviceIsConnected( path: str ):
+    
+    # this is a little hacky, but it works at catching "H:\ is not plugged in"
+    # does not work for Linux, oh well
+    try:
+        
+        os.path.ismount( path )
+        
+        return True
+        
+    except FileNotFoundError:
         
         return False
         

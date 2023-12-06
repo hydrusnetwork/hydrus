@@ -12,33 +12,74 @@ from hydrus.core import HydrusExceptions
 from hydrus.core.images import HydrusImageColours
 from hydrus.core.images import HydrusImageMetadata
 
-PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
+try:
+    
+    PIL_SRGB_PROFILE = PILImageCms.get_display_profile()
+    
+except:
+    
+    PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
+    
+
+def NormaliseNumPyImageToUInt8( numpy_image: numpy.array ):
+    
+    if numpy_image.dtype == numpy.uint16:
+        
+        numpy_image = numpy.array( numpy_image // 256, dtype = numpy.uint8 )
+        
+    elif numpy_image.dtype == numpy.int16:
+        
+        numpy_image = numpy.array( ( numpy_image + 32768 ) // 256, dtype = numpy.uint8 )
+        
+    elif numpy_image.dtype != numpy.uint8:
+        
+        # this is hacky and is applying some crazy old-school flickr HDR to minmax our range, but it basically works
+        # this MINMAX is a decent fallback since it seems that some satellite TIFF files have a range of -9999,9999, which is probably in the advanced metadata somewhere but we can't read it mate
+        
+        #numpy_image = cv2.normalize( numpy_image, None, 0, 255, cv2.NORM_MINMAX, dtype = cv2.CV_8U )
+        
+        # this is hacky and is applying some crazy old-school flickr HDR to minmax our range, but it basically works
+        min_value = numpy.min( numpy_image )
+        max_value = numpy.max( numpy_image )
+        
+        if min_value > 0:
+            
+            numpy_image = numpy_image - min_value
+            
+        
+        range_value = ( max_value - min_value ) + 1
+        
+        if range_value > 0:
+            
+            magic_multiple = 256 / range_value
+            
+            numpy_image = ( numpy_image * magic_multiple ).clip( 0, 255 ).astype( numpy.uint8 )
+            
+        else:
+            
+            numpy_image = numpy_image.astype( numpy.uint8 )
+            
+        
+    
+    return numpy_image
+    
 
 def DequantizeFreshlyLoadedNumPyImage( numpy_image: numpy.array ) -> numpy.array:
     
     # OpenCV loads images in BGR, and we want to normalise to RGB in general
     
-    if numpy_image.dtype == 'uint16':
-        
-        numpy_image = numpy.array( numpy_image // 256, dtype = 'uint8' )
-        
-    elif numpy_image.dtype == 'int16':
-        
-        numpy_image = numpy.array( ( numpy_image + 32768 ) // 256, dtype = 'uint8' )
-        
-    elif numpy_image.dtype != 'uint8':
-        
-        # this is hacky and is applying some crazy old-school flickr HDR to minmax our range, but it basically works
-        numpy_image = cv2.normalize( numpy_image, None, 0, 255, cv2.NORM_MINMAX, dtype = cv2.CV_8U )
-        
+    numpy_image = NormaliseNumPyImageToUInt8( numpy_image )
     
     shape = numpy_image.shape
     
     if len( shape ) == 2:
         
-        # monochrome image
+        # L to RGB
         
-        convert = cv2.COLOR_GRAY2RGB
+        l = numpy_image
+        
+        # axis -1 makes them stack on the last dimension
+        numpy_image = numpy.stack( ( l, l, l ), axis = -1 )
         
     else:
         
@@ -46,15 +87,23 @@ def DequantizeFreshlyLoadedNumPyImage( numpy_image: numpy.array ) -> numpy.array
         
         if depth == 4:
             
-            convert = cv2.COLOR_BGRA2RGBA
+            # BGRA to RGBA
+            
+            b = numpy_image[ :, :, 0 ]
+            g = numpy_image[ :, :, 1 ]
+            r = numpy_image[ :, :, 2 ]
+            a = numpy_image[ :, :, 3 ]
+            
+            # axis -1 makes them stack on the last dimension
+            numpy_image = numpy.stack( ( r, g, b, a ), axis = -1 )
             
         else:
             
-            convert = cv2.COLOR_BGR2RGB
+            # BGR to RGB, channel swap
+            
+            numpy_image = numpy_image[ :, :, ::-1 ]
             
         
-    
-    numpy_image = cv2.cvtColor( numpy_image, convert )
     
     return numpy_image
     
@@ -97,11 +146,13 @@ def NormaliseICCProfilePILImageToSRGB( pil_image: PILImage.Image ) -> PILImage.I
         
         src_profile = PILImageCms.ImageCmsProfile( f )
         
-        if pil_image.mode in ( 'L', 'LA', 'P' ):
+        if pil_image.mode in ( 'I', 'F', 'L', 'LA', 'P' ):
             
             # had a bunch of LA pngs that turned pure white on RGBA ICC conversion
             # but seem to work fine if keep colourspace the same for now
             # it is a mystery, I guess a PIL bug, but presumably L and LA are technically sRGB so it is still ok to this
+            
+            # note that 'I' and 'F' ICC Profile images tend to just fail here with 'cannot build transform', and generally have poor PIL support, so I convert to RGB beforehand with hacky tech
             
             outputMode = pil_image.mode
             

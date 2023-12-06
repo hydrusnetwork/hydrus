@@ -7,12 +7,11 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing
-from hydrus.client import ClientPaths
 from hydrus.client import ClientStrings
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -188,7 +187,7 @@ class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
             
             if self._formulae.count() == 1:
                 
-                QW.QMessageBox.critical( self, 'Error', 'A compound formula needs at least one sub-formula!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'A compound formula needs at least one sub-formula!' )
                 
             else:
                 

@@ -23,6 +23,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDuplicates
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -493,7 +494,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -1386,7 +1387,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         if len( choice_tuples ) == 0:
             
-            QW.QMessageBox.critical( self, 'Error', 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
             
         else:
             
@@ -1464,7 +1465,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         if len( choice_tuples ) == 0:
             
-            QW.QMessageBox.critical( self, 'Error', 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'You have no more tag or rating services to add! Try editing the existing ones instead!' )
             
         else:
             
@@ -1919,7 +1920,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -2604,7 +2605,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -3279,7 +3280,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                         
                         if row in current_data:
                             
-                            QW.QMessageBox.warning( self, 'Warning', 'That regex and description are already in the list!' )
+                            ClientGUIDialogsMessage.ShowWarning( self, 'That regex and description are already in the list!' )
                             
                             return
                             

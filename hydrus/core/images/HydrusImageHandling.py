@@ -163,42 +163,30 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
     
     if not force_pil:
         
+        pil_image = HydrusImageOpening.RawOpenPILImage( path )
+        
         try:
             
-            pil_image = HydrusImageOpening.RawOpenPILImage( path )
+            pil_image.verify()
             
-            try:
-                
-                pil_image.verify()
-                
-            except:
-                
-                raise HydrusExceptions.UnsupportedFileException()
-                
+        except Exception as e:
             
-            # I and F are some sort of 32-bit monochrome or whatever, doesn't seem to work in PIL well, with or without ICC
-            if pil_image.mode not in ( 'I', 'F' ):
+            raise HydrusExceptions.UnsupportedFileException() from e
+            
+        
+        if pil_image.mode == 'LAB':
+            
+            force_pil = True
+            
+        
+        if HydrusImageMetadata.HasICCProfile( pil_image ):
+            
+            if HG.media_load_report_mode:
                 
-                if pil_image.mode == 'LAB':
-                    
-                    force_pil = True
-                    
-                
-                if HydrusImageMetadata.HasICCProfile( pil_image ):
-                    
-                    if HG.media_load_report_mode:
-                        
-                        HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
-                        
-                    
-                    force_pil = True
-                    
+                HydrusData.ShowText( 'Image has ICC, so switching to PIL' )
                 
             
-        except HydrusExceptions.UnsupportedFileException:
-            
-            # pil had trouble, let's cross our fingers cv can do it
-            pass
+            force_pil = True
             
         
     
@@ -268,6 +256,11 @@ def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alp
         raise HydrusExceptions.DamagedOrUnusualFileException( 'Looks like a truncated file that PIL could not handle!' )
         
     
+    if numpy_image.shape == ():
+        
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Looks like a weird truncated file!' )
+        
+    
     if strip_useless_alpha:
         
         numpy_image = HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
@@ -286,6 +279,21 @@ def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = T
         
         if dequantize:
             
+            if pil_image.mode in ( 'I', 'F' ):
+                
+                # 'I' = greyscale, uint16
+                # 'F' = float, np.float32
+                
+                # calling "pil_image.convert( 'L' )" and similar on an I doesn't seem to normalise the intensity, it just blows out the image crazy???
+                # so we'll hack it ourselves. these are so rare it is fine if we are a bit weird and lose the extra metadata
+                
+                numpy_image = GenerateNumPyImageFromPILImage( pil_image )
+                
+                numpy_image = HydrusImageNormalisation.NormaliseNumPyImageToUInt8( numpy_image )
+                
+                pil_image = GeneratePILImageFromNumPyImage( numpy_image )
+                
+            
             # note this destroys animated gifs atm, it collapses down to one frame
             pil_image = HydrusImageNormalisation.DequantizePILImage( pil_image )
             
@@ -299,8 +307,6 @@ def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = T
     
 
 def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image:
-    
-    # I'll leave this here as a neat artifact, but I really shouldn't ever be making a PIL from a cv2 image. the only PIL benefits are the .info dict, which this won't generate
     
     if len( numpy_image.shape ) == 2:
         
@@ -334,6 +340,7 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image
     
     return pil_image
     
+
 def GenerateThumbnailNumPyFromStaticImagePath( path, target_resolution, mime ):
     
     numpy_image = GenerateNumPyImage( path, mime )

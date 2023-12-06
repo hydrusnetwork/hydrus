@@ -1035,9 +1035,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                     self._checking_paused = True
                     
                 
-                previous_next_check_time = self._next_check_time
-                
-                self._next_check_time = self._checker_options.GetNextCheckTime( self._file_seed_cache, self._last_check_time, previous_next_check_time )
+                self._next_check_time = self._checker_options.GetNextCheckTime( self._file_seed_cache, self._last_check_time )
                 
             
         

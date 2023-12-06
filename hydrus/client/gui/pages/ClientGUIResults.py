@@ -28,6 +28,7 @@ from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
@@ -1894,7 +1895,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
         else:
             
-            QW.QMessageBox.warning( self, 'Warning', 'No file is focused, so cannot set the focused file as better!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'No file is focused, so cannot set the focused file as better!' )
             
             return
             
@@ -1935,7 +1936,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
         else:
             
-            QW.QMessageBox.warning( self, 'Warning', 'No file is focused, so cannot set the focused file as king!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'No file is focused, so cannot set the focused file as king!' )
             
             return
             

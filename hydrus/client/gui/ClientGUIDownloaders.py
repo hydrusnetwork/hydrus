@@ -9,13 +9,12 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientPaths
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -497,7 +496,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( choice_tuples ) == 0:
             
-            QW.QMessageBox.critical( self, 'Error', 'No remaining gugs available!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'No remaining gugs available!' )
             
             return
             
@@ -1343,7 +1342,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if key in existing_keys:
             
-            QW.QMessageBox.critical( self, 'Error', 'That key already exists!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'That key already exists!' )
             
             return
             
@@ -1374,7 +1373,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                             
                         elif not string_match.Matches( default ):
                             
-                            QW.QMessageBox.warning( self, 'Warning', 'That default does not match the given rule! Clearing it to none!' )
+                            ClientGUIDialogsMessage.ShowWarning( self, 'That default does not match the given rule! Clearing it to none!' )
                             
                             default = None
                             
@@ -1478,7 +1477,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if key in existing_keys:
                     
-                    QW.QMessageBox.critical( self, 'Error', 'That key already exists!' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'That key already exists!' )
                     
                     return
                     
@@ -1513,7 +1512,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                                 
                             elif not string_match.Matches( default ):
                                 
-                                QW.QMessageBox.warning( self, 'Warning', 'That default does not match the given rule! Clearing it to none!' )
+                                ClientGUIDialogsMessage.ShowWarning( self, 'That default does not match the given rule! Clearing it to none!' )
                                 
                                 default = None
                                 
@@ -1579,7 +1578,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                             
                         elif not string_match.Matches( new_default ):
                             
-                            QW.QMessageBox.warning( self, 'Warning', 'That default does not match the given rule! Clearing it to none!' )
+                            ClientGUIDialogsMessage.ShowWarning( self, 'That default does not match the given rule! Clearing it to none!' )
                             
                             new_default = None
                             
@@ -1900,7 +1899,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 message += os.linesep * 2
                 message += 'If you are not sure what this means, turn this back off.'
                 
-                QW.QMessageBox.information( self, 'Information', message )
+                ClientGUIDialogsMessage.ShowInformation( self, message )
                 
             
         else:
@@ -1911,7 +1910,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 message += os.linesep * 2
                 message += 'If you are not sure what this means, turn this back on.'
                 
-                QW.QMessageBox.information( self, 'Information', message )
+                ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
     
@@ -2371,7 +2370,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( self._parsers ) == 0:
             
-            QW.QMessageBox.information( self, 'Information', 'Unfortunately, you do not have any parsers, so none can be linked to your url classes. Please create some!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Unfortunately, you do not have any parsers, so none can be linked to your url classes. Please create some!' )
             
             return
             

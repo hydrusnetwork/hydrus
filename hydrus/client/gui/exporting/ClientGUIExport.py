@@ -19,6 +19,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.exporting import ClientExportingFiles
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -447,7 +448,7 @@ If you select synchronise, be careful!'''
         
         if self._delete_from_client_after_export.isChecked():
             
-            QW.QMessageBox.warning( self, 'Warning', 'This will delete the exported files from your client after the export! If you do not know what this means, uncheck it!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'This will delete the exported files from your client after the export! If you do not know what this means, uncheck it!' )
             
         
     
@@ -761,7 +762,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            ClientGUIDialogsMessage.ShowWarning( self, f'Problem parsing export phrase!\n\n{e}' )
             
             return
             
@@ -878,7 +879,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 except:
                     
-                    QP.CallAfter( QW.QMessageBox.information, self, 'Information', 'Encountered a problem while attempting to export file #{}:'.format( HydrusData.ToHumanInt( number ) ) + os.linesep * 2 + traceback.format_exc() )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem during file export!', f'Encountered a problem while attempting to export file #{HydrusData.ToHumanInt( number )}:\n\n{traceback.format_exc()}' )
                     
                     break
                     

@@ -15,6 +15,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIRatings
@@ -134,7 +135,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', str( e ) )
             
             return
             
@@ -841,7 +842,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
                 
                 e = result
                 
-                QP.CallAfter( QW.QMessageBox.critical, self, 'Error', 'Could not load mappings:'+os.linesep*2+str(e) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not load mappings:' + '\n' * 2 + str(e) )
                 
                 self._status_st.setText( str( e ) )
                 

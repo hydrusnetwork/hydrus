@@ -29,6 +29,7 @@ from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -2057,7 +2058,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
         else:
             
-            QW.QMessageBox.warning( self, 'Warning', 'No presented files for that selection!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'No presented files for that selection!' )
             
         
     
@@ -3047,7 +3048,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
         else:
             
-            QW.QMessageBox.warning( self, 'Warning', 'No presented files for that selection!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'No presented files for that selection!' )
             
         
     

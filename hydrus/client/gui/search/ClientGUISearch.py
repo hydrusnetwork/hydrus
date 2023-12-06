@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -891,7 +892,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.warning( self, 'Predicate not valid!', str( e ) )
+                ClientGUIDialogsMessage.ShowWarning( self, f'Sorry, predicate was not valid: {e}' )
                 
                 return
                 

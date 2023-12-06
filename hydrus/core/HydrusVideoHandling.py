@@ -998,6 +998,11 @@ class VideoRendererFFMPEG( object ):
     
     def __init__( self, path, mime, duration, num_frames, target_resolution, clip_rect = None, start_pos = None ):
         
+        if duration <= 0 or duration is None:
+            
+            duration = 100 # 100ms
+            
+        
         self._path = path
         self._mime = mime
         self._duration = duration / 1000.0

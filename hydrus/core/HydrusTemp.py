@@ -85,23 +85,18 @@ def InitialiseHydrusTempDir():
 
 def SetEnvTempDir( path ):
     
-    if os.path.isfile( path ):
-        
-        raise Exception( 'The given temp directory, "{}", seems to be a file already, not a directory!'.format( path ) )
-        
-    
     try:
         
         HydrusPaths.MakeSureDirectoryExists( path )
         
     except Exception as e:
         
-        raise Exception( 'Could not create the temp dir: {}'.format( e ) )
+        raise Exception( f'Could not create the temp dir "{path}"!' )
         
     
     if not HydrusPaths.DirectoryIsWriteable( path ):
         
-        raise Exception( 'The given temp directory, "{}", does not seem to be writeable-to!'.format( path ) )
+        raise Exception( f'The given temp directory, "{path}", does not seem to be writeable-to!' )
         
     
     for tmp_name in ( 'TMPDIR', 'TEMP', 'TMP' ):

@@ -705,48 +705,64 @@ def IsAlreadyRunning( db_path, instance ):
     
     if os.path.exists( path ):
         
-        with open( path, 'r', encoding = 'utf-8' ) as f:
+        try:
             
-            file_text = f.read()
-            
-            try:
+            with open( path, 'r', encoding = 'utf-8' ) as f:
                 
-                ( pid, create_time ) = HydrusText.DeserialiseNewlinedTexts( file_text )
+                file_text = f.read()
                 
-                pid = int( pid )
-                create_time = float( create_time )
-                
-            except ValueError:
-                
-                return False
-                
-            
-            try:
-                
-                me = psutil.Process()
-                
-                if me.pid == pid and me.create_time() == create_time:
+                try:
                     
-                    # this is me! there is no conflict, lol!
-                    # this happens when a linux process restarts with os.execl(), for instance (unlike Windows, it keeps its pid)
+                    ( pid, create_time ) = HydrusText.DeserialiseNewlinedTexts( file_text )
+                    
+                    pid = int( pid )
+                    create_time = float( create_time )
+                    
+                except ValueError:
                     
                     return False
                     
                 
-                if psutil.pid_exists( pid ):
+                try:
                     
-                    p = psutil.Process( pid )
+                    me = psutil.Process()
                     
-                    if p.create_time() == create_time and p.is_running():
+                    if me.pid == pid and me.create_time() == create_time:
                         
-                        return True
+                        # this is me! there is no conflict, lol!
+                        # this happens when a linux process restarts with os.execl(), for instance (unlike Windows, it keeps its pid)
+                        
+                        return False
                         
                     
+                    if psutil.pid_exists( pid ):
+                        
+                        p = psutil.Process( pid )
+                        
+                        if p.create_time() == create_time and p.is_running():
+                            
+                            return True
+                            
+                        
+                    
+                except psutil.Error:
+                    
+                    return False
+                    
                 
-            except psutil.Error:
-                
-                return False
-                
+            
+        except UnicodeDecodeError:
+            
+            Print( 'The already-running file was incomprehensible!' )
+            
+            return False
+            
+        except Exception as e:
+            
+            Print( 'Problem loading the already-running file:' )
+            PrintException( e )
+            
+            return False
             
         
     
@@ -903,21 +919,29 @@ def PrintExceptionTuple( etype, value, tb, do_wait = True ):
     
     if tb is None:
         
-        trace = 'No error trace--here is the stack:' + os.linesep + ''.join( traceback.format_stack() )
+        trace = 'No error trace--here is the stack:' + '\n' + ''.join( traceback.format_stack() )
         
     else:
         
         trace = ''.join( traceback.format_exception( etype, value, tb ) )
         
     
+    trace = trace.rstrip()
+    
     stack_list = traceback.format_stack()
     
     stack = ''.join( stack_list )
     
-    message = str( etype.__name__ ) + ': ' + str( value ) + os.linesep + trace + os.linesep + stack
+    stack = stack.rstrip()
     
-    Print( '' )
-    Print( 'Exception:' )
+    message = f'''
+================ Exception ================
+{etype.__name__}: {value}
+================ Traceback ================
+{trace}
+================== Stack ==================
+{stack}
+=================== End ==================='''
     
     DebugPrint( message )
     

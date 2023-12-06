@@ -15,10 +15,10 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientPaths
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -365,7 +365,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if query_text in self._GetCurrentQueryTexts():
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'You already have a query for "{}", so nothing new has been added.'.format( query_text ) )
+                    ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{query_text}", so nothing new has been added.' )
                     
                     return
                     
@@ -585,7 +585,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except HydrusExceptions.DataMissing:
                     
-                    QW.QMessageBox.critical( self, 'Error', 'Some data for this query, "{}" was missing! This should have been dealt with when the dialog launched, so something is very wrong! Please exit the manage subscriptions dialog immediately, pause your subs, and contact hydrus dev!' )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Important Error!', 'Some data for this query, "{}" was missing! This should have been dealt with when the dialog launched, so something is very wrong! Please exit the manage subscriptions dialog immediately, pause your subs, and contact hydrus dev!' )
                     
                     return
                     
@@ -611,7 +611,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     if edited_query_text != old_query_header.GetQueryText() and edited_query_text in self._GetCurrentQueryTexts():
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'You already have a query for "'+edited_query_text+'"! The edit you just made will not be saved.' )
+                        ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{edited_query_text}"! The edit you just made will not be saved.' )
                         
                         break
                         
@@ -741,7 +741,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         message = os.linesep.join( data_strings )
         
-        QW.QMessageBox.information( self, 'Information', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _ListCtrlCanCheckNow( self ):
@@ -813,7 +813,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -831,7 +833,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( pasted_query_texts ) == 0:
             
-            QW.QMessageBox.warning( self, 'Empty Paste?', 'The clipboard did not seem to have anything in it!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'The clipboard did not seem to have anything in it!' )
             
             return
             
@@ -948,7 +950,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( message ) > 0:
             
-            QW.QMessageBox.information( self, 'Information', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
         query_headers = []
@@ -2113,7 +2115,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             # this should never happen, and we should not have the situation where only cased can be done. if cased can, caseless can, riiiiiight?
             
-            QW.QMessageBox.warning( self, 'Warning', 'There are no apparent duplicates, the dupe data will now be recalculated.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'There are no apparent duplicates, the dupe data will now be recalculated.' )
             
             self._RegenDupeData()
             
@@ -2135,7 +2137,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( gug_names_to_dupe_query_texts ) == 0:
             
-            QW.QMessageBox.warning( self, 'Warning', 'There are no apparent duplicates, the dupe data will now be recalculated.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'There are no apparent duplicates, the dupe data will now be recalculated.' )
             
             self._RegenDupeData()
             
@@ -2178,7 +2180,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( potential_dupe_query_texts ) == 0:
             
-            QW.QMessageBox.warning( self, 'Warning', 'Strangely, there are actually no apparent duplicates for this downloader, the dupe data will now be recalculated. Let hydev know about this, please.' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Strangely, there are actually no apparent duplicates for this downloader, the dupe data will now be recalculated. Let hydev know about this, please.' )
             
             self._RegenDupeData()
             
@@ -2294,7 +2296,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if len( choice_tuples ) == 0:
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'Strangely, there are actually no subscriptions that can do dedupe work for the selected duplicates, the dupe data will now be recalculated. Let hydev know about this, please.' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Strangely, there are actually no subscriptions that can do dedupe work for the selected duplicates, the dupe data will now be recalculated. Let hydev know about this, please.' )
                     
                     return
                     
@@ -2507,7 +2509,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( mergeable_groups ) == 0:
                 
-                QW.QMessageBox.information( self, 'Information', 'Unfortunately, none of those subscriptions appear to be mergeable!' )
+                ClientGUIDialogsMessage.ShowInformation( self, 'Unfortunately, none of those subscriptions appear to be mergeable!' )
                 
                 return
                 
@@ -2636,7 +2638,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( subscriptions ) != 1:
             
-            QW.QMessageBox.critical( self, 'Error', 'Separate only works if one subscription is selected!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Separate only works if one subscription is selected!' )
             
             return
             
@@ -2647,7 +2649,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if num_queries <= 1:
             
-            QW.QMessageBox.critical( self, 'Error', 'Separate only works if the selected subscription has more than one query!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Separate only works if the selected subscription has more than one query!' )
             
             return
             

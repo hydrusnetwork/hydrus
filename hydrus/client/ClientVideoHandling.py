@@ -1,5 +1,3 @@
-import PIL.Image
-import cv2
 import numpy
 
 from hydrus.core import HydrusData
@@ -9,52 +7,6 @@ from hydrus.core import HydrusTime
 from hydrus.core.images import HydrusImageHandling
 from hydrus.core.images import HydrusImageNormalisation
 
-if cv2.__version__.startswith( '2' ):
-    
-    CAP_PROP_FRAME_COUNT = cv2.cv.CV_CAP_PROP_FRAME_COUNT
-    CAP_PROP_FPS = cv2.cv.CV_CAP_PROP_FPS
-    CAP_PROP_FRAME_WIDTH = cv2.cv.CV_CAP_PROP_FRAME_WIDTH
-    CAP_PROP_FRAME_HEIGHT = cv2.cv.CV_CAP_PROP_FRAME_HEIGHT
-    CAP_PROP_CONVERT_RGB = cv2.cv.CV_CAP_PROP_CONVERT_RGB
-    CAP_PROP_POS_FRAMES = cv2.cv.CV_CAP_PROP_POS_FRAMES
-    
-else:
-    
-    CAP_PROP_FRAME_COUNT = cv2.CAP_PROP_FRAME_COUNT
-    CAP_PROP_FPS = cv2.CAP_PROP_FPS
-    CAP_PROP_FRAME_WIDTH = cv2.CAP_PROP_FRAME_WIDTH
-    CAP_PROP_FRAME_HEIGHT = cv2.CAP_PROP_FRAME_HEIGHT
-    CAP_PROP_CONVERT_RGB = cv2.CAP_PROP_CONVERT_RGB
-    CAP_PROP_POS_FRAMES = cv2.CAP_PROP_POS_FRAMES
-    
-
-def GetCVVideoProperties( path ):
-    
-    capture = cv2.VideoCapture( path )
-    
-    num_frames = int( capture.get( CAP_PROP_FRAME_COUNT ) )
-    
-    fps = capture.get( CAP_PROP_FPS )
-    
-    if fps is None or fps == 0:
-        
-        fps = 1
-        
-    
-    length_in_seconds = num_frames / fps
-    
-    length_in_ms = int( length_in_seconds * 1000 )
-    
-    duration = length_in_ms
-    
-    width = int( capture.get( CAP_PROP_FRAME_WIDTH ) )
-    
-    height = int( capture.get( CAP_PROP_FRAME_HEIGHT ) )
-    
-    return ( ( width, height ), duration, num_frames )
-    
-
-# the cv code was initially written by @fluffy_cub
 class GIFRenderer( object ):
     
     def __init__( self, path, num_frames, target_resolution ):
@@ -206,11 +158,23 @@ class GIFRenderer( object ):
                 
             
         
+        try:
+            
+            resized_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, self._target_resolution )
+            
+        except:
+            
+            self._frames_we_could_not_render.add( self._current_render_index )
+            self._cannot_seek_to_or_beyond_this_index = min( self._frames_we_could_not_render )
+            
+            numpy_image = self._GetRecoveryFrame()
+            
+            resized_numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, self._target_resolution )
+            
+        
         self._last_valid_numpy_frame = numpy_image
         
-        numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, self._target_resolution )
-        
-        return numpy_image
+        return resized_numpy_image
         
     
     def _RewindGIF( self, reinitialise = False ):
@@ -254,104 +218,6 @@ class GIFRenderer( object ):
             
             self._MoveRendererOnOneFrame()
             
-        
-        #self._cv_video.set( CV_CAP_PROP_POS_FRAMES, index )
-        
-    
-    def Stop( self ):
-        
-        pass
-        
-    
-
-# the cv code was initially written by @fluffy_cub
-# hydev is splitting this off into its own clean thing now, just for posterity
-# PIL gif rendering has improved by leaps and bounds in recent years, and we have good alpha rendering now. CV is now the sub-par
-class GIFRendererCV( object ):
-    
-    def __init__( self, path, num_frames, target_resolution ):
-        
-        if HG.media_load_report_mode:
-            
-            HydrusData.ShowText( 'Loading GIF: ' + path )
-            
-        
-        self._path = path
-        self._num_frames = num_frames
-        self._target_resolution = target_resolution
-        
-        self._InitialiseCV()
-        
-    
-    def _GetCurrentFrameAndMoveOn( self ):
-        
-        ( retval, numpy_image ) = self._cv_video.read()
-        
-        if not retval:
-            
-            self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
-            
-            raise HydrusExceptions.CantRenderWithCVException( 'CV could not render frame ' + str( self._next_render_index - 1 ) + '.' )
-            
-        
-        self._next_render_index = ( self._next_render_index + 1 ) % self._num_frames
-        
-        if self._next_render_index == 0:
-            
-            self._RewindGIF()
-            
-        
-        return numpy_image
-        
-    
-    def _InitialiseCV( self ):
-        
-        if HG.media_load_report_mode:
-            
-            HydrusData.ShowText( 'Loading GIF with OpenCV' )
-            
-        
-        self._cv_video = cv2.VideoCapture( self._path )
-        
-        self._cv_video.set( CAP_PROP_CONVERT_RGB, 1.0 ) # True cast to double
-        
-        self._next_render_index = 0
-        
-    
-    def _RenderCurrentFrameAndResizeIt( self ):
-        
-        numpy_image = self._GetCurrentFrameAndMoveOn()
-        
-        numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, self._target_resolution )
-        
-        numpy_image = cv2.cvtColor( numpy_image, cv2.COLOR_BGR2RGB )
-        
-        return numpy_image
-        
-    
-    def _RewindGIF( self ):
-        
-        self._cv_video.release()
-        self._cv_video.open( self._path )
-        
-        #self._cv_video.set( CAP_PROP_POS_FRAMES, 0.0 )
-        
-        self._next_render_index = 0
-        
-    
-    def read_frame( self ):
-        
-        return self._RenderCurrentFrameAndResizeIt()
-        
-    
-    def set_position( self, index ):
-        
-        if index == self._next_render_index: return
-        elif index < self._next_render_index: self._RewindGIF()
-        
-        while self._next_render_index < index: self._GetCurrentFrameAndMoveOn()
-        
-        #self._cv_video.set( CV_CAP_PROP_POS_FRAMES, index )
         
     
     def Stop( self ):

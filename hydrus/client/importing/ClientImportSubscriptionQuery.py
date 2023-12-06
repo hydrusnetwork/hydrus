@@ -785,9 +785,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
                     
                 
             
-            previous_next_check_time = self._next_check_time
-            
-            self._next_check_time = checker_options.GetNextCheckTime( file_seed_cache, self._last_check_time, previous_next_check_time )
+            self._next_check_time = checker_options.GetNextCheckTime( file_seed_cache, self._last_check_time )
             
         
         self._raw_file_velocity = checker_options.GetRawCurrentVelocity( file_seed_cache, self._last_check_time )

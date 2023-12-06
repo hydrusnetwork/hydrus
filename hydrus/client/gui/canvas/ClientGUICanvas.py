@@ -23,6 +23,7 @@ from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
@@ -2901,7 +2902,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                 
-                QW.QMessageBox.critical( self, 'Error', 'Due to an unexpected series of events, the duplicate filter has no valid pair to back up to. It could be some files were deleted during processing. The filter will now close.' )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Hell!', 'Due to an unexpected series of events, the duplicate filter has no valid pair to back up to. It could be some files were deleted during processing. The filter will now close.' )
                 
                 self.window().deleteLater()
                 
@@ -3105,7 +3106,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                         
                         HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
                         
-                        QW.QMessageBox.critical( self, 'Error', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
+                        ClientGUIDialogsMessage.ShowCritical( self, 'Hell!', 'It seems an entire batch of pairs were unable to be displayed. The duplicate filter will now close.' )
                         
                         self.window().deleteLater()
                         
@@ -3405,7 +3406,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 return
                 
             
-            QW.QMessageBox.information( self, 'Information', 'All pairs have been filtered!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'All pairs have been filtered!' )
             
             self._TryToCloseWindow()
             
@@ -3909,7 +3910,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
             message = 'This file is delete-locked! Send it back to the inbox to delete it!'
             
-            QW.QMessageBox.information( self, 'Locked!', message )
+            ClientGUIDialogsMessage.ShowWarning( self, message )
             
             return False
             

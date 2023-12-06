@@ -3026,7 +3026,7 @@ Response:
 _Try to cancel a popup._
 
 Restricted access: 
-:   YES. Manage Pages permission needed.
+:   YES. Manage Popups permission needed.
     
 Required Headers:
 :   
@@ -3053,7 +3053,7 @@ Response:
 _Try to dismiss a popup._
 
 Restricted access: 
-:   YES. Manage Pages permission needed.
+:   YES. Manage Popups permission needed.
     
 Required Headers:
 :   
@@ -3082,7 +3082,7 @@ Response:
 _Mark a popup as done._
 
 Restricted access: 
-:   YES. Manage Pages permission needed.
+:   YES. Manage Popups permission needed.
     
 Required Headers:
 :   
@@ -3114,7 +3114,7 @@ Response:
 _Finish and dismiss a popup._
 
 Restricted access: 
-:   YES. Manage Pages permission needed.
+:   YES. Manage Popups permission needed.
     
 Required Headers:
 :   

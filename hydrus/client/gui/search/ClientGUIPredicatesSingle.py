@@ -14,6 +14,7 @@ from hydrus.core.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientImageHandling
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUITime
@@ -2143,7 +2144,9 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( repr( e ) ) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', f'Sorry, seemed to be a problem: {e}' )
                 
                 return
                 
@@ -2156,7 +2159,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                 
             except HydrusExceptions.DataMissing as e:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'Did not see an image bitmap or a file path in the clipboard!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'Did not see an image bitmap or a file path in the clipboard!' )
                 
                 return
                 
@@ -2177,21 +2180,23 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
                         
                     else:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'Sorry, "{}" files are not compatible with the similar file search system!'.format( HC.mime_string_lookup[ mime ] ) )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, "{}" files are not compatible with the similar file search system!'.format( HC.mime_string_lookup[ mime ] ) )
                         
                         return
                         
                     
                 else:
                     
-                    QW.QMessageBox.warning( self, 'Warning', 'Sorry, that clipboard text did not look like a valid file path!' )
+                    ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that clipboard text did not look like a valid file path!' )
                     
                     return
                     
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Error', 'Sorry, seemed to be a problem: {}'.format( repr( e ) ) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', f'Sorry, seemed to be a problem: {e}' )
                 
                 return
                 

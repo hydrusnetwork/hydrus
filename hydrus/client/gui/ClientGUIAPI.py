@@ -9,6 +9,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import QtPorting as QP
@@ -48,7 +49,7 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
             
             self._api_permissions = api_permissions_request
             
-            QW.QMessageBox.information( self, 'Information', 'Got request!' )
+            ClientGUIDialogsMessage.ShowInformation( self, 'Got request!' )
             
             ClientAPI.last_api_permissions_request = None
             self._repeating_job.Cancel()

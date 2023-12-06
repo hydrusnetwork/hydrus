@@ -66,6 +66,31 @@ def GetZipAsPath( path_to_zip, path_in_zip="" ):
     return zipfile.Path( path_to_zip, at=path_in_zip )
     
 
+def IsOpenableZip( path_to_zip ):
+    
+    try:
+        
+        with zipfile.ZipFile( path_to_zip ) as zip_handle:
+            
+            infos = zip_handle.infolist()
+            
+            if len( infos ) > 0:
+                
+                with zip_handle.open( infos[0] ) as reader:
+                    
+                    reader.read( 1024 )
+                    
+                
+            
+            return True
+            
+        
+    except:
+        
+        return False
+        
+    
+
 def ZipLooksLikeCBZ( path_to_zip ):
     
     # TODO: we should probably wangle this away from 'zip' and towards 'archive', but it is fine as a first step
@@ -83,7 +108,7 @@ def ZipLooksLikeCBZ( path_to_zip ):
     num_images = 0
     num_weird_files_allowed_per_directory = 5
     num_images_needed_per_directory = 1
-    ok_weird_filenames = { 'md5sum', 'comicbook.xml', 'metadata.txt' }
+    ok_weird_filenames = { 'md5sum', 'comicbook.xml', 'metadata.txt', 'info.txt' }
     
     with zipfile.ZipFile( path_to_zip ) as zip_handle:
         

@@ -15,13 +15,13 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
@@ -504,7 +504,9 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -535,7 +537,9 @@ class AddEditDeleteListBox( QW.QWidget ):
                         
                     except Exception as e:
                         
-                        QW.QMessageBox.critical( self, 'Error', str(e) )
+                        HydrusData.PrintException( e )
+                        
+                        ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
                         
                         return
                         
@@ -546,9 +550,11 @@ class AddEditDeleteListBox( QW.QWidget ):
                         
                         self._ImportObject( obj )
                         
-                    except:
+                    except Exception as e:
                         
-                        QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the png!' )
+                        HydrusData.PrintException( e )
+                        
+                        ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', 'I could not understand what was encoded in the png!' )
                         
                         return
                         
@@ -616,7 +622,7 @@ class AddEditDeleteListBox( QW.QWidget ):
                 message += os.linesep * 2
                 message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
                 
-                QW.QMessageBox.critical( self, 'Error', message )
+                ClientGUIDialogsMessage.ShowWarning( self, message )
                 
             
             if len( other_bad_errors ) > 0:
@@ -625,14 +631,14 @@ class AddEditDeleteListBox( QW.QWidget ):
                 message += os.linesep * 2
                 message += os.linesep.join( other_bad_errors )
                 
-                QW.QMessageBox.critical( self, 'Error', message )
+                ClientGUIDialogsMessage.ShowWarning( self, message )
                 
             
             if num_added > 0:
                 
                 message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
                 
-                QW.QMessageBox.information( self, 'Success', message )
+                ClientGUIDialogsMessage.ShowInformation( self, message )
                 
             
         

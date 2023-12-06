@@ -111,6 +111,11 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                         
                         self.modules_files_metadata_basic.SetHasTransparency( hash_id, has_transparency )
                         
+                        if has_transparency:
+                            
+                            self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                            
+                        
                     
                     new_file_info.add( ( hash_id, hash ) )
                     

@@ -2,18 +2,16 @@ import os
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -424,7 +422,7 @@ For regular import pages, 'presentation' means if the imported file's thumbnail 
 
 If you have a very large (10k+ files) file import page, consider hiding some or all of its thumbs to reduce ui lag and increase overall import speed.'''
         
-        QW.QMessageBox.information( self, 'Information', help_message )
+        ClientGUIDialogsMessage.ShowInformation( self, help_message )
         
     
     def _UpdateDispositiveFromHash( self ):
@@ -821,7 +819,7 @@ If a new note coming in has the same name but different text, then two things ca
 
 Beyond that, you can filter and rename notes. Check the tooltips for more info.'''
         
-        QW.QMessageBox.information( self, 'Information', help_message )
+        ClientGUIDialogsMessage.ShowInformation( self, help_message )
         
     
     def _UpdateIsDefault( self ):
@@ -1519,7 +1517,7 @@ You can also set some fixed 'explicit' tags (like, say, 'read later' or 'from my
 
 Please note that once you know what tags you like, you can (and should) set up the 'default' values for these tag import options under _network->downloaders->manage default import options_, both globally and on a per-parser basis. If you always want all the tags going to 'my tags', this is easy to set up there, and you won't have to put it in every time.'''
         
-        QW.QMessageBox.information( self, 'Information', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _UpdateIsDefault( self ):
@@ -1868,7 +1866,9 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -1891,7 +1891,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if file_import_options.IsDefault() and not self._allow_default_selection:
             
-            QW.QMessageBox.warning( self, 'Default Options!', 'Sorry, the options you pasted were set as default, but this button needs something specific!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, the options you pasted were set as default, but this button needs something specific!' )
             
             return
             
@@ -1907,7 +1907,9 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -1930,7 +1932,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if note_import_options.IsDefault() and not self._allow_default_selection:
             
-            QW.QMessageBox.warning( self, 'Default Options!', 'Sorry, the options you pasted were set as default, but this button needs something specific!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, the options you pasted were set as default, but this button needs something specific!' )
             
             return
             
@@ -1946,7 +1948,9 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -1969,7 +1973,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         if tag_import_options.IsDefault() and not self._allow_default_selection:
             
-            QW.QMessageBox.warning( self, 'Default Options!', 'Sorry, the options you pasted were set as default, but this button needs something specific!' )
+            ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, the options you pasted were set as default, but this button needs something specific!' )
             
             return
             

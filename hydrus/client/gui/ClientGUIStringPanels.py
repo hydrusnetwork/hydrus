@@ -1162,7 +1162,7 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
         self._controls_panel = ClientGUICommon.StaticBox( self, 'join text' )
         
         self._joiner = QW.QLineEdit( self._controls_panel )
-        self._joiner.setToolTip( 'The strings will be joined using this text. For instance, joining "A" "B" "C" with ", " will create "A, B, C". You can enter the empty string, which simply concatenates.' )
+        self._joiner.setToolTip( 'The strings will be joined using this text. For instance, joining "A" "B" "C" with ", " will create "A, B, C". Entering "\\n" will convert to a newline, which means if you want to join by backslash, you need to enter two, "\\\\". You can enter the empty string, which simply concatenates.' )
         
         self._join_tuple_size = ClientGUICommon.NoneableSpinCtrl( self._controls_panel, none_phrase = 'merge all into one string', min = 2 )
         self._join_tuple_size.setToolTip( 'If you want to merge your strings in a 1-2, 1-2, 1-2 (e.g. you have domain-path pairs you want to joint into URLs), or 1-2-3, 1-2-3, 1-2-3 fashion, set the size of your groups here. If the remainder at the end of the list does not fit the group size, it is discarded.' )
@@ -1242,9 +1242,13 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
             
             joined_texts = string_joiner.Join( texts )
             
+            self._joiner.setObjectName( '' )
+            
         except Exception as e:
             
             joined_texts = [ 'Error: {}'.format( e ) ]
+            
+            self._joiner.setObjectName( 'HydrusInvalid' )
             
         
         self._example_strings_joined.clear()
@@ -1880,6 +1884,9 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._controls_panel = ClientGUICommon.StaticBox( self, 'splitter values' )
         
         self._separator = QW.QLineEdit( self._controls_panel )
+        tt = 'The string will be split wherever it encounters these characters. Entering "\\n" will convert to a newline, which means if you want to split by backslash, you need to enter two, "\\\\".'
+        self._separator.setToolTip( tt )
+        
         self._max_splits = ClientGUICommon.NoneableSpinCtrl( self._controls_panel, min = 1, max = 65535, unit = 'splits', none_phrase = 'no limit' )
         
         #
@@ -1903,6 +1910,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'separator: ', self._separator ) )
         rows.append( ( 'max splits: ', self._max_splits ) )
+        rows.append( ( 'apply unicode escape: ', self._max_splits ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._controls_panel, rows )
         
@@ -1952,11 +1960,20 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            self._separator.setObjectName( '' )
-            
             string_splitter = self._GetValue()
             
-            results = string_splitter.Split( self._example_string.text() )
+            try:
+                
+                results = string_splitter.Split( self._example_string.text() )
+                
+                self._separator.setObjectName( '' )
+                
+            except Exception as e:
+                
+                results = [ 'Error: {}'.format( e ) ]
+                
+                self._separator.setObjectName( 'HydrusInvalid' )
+                
             
         
         self._example_string_splits.clear()

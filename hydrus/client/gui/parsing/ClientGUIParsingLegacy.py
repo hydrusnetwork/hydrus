@@ -17,6 +17,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -134,7 +135,7 @@ class EditNodes( QW.QWidget ):
                 
             else:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'That was not a script--it was a: '+type(obj).__name__ )
+                ClientGUIDialogsMessage.ShowWarning( self, f'That was not a script--it was a: {type(obj).__name__}' )
                 
             
         
@@ -268,7 +269,9 @@ class EditNodes( QW.QWidget ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem pasting!', str(e) )
             
             return
             
@@ -491,7 +494,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 
                 message = 'Could not parse!'
                 
-                QP.CallAfter( QW.QMessageBox.critical, None, 'Error', message )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Parsing problem!', message )
                 
             
         
@@ -721,7 +724,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
             if not os.path.exists( test_arg ):
                 
-                QW.QMessageBox.critical( self, 'Error', 'That file does not exist!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'That file does not exist!' )
                 
                 return
                 
@@ -764,7 +767,7 @@ And pass that html to a number of 'parsing children' that will each look through
             message += os.linesep * 2
             message += str( e )
             
-            QW.QMessageBox.critical( self, 'Error', message )
+            ClientGUIDialogsMessage.ShowCritical( self, 'Could not fetch!', message )
             
         finally:
             
@@ -806,7 +809,7 @@ And pass that html to a number of 'parsing children' that will each look through
                 
                 message = 'Could not parse!'
                 
-                QP.CallAfter( QW.QMessageBox.critical, None, 'Error', message )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Error', message )
                 
             finally:
                 
@@ -975,7 +978,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             else:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'That was not a script--it was a: '+type(obj).__name__ )
+                ClientGUIDialogsMessage.ShowWarning( self, f'That was not a script--it was a: {type(obj).__name__}' )
                 
             
         
@@ -1124,7 +1127,9 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.critical( self, 'Error', str(e) )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem importing!', str(e) )
             
             return
             
@@ -1155,7 +1160,9 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 except Exception as e:
                     
-                    QW.QMessageBox.critical( self, 'Error', str(e) )
+                    HydrusData.PrintException( e )
+                    
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', str(e) )
                     
                     return
                     
@@ -1166,9 +1173,11 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     self._ImportObject( obj )
                     
-                except:
+                except Exception as e:
                     
-                    QW.QMessageBox.critical( self, 'Error', 'I could not understand what was encoded in the png!' )
+                    HydrusData.PrintException( e )
+                    
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', 'I could not understand what was encoded in the png!' )
                     
                 
             

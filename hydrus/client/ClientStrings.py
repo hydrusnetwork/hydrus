@@ -1,11 +1,9 @@
 import base64
-import calendar
 import datetime
 import hashlib
 import html
 import re
 import typing
-import time
 import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
@@ -473,9 +471,9 @@ class StringJoiner( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_JOINER
     SERIALISABLE_NAME = 'String Concatenator'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, joiner: str = '', join_tuple_size = None ):
+    def __init__( self, joiner: str = '', join_tuple_size: typing.Optional[ int ] = None ):
         
         StringProcessingStep.__init__( self )
         
@@ -491,6 +489,20 @@ class StringJoiner( StringProcessingStep ):
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         ( self._joiner, self._join_tuple_size ) = serialisable_info
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( joiner, join_tuple_size )  = old_serialisable_info
+            
+            joiner = joiner.replace( '\\', '\\\\' )
+            
+            new_serialisable_info = ( joiner, self._join_tuple_size )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def GetJoiner( self ):
@@ -520,11 +532,21 @@ class StringJoiner( StringProcessingStep ):
         
         try:
             
+            # \\n -> \n
+            joiner = self._joiner.encode( 'latin-1', 'backslashreplace' ).decode( 'unicode-escape' )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.StringJoinerException( 'Could not escape the joiner string. Wrong number of backslashes?' )
+            
+        
+        try:
+            
             joined_texts = []
             
             if self._join_tuple_size is None:
                 
-                joined_texts.append( self._joiner.join( texts ) )
+                joined_texts.append( joiner.join( texts ) )
                 
             else:
                 
@@ -532,7 +554,7 @@ class StringJoiner( StringProcessingStep ):
                     
                     if len( chunk_of_texts ) == self._join_tuple_size:
                         
-                        joined_texts.append( self._joiner.join( chunk_of_texts ) )
+                        joined_texts.append( joiner.join( chunk_of_texts ) )
                         
                     
                 
@@ -1124,7 +1146,7 @@ class StringSplitter( StringProcessingStep ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_STRING_SPLITTER
     SERIALISABLE_NAME = 'String Splitter'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
     def __init__( self, separator: str = ',', max_splits: typing.Optional[ int ] = None ):
         
@@ -1142,6 +1164,20 @@ class StringSplitter( StringProcessingStep ):
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
         ( self._separator, self._max_splits ) = serialisable_info
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( separator, max_splits ) = old_serialisable_info
+            
+            separator = separator.replace( '\\', '\\\\' )
+            
+            new_serialisable_info = ( separator, max_splits )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def GetMaxSplits( self ):
@@ -1168,13 +1204,22 @@ class StringSplitter( StringProcessingStep ):
         
         try:
             
+            separator = self._separator.encode( 'latin-1', 'backslashreplace' ).decode( 'unicode-escape' )
+            
+        except:
+            
+            raise HydrusExceptions.StringSplitterException( 'Could not escape the splitter string. Wrong number of backslashes?' )
+            
+        
+        try:
+            
             if self._max_splits is None:
                 
-                results = text.split( self._separator )
+                results = text.split( separator )
                 
             else:
                 
-                results = text.split( self._separator, self._max_splits )
+                results = text.split( separator, self._max_splits )
                 
             
         except Exception as e:

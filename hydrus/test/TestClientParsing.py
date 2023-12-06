@@ -342,6 +342,14 @@ class TestStringJoiner( unittest.TestCase ):
         self.assertEqual( joiner.Join( texts ), [ 'ab--cd', 'ef--gh' ] )
         self.assertEqual( joiner.ToString(), 'joining every 2 strings using "--"' )
         
+        joiner = ClientStrings.StringJoiner( joiner = r'\n', join_tuple_size = None )
+        self.assertEqual( joiner.Join( texts ), [ 'ab\ncd\nef\ngh\nij' ] )
+        self.assertEqual( joiner.ToString(), 'joining all strings using "\\n"' )
+        
+        joiner = ClientStrings.StringJoiner( joiner = '\\\\', join_tuple_size = None )
+        self.assertEqual( joiner.Join( texts ), [ 'ab\\cd\\ef\\gh\\ij' ] )
+        self.assertEqual( joiner.ToString(), 'joining all strings using "\\\\"' )
+        
     
 class TestStringMatch( unittest.TestCase ):
     
@@ -636,6 +644,14 @@ class TestStringSplitter( unittest.TestCase ):
         self.assertEqual( splitter.Split( '123' ), [ '123' ] )
         self.assertEqual( splitter.Split( '1,2,3' ), [ '1,2,3' ] )
         self.assertEqual( splitter.Split( '1, 2, 3, 4' ), [ '1', '2', '3, 4' ] )
+        
+        splitter = ClientStrings.StringSplitter( separator = r'\n' )
+        
+        self.assertEqual( splitter.Split( '1\n2' ), [ '1', '2' ] )
+        
+        splitter = ClientStrings.StringSplitter( separator = '\\\\' )
+        
+        self.assertEqual( splitter.Split( '1\\2' ), [ '1', '2' ] )
         
     
 class TestStringProcessor( unittest.TestCase ):

@@ -23,6 +23,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFilesPhysical
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -2370,7 +2371,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg.setToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
             
             self._load_images_with_pil = QW.QCheckBox( system_panel )
-            self._load_images_with_pil.setToolTip( 'OpenCV is much faster than PIL, but it is sometimes less reliable. Switch this on if you experience crashes or other unusual problems while importing or viewing certain images. EDIT: OpenCV is much better these days--this is mostly not needed.' )
+            self._load_images_with_pil.setToolTip( 'We are dropping CV and moving to PIL exclusively. If you want to help test, please turn this on and send hydev any images that render wrong!' )
             
             #
             
@@ -2556,7 +2557,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
-            rows.append( ( 'BUGFIX: Load images with PIL (slower):', self._load_images_with_pil ) )
+            rows.append( ( 'IN TESTING: Load images with PIL:', self._load_images_with_pil ) )
             
             gridbox = ClientGUICommon.WrapInGrid( system_panel, rows )
             
@@ -2691,7 +2692,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( unset_filetypes ) == 0:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'You cannot add any more specific filetype options!' )
+                ClientGUIDialogsMessage.ShowWarning( self, 'You cannot add any more specific filetype options!' )
                 
                 return
                 
@@ -3828,7 +3829,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Critical', 'Could not apply style: {}'.format( repr( e ) ) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Critical', f'Could not apply style: {e}' )
                 
             
             try:
@@ -3844,7 +3847,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             except Exception as e:
                 
-                QW.QMessageBox.critical( self, 'Critical', 'Could not apply stylesheet: {}'.format( repr( e ) ) )
+                HydrusData.PrintException( e )
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Critical', f'Could not apply stylesheet: {e}' )
                 
             
         
@@ -4285,7 +4290,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if namespace in ( '', ':' ):
                         
-                        QW.QMessageBox.warning( self, 'Not allowed', 'Sorry, that namespace means unnamespaced/default namespaced, which are already listed.' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace means unnamespaced/default namespaced, which are already listed.' )
                         
                         return
                         
@@ -4294,7 +4299,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if namespace in existing_namespaces:
                         
-                        QW.QMessageBox.warning( self, 'Already exists', 'Sorry, that namespace is already listed!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace is already listed!' )
                         
                         return
                         
@@ -4628,7 +4633,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if tag_slice in ( '', ':' ):
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'Sorry, you cannot re-add unnamespaced or namespaced!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, you cannot re-add unnamespaced or namespaced!' )
                         
                         return
                         
@@ -4642,7 +4647,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if tag_slice in existing_tag_slices:
                         
-                        QW.QMessageBox.warning( self, 'Warning', 'Sorry, that namespace already exists!' )
+                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace already exists!' )
                         
                         return
                         
@@ -5032,9 +5037,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 HG.client_controller.pub( 'reset_thumbnail_cache' )
                 
             
-        except:
+        except Exception as e:
             
-            QW.QMessageBox.critical( self, 'Error', traceback.format_exc() )
+            HydrusData.PrintException( e )
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Problem saving options!', str( e ) )
             
         
     
@@ -5197,7 +5204,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
         except HydrusExceptions.DataMissing as e:
             
-            QW.QMessageBox.warning( self, 'Warning', str(e) )
+            ClientGUIDialogsMessage.ShowWarning( self, str(e) )
             
             return
             
@@ -5339,7 +5346,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             except Exception as e:
                 
-                QW.QMessageBox.warning( self, 'Warning', 'I could not add that URL: {}'.format( e ) )
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem with URL!', f'I could not add that URL: {e}' )
                 
             
         

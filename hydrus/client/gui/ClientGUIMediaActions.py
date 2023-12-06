@@ -11,7 +11,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
-from hydrus.core.images import HydrusImageHandling
 from hydrus.core.images import HydrusImageMetadata
 from hydrus.core.images import HydrusImageOpening
 
@@ -20,6 +19,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPDFHandling
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
@@ -669,7 +669,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
     
     if not media.GetLocationsManager().IsLocal():
         
-        QW.QMessageBox.warning( win, 'Warning', 'This file is not local to this computer!' )
+        ClientGUIDialogsMessage.ShowWarning( win, 'The file is not local to this computer!' )
         
         return
         
@@ -719,7 +719,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
     
     if exif_dict is None and file_text is None:
         
-        QW.QMessageBox.information( win, 'Nothing found', 'Sorry, could not see any human-readable information in this file! Hydrus should have known this, so if this keeps happening, you may need to schedule a rescan of this info in file maintenance.' )
+        ClientGUIDialogsMessage.ShowWarning( win, 'Sorry, could not see any human-readable information in this file! Hydrus should have known this, so if this keeps happening, you may need to schedule a rescan of this info in file maintenance.' )
         
         return
         

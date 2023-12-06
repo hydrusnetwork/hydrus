@@ -61,49 +61,7 @@ try:
     
     HG.server_action = result.action
     
-    if result.db_dir is None:
-        
-        if HC.RUNNING_FROM_MACOS_APP:
-            
-            if HC.USERPATH_DB_DIR is None:
-                
-                raise Exception( 'The userpath (for macOS App database) could not be determined!' )
-                
-            
-            db_dir = HC.USERPATH_DB_DIR
-            
-        else:
-            
-            db_dir = HC.DEFAULT_DB_DIR
-            
-        
-    else:
-        
-        db_dir = result.db_dir
-        
-        db_dir = HydrusPaths.ConvertPortablePathToAbsPath( db_dir, HC.BASE_DIR )
-        
-    
-    if not HydrusPaths.DirectoryIsWriteable( db_dir ):
-        
-        if HC.USERPATH_DB_DIR is None:
-            
-            raise Exception( f'The db path "{db_dir}" was not writeable-to, and the userpath could not be determined!' )
-            
-        else:
-            
-            if not HydrusPaths.DirectoryIsWriteable( HC.USERPATH_DB_DIR ):
-                
-                raise Exception( f'Neither the default db path "{db_dir}", nor the userpath fallback "{HC.USERPATH_DB_DIR}", were writeable-to!' )
-                
-            
-            HydrusData.Print( f'The given db path "{db_dir}" is not writeable-to! Falling back to userpath at "{HC.USERPATH_DB_DIR}".' )
-            
-            HC.WE_SWITCHED_TO_USERPATH = True
-            
-            db_dir = HC.USERPATH_DB_DIR
-            
-        
+    db_dir = HydrusPaths.FigureOutDBDir( result.db_dir )
     
     HG.db_journal_mode = result.db_journal_mode
     
@@ -111,6 +69,7 @@ try:
         
         HG.db_journal_mode = 'TRUNCATE'
         
+    
     if result.db_memory_journaling:
         
         HG.db_journal_mode = 'MEMORY'

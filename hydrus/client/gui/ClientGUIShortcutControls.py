@@ -8,10 +8,10 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
@@ -252,7 +252,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
             message = 'Not every shortcut could find a new key to use, sorry!'
             
-            QW.QMessageBox.information( self, 'Information', message )
+            ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
     
@@ -603,7 +603,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if existing_data is None:
             
-            QW.QMessageBox.information( self, 'Information', 'It looks like your client was missing the "{}" shortcut set! It will now be restored.'.format( name ) )
+            ClientGUIDialogsMessage.ShowInformation( self, 'It looks like your client was missing the "{}" shortcut set! It will now be restored.'.format( name ) )
             
             self._reserved_shortcuts.AddDatas( ( new_data, ) )
             
@@ -636,7 +636,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += os.linesep * 2
         message += 'The built-in \'media\' set also supports tag and rating actions, if you would like some of those to always be active.'
         
-        QW.QMessageBox.information( self, 'Information', message )
+        ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
     def _UpdateMouseLabels( self ):

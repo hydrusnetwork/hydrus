@@ -1,6 +1,6 @@
 # made by prkc for Hydrus Network
 # Licensed under the same terms as Hydrus Network
-# hydev has changed a couple things here and there, and changed how filetypes work
+# hydev has changed a couple things here and there
 
 # The basic idea here is to take a system predicate written as text and parse it into a (predicate type, operator, value, unit)
 # tuple. The exact structure of the operator, value and unit members depend on the type of the predicate.
@@ -16,6 +16,17 @@
 # It might be better to switch to already established Hydrus enums and constants where possible. 
 # Errors are handled by throwing ValueErrors. The main function to call is parse_system_predicate.
 # If this file is run by itself it will parse and print all the included examples. There are examples for each supported predicate type.
+
+try:
+    
+    import dateparser
+    
+    DATEPARSER_OK = True
+    
+except:
+    
+    DATEPARSER_OK = False
+    
 
 import math
 import re
@@ -266,6 +277,14 @@ SYSTEM_PREDICATES = {
     'rating( for)?(?=.+?[^/]\d+$)': (Predicate.RATING_SPECIFIC_INCDEC, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_INCDEC, None ),
 }
 
+def string_looks_like_date( string ):
+    
+    # this sucks but it will do for now
+    
+    test_words = [ 'year', 'month', 'day', 'hour', 'second', 'ago' ]
+    
+    return True not in ( word in string for word in test_words )
+    
 
 # Parsing is just finding a matching predicate name,
 # then trying to parse it by consuming the input string.
@@ -419,26 +438,63 @@ def parse_value( string: str, spec ):
             return string[ len( match[ 0 ] ): ], set( found_ftypes_good )
         raise ValueError( "Invalid value, expected a list of file types" )
     elif spec == Value.DATE_OR_TIME_INTERVAL:
-        match = re.match( '((?P<year>0|([1-9][0-9]*))\s*(years|year))?\s*((?P<month>0|([1-9][0-9]*))\s*(months|month))?\s*((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?', string )
-        if match and (match.group( 'year' ) or match.group( 'month' ) or match.group( 'day' ) or match.group( 'hour' )):
-            years = int( match.group( 'year' ) ) if match.group( 'year' ) else 0
-            months = int( match.group( 'month' ) ) if match.group( 'month' ) else 0
-            days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
-            hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
+        
+        if DATEPARSER_OK:
             
-            string_result = string[ len( match[ 0 ] ): ]
+            dt = dateparser.parse( string )
             
-            if string_result == 'ago':
+            if not string_looks_like_date( string ):
                 
-                string_result = ''
+                # a time delta
+                now = dateparser.parse( 'now' ) # lol, that's how you get around cross-library timezone headaches
+                
+                time_delta = now - dt
+                
+                # this sucked a lot, and then I decided to eventually switch the whole system to days/seconds, just like datetime's time_delta
+                # if a user wants to put in 365 days, knowing what inaccuracy that implies, then they can. we just can't reliably deliver leap-year accuracy on long durations
+                
+                years = 0
+                months = 0
+                days = time_delta.days
+                
+                hours = round( time_delta.seconds / 3600 )
+                
+                if years + months + days + hours == 0:
+                    
+                    return ( '', dt )
+                    
+                
+                return ( '', ( years, months, days, hours ) )
+                
+            else:
+                
+                return ( '', dt )
                 
             
-            return string_result, (years, months, days, hours)
-        match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
-        if match:
-            # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
-            return string[ len( match[ 0 ] ): ], datetime.datetime( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
-        raise ValueError( "Invalid value, expected a date or a time interval" )
+        else:
+            
+            match = re.match( '((?P<year>0|([1-9][0-9]*))\s*(years|year))?\s*((?P<month>0|([1-9][0-9]*))\s*(months|month))?\s*((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?', string )
+            if match and (match.group( 'year' ) or match.group( 'month' ) or match.group( 'day' ) or match.group( 'hour' )):
+                years = int( match.group( 'year' ) ) if match.group( 'year' ) else 0
+                months = int( match.group( 'month' ) ) if match.group( 'month' ) else 0
+                days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
+                hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
+                
+                string_result = string[ len( match[ 0 ] ): ]
+                
+                if string_result == 'ago':
+                    
+                    string_result = ''
+                    
+                
+                return string_result, (years, months, days, hours)
+            match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
+            if match:
+                # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
+                return string[ len( match[ 0 ] ): ], datetime.datetime( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
+            raise ValueError( "Invalid value, expected a date or a time interval" )
+            
+        
     elif spec == Value.TIME_SEC_MSEC:
         match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
         if match and (match.group( 'sec' ) or match.group( 'msec' )):
@@ -606,7 +662,9 @@ def parse_operator( string: str, spec ):
                 op_string = string[ : re_result.start() ]
                 string_result = re_result.group()
                 
-                looks_like_date = '-' in string_result
+                invert_ops = not string_looks_like_date( string_result )
+                
+                looks_like_date = string_looks_like_date( string_result )
                 invert_ops = not looks_like_date
                 
                 if 'month' in op_string and looks_like_date:
