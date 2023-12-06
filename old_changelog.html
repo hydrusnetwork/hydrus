@@ -35,6 +35,43 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_555"><a href="#version_555">version 555</a></h2>
+                    <ul>
+                        <li><h3>Ugoira/CBZ/Zip</h3></li>
+                        <li>the Ugoira/CBZ conversion last week went ok! we found too many false-positive Ugoiras, however, so I have decided to make that test stricter. Ugoiras now have to have zero-indexed filesnames, and always zero-filled to six digits. all your Ugoiras will get scanned again to see if they should better be CBZ</li>
+                        <li>all zip files that are not openable (passworded, corrupt) are now detected early and just set as 'zip'</li>
+                        <li><h3>OpenCV</h3></li>
+                        <li>after discussing it with users, I have made the decision to slowly remove the image library OpenCV from the program. it has served us well, but it has always been a difficult-to-install bloat, and the super-compatible PIL actually does the job better these days. we'll simplify our rendering pipeline while also, with luck, improving HDR format support in future</li>
+                        <li>thanks to a user, a critical OpenCV call involved in generating similar-files search metadata (perceptual hashes DCT) is now replaced with non-OpenCV tech</li>
+                        <li>PIL can now load images in int32 or float32 greyscale, with or without ICC Profiles, and it shouldn't look too crazy (OpenCV was handling these before)</li>
+                        <li>deleted all the old OpenCV gif rendering and metadata scanning tech</li>
+                        <li>**if you would like to help test, please turn on `options->media->IN TESTING: Load images with PIL`. this used to be just a BUGFIX thing, but now it emulates where we actually want to end up. please send me any image files that render weird**</li>
+                        <li><h3>better boot error handling</h3></li>
+                        <li>if an error happens very early during boot, before the main Application event loop and splash screen are started, hydrus will now try and spin up a very small App and text dialog to show you the error visually! of course, if the error is Qt-related, then this won't work, ha ha ha, but you'll still always get the crash log</li>
+                        <li>the client will now boot if the 'already-running' file exists but is incomprehensible--it'll just log that it was. also, if any other problem occurs during the 'already-running' check, hydrus assumes it is not already running and prints the error to the log</li>
+                        <li>improved the 'can we write to the database folder?' test a little more. previously, if the db directory on boot was both missing and its parent was read-only, it would raise an error. now we correctly recognise that state as 'not writeable'</li>
+                        <li>also, the fallback to the userpath db directory now only happens if you do not set a `-d/--db_dir` launch parameter. if you specifically set a launch path and that place is missing or read only, the program will not boot! I am more comfortable doing this now that we have the dialog to better display what happened</li>
+                        <li>unified the 'what db dir are we using?' tests to one place</li>
+                        <li>also cleaned up some of the boot failure code, which was spamming things haphazardly</li>
+                        <li><h3>string splitting and joining</h3></li>
+                        <li>the String Splitter and Joiner now interpret `\n` in their splitter/joiner text as newline (and other replacements like `\t` for tab; anything python supports). in order to not break existing parsers, the old splitter and joiner strings will be encoded on update (any `\` will become `\\`)</li>
+                        <li>added some unit tests to test this behaviour for both String Processor types</li>
+                        <li><h3>misc</h3></li>
+                        <li>the system predicate parser is now plugged into the excellent `dateparser` library that we already use in downloader parsing. this thing can eat pretty much any date string you can throw at it, so if you type "system:archived time: since 01/05/2011" or "system:archived time: before 30 hours ago", it'll all work for almost any combination you can think of. it'll probably even work in your native language! the one big caveat is if you give a longer duration timestamp in the form 'x time units( ago)', rather than a specific date, it'll convert it to days/hours, ignoring years and months. since this stuff causes a ton of headaches, I am likely going to switch all the time-delta time predicates here to work on days/hours/seconds, and if you want to put 60 or 365 days, knowing what inaccuracy that implies means, then you can, rather than have me continually fret over and fail to deliver various leap year calculation problems. _calendarium delenda est_</li>
+                        <li>fixed some thumbnail rendering for another class of damaged gif--this time, gifs that are so garbagified that they change their resolution from one frame to the next and/or produce a sizeless, shapeless frame of a handful of bytes. this is now detected and the bad data discarded!</li>
+                        <li>if a video seems to have 0/None duration, the main native ffmpeg renderer (which is also used for thumbnail generation) can now handle it. the 'start x% in' value will be crazy, but it'll work</li>
+                        <li>fixed an error with mpv trying to inspect the duration of null media during various states of media viewer transition</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>gave a quick pass over the ~250 small 'just show some text and a system icon' dialogs work across the program. unified all calls through one location, improved some strings and string formatting, added more exception logging, unified the dialog titles, differentiated information/warning/critical flags better, made 'critical' messages log their titles and text, and made it all thread safe in a nice invisible way to callers</li>
+                        <li>fixed some borked page/popup permission checks in the client api</li>
+                        <li>if a file transitions from 'no transparency' to 'has transparency', the client will now queue a thumbnail regen, just in case that tech has been recently added</li>
+                        <li>improved the formatting of what the main error-logging method actually prints to the log</li>
+                        <li>slimmed down some of the watcher/subscription fixed-checking-time code</li>
+                        <li>misc formatting cleanup and surplus import clearout</li>
+                        <li>fixed the discord link in the PTR help document</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_554"><a href="#version_554">version 554</a></h2>
                     <ul>
                         <li><h3>checker options fixes</h3></li>
