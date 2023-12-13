@@ -219,6 +219,8 @@ pred_generators = {
     SystemPredicateParser.Predicate.NO_HUMAN_READABLE_EMBEDDED_METADATA : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False ),
     SystemPredicateParser.Predicate.HAS_ICC_PROFILE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ),
     SystemPredicateParser.Predicate.NO_ICC_PROFILE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ),
+    SystemPredicateParser.Predicate.HAS_FORCED_FILETYPE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True ),
+    SystemPredicateParser.Predicate.NO_FORCED_FILETYPE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False ),
     SystemPredicateParser.Predicate.LIMIT : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, v ),
     SystemPredicateParser.Predicate.FILETYPE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, tuple( v ) ),
     SystemPredicateParser.Predicate.HAS_DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '>', 0 ) ),

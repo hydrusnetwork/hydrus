@@ -70,6 +70,7 @@ PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME = 47
 PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA = 48
 PREDICATE_TYPE_SYSTEM_SIMILAR_TO = 49
 PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY = 50
+PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE = 51
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -116,7 +117,8 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING,
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
     PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
-    PREDICATE_TYPE_SYSTEM_TIME
+    PREDICATE_TYPE_SYSTEM_TIME,
+    PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE
 }
 
 IGNORED_TAG_SEARCH_CHARACTERS = '[](){}/\\"\'-_'
@@ -479,6 +481,13 @@ class FileSystemPredicates( object ):
                 has_icc_profile = value
                 
                 self._common_info[ 'has_icc_profile' ] = has_icc_profile
+                
+            
+            if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE:
+                
+                has_forced_filetype = value
+                
+                self._common_info[ 'has_forced_filetype' ] = has_forced_filetype
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_HASH:
@@ -2142,7 +2151,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, self._value, not self._inclusive )
             
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE ):
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_HAS_AUDIO, PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY, PREDICATE_TYPE_SYSTEM_HAS_EXIF, PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE ):
             
             return Predicate( self._predicate_type, not self._value )
             
@@ -2796,6 +2805,20 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     if not has_icc_profile:
                         
                         base = 'no icc profile'
+                        
+                    
+                
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE:
+                
+                base = 'has forced filetype'
+                
+                if self._value is not None:
+                    
+                    has_forced_filetype = self._value
+                    
+                    if not has_forced_filetype:
+                        
+                        base = 'no forced filetype'
                         
                     
                 

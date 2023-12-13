@@ -74,6 +74,8 @@ class FileInfoManager( object ):
         self.has_audio = has_audio
         self.num_words = num_words
         
+        self.original_mime = None
+        
         self.has_transparency = False
         self.has_exif = False
         self.has_human_readable_embedded_metadata = False
@@ -94,6 +96,23 @@ class FileInfoManager( object ):
         fim.pixel_hash = self.pixel_hash
         
         return fim
+        
+    
+    def FiletypeIsForced( self ):
+        
+        return self.original_mime is not None
+        
+    
+    def GetOriginalMime( self ):
+        
+        if self.FiletypeIsForced():
+            
+            return self.original_mime
+            
+        else:
+            
+            return self.mime
+            
         
     
     def ToTuple( self ):

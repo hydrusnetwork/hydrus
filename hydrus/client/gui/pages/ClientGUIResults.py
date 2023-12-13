@@ -928,7 +928,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
         else:
             
-            if ctrl:
+            if ctrl and not shift:
                 
                 if media.IsSelected():
                     
@@ -2198,15 +2198,18 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                     ( width, height ) = self._focused_media.GetResolution()
                     
-                    if action == CAC.SIMPLE_COPY_LITTLE_BMP and ( width > 1024 or height > 1024 ):
+                    if width is not None and height is not None:
                         
-                        target_resolution = HydrusImageHandling.GetThumbnailResolution( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
-                        
-                        copied = self._CopyBMPToClipboard( resolution = target_resolution )
-                        
-                    else:
-                        
-                        copied = self._CopyBMPToClipboard()
+                        if action == CAC.SIMPLE_COPY_LITTLE_BMP and ( width > 1024 or height > 1024 ):
+                            
+                            target_resolution = HydrusImageHandling.GetThumbnailResolution( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                            
+                            copied = self._CopyBMPToClipboard( resolution = target_resolution )
+                            
+                        else:
+                            
+                            copied = self._CopyBMPToClipboard()
+                            
                         
                     
                 
@@ -4197,10 +4200,9 @@ class MediaPanelThumbnails( MediaPanel ):
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage notes for the focused file.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaActions.SetFilesForcedFiletypes, self, self._selected_media )
             
             ClientGUIMediaMenus.AddDuplicatesMenu( self, manage_menu, self._location_context, focus_singleton, num_selected, collections_selected )
-            
-            ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
             
             regen_menu = ClientGUIMenus.GenerateMenu( manage_menu )
             
@@ -4210,6 +4212,8 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             
             ClientGUIMenus.AppendMenu( manage_menu, regen_menu, 'maintenance' )
+            
+            ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, flat_selected_medias )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
@@ -4467,7 +4471,7 @@ class MediaPanelThumbnails( MediaPanel ):
                     
                     ( width, height ) = self._focused_media.GetResolution()
                     
-                    if width > 1024 or height > 1024:
+                    if width is not None and height is not None and ( width > 1024 or height > 1024 ):
                         
                         target_resolution = HydrusImageHandling.GetThumbnailResolution( self._focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
                         

@@ -1829,6 +1829,18 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True )
+        
+        self.assertEqual( p.ToString(), 'system:has forced filetype' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False )
+        
+        self.assertEqual( p.ToString(), 'system:no forced filetype' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( 'abcd' ), ), 'sha256' ) )
         
         self.assertEqual( p.ToString(), 'system:sha256 hash is abcd' )
@@ -2037,6 +2049,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:no human-readable embedded metadata', "system:no embedded metadata" ),
             ( 'system:has icc profile', "system:has icc profile" ),
             ( 'system:no icc profile', "system:no icc profile" ),
+            ( 'system:has forced filetype', "system:has forced filetype" ),
+            ( 'system:no forced filetype', "system:no forced filetype" ),
             ( 'system:number of tags > 5', "system:number of tags > 5" ),
             ( 'system:number of character tags > 5', "system:number of character tags > 5" ),
             ( f'system:number of tags {HC.UNICODE_APPROX_EQUAL} 10', "system:number of tags ~= 10" ),

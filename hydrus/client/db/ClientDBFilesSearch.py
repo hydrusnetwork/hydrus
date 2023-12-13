@@ -4,11 +4,9 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -77,17 +75,34 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
     
     if 'mimes' in simple_preds:
         
+        # Note, I worked on this way longer than I needed to, vacillating on how to structure this forced data properly and rewriting things four times
+        # NOT EXISTS is a blessing, do not try to screw around too much!
+        
         mimes = simple_preds[ 'mimes' ]
         
         if len( mimes ) == 1:
             
             ( mime, ) = mimes
             
-            files_info_predicates.append( 'mime = ' + str( mime ) )
+            files_info_predicates.append( f'( ( mime = {mime} AND NOT EXISTS ( SELECT 1 FROM files_info_forced_filetypes WHERE hash_id = h1 AND forced_mime != {mime} ) ) OR EXISTS ( SELECT 1 FROM files_info_forced_filetypes WHERE hash_id = h1 AND forced_mime = {mime} ) )' )
             
         else:
             
-            files_info_predicates.append( 'mime IN ' + HydrusData.SplayListForDB( mimes ) )
+            files_info_predicates.append( f'( ( mime IN {HydrusData.SplayListForDB( mimes )} AND NOT EXISTS ( SELECT 1 FROM files_info_forced_filetypes WHERE hash_id = h1 AND forced_mime NOT IN {HydrusData.SplayListForDB( mimes )} ) ) OR EXISTS ( SELECT 1 FROM files_info_forced_filetypes WHERE hash_id = h1 AND mime IN {HydrusData.SplayListForDB( mimes )} ) )' )
+            
+        
+    
+    if 'has_forced_filetype' in simple_preds:
+        
+        has_forced_filetype = simple_preds[ 'has_forced_filetype' ]
+        
+        if has_forced_filetype:
+            
+            files_info_predicates.append( 'EXISTS ( SELECT 1 FROM files_info_forced_filetypes WHERE hash_id = h1 )' )
+            
+        else:
+            
+            files_info_predicates.append( 'NOT EXISTS ( SELECT 1 FROM files_info_forced_filetypes WHERE hash_id = h1 )' )
             
         
     
@@ -1720,13 +1735,13 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     if query_hash_ids is None:
                         
-                        loop_query_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} WHERE {};'.format( files_table_name, ' AND '.join( files_info_predicates ) ) ) )
+                        loop_query_hash_ids = self._STS( self._Execute( 'SELECT hash_id AS h1 FROM {} WHERE {};'.format( files_table_name, ' AND '.join( files_info_predicates ) ) ) )
                         
                     else:
                         
                         if is_inbox and len( query_hash_ids ) == len( self.modules_files_inbox.inbox_hash_ids ):
                             
-                            loop_query_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN {} WHERE {};'.format( 'file_inbox', files_table_name, ' AND '.join( files_info_predicates ) ) ) )
+                            loop_query_hash_ids = self._STS( self._Execute( 'SELECT hash_id AS h1 FROM {} NATURAL JOIN {} WHERE {};'.format( 'file_inbox', files_table_name, ' AND '.join( files_info_predicates ) ) ) )
                             
                         else:
                             
@@ -1734,7 +1749,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                                 
                                 self._AnalyzeTempTable( temp_table_name )
                                 
-                                loop_query_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} NATURAL JOIN {} WHERE {};'.format( temp_table_name, files_table_name, ' AND '.join( files_info_predicates ) ) ) )
+                                loop_query_hash_ids = self._STS( self._Execute( 'SELECT hash_id AS h1 FROM {} NATURAL JOIN {} WHERE {};'.format( temp_table_name, files_table_name, ' AND '.join( files_info_predicates ) ) ) )
                                 
                             
                         
@@ -1918,7 +1933,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 predicate_string = ' AND '.join( files_info_predicates )
                 
-                select = 'SELECT hash_id FROM {} NATURAL JOIN files_info WHERE {};'.format( temp_table_name, predicate_string )
+                select = 'SELECT hash_id AS h1 FROM {} NATURAL JOIN files_info WHERE {};'.format( temp_table_name, predicate_string )
                 
                 files_info_hash_ids = self._STI( self._Execute( select ) )
                 

@@ -2430,9 +2430,89 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _ForceFiletypes( self, hashes, mime ):
+        
+        hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hashes = hashes )
+        
+        for hash_id in hash_ids_to_hashes.keys():
+            
+            self.modules_files_metadata_basic.SetForcedFiletype( hash_id, mime )
+            
+        
+        hashes_that_need_refresh = set()
+        
+        for ( hash_id, hash ) in hash_ids_to_hashes.items():
+            
+            if self._weakref_media_result_cache.HasFile( hash_id ):
+                
+                self._weakref_media_result_cache.DropMediaResult( hash_id, hash )
+                
+                hashes_that_need_refresh.add( hash )
+                
+            
+        
+        if len( hashes_that_need_refresh ) > 0:
+            
+            HG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
+            
+        
+    
     def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
         
         return JobDatabaseClient( job_type, synchronous, action, *args, **kwargs )
+        
+    
+    def _GenerateFileInfoManagers( self, hash_ids: typing.Collection[ int ], hash_ids_table_name ) -> typing.List[ ClientMediaManagers.FileInfoManager ]:
+        
+        hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = hash_ids )
+        
+        # temp hashes to metadata
+        hash_ids_to_file_info_managers = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( hash_ids_table_name ) ) }
+        
+        hash_ids_to_pixel_hashes = self.modules_similar_files.GetHashIdsToPixelHashes( hash_ids_table_name )
+        hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( hash_ids_table_name )
+        hash_ids_to_forced_filetypes = self.modules_files_metadata_basic.GetHashIdsToForcedFiletypes( hash_ids_table_name )
+        has_transparency_hash_ids = self.modules_files_metadata_basic.GetHasTransparencyHashIds( hash_ids_table_name )
+        has_exif_hash_ids = self.modules_files_metadata_basic.GetHasEXIFHashIds( hash_ids_table_name )
+        has_human_readable_embedded_metadata_hash_ids = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadataHashIds( hash_ids_table_name )
+        has_icc_profile_hash_ids = self.modules_files_metadata_basic.GetHasICCProfileHashIds( hash_ids_table_name )
+        
+        # build it
+        
+        file_info_managers = []
+        
+        for hash_id in hash_ids:
+            
+            if hash_id in hash_ids_to_file_info_managers:
+                
+                file_info_manager = hash_ids_to_file_info_managers[ hash_id ]
+                
+            else:
+                
+                hash = hash_ids_to_hashes[ hash_id ]
+                
+                file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
+                
+            
+            file_info_manager.pixel_hash = hash_ids_to_pixel_hashes.get( hash_id, None )
+            file_info_manager.blurhash = hash_ids_to_blurhashes.get( hash_id, None )
+            file_info_manager.has_transparency = hash_id in has_transparency_hash_ids
+            file_info_manager.has_exif = hash_id in has_exif_hash_ids
+            file_info_manager.has_human_readable_embedded_metadata = hash_id in has_human_readable_embedded_metadata_hash_ids
+            file_info_manager.has_icc_profile = hash_id in has_icc_profile_hash_ids
+            
+            forced_mime = hash_ids_to_forced_filetypes.get( hash_id, None )
+            
+            if forced_mime is not None:
+                
+                file_info_manager.original_mime = file_info_manager.mime
+                file_info_manager.mime = forced_mime
+                
+            
+            file_info_managers.append( file_info_manager )
+            
+        
+        return file_info_managers
         
     
     def _GetBonedStats( self, file_search_context: ClientSearch.FileSearchContext = None, job_status = None ):
@@ -2583,7 +2663,11 @@ class DB( HydrusDB.HydrusDB ):
         
         if deleted_files_table_name is not None:
             
-            ( num_deleted, size_deleted ) = self._Execute( f'SELECT COUNT( hash_id ), SUM( size ) FROM {deleted_files_table_name} CROSS JOIN files_info USING ( hash_id );' ).fetchone()
+            # it seems for old deleted files, I used to delete from files_info, so this was, when combined, undercounting!!!
+            
+            ( num_deleted, ) = self._Execute( f'SELECT COUNT( hash_id ) FROM {deleted_files_table_name};' ).fetchone()
+            
+            ( size_deleted, ) = self._Execute( f'SELECT SUM( size ) FROM {deleted_files_table_name} CROSS JOIN files_info USING ( hash_id );' ).fetchone()
             
             if size_deleted is None:
                 
@@ -2855,6 +2939,9 @@ class DB( HydrusDB.HydrusDB ):
         job_status = None
     ):
         
+        all_my_files_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
+        all_local_files_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT )
+        
         # get all sorts of stats and present them in ( timestamp, cumulative_num ) tuple pairs
         
         file_history = {}
@@ -2998,7 +3085,7 @@ class DB( HydrusDB.HydrusDB ):
         inbox_file_history = []
         archive_file_history = []
         
-        if current_files_table_name == ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_file_service_id, HC.CONTENT_STATUS_CURRENT ):
+        if current_files_table_name == all_local_files_current_files_table_name:
             
             ( total_inbox_files, ) = self._Execute( 'SELECT COUNT( * ) FROM file_inbox;' ).fetchone()
             
@@ -3019,11 +3106,41 @@ class DB( HydrusDB.HydrusDB ):
                 return file_history
                 
             
+            if deleted_files_table_name == deleted_timestamps_table_name:
+                
+                deleted_files_table_join = deleted_files_table_name
+                
+            else:
+                
+                deleted_files_table_join = f'{deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id )'
+                
+            
+            # I do a load of gubbins here related to timestamp tables. deleted timestamps were added before archived, so I think we are fine to presume that deleted timestamps exist whenever an archived one does too
+            
             # note also that we do not scrub archived time on a file delete, so this upcoming fetch is for all files ever. this is useful, so don't undo it m8
             archive_timestamps_current = self._STL( self._Execute( f'SELECT archived_timestamp FROM {current_files_table_name} CROSS JOIN archive_timestamps USING ( hash_id );' ) )
-            archive_timestamps_deleted = self._STL( self._Execute( f'SELECT archived_timestamp FROM {deleted_files_table_name} CROSS JOIN archive_timestamps USING ( hash_id );' ) )
+            archive_timestamps_deleted_both = self._Execute( f'SELECT archived_timestamp, {deleted_timestamps_table_name}.timestamp FROM {deleted_files_table_join} CROSS JOIN archive_timestamps USING ( hash_id );' ).fetchall()
             
-            archive_timestamps = sorted( archive_timestamps_current + archive_timestamps_deleted )
+            archive_timestamps_deleted = []
+            
+            for ( archive_timestamp, deleted_timestamp ) in archive_timestamps_deleted_both:
+                
+                if deleted_timestamp is None:
+                    
+                    # no record, use archive
+                    archive_timestamps_deleted.append( archive_timestamp )
+                    
+                else:
+                    
+                    # if the archive happened after our delete, we'll use the delete timestamp as proxy for 'de-inboxed'
+                    archive_timestamps_deleted.append( min( archive_timestamp, deleted_timestamp ) )
+                    
+                
+            
+            # this represents the situation where a file is in trash or another file service, in inbox, but for our purposes has been de-inboxed
+            de_inboxed_from_deleted = [ timestamp for ( timestamp, hash_id ) in self._Execute( f'SELECT timestamp, hash_id as h1 FROM {deleted_files_table_join} WHERE {deleted_timestamps_table_name}.timestamp IS NOT NULL AND NOT EXISTS ( SELECT 1 FROM archive_timestamps WHERE hash_id = h1 );' ) ]
+            
+            archive_timestamps = sorted( archive_timestamps_current + archive_timestamps_deleted + de_inboxed_from_deleted )
             
         
         if job_status.IsCancelled():
@@ -3031,15 +3148,13 @@ class DB( HydrusDB.HydrusDB ):
             return file_history
             
         
-        media_current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.combined_local_media_service_id, HC.CONTENT_STATUS_CURRENT )
-        
-        if current_files_table_name == media_current_files_table_name:
+        if current_files_table_name == all_my_files_current_files_table_name:
             
             total_archiveable_count = len( current_timestamps )
             
         else:
             
-            ( total_archiveable_count, ) = self._Execute( f'SELECT COUNT( * ) FROM {current_files_table_name} CROSS JOIN {media_current_files_table_name} USING ( hash_id );' ).fetchone()
+            ( total_archiveable_count, ) = self._Execute( f'SELECT COUNT( * ) FROM {current_files_table_name} CROSS JOIN {all_my_files_current_files_table_name} USING ( hash_id );' ).fetchone()
             
         
         total_archive_files = total_archiveable_count - total_inbox_files
@@ -3068,12 +3183,12 @@ class DB( HydrusDB.HydrusDB ):
                 
                 step_timestamp = combined_timestamps_with_deltas[0][0]
                 
-                for ( archived_timestamp, inbox_delta, archive_delta ) in combined_timestamps_with_deltas:
+                for ( timestamp, inbox_delta, archive_delta ) in combined_timestamps_with_deltas:
                     
-                    while archived_timestamp < step_timestamp - step_gap:
+                    while timestamp < step_timestamp - step_gap:
                         
-                        inbox_file_history.append( ( archived_timestamp, total_inbox_files ) )
-                        archive_file_history.append( ( archived_timestamp, total_archive_files ) )
+                        inbox_file_history.append( ( timestamp, total_inbox_files ) )
+                        archive_file_history.append( ( timestamp, total_archive_files ) )
                         
                         step_timestamp -= step_gap
                         
@@ -3101,35 +3216,12 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( missing_hash_ids ) > 0:
             
-            missing_hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = missing_hash_ids )
-            
             with self._MakeTemporaryIntegerTable( missing_hash_ids, 'hash_id' ) as temp_table_name:
                 
-                # temp hashes to metadata
-                hash_ids_to_info = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, missing_hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_table_name ) ) }
-                
-                hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( temp_table_name )
+                missing_file_info_managers = self._GenerateFileInfoManagers( hash_ids, temp_table_name )
                 
             
-            # build it
-            
-            for hash_id in missing_hash_ids:
-                
-                if hash_id in hash_ids_to_info:
-                    
-                    file_info_manager = hash_ids_to_info[ hash_id ]
-                    
-                else:
-                    
-                    hash = missing_hash_ids_to_hashes[ hash_id ]
-                    
-                    file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
-                    
-                
-                file_info_manager.blurhash = hash_ids_to_blurhashes.get( hash_id, None )
-                
-                file_info_managers.append( file_info_manager )
-                
+            file_info_managers.extend( missing_file_info_managers )
             
         
         if sorted:
@@ -3575,7 +3667,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # everything here is temp hashes to metadata
                 
-                hash_ids_to_info = { hash_id : ClientMediaManagers.FileInfoManager( hash_id, missing_hash_ids_to_hashes[ hash_id ], size, mime, width, height, duration, num_frames, has_audio, num_words ) for ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) in self._Execute( 'SELECT * FROM {} CROSS JOIN files_info USING ( hash_id );'.format( temp_table_name ) ) }
+                file_info_managers = self._GenerateFileInfoManagers( hash_ids, temp_table_name )
+                
+                hash_ids_to_file_info_managers = { file_info_manager.hash_id : file_info_manager for file_info_manager in file_info_managers }
                 
                 (
                     hash_ids_to_current_file_service_ids_to_timestamps,
@@ -3585,31 +3679,26 @@ class DB( HydrusDB.HydrusDB ):
                     hash_ids_to_petitioned_file_service_ids
                 ) = self.modules_files_storage.GetHashIdsToServiceInfoDicts( temp_table_name )
                 
-                hash_ids_to_urls = self.modules_url_map.GetHashIdsToURLs( hash_ids_table_name = temp_table_name )
-                
-                hash_ids_to_service_ids_and_filenames = self.modules_service_paths.GetHashIdsToServiceIdsAndFilenames( temp_table_name )
-                
-                hash_ids_to_local_ratings = self.modules_ratings.GetHashIdsToRatings( temp_table_name )
-                
-                hash_ids_to_names_and_notes = self.modules_notes_map.GetHashIdsToNamesAndNotes( temp_table_name )
-                
-                hash_ids_to_file_viewing_stats = self.modules_files_viewing_stats.GetHashIdsToFileViewingStatsRows( temp_table_name )
-                
-                hash_ids_to_half_initialised_timestamp_managers = self.modules_files_timestamps.GetHashIdsToHalfInitialisedTimestampsManagers( hash_ids, temp_table_name )
-                
-                hash_ids_to_local_file_deletion_reasons = self.modules_files_storage.GetHashIdsToFileDeletionReasons( temp_table_name )
-                
                 hash_ids_to_current_file_service_ids = { hash_id : list( file_service_ids_to_timestamps.keys() ) for ( hash_id, file_service_ids_to_timestamps ) in hash_ids_to_current_file_service_ids_to_timestamps.items() }
                 
                 hash_ids_to_tags_managers = self._GetForceRefreshTagsManagersWithTableHashIds( missing_hash_ids, temp_table_name, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
                 
-                hash_ids_to_pixel_hashes = self.modules_similar_files.GetHashIdsToPixelHashes( temp_table_name )
-                hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( temp_table_name )
+                # TODO: it is a little tricky, but it would be nice to have 'gettimestampmanagers' and 'getlocationsmanagers' here
+                # don't forget that timestamp is held by both the media result and the locations manager, so either give it to location manager entirely for KISS or have another think
                 
-                has_transparency_hash_ids = self.modules_files_metadata_basic.GetHasTransparencyHashIds( temp_table_name )
-                has_exif_hash_ids = self.modules_files_metadata_basic.GetHasEXIFHashIds( temp_table_name )
-                has_human_readable_embedded_metadata_hash_ids = self.modules_files_metadata_basic.GetHasHumanReadableEmbeddedMetadataHashIds( temp_table_name )
-                has_icc_profile_hash_ids = self.modules_files_metadata_basic.GetHasICCProfileHashIds( temp_table_name )
+                hash_ids_to_half_initialised_timestamp_managers = self.modules_files_timestamps.GetHashIdsToHalfInitialisedTimestampsManagers( hash_ids, temp_table_name )
+                
+                hash_ids_to_urls = self.modules_url_map.GetHashIdsToURLs( hash_ids_table_name = temp_table_name )
+                
+                hash_ids_to_service_ids_and_filenames = self.modules_service_paths.GetHashIdsToServiceIdsAndFilenames( temp_table_name )
+                
+                hash_ids_to_local_file_deletion_reasons = self.modules_files_storage.GetHashIdsToFileDeletionReasons( temp_table_name )
+                
+                hash_ids_to_file_viewing_stats = self.modules_files_viewing_stats.GetHashIdsToFileViewingStatsRows( temp_table_name )
+                
+                hash_ids_to_local_ratings = self.modules_ratings.GetHashIdsToRatings( temp_table_name )
+                
+                hash_ids_to_names_and_notes = self.modules_notes_map.GetHashIdsToNamesAndNotes( temp_table_name )
                 
             
             # build it
@@ -3620,6 +3709,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for hash_id in missing_hash_ids:
                 
+                file_info_manager = hash_ids_to_file_info_managers[ hash_id ]
                 tags_manager = hash_ids_to_tags_managers[ hash_id ]
                 
                 #
@@ -3702,24 +3792,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                 
                 #
-                
-                if hash_id in hash_ids_to_info:
-                    
-                    file_info_manager = hash_ids_to_info[ hash_id ]
-                    
-                else:
-                    
-                    hash = missing_hash_ids_to_hashes[ hash_id ]
-                    
-                    file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash )
-                    
-                
-                file_info_manager.has_transparency = hash_id in has_transparency_hash_ids
-                file_info_manager.has_exif = hash_id in has_exif_hash_ids
-                file_info_manager.has_human_readable_embedded_metadata = hash_id in has_human_readable_embedded_metadata_hash_ids
-                file_info_manager.has_icc_profile = hash_id in has_icc_profile_hash_ids
-                file_info_manager.pixel_hash = hash_ids_to_pixel_hashes.get( hash_id, None )
-                file_info_manager.blurhash = hash_ids_to_blurhashes.get( hash_id, None )
                 
                 missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
                 
@@ -4876,7 +4948,7 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            file_info_manager = ClientMediaManagers.FileInfoManager( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
+            file_info_manager = self._GetFileInfoManagers( [ hash_id ] )[0]
             
             now = HydrusTime.GetNow()
             
@@ -9949,6 +10021,71 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 555:
+            
+            if not self._TableExists( 'files_info_forced_filetypes' ):
+                
+                self._Execute( 'CREATE TABLE IF NOT EXISTS main.files_info_forced_filetypes ( hash_id INTEGER PRIMARY KEY, forced_mime INTEGER );' )
+                
+                self._CreateIndex( 'files_info_forced_filetypes', [ 'forced_mime' ] )
+                
+            
+            try:
+                
+                self._controller.frame_splash_status.SetSubtext( f'scheduling some maintenance work' )
+                
+                all_local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+                
+                with self._MakeTemporaryIntegerTable( all_local_hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    def ask_what_to_do_thumb_regen():
+                        
+                        message = 'Animated GIF and APNGs recently gained better thumbnail generation tech, with transparency support and "generate it x% in" scanning. Would you like your client to regenerate all your animation thumbnails?'
+                        message += '\n\n'
+                        message += 'I recommend saying yes, but if you already regenerated these thumbs in the past couple of weeks, or you have set thumbnails to always generate from the first frame of an animation, or have other reasons to put off a big file maintenance job, then choose no.'
+                        
+                        from hydrus.client.gui import ClientGUIDialogsQuick
+                        
+                        result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Regen animation thumbnails?' )
+                        
+                        return result == QW.QDialog.Accepted
+                        
+                    
+                    do_thumb_regen = self._controller.CallBlockingToQt( None, ask_what_to_do_thumb_regen )
+                    
+                    if do_thumb_regen:
+                        
+                        hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {HydrusData.SplayListForDB( [ HC.ANIMATION_GIF, HC.ANIMATION_APNG ] )};', ) )
+                        self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FORCE_THUMBNAIL )
+                        
+                    
+                    hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_hash_ids_table_name} CROSS JOIN files_info USING ( hash_id ) WHERE mime IN {HydrusData.SplayListForDB( [ HC.ANIMATION_UGOIRA, HC.APPLICATION_CBZ ] )};', ) )
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some file updates failed to schedule! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                self._Execute( 'DELETE FROM archive_timestamps WHERE hash_id IN ( SELECT hash_id FROM file_inbox );' )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Some database cleanup failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10448,6 +10585,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'file_maintenance_cancel_jobs': self.modules_files_maintenance_queue.CancelJobs( *args, **kwargs )
         elif action == 'file_maintenance_clear_jobs': self.modules_files_maintenance.ClearJobs( *args, **kwargs )
         elif action == 'fix_logically_inconsistent_mappings': self._FixLogicallyInconsistentMappings( *args, **kwargs )
+        elif action == 'force_filetype': self._ForceFiletypes( *args, **kwargs )
         elif action == 'ideal_client_files_locations': self.modules_files_physical_storage.SetIdealClientFilesLocations( *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'import_update': self._ImportUpdate( *args, **kwargs )

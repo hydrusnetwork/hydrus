@@ -16,6 +16,7 @@ from hydrus.core.images import HydrusImageOpening
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientFiles
 from hydrus.client import ClientPDFHandling
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
@@ -597,14 +598,14 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
         
         BLOCK_SIZE = 64
         
-        if len( applicable_media ) > BLOCK_SIZE:
-            
-            HG.client_controller.pub( 'message', job_status )
-            
-        
         pauser = HydrusThreading.BigJobPauser()
         
         num_to_do = len( applicable_media )
+        
+        if num_to_do > BLOCK_SIZE:
+            
+            HG.client_controller.pub( 'message', job_status )
+            
         
         now = HydrusTime.GetNow()
         
@@ -663,6 +664,104 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     job = ClientGUIAsync.AsyncQtJob( win, work_callable, publish_callable )
     
     job.start()
+    
+
+def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    # boot a panel, it shows the user what current mimes are, what forced mimes are, and they have the choice to set all to x
+    # if it comes back yes, we save to db
+    
+    medias = ClientMedia.FlattenMedia( medias )
+    
+    file_info_managers = [ media.GetFileInfoManager() for media in medias ]
+    
+    original_mimes_count = collections.Counter( file_info_manager.GetOriginalMime() for file_info_manager in file_info_managers )
+    forced_mimes_count = collections.Counter( file_info_manager.mime for file_info_manager in file_info_managers if file_info_manager.FiletypeIsForced() )
+    
+    with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'force filetypes' ) as dlg:
+        
+        panel = ClientGUIScrolledPanelsEdit.EditFilesForcedFiletypePanel( dlg, original_mimes_count, forced_mimes_count )
+        
+        dlg.SetPanel( panel )
+        
+        if dlg.exec() == QW.QDialog.Accepted:
+            
+            forced_mime = panel.GetValue()
+            
+            def work_callable():
+                
+                job_status = ClientThreading.JobStatus( cancellable = True )
+                
+                job_status.SetStatusTitle( 'forcing filetypes' )
+                
+                BLOCK_SIZE = 64
+                
+                pauser = HydrusThreading.BigJobPauser()
+                
+                num_to_do = len( medias )
+                
+                if num_to_do > BLOCK_SIZE:
+                    
+                    HG.client_controller.pub( 'message', job_status )
+                    
+                
+                for ( i, block_of_media ) in enumerate( HydrusLists.SplitListIntoChunks( medias, BLOCK_SIZE ) ):
+                    
+                    if job_status.IsCancelled():
+                        
+                        break
+                        
+                    
+                    job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+                    job_status.SetVariable( 'popup_gauge_1', ( i * BLOCK_SIZE, num_to_do ) )
+                    
+                    hashes = { media.GetHash() for media in block_of_media }
+                    
+                    HG.client_controller.WriteSynchronous( 'force_filetype', hashes, forced_mime )
+                    
+                    hashes_we_needed_to_dupe = set()
+                    
+                    for media in block_of_media:
+                        
+                        hash = media.GetHash()
+                        
+                        current_mime = media.GetMime()
+                        mime_to_move_to = forced_mime
+                        
+                        if mime_to_move_to is None:
+                            
+                            mime_to_move_to = media.GetFileInfoManager().GetOriginalMime()
+                            
+                        
+                        needed_to_dupe_the_file = HG.client_controller.client_files_manager.ChangeFileExt( hash, current_mime, mime_to_move_to )
+                        
+                        if needed_to_dupe_the_file:
+                            
+                            hashes_we_needed_to_dupe.add( hash )
+                            
+                        
+                    
+                    if len( hashes_we_needed_to_dupe ) > 0:
+                        
+                        HG.client_controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', hashes_we_needed_to_dupe, ClientFiles.REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + 3600 )
+                        
+                    
+                    pauser.Pause()
+                    
+                
+                job_status.FinishAndDismiss()
+                
+            
+            def publish_callable( result ):
+                
+                pass
+                
+            
+            job = ClientGUIAsync.AsyncQtJob( win, work_callable, publish_callable )
+            
+            job.start()
+            
+        
     
 
 def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton ):

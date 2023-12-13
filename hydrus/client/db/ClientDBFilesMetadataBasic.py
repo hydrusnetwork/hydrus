@@ -26,6 +26,10 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             ( [ 'num_frames' ], False, 400 )
         ]
         
+        index_generation_dict[ 'main.files_info_forced_filetypes' ] = [
+            ( [ 'forced_mime' ], False, 556 )
+        ]
+        
         return index_generation_dict
         
     
@@ -33,6 +37,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         
         return {
             'main.files_info' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, size INTEGER, mime INTEGER, width INTEGER, height INTEGER, duration INTEGER, num_frames INTEGER, has_audio INTEGER_BOOLEAN, num_words INTEGER );', 400 ),
+            'main.files_info_forced_filetypes' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, forced_mime INTEGER );', 556 ),
             'main.has_icc_profile' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 465 ),
             'main.has_exif' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
             'main.has_human_readable_embedded_metadata' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY );', 505 ),
@@ -101,6 +106,11 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     def GetHashIdsToBlurhashes( self, hash_ids_table_name: str ):
         
         return dict( self._Execute( 'SELECT hash_id, blurhash FROM {} CROSS JOIN blurhashes USING ( hash_id );'.format( hash_ids_table_name ) ) )
+        
+    
+    def GetHashIdsToForcedFiletypes( self, hash_ids_table_name: str ):
+        
+        return dict( self._Execute( 'SELECT hash_id, forced_mime FROM {} CROSS JOIN files_info_forced_filetypes USING ( hash_id );'.format( hash_ids_table_name ) ) )
         
     
     def GetHasICCProfile( self, hash_id: int ):
@@ -182,6 +192,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
             
             return [
                 ( 'files_info', 'hash_id' ),
+                ( 'files_info_forced_filetypes', 'hash_id' ),
                 ( 'has_exif', 'hash_id' ),
                 ( 'has_human_readable_embedded_metadata', 'hash_id' ),
                 ( 'has_icc_profile', 'hash_id' ),
@@ -212,6 +223,28 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         total_size = self._GetSumResult( result )
         
         return total_size
+        
+    
+    def SetForcedFiletype( self, hash_id: int, forced_mime: typing.Optional[ int ] ):
+        
+        self._Execute( 'DELETE FROM files_info_forced_filetypes WHERE hash_id = ?;', ( hash_id, ) )
+        
+        if forced_mime is not None:
+            
+            result = self._Execute( 'SELECT mime FROM files_info WHERE hash_id = ?;', ( hash_id, ) ).fetchone()
+            
+            if result is not None:
+                
+                ( original_mime, ) = result
+                
+                if original_mime == forced_mime:
+                    
+                    return
+                    
+                
+            
+            self._Execute( 'INSERT INTO files_info_forced_filetypes ( hash_id, forced_mime ) VALUES ( ?, ? );', ( hash_id, forced_mime ) )
+            
         
     
     def SetHasEXIF( self, hash_id: int, has_exif: bool ):
@@ -247,6 +280,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
         else:
             
             self._Execute( 'DELETE FROM has_icc_profile WHERE hash_id = ?;', ( hash_id, ) )
+            
         
     
     def SetHasTransparency( self, hash_id: int, has_transparency: bool ):

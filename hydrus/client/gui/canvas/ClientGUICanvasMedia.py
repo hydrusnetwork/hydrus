@@ -244,7 +244,7 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
 
 def CalculateMediaSize( media, zoom ):
     
-    if media.GetMime() in HC.AUDIO:
+    if media.GetMime() in HC.AUDIO or None in media.GetResolution():
         
         ( original_width, original_height ) = ( 360, 240 )
         
@@ -1499,6 +1499,11 @@ class MediaContainer( QW.QWidget ):
         elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE:
             
             if self._media.IsStaticImage():
+                
+                if None in self._media.GetResolution():
+                    
+                    raise Exception( 'This media has no resolution!' )
+                    
                 
                 if isinstance( self._media_window, StaticImage ):
                     

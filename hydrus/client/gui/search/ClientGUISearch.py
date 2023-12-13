@@ -39,6 +39,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_EXIF,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_RATING,
@@ -582,6 +583,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_HUMAN_READABLE_EMBEDDED_METADATA, False ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False ), ), show_remove_button = False ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY:
             
@@ -610,6 +613,13 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True ), ), show_remove_button = False ) )
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False ), ), show_remove_button = False ) )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE:
+            
+            recent_predicate_types = []
+            
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False ), ), show_remove_button = False ) )
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HASH:
             

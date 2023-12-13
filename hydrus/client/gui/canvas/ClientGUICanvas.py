@@ -911,18 +911,20 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     ( width, height ) = self._current_media.GetResolution()
                     
-                    if action == CAC.SIMPLE_COPY_LITTLE_BMP and ( width > 1024 or height > 1024 ):
+                    if width is not None and height is not None:
                         
-                        target_resolution = HydrusImageHandling.GetThumbnailResolution( self._current_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
-                        
-                        copied = self._CopyBMPToClipboard( resolution = target_resolution )
-                        
-                    else:
-                        
-                        copied = self._CopyBMPToClipboard()
+                        if action == CAC.SIMPLE_COPY_LITTLE_BMP and ( width > 1024 or height > 1024 ):
+                            
+                            target_resolution = HydrusImageHandling.GetThumbnailResolution( self._current_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                            
+                            copied = self._CopyBMPToClipboard( resolution = target_resolution )
+                            
+                        else:
+                            
+                            copied = self._CopyBMPToClipboard()
+                            
                         
                     
-                
                 if action == CAC.SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE and not copied:
                     
                     self._CopyFileToClipboard()
@@ -1522,6 +1524,7 @@ class CanvasPanel( Canvas ):
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaActions.SetFilesForcedFiletypes, self, [ self._current_media ] )
             
             ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
@@ -1584,7 +1587,7 @@ class CanvasPanel( Canvas ):
 
                 ( width, height ) = self._current_media.GetResolution()
                 
-                if width > 1024 or height > 1024:
+                if width is not None and height is not None and ( width > 1024 or height > 1024 ):
                     
                     target_resolution = HydrusImageHandling.GetThumbnailResolution( self._current_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
                     
@@ -4646,6 +4649,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaActions.SetFilesForcedFiletypes, self, [ self._current_media ] )
             
             ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
@@ -4714,7 +4718,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 
                 ( width, height ) = self._current_media.GetResolution()
                 
-                if width > 1024 or height > 1024:
+                if width is not None and height is not None and ( width > 1024 or height > 1024 ):
                     
                     target_resolution = HydrusImageHandling.GetThumbnailResolution( self._current_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
                     

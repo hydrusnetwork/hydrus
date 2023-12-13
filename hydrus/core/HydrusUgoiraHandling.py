@@ -147,6 +147,20 @@ def ZipLooksLikeUgoira( path_to_zip ):
                 
             
         
+        try:
+            
+            path = HydrusArchiveHandling.GetCoverPagePath( zip_handle )
+            
+            with zip_handle.open( path ) as reader:
+                
+                reader.read()
+                
+            
+        except:
+            
+            return False
+            
+        
     
     return True
     

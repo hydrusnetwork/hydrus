@@ -1247,6 +1247,11 @@ class ClientFilesManager( object ):
     
     def ChangeFileExt( self, hash, old_mime, mime ):
         
+        if old_mime == mime:
+            
+            return False
+            
+        
         with self._rwlock.write:
             
             return self._ChangeFileExt( hash, old_mime, mime )
@@ -2470,7 +2475,7 @@ class FilesMaintenanceManager( object ):
             
             additional_data = ( size, mime, width, height, duration, num_frames, has_audio, num_words )
             
-            if mime != original_mime:
+            if mime != original_mime and not media_result.GetFileInfoManager().FiletypeIsForced():
                 
                 if not HydrusPaths.PathIsFree( path ):
                     

@@ -22,33 +22,36 @@ def ExtractSingleFileFromZip( path_to_zip, filename_to_extract, extract_into_fil
 
 def ExtractCoverPage( path_to_zip, extract_path ):
     
-    # this probably depth-first fails with a crazy multiple-nested-subdirectory structure, but we'll cross that bridge when we come to it
     with zipfile.ZipFile( path_to_zip ) as zip_handle:
         
-        all_file_paths = [ zip_info.filename for zip_info in zip_handle.infolist() if not zip_info.is_dir() ]
+        path = GetCoverPagePath( zip_handle )
         
-        HydrusData.HumanTextSort( all_file_paths )
-        
-        for path in all_file_paths:
+        with zip_handle.open( path ) as reader:
             
-            if '.' in path:
+            with open( extract_path, 'wb' ) as writer:
                 
-                ext_with_dot = '.' + path.split( '.' )[-1]
+                writer.write( reader.read() )
                 
-                if ext_with_dot in HC.IMAGE_FILE_EXTS:
-                    
-                    # this is the cover page
-                    
-                    with zip_handle.open( path ) as reader:
-                        
-                        with open( extract_path, 'wb' ) as writer:
-                            
-                            writer.write( reader.read() )
-                            
-                            return
-                            
-                        
-                    
+            
+        
+    
+
+def GetCoverPagePath( zip_handle: zipfile.ZipFile ):
+    
+    # this probably depth-first fails with a crazy multiple-nested-subdirectory structure, but we'll cross that bridge when we come to it
+    all_file_paths = [ zip_info.filename for zip_info in zip_handle.infolist() if not zip_info.is_dir() ]
+    
+    HydrusData.HumanTextSort( all_file_paths )
+    
+    for path in all_file_paths:
+        
+        if '.' in path:
+            
+            ext_with_dot = '.' + path.split( '.' )[-1]
+            
+            if ext_with_dot in HC.IMAGE_FILE_EXTS:
+                
+                return path
                 
             
         
@@ -68,17 +71,21 @@ def GetZipAsPath( path_to_zip, path_in_zip="" ):
 
 def IsOpenableZip( path_to_zip ):
     
+    ENCRYPTED_FLAG = 0x1
+    
     try:
         
         with zipfile.ZipFile( path_to_zip ) as zip_handle:
             
-            infos = zip_handle.infolist()
+            zip_infos = zip_handle.infolist()
             
-            if len( infos ) > 0:
+            for zip_info in zip_infos:
                 
-                with zip_handle.open( infos[0] ) as reader:
+                is_encrypted = zip_info.flag_bits & ENCRYPTED_FLAG
+                
+                if is_encrypted:
                     
-                    reader.read( 1024 )
+                    return False
                     
                 
             
@@ -153,11 +160,30 @@ def ZipLooksLikeCBZ( path_to_zip ):
                     
                     continue
                     
+                elif ext_with_dot in HC.VIDEO_FILE_EXTS:
+                    
+                    # this catches some zips nicely
+                    return False
+                    
                 else:
                     
                     num_weird_files += 1
                     
                 
+            
+        
+        try:
+            
+            path = GetCoverPagePath( zip_handle )
+            
+            with zip_handle.open( path ) as reader:
+                
+                reader.read()
+                
+            
+        except:
+            
+            return False
             
         
     

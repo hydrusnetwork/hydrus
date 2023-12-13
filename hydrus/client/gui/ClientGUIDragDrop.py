@@ -112,9 +112,16 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
         
         for ( i, ( m, original_path ) ) in enumerate( media_and_original_paths ):
             
-            filename = ClientExportingFiles.GenerateExportFilename( dnd_temp_dir, m, filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
-            
-            if filename == HC.mime_ext_lookup[ m.GetMime() ]:
+            try:
+                
+                filename = ClientExportingFiles.GenerateExportFilename( dnd_temp_dir, m, filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
+                
+                if filename == HC.mime_ext_lookup[ m.GetMime() ]:
+                    
+                    raise Exception()
+                    
+                
+            except:
                 
                 filename = ClientExportingFiles.GenerateExportFilename( dnd_temp_dir, m, fallback_filename_terms, i + 1, do_not_use_filenames = seen_export_filenames )
                 

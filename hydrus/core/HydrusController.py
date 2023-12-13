@@ -293,6 +293,21 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
             
         
     
+    def BlockingSafeShowCriticalMessage( self, title: str, message: str ):
+        
+        HydrusData.DebugPrint( title )
+        HydrusData.DebugPrint( message )
+        
+        input( 'Press Enter to continue.' )
+        
+    
+    def BlockingSafeShowMessage( self, message: str ):
+        
+        HydrusData.DebugPrint( message )
+        
+        input( 'Press Enter to continue.' )
+        
+    
     def ThreadSlotsAreAvailable( self, thread_type ) -> bool:
         
         with self._thread_slot_lock:

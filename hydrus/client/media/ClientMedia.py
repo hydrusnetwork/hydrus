@@ -48,6 +48,11 @@ def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
         return False
         
     
+    if media.IsStaticImage() and ( width is None or height is None ):
+        
+        return False
+        
+    
     return True
     
 
@@ -1830,19 +1835,20 @@ class MediaSingleton( Media ):
         
         file_info_manager = self._media_result.GetFileInfoManager()
         locations_manager = self._media_result.GetLocationsManager()
+        timestamps_manager = locations_manager.GetTimestampsManager()
         
         ( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
         
-        info_string = HydrusData.ToHumanBytes( size ) + ' ' + HC.mime_string_lookup[ mime ]
+        info_string = f'{HydrusData.ToHumanBytes( size )} {HC.mime_string_lookup[ mime ]}'
         
         if width is not None and height is not None:
             
-            info_string += ' ({})'.format( HydrusData.ConvertResolutionToPrettyString( ( width, height ) ) )
+            info_string += f' ({HydrusData.ConvertResolutionToPrettyString( ( width, height ) )})'
             
         
         if duration is not None:
             
-            info_string += ', ' + HydrusTime.MillisecondsToPrettyTime( duration )
+            info_string += f', {HydrusTime.MillisecondsToPrettyTime( duration )}'
             
         
         if num_frames is not None:
@@ -1853,23 +1859,30 @@ class MediaSingleton( Media ):
                 
             else:
                 
-                framerate_insert = ', {}fps'.format( round( num_frames / ( duration / 1000 ) ) )
+                framerate_insert = f', {round( num_frames / ( duration / 1000 ) )}fps'
                 
             
-            info_string += ' ({} frames{})'.format( HydrusData.ToHumanInt( num_frames ), framerate_insert )
+            info_string += f' ({HydrusData.ToHumanInt( num_frames )} frames{framerate_insert})'
             
         
         if has_audio:
             
-            info_string += ', {}'.format( HG.client_controller.new_options.GetString( 'has_audio_label' ) )
+            audio_label = HG.client_controller.new_options.GetString( 'has_audio_label' )
+            
+            info_string += f', {audio_label}'
             
         
-        if num_words is not None: info_string += ' (' + HydrusData.ToHumanInt( num_words ) + ' words)'
+        if num_words is not None:
+            
+            info_string += f' ({HydrusData.ToHumanInt( num_words )} words)'
+            
         
         lines = [ ( True, info_string ) ]
         
-        locations_manager = self._media_result.GetLocationsManager()
-        timestamps_manager = locations_manager.GetTimestampsManager()
+        if file_info_manager.FiletypeIsForced():
+            
+            lines.append( ( False, f'filetype was originally: {HC.mime_string_lookup[ file_info_manager.original_mime ]}' ) )
+            
         
         current_service_keys = locations_manager.GetCurrent()
         deleted_service_keys = locations_manager.GetDeleted()
