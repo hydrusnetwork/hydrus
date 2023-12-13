@@ -3218,7 +3218,7 @@ class DB( HydrusDB.HydrusDB ):
             
             with self._MakeTemporaryIntegerTable( missing_hash_ids, 'hash_id' ) as temp_table_name:
                 
-                missing_file_info_managers = self._GenerateFileInfoManagers( hash_ids, temp_table_name )
+                missing_file_info_managers = self._GenerateFileInfoManagers( missing_hash_ids, temp_table_name )
                 
             
             file_info_managers.extend( missing_file_info_managers )
