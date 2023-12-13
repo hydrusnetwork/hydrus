@@ -384,12 +384,12 @@ class Controller( HydrusController.HydrusController ):
             
         
     
-    def BlockingSafeShowCriticalMessage( self, title, message ):
+    def BlockingSafeShowCriticalMessage( self, title: str, message: str ):
         
         ClientGUIDialogsMessage.ShowCritical( self.gui, title, message )
         
     
-    def BlockingSafeShowMessage( self, message ):
+    def BlockingSafeShowMessage( self, message: str ):
         
         ClientGUIDialogsMessage.ShowInformation( self.gui, message )
         

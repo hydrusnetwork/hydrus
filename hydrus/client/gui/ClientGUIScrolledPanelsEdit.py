@@ -1771,6 +1771,142 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         return duplicate_content_merge_options
         
     
+
+class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, original_mimes_count: typing.Dict[ int, int ], forced_mimes_count: typing.Dict[ int, int ] ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        total_file_count = sum( original_mimes_count.values() )
+        total_forced_mimes_count = sum( forced_mimes_count.values() )
+        
+        self._forced_mime = ClientGUICommon.BetterChoice( self )
+        
+        if total_forced_mimes_count > 0:
+            
+            self._forced_mime.addItem( 'remove all forced filetypes', None )
+            
+        
+        do_not_allow_this_mime = None
+        
+        if len( original_mimes_count.keys() ) == 1:
+            
+            # we only have one filetype to start with, so don't let user say set to that
+            
+            do_not_allow_this_mime = list( original_mimes_count.keys() )[0]
+            
+        
+        general_mime_types = [
+            HC.GENERAL_IMAGE,
+            HC.GENERAL_ANIMATION,
+            HC.GENERAL_VIDEO,
+            HC.GENERAL_AUDIO,
+            HC.GENERAL_APPLICATION,
+            HC.GENERAL_IMAGE_PROJECT,
+            HC.GENERAL_APPLICATION_ARCHIVE
+        ]
+        
+        mimes_in_order = []
+        
+        for general_mime_type in general_mime_types:
+            
+            mimes_in_order.extend( HC.general_mimetypes_to_mime_groups[ general_mime_type ] )
+            
+        
+        mimes_in_order.append( HC.APPLICATION_HYDRUS_UPDATE_DEFINITIONS )
+        mimes_in_order.append( HC.APPLICATION_HYDRUS_UPDATE_CONTENT )
+        
+        for mime in mimes_in_order:
+            
+            if mime == do_not_allow_this_mime:
+                
+                continue
+                
+            
+            label = HC.mime_string_lookup[ mime ]
+            
+            if mime in HC.mimes_to_general_mimetypes:
+                
+                general_mime = HC.mimes_to_general_mimetypes[ mime ]
+                
+                label = f'{HC.mime_string_lookup[ general_mime ]} - {label}'
+                
+            
+            self._forced_mime.addItem( label, mime )
+            
+        
+        #
+        
+        original_filetype_statements = []
+        
+        for mime in mimes_in_order:
+            
+            if mime in original_mimes_count:
+                
+                count = original_mimes_count[ mime ]
+                
+                original_filetype_statements.append( f'{HydrusData.ToHumanInt(count)} {HC.mime_string_lookup[ mime ]}')
+                
+            
+        
+        original_filetype_summary = ', '.join( original_filetype_statements )
+        
+        if total_forced_mimes_count == 0:
+            
+            forced_filetype_summary = 'None are currently forced to be anything else.'
+            
+        else:
+            
+            forced_filetype_statements = []
+            
+            for mime in mimes_in_order:
+                
+                if mime in forced_mimes_count:
+                    
+                    count = forced_mimes_count[ mime ]
+                    
+                    forced_filetype_statements.append( f'{HydrusData.ToHumanInt(count)} {HC.mime_string_lookup[ mime ]}')
+                    
+                
+            
+            forced_filetype_summary = ', '.join( forced_filetype_statements )
+            
+            if total_forced_mimes_count == total_file_count:
+                
+                forced_filetype_summary = f'All are currently being forced: {forced_filetype_summary}.'
+                
+            else:
+                
+                forced_filetype_summary = f'{HydrusData.ToHumanInt(total_forced_mimes_count)} are currently being forced, to: {forced_filetype_summary}.'
+                
+            
+        
+        vbox = QP.VBoxLayout()
+        
+        text = 'WARNING: This is advanced and experimental! Be careful!'
+        text += '\n\n'
+        text += 'This will override what hydrus thinks the filetype is for all of these files. Files will be renamed to receive their new file extensions. The original filetype is not forgotten, and this can be undone.'
+        text += '\n\n'
+        text += f'Of the {HydrusData.ToHumanInt( total_file_count )} files, there are {original_filetype_summary}. {forced_filetype_summary}'
+        
+        st = ClientGUICommon.BetterStaticText( self, text )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._forced_mime, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        self.widget().setLayout( vbox )
+        
+    
+    def GetValue( self ):
+        
+        forced_mime = self._forced_mime.GetValue()
+        
+        return forced_mime
+        
+    
+
 class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, names_to_notes: typing.Dict[ str, str ], name_to_start_on: typing.Optional[ str ] ):
@@ -2914,6 +3050,7 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         return ( name, remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen )
         
     
+
 class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, info ):

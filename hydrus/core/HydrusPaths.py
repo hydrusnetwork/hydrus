@@ -266,6 +266,11 @@ def ElideFilenameOrDirectorySafely( name: str, num_characters_used_in_other_comp
             
         
     
+    if name == '':
+        
+        return name
+        
+    
     while len( name.encode( 'utf-8' ) ) > num_characters_available:
         
         name = name[:-1]

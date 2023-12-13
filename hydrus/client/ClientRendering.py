@@ -95,6 +95,11 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         self._num_frames = media.GetNumFrames()
         self._resolution = media.GetResolution()
         
+        if None in self._resolution:
+            
+            self._resolution = ( 100, 100 )
+            
+        
         self._icc_profile_bytes = None
         self._qt_colourspace = None
         

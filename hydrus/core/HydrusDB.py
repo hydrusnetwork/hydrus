@@ -397,23 +397,34 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def _InitDB( self ):
         
-        create_db = False
+        main_database_is_missing = False
         
-        db_path = os.path.join( self._db_dir, self._db_filenames[ 'main' ] )
+        main_db_path = os.path.join( self._db_dir, self._db_filenames[ 'main' ] )
         
-        if not os.path.exists( db_path ):
+        external_db_paths = [ os.path.join( self._db_dir, self._db_filenames[ db_name ] ) for db_name in self._db_filenames if db_name != 'main' ]
+        
+        existing_external_db_paths = [ external_db_path for external_db_path in external_db_paths if os.path.exists( external_db_path ) ]
+        
+        if os.path.exists( main_db_path ):
             
-            create_db = True
+            if len( existing_external_db_paths ) < len( external_db_paths ):
+                
+                external_paths_summary = '"{}"'.format( '", "'.join( [ path for path in external_db_paths if path not in existing_external_db_paths ] ) )
+                
+                message = f'While the main database file, "{main_db_path}", exists, the external files {external_paths_summary} do not!\n\nIf this is a surprise to you, you have probably had a hard drive failure. You must close this process immediately and diagnose what has happened. Check the "help my db is broke.txt" document in the install_dir/db directory for additional help.\n\nIf this is not a surprise, then you may continue if you wish, and hydrus will do its best to reconstruct the missing files. You will see more error prompts.'
+                
+                self._controller.BlockingSafeShowCriticalMessage( 'missing database file!', message )
+                
             
-            external_db_paths = [ os.path.join( self._db_dir, self._db_filenames[ db_name ] ) for db_name in self._db_filenames if db_name != 'main' ]
+        else:
             
-            existing_external_db_paths = [ external_db_path for external_db_path in external_db_paths if os.path.exists( external_db_path ) ]
+            main_database_is_missing = True
             
             if len( existing_external_db_paths ) > 0:
                 
-                message = 'Although the external files, "{}" do exist, the main database file, "{}", does not! This makes for an invalid database, and the program will now quit. Please contact hydrus_dev if you do not know how this happened or need help recovering from hard drive failure.'
+                external_paths_summary = '"{}"'.format( '", "'.join( existing_external_db_paths ) )
                 
-                message = message.format( ', '.join( existing_external_db_paths ), db_path )
+                message = f'Although the external files, {external_paths_summary} do exist, the main database file, "{main_db_path}", does not!\n\nThis makes for an invalid database, and the program will now quit. Please contact hydrus_dev if you do not know how this happened or need help recovering from hard drive failure.'
                 
                 raise HydrusExceptions.DBAccessException( message )
                 
@@ -421,14 +432,23 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         self._InitDBConnection()
         
+        version_is_missing = False
+        
         result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE type = ? AND name = ?;', ( 'table', 'version' ) ).fetchone()
         
         if result is None:
             
-            create_db = True
+            if not main_database_is_missing:
+                
+                message = f'The "version" table in your {main_db_path} database was missing.\n\nIf you have used this database many times before, then you have probably had a hard drive failure. You must close this process immediately and diagnose what has happened. Check the "help my db is broke.txt" document in the install_dir/db directory for additional help.\n\nIf this database is new, and you recently attempted to boot it for the first time, but it failed, then this is less of a worrying situation, and you can continue.'
+                
+                self._controller.BlockingSafeShowCriticalMessage( 'missing critical database table!', message )
+                
+            
+            version_is_missing = True
             
         
-        if create_db:
+        if main_database_is_missing or version_is_missing:
             
             self._is_first_start = True
             
@@ -652,11 +672,6 @@ class HydrusDB( HydrusDBBase.DBBase ):
     def _ReportUnderupdatedDB( self, version ):
         
         pass
-        
-    
-    def _ReportStatus( self, text ):
-        
-        HydrusData.Print( text )
         
     
     def _ShrinkMemory( self ):

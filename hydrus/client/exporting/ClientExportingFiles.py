@@ -175,6 +175,7 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
     
     return filename
     
+
 def GetExportPath():
     
     portable_path = HG.client_controller.options[ 'export_path' ]
@@ -568,7 +569,16 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 raise Exception( 'A file to be exported, hash "{}", was missing! You should run file maintenance (under database->maintenance->files) to check the files for the export folder\'s search, and possibly all your files.' )
                 
             
-            filename = GenerateExportFilename( self._path, media_result, terms, i + 1 )
+            try:
+                
+                filename = GenerateExportFilename( self._path, media_result, terms, i + 1 )
+                
+            except:
+                
+                fallback_filename_terms = ParseExportPhrase( '{hash}' )
+                
+                filename = GenerateExportFilename( self._path, media_result, fallback_filename_terms, i + 1 )
+                
             
             dest_path = os.path.normpath( os.path.join( self._path, filename ) )
             

@@ -102,6 +102,8 @@ class Predicate( Enum ):
     NO_HUMAN_READABLE_EMBEDDED_METADATA = auto()
     HAS_ICC_PROFILE = auto()
     NO_ICC_PROFILE = auto()
+    HAS_FORCED_FILETYPE = auto()
+    NO_FORCED_FILETYPE = auto()
     HAS_TAGS = auto()
     UNTAGGED = auto()
     NUM_OF_TAGS = auto()
@@ -225,6 +227,8 @@ SYSTEM_PREDICATES = {
     'no.*embedded.*metadata': (Predicate.NO_HUMAN_READABLE_EMBEDDED_METADATA, None, None, None),
     'has icc profile': (Predicate.HAS_ICC_PROFILE, None, None, None),
     'no icc profile': (Predicate.NO_ICC_PROFILE, None, None, None),
+    'has forced filetype': (Predicate.HAS_FORCED_FILETYPE, None, None, None),
+    'no forced filetype': (Predicate.NO_FORCED_FILETYPE, None, None, None),
     'has tags': (Predicate.HAS_TAGS, None, None, None),
     'untagged|no tags': (Predicate.UNTAGGED, None, None, None),
     'num(ber)?( of)? tags': (Predicate.NUM_OF_TAGS, Operators.RELATIONAL, Value.NATURAL, None),

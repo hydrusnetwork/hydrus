@@ -105,7 +105,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 555
+SOFTWARE_VERSION = 556
 CLIENT_API_VERSION = 57
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -1300,6 +1300,7 @@ mime_ext_lookup = {
 
 IMAGE_FILE_EXTS = { mime_ext_lookup[ mime ] for mime in IMAGES }
 IMAGE_FILE_EXTS.update( ( '.jpe', '.jpeg' ) )
+VIDEO_FILE_EXTS = { mime_ext_lookup[ mime ] for mime in VIDEO }
 
 ALLOWED_MIME_EXTENSIONS = [ mime_ext_lookup[ mime ] for mime in ALLOWED_MIMES ]
 

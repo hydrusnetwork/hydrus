@@ -1971,6 +1971,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     tlw.show()
                     
+                    if was_maximised:
+                        
+                        tlw.showMaximized()
+                        
+                    
                 
             
             self._have_shown_once = True
@@ -8007,6 +8012,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def REPEATINGBandwidth( self ):
         
+        if self._currently_minimised_to_system_tray:
+            
+            return
+            
+        
         global_tracker = self._controller.network_engine.bandwidth_manager.GetMySessionTracker()
         
         boot_time = self._controller.GetBootTime()
@@ -8101,6 +8111,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def REPEATINGPageUpdate( self ):
         
+        if self._currently_minimised_to_system_tray:
+            
+            return
+            
+        
         page = self.GetCurrentPage()
         
         if page is not None:
@@ -8127,6 +8142,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def REPEATINGUIUpdate( self ):
+        
+        if self._currently_minimised_to_system_tray:
+            
+            return
+            
         
         for window in list( self._ui_update_windows ):
             

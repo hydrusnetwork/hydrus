@@ -422,6 +422,9 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, True, 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE, False, 1 ) )
         
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, True, 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE, False, 1 ) )
+        
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( ( hash, ), 'sha256' ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( '0123456789abcdef' * 4 ), ), 'sha256' ), 0 ) )
         

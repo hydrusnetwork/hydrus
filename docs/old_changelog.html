@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_556"><a href="#version_556">version 556</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed, on a file drag and drop, the new export path eliding code from raising an error when the default export phrase would give an empty filename. e.g. if you set the export phrase as `[title]` and the file has no title. this no longer raises an error, and the fallback export phrase `{hash}` is again used instead. broadly speaking, most errors here are now handled better</li>
+                        <li>also, export folders will now fallback to using `{hash}` if their normal export filename raises an error</li>
+                        <li>holding down ctrl+shift+ while selecting thumbnails now does the same thing as a bare shift+ select. previously, it was unhelpfully interpreting this as a bare ctrl+ click</li>
+                        <li>I may have improved the stability of 'minimise to system tray'. this thing still hangs the UI for some users on a delayed restore, I do not for certain know why</li>
+                        <li>thanks to a user who figured out the new build script, the Docker package is now on Alpine 3.19, with more and newer python library support along with it</li>
+                        <li><h3>forced filetypes</h3></li>
+                        <li>you can now force files' filetypes. hit _right-click->manage->force filetype_ on thumbnails or the media viewer, and you'll get a new dialog that lets you force-reassign those files to be considered something else. changes take place immediately, and files are renamed on disk with their new file extensions, making 'open externally' work nicely. the original filetype is remembered, so this can be undone easily through the same dialog</li>
+                        <li>this is happening because of the cbz/zip/Ugoira work, where the distinction between one format and another is not always perfect. the tech will also be useful for 'arbitrary file import' support. in any case, if there is something you want to force one way or another, it should now be easy</li>
+                        <li>searching for system:filetype will recognise the forced filetypes, but there may be other, more advanced areas of the program that should but do not. please let me know how you get on!</li>
+                        <li>there is a new system predicate, `system:has/no forced filetype`, that lets you further filter for the files that have this set or not. it is under `system:file properties`. it is also parsable if you ever need to type it</li>
+                        <li>if a file gets a metadata rescan and becomes a different filetype, this affects the original filetype and not the forced. if they are now both the same, no big problem</li>
+                        <li>as a side thing, I cleaned up how file metadata is put together in the database during file search. we were in a limbo state a little while ago, with an api call that just needed limited data, but I was never comfortable with it. now everything goes through the same routine, and every 'file info manager' is fully fleshed out, no matter the caller</li>
+                        <li>_yes, if you set a zip as a jpeg, you are going to get weird errors when you click on them. I'll iron these things out a bit--and have already added several quick safety checks for apparent image files without resolution and so on--and I am interested in reports, but for the most part, don't be stupid here and you won't end up in a bad place_</li>
+                        <li><h3>filetypes</h3></li>
+                        <li>**you will be asked on update if you would like to regenerate all your animated GIF and APNG thumbnails. The new x%-in and transparency tech seems to be working well, so I'm rolling out the full regen to everyone**</li>
+                        <li>before verifying a zip is an Ugoira or a cbz, the client now test-reads the cover page it will use as a thumbnail just to make sure it isn't passworded or corrupt or whatever</li>
+                        <li>thanks to a user, the test for whether a a zip is encrypted is much faster and neater now</li>
+                        <li>if there is an obvious video in a zip file, this is now dispositive to it not being considered a cbz</li>
+                        <li>all cbz and Ugoira are going to get a metadata scan again to account for these stricter rules</li>
+                        <li><h3>Mr. Bones/file history chart</h3></li>
+                        <li>**if you have had some dodgy inbox/archive numbers in your file history chart, please check again and let me know what you see. if the numbers are still bad, try changing the search from the 'all my files'/'system:everything' default--any better?**</li>
+                        <li>fixed Mr. Bones undercounting deleted files on some very old clients (i.e. mine)</li>
+                        <li>improved accuracy of some archive/inbox time calculations for the file history chart by adjusting archive times to the file service removal time of that file, if it is earlier</li>
+                        <li>included some additional de-inbox events that were being missed in the file history chart by recognising that files in the inbox but removed from a domain are nonetheless a decrement to the inbox count</li>
+                        <li>on update, some old invalid archive records will be deleted, which will also help the file history chart</li>
+                        <li><h3>boot error handling</h3></li>
+                        <li>if you start the program with client.db/server.db but missing any of the auxiliary databases, the program now stops you before the new file creation starts with a blocking message saying what has happened. it advises whether you should quit the process now to diagnose the hard drive fault or attempt to continue with reconstruction</li>
+                        <li>if you start the program with client.db/server.db but the 'version' table is missing, you now get a special blocking message before the main db creation routine starts saying what has happened. it advises whether you should quit the process now to diagnose the hard drive fault or attempt to continue with initial creation</li>
+                        <li>the server gets a bit of 'safe blocking show message' tech this week, which prints this info to the console and asks for the user to hit enter to continue</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_555"><a href="#version_555">version 555</a></h2>
                     <ul>
                         <li><h3>Ugoira/CBZ/Zip</h3></li>

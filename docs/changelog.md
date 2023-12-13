@@ -7,6 +7,48 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 556](https://github.com/hydrusnetwork/hydrus/releases/tag/v556)
+
+### misc
+
+* fixed, on a file drag and drop, the new export path eliding code from raising an error when the default export phrase would give an empty filename. e.g. if you set the export phrase as `[title]` and the file has no title. this no longer raises an error, and the fallback export phrase `{hash}` is again used instead. broadly speaking, most errors here are now handled better
+* also, export folders will now fallback to using `{hash}` if their normal export filename raises an error
+* holding down ctrl+shift+ while selecting thumbnails now does the same thing as a bare shift+ select. previously, it was unhelpfully interpreting this as a bare ctrl+ click
+* I may have improved the stability of 'minimise to system tray'. this thing still hangs the UI for some users on a delayed restore, I do not for certain know why
+* thanks to a user who figured out the new build script, the Docker package is now on Alpine 3.19, with more and newer python library support along with it
+
+### forced filetypes
+
+* you can now force files' filetypes. hit _right-click->manage->force filetype_ on thumbnails or the media viewer, and you'll get a new dialog that lets you force-reassign those files to be considered something else. changes take place immediately, and files are renamed on disk with their new file extensions, making 'open externally' work nicely. the original filetype is remembered, so this can be undone easily through the same dialog
+* this is happening because of the cbz/zip/Ugoira work, where the distinction between one format and another is not always perfect. the tech will also be useful for 'arbitrary file import' support. in any case, if there is something you want to force one way or another, it should now be easy
+* searching for system:filetype will recognise the forced filetypes, but there may be other, more advanced areas of the program that should but do not. please let me know how you get on!
+* there is a new system predicate, `system:has/no forced filetype`, that lets you further filter for the files that have this set or not. it is under `system:file properties`. it is also parsable if you ever need to type it
+* if a file gets a metadata rescan and becomes a different filetype, this affects the original filetype and not the forced. if they are now both the same, no big problem
+* as a side thing, I cleaned up how file metadata is put together in the database during file search. we were in a limbo state a little while ago, with an api call that just needed limited data, but I was never comfortable with it. now everything goes through the same routine, and every 'file info manager' is fully fleshed out, no matter the caller
+* _yes, if you set a zip as a jpeg, you are going to get weird errors when you click on them. I'll iron these things out a bit--and have already added several quick safety checks for apparent image files without resolution and so on--and I am interested in reports, but for the most part, don't be stupid here and you won't end up in a bad place_
+
+### filetypes
+
+* **you will be asked on update if you would like to regenerate all your animated GIF and APNG thumbnails. The new x%-in and transparency tech seems to be working well, so I'm rolling out the full regen to everyone**
+* before verifying a zip is an Ugoira or a cbz, the client now test-reads the cover page it will use as a thumbnail just to make sure it isn't passworded or corrupt or whatever
+* thanks to a user, the test for whether a a zip is encrypted is much faster and neater now
+* if there is an obvious video in a zip file, this is now dispositive to it not being considered a cbz
+* all cbz and Ugoira are going to get a metadata scan again to account for these stricter rules
+
+### Mr. Bones/file history chart
+
+* **if you have had some dodgy inbox/archive numbers in your file history chart, please check again and let me know what you see. if the numbers are still bad, try changing the search from the 'all my files'/'system:everything' default--any better?**
+* fixed Mr. Bones undercounting deleted files on some very old clients (i.e. mine)
+* improved accuracy of some archive/inbox time calculations for the file history chart by adjusting archive times to the file service removal time of that file, if it is earlier
+* included some additional de-inbox events that were being missed in the file history chart by recognising that files in the inbox but removed from a domain are nonetheless a decrement to the inbox count
+* on update, some old invalid archive records will be deleted, which will also help the file history chart
+
+### boot error handling
+
+* if you start the program with client.db/server.db but missing any of the auxiliary databases, the program now stops you before the new file creation starts with a blocking message saying what has happened. it advises whether you should quit the process now to diagnose the hard drive fault or attempt to continue with reconstruction
+* if you start the program with client.db/server.db but the 'version' table is missing, you now get a special blocking message before the main db creation routine starts saying what has happened. it advises whether you should quit the process now to diagnose the hard drive fault or attempt to continue with initial creation
+* the server gets a bit of 'safe blocking show message' tech this week, which prints this info to the console and asks for the user to hit enter to continue
+
 ## [Version 555](https://github.com/hydrusnetwork/hydrus/releases/tag/v555)
 
 ### Ugoira/CBZ/Zip
@@ -404,32 +446,3 @@ title: Changelog
 * cleaned up some filetype parsing code that was getting a little messy, also reduced some overhead
 * unified the thumbnail/file filetype parsing a little, with better fallback states when a hydrus thumbnail happens for some reason not to be a jpeg or png
 * fixed an out of date menu reference in the 'help my media files are broke.txt' document. 'clear orphan files' is under 'file maintenance' now, not 'db maintenance'
-
-## [Version 546](https://github.com/hydrusnetwork/hydrus/releases/tag/v546)
-
-### misc
-
-* fixed the recent messed up colours in PSD thumbnail generation. I enthusiastically 'fixed' a problem with greyscale PSD thumbs at the last minute last week and accidentally swapped the RGB colour channels on coloured ones. I changed the badly named method that caused this mixup, and all existing PSD thumbs will be regenerated (issue #1448)
-* fixed up some borked button-enabling and status-displaying logic in the file history chart. the cancel process should work properly on repeat now
-* made two logical fixes to the archive count in the new file history chart when you have a specific search--archive times for files you deleted are now included properly, and files that are not eligible for archiving are discluded from the initial count. this _should_ make the inbox and archive lines, which were often way too high during specific searches, a little better behaved. let me know what you see!
-* added a checkbox to _options->thumbnails_ to turn off the new blurhash thumbnail fallback
-* 'this has exif data, the other does not' statements are now calculated from cached knowledge--loading pairs in the duplicate filter should be faster now
-* some larger image files with clever metadata should import just a little faster now
-* if the process isn't explicitly frozen into an executable or a macOS App, it is now considered 'running from source'. various unusual 'running from source' modes (e.g. booting from various scripts that mess with argv) should now be recognised better
-
-### boring code cleanup
-
-* moved 'recent tags' code to a new client db module
-* moved ratings code to a new client db module
-* moved some db integrity checking code to the db maintenance module
-* moved the orphan table checking code to the db maintenance module
-* fixed the orphan table checking code, which was under-detecting orphan tables
-* moved some final references to sibling/parent tables from main db method to sibling and parent modules
-* moved most of the image metadata functions (exif, icc profile, human-readable, subsampling, quantization quality estimate) to a new `HydrusImageMetadata` file
-* moved the new blurhash methods to a new `HydrusBlurhash` file
-* moved various normalisation routines to a new `HydrusImageNormalisation` file
-* moved various channel scanning and adjusting code to a new `HydrusImageColours` file
-* moved the hydrus image files to the new 'hydrus.core.images' module
-* cleaned up some image loading code
-* deleted ancient and no-longer-used client db code regarding imageboard definitions, status texts, and more
-* removed the ancient `OPENCV_OK` fallback code, which was only used, superfluously, in a couple of final places. OpenCV is not optional to run hydrus, server or client
