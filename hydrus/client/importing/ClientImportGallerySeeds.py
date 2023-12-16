@@ -447,19 +447,19 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             parsing_text = network_job.GetContentText()
             
-            actual_fetched_url = network_job.GetActualFetchedURL()
+            redirected_url = network_job.GetRedirectedUrl()
             
             do_parse = True
             
-            if actual_fetched_url != url_to_check:
+            if redirected_url is not None:
                 
-                ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( redirected_url )
                 
                 if url_type == HC.URL_TYPE_GALLERY:
                     
                     if can_parse:
                         
-                        gallery_url = actual_fetched_url
+                        gallery_url = redirected_url
                         
                         url_for_child_referral = gallery_url
                         
@@ -480,7 +480,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     from hydrus.client.importing import ClientImportFileSeeds
                     
-                    file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, actual_fetched_url )
+                    file_seed = ClientImportFileSeeds.FileSeed( ClientImportFileSeeds.FILE_SEED_TYPE_URL, redirected_url )
                     
                     file_seed.SetReferralURL( url_for_child_referral )
 

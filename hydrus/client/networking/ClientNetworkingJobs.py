@@ -180,6 +180,8 @@ class NetworkJob( object ):
         self._actual_fetched_url = self._url
         self._temp_path = temp_path
         
+        self._redirected_url = None
+        
         self._response_server_header = None
         self._response_last_modified = None
         
@@ -785,11 +787,11 @@ class NetworkJob( object ):
             snc = self._session_network_context
             
         
-        session = self.engine.session_manager.GetSession( snc )
+        session: requests.Session = self.engine.session_manager.GetSession( snc )
         
         ( connect_timeout, read_timeout ) = self._GetTimeouts()
         
-        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ), allow_redirects  = False )
         
         with self._lock:
             
@@ -1221,6 +1223,14 @@ class NetworkJob( object ):
             
         
     
+    def GetRedirectedUrl( self ):
+        
+        with self._lock:
+            
+            return self._redirected_url
+            
+        
+    
     def GetContentBytes( self ):
         
         with self._lock:
@@ -1312,7 +1322,7 @@ class NetworkJob( object ):
             
         
     
-    def GetSession( self ):
+    def GetSession( self ) -> requests.Session:
         
         with self._lock:
             
@@ -1554,20 +1564,21 @@ class NetworkJob( object ):
                     
                     response = self._SendRequestAndGetResponse()
                     
-                    # I think tbh I would rather tell requests not to do 3XX, which is possible with allow_redirects = False on request, and then just raise various 3XX exceptions with url info, so I can requeue easier and keep a record
-                    # figuring out correct new url seems a laugh, requests has slight helpers, but lots of exceptions
-                    # SessionRedirectMixin here https://requests.readthedocs.io/en/latest/_modules/requests/sessions/
-                    # but this will do as a patch for now
-                    self._actual_fetched_url = response.url
-                    
-                    if self._actual_fetched_url != self._url and HG.network_report_mode:
+                    if response.is_redirect:
                         
-                        HydrusData.ShowText( 'Network Jobs Redirect: {} -> {}'.format( self._url, self._actual_fetched_url ) )
+                        session = self.GetSession()
+                        
+                        self._redirected_url = session.get_redirect_target( response )
+                        
+                        if HG.network_report_mode:
+                            
+                            HydrusData.ShowText( 'Network Jobs Redirect: {} -> {}'.format( self._url, self._redirected_url ) )
+                            
                         
                     
-                    self._ParseFirstResponseHeaders( response )
-                    
-                    if response.ok:
+                    elif response.ok:
+                        
+                        self._ParseFirstResponseHeaders( response )
                         
                         with self._lock:
                             
@@ -1631,6 +1642,8 @@ class NetworkJob( object ):
                             
                         
                     else:
+                        
+                        self._ParseFirstResponseHeaders( response )
                         
                         with self._lock:
                             
