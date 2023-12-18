@@ -33,7 +33,6 @@ from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingFunctions
-from hydrus.client.networking import ClientNetworkingJobs
 
 FILE_SEED_TYPE_HDD = 0
 FILE_SEED_TYPE_URL = 1
@@ -642,7 +641,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             url_to_fetch = HG.client_controller.network_engine.domain_manager.GetURLToFetch( file_url )
             
-            network_job: ClientNetworkingJobs.NetworkJob  = network_job_factory( 'GET', url_to_fetch, temp_path = temp_path, referral_url = referral_url )
+            network_job = network_job_factory( 'GET', url_to_fetch, temp_path = temp_path, referral_url = referral_url )
             
             for ( key, value ) in self._request_headers.items():
                 
@@ -668,15 +667,13 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 self._AddPrimaryURLs( ( url_to_fetch, ) )
                 
             
-            #actual_fetched_url = network_job.GetActualFetchedURL()
+            actual_fetched_url = network_job.GetActualFetchedURL()
             
-            redirected_url = network_job.GetRedirectedUrl()
-            
-            if redirected_url is not None:
+            if actual_fetched_url not in ( file_url, url_to_fetch ):
                 
-                self._AddPrimaryURLs( ( redirected_url, ) )
+                self._AddPrimaryURLs( ( actual_fetched_url, ) )
                 
-                ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( redirected_url )
+                ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                 
                 if actual_url_type == HC.URL_TYPE_POST and actual_can_parse:
                     
@@ -684,7 +681,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if file_seed_cache is None:
                         
-                        raise Exception( 'The downloader thought it had a raw file url with "{}", but that redirected to the apparent Post URL "{}", but then there was no file log in which to queue that download!'.format( file_url, redirected_url ) )
+                        raise Exception( 'The downloader thought it had a raw file url with "{}", but that redirected to the apparent Post URL "{}", but then there was no file log in which to queue that download!'.format( file_url, actual_fetched_url ) )
                         
                     else:
                         
@@ -692,10 +689,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         if original_url_type == actual_url_type and original_match_name == actual_match_name:
                             
-                            raise Exception( 'The downloader thought it had a raw file url with "{}", but that redirected to the apparent Post URL "{}". As that URL has the same class as this import job\'s original URL, we are stopping here in case this is a looping redirect!'.format( file_url, redirected_url ) )
+                            raise Exception( 'The downloader thought it had a raw file url with "{}", but that redirected to the apparent Post URL "{}". As that URL has the same class as this import job\'s original URL, we are stopping here in case this is a looping redirect!'.format( file_url, actual_fetched_url ) )
                             
                         
-                        file_seed = FileSeed( FILE_SEED_TYPE_URL, redirected_url )
+                        file_seed = FileSeed( FILE_SEED_TYPE_URL, actual_fetched_url )
                         
                         file_seed.SetReferralURL( file_url )
                         
@@ -1383,19 +1380,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     parsing_text = network_job.GetContentText()
                     
-                    redirected_url = network_job.GetRedirectedUrl()
+                    actual_fetched_url = network_job.GetActualFetchedURL()
                     
-                    if redirected_url is not None:
+                    if actual_fetched_url != url_to_check:
                         
                         # we have redirected, a 3XX response
                         
-                        ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( redirected_url )
+                        ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                         
                         if actual_url_type == HC.URL_TYPE_POST and actual_can_parse:
                             
-                            self._AddPrimaryURLs( ( redirected_url, ) )
+                            self._AddPrimaryURLs( ( actual_fetched_url, ) )
                             
-                            post_url = redirected_url
+                            post_url = actual_fetched_url
                             
                             url_for_child_referral = post_url
                             
