@@ -73,6 +73,7 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 | pdf      | `.pdf`    | `application/pdf`               |     ✅     |         ❌         | 300 DPI assumed for resolution. No thumbnails for encrypted PDFs. |
 | epub     | `.epub`   | `application/epub+zip`          |     ❌     |         ❌         |                                                                   |
 | djvu     | `.djvu`   | `image/vnd.djvu`                |     ❌     |         ❌         |                                                                   |
+| rtf      | `.rtf`    | `application/rtf`               |     ❌     |         ❌         |                                                                   |
 
 
 ## Image Project Files
