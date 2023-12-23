@@ -740,6 +740,7 @@ APPLICATION_EPUB = 71
 APPLICATION_DJVU = 72
 APPLICATION_CBZ = 73
 ANIMATION_UGOIRA = 74
+APPLICATION_RTF = 75
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -792,6 +793,7 @@ SEARCHABLE_MIMES = {
     APPLICATION_PDF,
     APPLICATION_EPUB,
     APPLICATION_DJVU,
+    APPLICATION_RTF,
     APPLICATION_ZIP,
     APPLICATION_RAR,
     APPLICATION_7Z,
@@ -886,7 +888,8 @@ APPLICATIONS = [
     APPLICATION_FLASH,
     APPLICATION_PDF,
     APPLICATION_EPUB,
-    APPLICATION_DJVU
+    APPLICATION_DJVU,
+    APPLICATION_RTF
 ]
 
 IMAGE_PROJECT_FILES = [
@@ -1030,6 +1033,8 @@ mime_enum_lookup = {
     'image/vnd.djvu' : APPLICATION_DJVU,
     'image/vnd.djvu+multipage' : APPLICATION_DJVU,
     'image/x-djvu' : APPLICATION_DJVU,
+    'text/rtf' : APPLICATION_RTF,
+    'application/rtf': APPLICATION_RTF,
     'application/vnd.comicbook+zip' : APPLICATION_CBZ,
     'application/zip' : APPLICATION_ZIP,
     'application/vnd.rar' : APPLICATION_RAR,
@@ -1098,6 +1103,7 @@ mime_string_lookup = {
     APPLICATION_PDF : 'pdf',
     APPLICATION_EPUB : 'epub',
     APPLICATION_DJVU : 'djvu',
+    APPLICATION_RTF : 'rtf',
     APPLICATION_PSD : 'psd',
     APPLICATION_CLIP : 'clip',
     APPLICATION_SAI2 : 'sai2',
@@ -1179,6 +1185,7 @@ mime_mimetype_string_lookup = {
     APPLICATION_PDF : 'application/pdf',
     APPLICATION_EPUB : 'application/epub+zip',
     APPLICATION_DJVU : 'image/vnd.djvu',
+    APPLICATION_RTF: 'application/rtf',
     APPLICATION_PSD : 'image/vnd.adobe.photoshop',
     APPLICATION_CLIP : 'application/clip', # made up
     APPLICATION_SAI2: 'application/sai2', # made up
@@ -1258,6 +1265,7 @@ mime_ext_lookup = {
     APPLICATION_PDF : '.pdf',
     APPLICATION_EPUB : '.epub',
     APPLICATION_DJVU : '.djvu',
+    APPLICATION_RTF : '.rtf',
     APPLICATION_PSD : '.psd',
     APPLICATION_CLIP : '.clip',
     APPLICATION_SAI2: '.sai2',
