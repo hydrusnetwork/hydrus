@@ -4,6 +4,8 @@ title: Supported Filetypes
 
 This is a list of all filetypes Hydrus can import. Hydrus determines the filetype based on examining the file itself rather than the extension or MIME type.
 
+The filetype for a file can be overridden with `manage -> force filetype` in the context menu for a file. 
+
 ## Images
 
 | Filetype   | Extension | MIME type      | Thumbnails | Viewable in Hydrus | Notes                                      |
@@ -23,13 +25,14 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 
 ## Animations
 
-| Filetype      | Extension | MIME type             | Thumbnails | Viewable in Hydrus | Notes |
-| ------------- | --------- | --------------------- | :--------: | :----------------: | ----- |
-| animated gif  | `.gif`    | `image/gif`           |     ✅     |         ✅         |       |
-| apng          | `.apng`   | `image/apng`          |     ✅     |         ✅         |       |
-| heif sequence | `.heifs`  | `image/heif-sequence` |     ✅     |         ✅         |       |
-| heic sequence | `.heics`  | `image/heic-sequence` |     ✅     |         ✅         |       |
-| avif sequence | `.avifs`  | `image/avif-sequence` |     ✅     |         ✅         |       |
+| Filetype      | Extension | MIME type             | Thumbnails | Viewable in Hydrus | Notes                                                                                                                                                                                            |
+| ------------- | --------- | --------------------- | :--------: | :----------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| animated gif  | `.gif`    | `image/gif`           |     ✅     |         ✅         |                                                                                                                                                                                                  |
+| apng          | `.apng`   | `image/apng`          |     ✅     |         ✅         |                                                                                                                                                                                                  |
+| heif sequence | `.heifs`  | `image/heif-sequence` |     ✅     |         ✅         |                                                                                                                                                                                                  |
+| heic sequence | `.heics`  | `image/heic-sequence` |     ✅     |         ✅         |                                                                                                                                                                                                  |
+| avif sequence | `.avifs`  | `image/avif-sequence` |     ✅     |         ✅         |                                                                                                                                                                                                  |
+| ugoira        | `.zip`    | `application/zip`     |     ✅     |         ❌         | [Pixiv Ugoira format](https://www.pixiv.help/hc/en-us/articles/235584628-What-are-Ugoira-). A zip file containing images with 6 digit zero-padded filenames will be identified as a Ugoira file. |
 
 
 ## Video
@@ -90,12 +93,12 @@ This is a list of all filetypes Hydrus can import. Hydrus determines the filetyp
 
 ## Archives
 
-| Filetype | Extension | MIME type                     | Notes |
-| -------- | --------- | ----------------------------- | ----- |
-| 7z       | `.7z`     | `application/x-7z-compressed` |       |
-| gzip     | `.gz`     | `application/gzip`            |       |
-| rar      | `.rar`    | `application/vnd.rar`         |       |
-| zip      | `.zip`    | `application/zip`             |       |
-
+| Filetype | Extension | MIME type                       | Thumbnails | Notes                                                                                                                                                                                                                                                                                    |
+| -------- | --------- | ------------------------------- | :--------: | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7z       | `.7z`     | `application/x-7z-compressed`   |     ❌     |                                                                                                                                                                                                                                                                                          |
+| gzip     | `.gz`     | `application/gzip`              |     ❌     |                                                                                                                                                                                                                                                                                          |
+| rar      | `.rar`    | `application/vnd.rar`           |     ❌     |                                                                                                                                                                                                                                                                                          |
+| zip      | `.zip`    | `application/zip`               |     ❌     |                                                                                                                                                                                                                                                                                          |
+| cbz      | `.cbz`    | `application/vnd.comicbook+zip` |     ✅     | A zip file containing images with incrementing numbers in their filenames will be identified as a cbz file. The code for identifying a cbz file is in [`hydrus/core/HydrusArchiveHandling.py`](https://github.com/hydrusnetwork/hydrus/blob/master/hydrus/core/HydrusArchiveHandling.py) |
 
 [^1]: This filetype doesn't have an official or de facto media type, the one listed was made up for Hydrus.
