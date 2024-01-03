@@ -560,11 +560,11 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._default_reason = default_reason
         
-        local_file_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        local_file_service_domains = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
         
         if suggested_file_service_key is None:
             
-            suggested_file_service_key = local_file_services[0].GetServiceKey()
+            suggested_file_service_key = local_file_service_domains[0].GetServiceKey()
             
         
         self._media = self._FilterForDeleteLock( ClientMedia.FlattenMedia( media ), suggested_file_service_key )
@@ -575,7 +575,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_description = ClientGUICommon.BetterStaticText( self, label = 'init' )
         
-        self._num_actionable_local_file_services = 0
+        self._num_actionable_local_file_service_domains = 0
         self._permitted_action_choices = []
         self._this_dialog_includes_service_keys = False
         
@@ -816,16 +816,21 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         possible_file_service_keys = []
         
-        local_file_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
-        local_file_service_keys = { service.GetServiceKey() for service in local_file_services }
+        local_file_service_domains = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        local_file_service_domain_keys = { service.GetServiceKey() for service in local_file_service_domains }
         
-        possible_file_service_keys.extend( ( ( lfs.GetServiceKey(), lfs.GetServiceKey() ) for lfs in local_file_services ) )
+        possible_file_service_keys.extend( ( ( lfs.GetServiceKey(), lfs.GetServiceKey() ) for lfs in local_file_service_domains ) )
         
         possible_file_service_keys.append( ( CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
         
         if we_are_advanced_delete_dialog:
             
             possible_file_service_keys.append( ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+            
+        else:
+            
+            # if not advanced, we still want regular users, in odd fixing situations, able to delete update files
+            possible_file_service_keys.append( ( CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
             
         
         possible_file_service_keys.extend( ( ( rfs.GetServiceKey(), rfs.GetServiceKey() ) for rfs in HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) ) )
@@ -842,7 +847,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         possible_file_service_keys_and_hashes = [ ( fsk, keys_to_hashes[ fsk ] ) for fsk in possible_file_service_keys if fsk in keys_to_hashes and len( keys_to_hashes[ fsk ] ) > 0 ]
         
-        self._num_actionable_local_file_services = len( local_file_service_keys.intersection( ( fsk[0] for ( fsk, hashes ) in possible_file_service_keys_and_hashes ) ) )
+        self._num_actionable_local_file_service_domains = len( local_file_service_domain_keys.intersection( ( fsk[0] for ( fsk, hashes ) in possible_file_service_keys_and_hashes ) ) )
         
         possibilities_involve_spicy_physical_delete = False
         
@@ -872,7 +877,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     file_desc = '{} files'.format( HydrusData.ToHumanInt( num_to_delete ) )
                     
                 
-                if self._num_actionable_local_file_services == 1:
+                if self._num_actionable_local_file_service_domains == 1:
                     
                     template = 'Send {} from {} to trash?'
                     
@@ -898,7 +903,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                 num_local_services_done += 1
                 
                 # this is an ugly place to put this, and the mickey-mouse append, but it works
-                if self._num_actionable_local_file_services > 1 and num_local_services_done == self._num_actionable_local_file_services:
+                if self._num_actionable_local_file_service_domains > 1 and num_local_services_done == self._num_actionable_local_file_service_domains:
                     
                     self._permitted_action_choices.append( ( text, ( deletee_file_service_key, list_of_service_keys_to_content_updates, save_reason, hashes_physically_deleted, text ) ) )
                     
@@ -1000,7 +1005,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         unnatural_spicy_physical_delete = possibilities_involve_spicy_physical_delete and not we_are_advanced_delete_dialog
         
-        if self._num_actionable_local_file_services == 1 and not unnatural_spicy_physical_delete and not HC.options[ 'confirm_trash' ]:
+        if self._num_actionable_local_file_service_domains == 1 and not unnatural_spicy_physical_delete and not HC.options[ 'confirm_trash' ]:
             
             # this dialog will never show
             self._question_is_already_resolved = True

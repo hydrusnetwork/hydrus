@@ -1,9 +1,9 @@
 import io
 import typing
 
-from hydrus.core import HydrusArchiveHandling
 from hydrus.core import HydrusExceptions
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files import HydrusArchiveHandling
+from hydrus.core.files.images import HydrusImageHandling
 
 from PIL import Image as PILImage
 import xml.etree.ElementTree as ET

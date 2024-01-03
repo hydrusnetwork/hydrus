@@ -24,13 +24,13 @@ from twisted.web.static import File as FileResource
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetworkVariableHandling
 from hydrus.core.networking import HydrusServerRequest
 from hydrus.core.networking import HydrusServerResources
@@ -2505,6 +2505,8 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
         
         json_happy_url_statuses = []
         
+        we_only_saw_successful = True
+        
         for file_import_status in url_statuses:
             
             if do_file_system_check:
@@ -2520,12 +2522,23 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLFiles( HydrusResourceClientA
             
             json_happy_url_statuses.append( d )
             
+            if file_import_status.status not in CC.SUCCESSFUL_IMPORT_STATES:
+                
+                we_only_saw_successful = False
+                
+            
         
         body_dict = { 'normalised_url' : normalised_url, 'url_file_statuses' : json_happy_url_statuses }
         
         body = Dumps( body_dict, request.preferred_mime )
         
         response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        
+        if we_only_saw_successful:
+            
+            # not likely to change much, so no worries about reducing overhead here
+            response_context.SetMaxAge( 30 )
+            
         
         return response_context
         
@@ -2561,7 +2574,8 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
         
         body = Dumps( body_dict, request.preferred_mime )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body )
+        # max age of ten minutes here
+        response_context = HydrusServerResources.ResponseContext( 200, mime = request.preferred_mime, body = body, max_age = 600 )
         
         return response_context
         
@@ -3116,7 +3130,16 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'num_words' : file_info_manager.num_words,
                         'has_audio' : file_info_manager.has_audio
                     }
-
+                    
+                    filetype_forced = file_info_manager.FiletypeIsForced()
+                    
+                    metadata_row[ 'filetype_forced' ] = filetype_forced
+                    
+                    if filetype_forced:
+                        
+                        metadata_row[ 'original_mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.original_mime ]
+                        
+                    
                     if include_blurhash:
                         
                         metadata_row[ 'blurhash' ] = file_info_manager.blurhash
@@ -3178,6 +3201,15 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'blurhash' : file_info_manager.blurhash,
                         'pixel_hash' : None if file_info_manager.pixel_hash is None else file_info_manager.pixel_hash.hex()
                     }
+                    
+                    filetype_forced = file_info_manager.FiletypeIsForced()
+                    
+                    metadata_row[ 'filetype_forced' ] = filetype_forced
+                    
+                    if filetype_forced:
+                        
+                        metadata_row[ 'original_mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.original_mime ]
+                        
                     
                     if file_info_manager.mime in HC.MIMES_WITH_THUMBNAILS:
                         

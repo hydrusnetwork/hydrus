@@ -119,7 +119,7 @@ To run the client:
 ## Updating
 
 !!! warning
-    Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!
+    Hydrus is imageboard-tier software, wild and fun--but also unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!
 
 **Hydrus does not auto-update. It will stay the same version unless you download and install a new one.**
 
@@ -142,8 +142,13 @@ The update process:
 *   If the client is running, close it!
 *   If you maintain a backup, run it now!
 *   If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.
-*   If you extract, then just extract the new version right on top of your current install and overwrite manually.
+*   If you extract, then just extract the new version right on top of your current install and overwrite manually. *It is wise to extract it straight from the archive to your install folder.*
 *   Start your client or server. It may take a few minutes to update its database. I will say in the release post if it is likely to take longer.
+
+??? warning "Be extremely careful making test runs of the Extract release"
+    **Do not test-run the extract before copying it over your install!** Running the program anywhere will create database files in the /db/ dir, and if you then copy that once-run folder on top of your real install, you will overwrite your real database! <span class="spoiler">Of course it doesn't really matter, because you made a full backup before you started, right? :^)</span>
+    
+    If you need to perform tests of an update, make sure you have a good backup before you start and then remember to delete any functional test extracts before extracting from the original archive once more for the actual 'install'.
 
 Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.
 

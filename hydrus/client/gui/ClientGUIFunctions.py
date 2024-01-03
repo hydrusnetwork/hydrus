@@ -13,7 +13,7 @@ from hydrus.core import HydrusText
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
-from hydrus.core.images import HydrusImageNormalisation
+from hydrus.core.files.images import HydrusImageNormalisation
 
 def ClientToScreen( win: QW.QWidget, pos: QC.QPoint ) -> QC.QPoint:
     

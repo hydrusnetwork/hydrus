@@ -9,10 +9,10 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
+from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientParsing

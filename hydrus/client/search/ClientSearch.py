@@ -2381,7 +2381,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
         self._RecalculateMatchableSearchTexts()
         
     
-    def ToString( self, with_count: bool = True, tag_display_type: int = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, render_for_user: bool = False, or_under_construction: bool = False ) -> str:
+    def ToString( self, with_count: bool = True, render_for_user: bool = False, or_under_construction: bool = False, for_parsable_export: bool = False ) -> str:
         
         base = ''
         count_text = ''
@@ -2839,13 +2839,25 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         is_phrase = 'is not'
                         
                     
-                    if len( hashes ) == 1:
+                    if len( hashes ) > 1:
                         
-                        base = '{} hash {} {}'.format( hash_type, is_phrase, hashes[0].hex() )
+                        is_phrase += ' in'
+                        
+                    
+                    if hash_type != 'sha256':
+                        
+                        base = f'hash ({hash_type})'
+                        
+                    
+                    if len( hashes ) == 1 or for_parsable_export:
+                        
+                        hashes_string = ', '.join( ( hash.hex() for hash in hashes ) )
+                        
+                        base = f'{base} {is_phrase} {hashes_string}'
                         
                     else:
                         
-                        base = '{} hash {} in {} hashes'.format( hash_type, is_phrase, HydrusData.ToHumanInt( len( hashes ) ) )
+                        base = f'{base} {is_phrase} {HydrusData.ToHumanInt( len( hashes ) )} hashes'
                         
                     
                 
@@ -2905,18 +2917,59 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( hashes, max_hamming ) = self._value
                     
-                    base += ' {} files using max hamming of {}'.format( HydrusData.ToHumanInt( len( hashes ) ), max_hamming )
+                    if for_parsable_export:
+                        
+                        hash_string = ', '.join( ( hash.hex() for hash in hashes ) )
+                        
+                    else:
+                        
+                        hash_string = f'{HydrusData.ToHumanInt( len( hashes ) )} files'
+                        
+                    
+                    base += f' {hash_string} with distance of {max_hamming}'
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA:
                 
-                base = 'similar to'
+                base = 'similar to data'
                 
                 if self._value is not None:
                     
                     ( pixel_hashes, perceptual_hashes, max_hamming ) = self._value
                     
-                    base += ' {} similar data hashes using max hamming of {}'.format( HydrusData.ToHumanInt( len( pixel_hashes ) + len( perceptual_hashes ) ), max_hamming )
+                    all_hashes = list( pixel_hashes ) + list( perceptual_hashes )
+                    
+                    if for_parsable_export:
+                        
+                        hash_string = ', '.join( ( hash.hex() for hash in all_hashes ) )
+                        
+                    else:
+                        
+                        components = []
+                        
+                        if len( pixel_hashes ) > 0:
+                            
+                            components.append( f'{HydrusData.ToHumanInt( len( pixel_hashes ) )} pixel')
+                            
+                        
+                        if len( perceptual_hashes ) > 0:
+                            
+                            components.append( f'{HydrusData.ToHumanInt( len( perceptual_hashes ) )} perceptual')
+                            
+                        
+                        component_string = ', '.join( components )
+                        
+                        hash_string = f'({component_string} hashes)'
+                        
+                    
+                    if len( perceptual_hashes ) > 0:
+                        
+                        base += f' {hash_string} with distance of {max_hamming}'
+                        
+                    else:
+                        
+                        base += f' {hash_string}'
+                        
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_SERVICE:

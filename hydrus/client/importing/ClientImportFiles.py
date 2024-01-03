@@ -1,14 +1,14 @@
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
-from hydrus.core.images import HydrusBlurhash
-from hydrus.core.images import HydrusImageHandling
-from hydrus.core.images import HydrusImageMetadata
-from hydrus.core.images import HydrusImageOpening
+from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusPSDHandling
+from hydrus.core.files.images import HydrusBlurhash
+from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageMetadata
+from hydrus.core.files.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles

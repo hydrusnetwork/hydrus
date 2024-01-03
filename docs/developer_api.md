@@ -1563,6 +1563,7 @@ Response:
       "hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
       "size" : 63405,
       "mime" : "image/jpeg",
+      "filetype_forced" : false,
       "filetype_human" : "jpeg",
       "filetype_enum" : 1,
       "ext" : ".jpg",
@@ -1617,6 +1618,7 @@ Response:
       "hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
       "size" : 199713,
       "mime" : "video/webm",
+      "filetype_forced" : false,
       "filetype_human" : "webm",
       "filetype_enum" : 21,
       "ext" : ".webm",
@@ -1735,6 +1737,7 @@ Response:
       "hash" : "4c77267f93415de0bc33b7725b8c331a809a924084bee03ab2f5fae1c6019eb2",
       "size" : 63405,
       "mime" : "image/jpeg",
+      "filetype_forced" : false,
       "filetype_human" : "jpeg",
       "filetype_enum" : 1,
       "ext" : ".jpg",
@@ -1750,6 +1753,7 @@ Response:
       "hash" : "3e7cb9044fe81bda0d7a84b5cb781cba4e255e4871cba6ae8ecd8207850d5b82",
       "size" : 199713,
       "mime" : "video/webm",
+      "filetype_forced" : false,
       "filetype_human" : "webm",
       "filetype_enum" : 21,
       "ext" : ".webm",
@@ -1777,6 +1781,8 @@ Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get\_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
 
 If the file has a thumbnail, `blurhash` gives a base 83 encoded string of its [blurhash](https://blurha.sh/). `pixel_hash` is an SHA256 of the image's pixel data and should exactly match for pixel-identical files (it is used in the duplicate system for 'must be pixel duplicates').
+
+If the file's filetype is forced by the user, `filetype_forced` becomes `true` and a second mime string, `original_mime` is added.
 
 #### tags
 

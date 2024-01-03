@@ -9,7 +9,7 @@ import cv2
 from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageHandling
 
 cv_interpolation_enum_lookup = {}
 

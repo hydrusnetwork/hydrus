@@ -1,5 +1,5 @@
-from hydrus.core import HydrusArchiveHandling
 from hydrus.core import HydrusExceptions
+from hydrus.core.files import HydrusArchiveHandling
 import plistlib
 
 # Mostly based on https://github.com/jaromvogel/ProcreateViewer/blob/master/ProcreatePython/ProcreateImageData.py

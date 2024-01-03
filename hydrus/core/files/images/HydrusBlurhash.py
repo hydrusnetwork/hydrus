@@ -3,7 +3,7 @@ import cv2
 
 from hydrus.external import blurhash as external_blurhash
 
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageHandling
 
 def GetBlurhashFromNumPy( numpy_image: numpy.array ) -> str:
     

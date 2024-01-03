@@ -1,4 +1,4 @@
-from hydrus.core.images import HydrusImageInit # right up top
+from hydrus.core.files.images import HydrusImageInit # right up top
 
 import cv2
 import hashlib
@@ -29,12 +29,12 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusPSDHandling
-from hydrus.core import HydrusKritaHandling
-from hydrus.core.images import HydrusImageColours
-from hydrus.core.images import HydrusImageMetadata
-from hydrus.core.images import HydrusImageNormalisation
-from hydrus.core.images import HydrusImageOpening
+from hydrus.core.files import HydrusKritaHandling
+from hydrus.core.files import HydrusPSDHandling
+from hydrus.core.files.images import HydrusImageColours
+from hydrus.core.files.images import HydrusImageMetadata
+from hydrus.core.files.images import HydrusImageNormalisation
+from hydrus.core.files.images import HydrusImageOpening
 
 def EnableLoadTruncatedImages():
     
@@ -164,15 +164,6 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
     if not force_pil:
         
         pil_image = HydrusImageOpening.RawOpenPILImage( path )
-        
-        try:
-            
-            pil_image.verify()
-            
-        except Exception as e:
-            
-            raise HydrusExceptions.UnsupportedFileException() from e
-            
         
         if pil_image.mode == 'LAB':
             

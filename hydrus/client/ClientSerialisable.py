@@ -14,7 +14,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions

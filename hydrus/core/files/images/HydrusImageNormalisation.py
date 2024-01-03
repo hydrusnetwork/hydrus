@@ -9,8 +9,8 @@ from PIL import ImageCms as PILImageCms
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core.images import HydrusImageColours
-from hydrus.core.images import HydrusImageMetadata
+from hydrus.core.files.images import HydrusImageColours
+from hydrus.core.files.images import HydrusImageMetadata
 
 try:
     

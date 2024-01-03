@@ -188,6 +188,7 @@ class Operators( Enum ):
     RELATIONAL_TIME = auto()  # One of '=', '<', '>', UNICODE_APPROX_EQUAL ('≈') (takes '~=' too), and the various 'since', 'before', 'the day of', 'the month of' time-based analogues
     RELATIONAL_FOR_RATING_SERVICE = auto()  # RELATIONAL, but in the middle of a 'service_name = 4/5' kind of thing
     EQUAL = auto()  # One of '=' or '!='
+    EQUAL_NOT_CONSUMING = auto()  # One of '=' or '!=', doesn't consume this text so later things can look at it
     FILESERVICE_STATUS = auto()  # One of 'is not currently in', 'is currently in', 'is not pending to', 'is pending to'
     TAG_RELATIONAL = auto()  # A tuple of a string (a potential tag name) and a relational operator (as a string)
     ONLY_EQUAL = auto()  # None (meaning =, since thats the only accepted operator)
@@ -241,7 +242,7 @@ SYSTEM_PREDICATES = {
     'similar to data': (Predicate.SIMILAR_TO_DATA, None, Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE, None),
     'limit': (Predicate.LIMIT, Operators.ONLY_EQUAL, Value.NATURAL, None),
     'file ?type': (Predicate.FILETYPE, Operators.ONLY_EQUAL, Value.FILETYPE_LIST, None),
-    'hash': (Predicate.HASH, Operators.EQUAL, Value.HASHLIST_WITH_ALGORITHM, None),
+    'hash': (Predicate.HASH, Operators.EQUAL_NOT_CONSUMING, Value.HASHLIST_WITH_ALGORITHM, None),
     'archived? (date|time)|(date|time) archived|archived.': (Predicate.ARCHIVED_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'modified (date|time)|(date|time) modified|modified': (Predicate.MOD_DATE, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
     'last view(ed)? (date|time)|(date|time) last viewed|last viewed': (Predicate.LAST_VIEWED_TIME, Operators.RELATIONAL_TIME, Value.DATE_OR_TIME_INTERVAL, None),
@@ -406,28 +407,70 @@ def parse_value( string: str, spec ):
             
         
     elif spec == Value.SHA256_HASHLIST_WITH_DISTANCE:
-        match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)+)+)(with\s+)?distance\s+(?P<distance>0|([1-9][0-9]*))', string )
+        match = re.match( '(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
         if match:
             hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
-            distance = int( match[ 'distance' ] )
+            
+            d = match.groupdict()
+            
+            if 'distance' in d and d[ 'distance' ] is not None:
+                
+                distance = int( match[ 'distance' ] )
+                
+            else:
+                
+                distance = 4
+                
+            
             return string[ len( match[ 0 ] ): ], (hashes, distance)
         raise ValueError( "Invalid value, expected a list of hashes with distance" )
     elif spec == Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE:
-        match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)+)+)(with\s+)?distance\s+(?P<distance>0|([1-9][0-9]*))', string )
+        match = re.match( '(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
         if match:
             hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             pixel_hashes = { hash for hash in hashes if len( hash ) == 64 }
             perceptual_hashes = { hash for hash in hashes if len( hash ) == 16 }
-            distance = int( match[ 'distance' ] )
+            
+            d = match.groupdict()
+            
+            if 'distance' in d and d[ 'distance' ] is not None:
+                
+                distance = int( match[ 'distance' ] )
+                
+            else:
+                
+                distance = 8
+                
+            
             return string[ len( match[ 0 ] ): ], (pixel_hashes, perceptual_hashes, distance)
         raise ValueError( "Invalid value, expected a list of hashes with distance" )
     elif spec == Value.HASHLIST_WITH_ALGORITHM:
-        match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)*)+)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )
+        
+        # hydev KISS hijack here, instead of clever regex to capture algorithm in all sorts of situations, let's just grab the hex we see and scan the rest for non-hex phrases mate
+        # old pattern: match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)*)+)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )
+        
+        algorithm = 'sha256'
+        
+        for possible_algorithm in ( 'md5', 'sha1', 'sha512' ):
+            
+            if possible_algorithm in string:
+                
+                algorithm = possible_algorithm
+                
+                break
+                
+            
+        
+        # {8} here to make sure we are looking at proper hash hex and not some short 'a' or 'de' word
+        match = re.search( '(?P<hashes>([0-9a-f]{8}[0-9a-f]+(\s|,)*)+)', string )
+        
         if match:
             hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
-            algorithm = match[ 'algorithm' ] if len( match[ 'algorithm' ] ) > 0 else 'sha256'
-            return string[ len( match[ 0 ] ): ], (hashes, algorithm)
-        raise ValueError( "Invalid value, expected a list of hashes with algorithm" )
+            return string[ match.endpos : ], (hashes, algorithm)
+        
+        raise ValueError( "Invalid value, expected a list of hashes and perhaps an algorithm" )
+        
+    
     elif spec == Value.FILETYPE_LIST:
         valid_values = sorted( FILETYPES.keys(), key = lambda k: len( k ), reverse = True )
         ftype_regex = '(' + '|'.join( [ '(' + val + ')' for val in valid_values ] ) + ')'
@@ -740,12 +783,26 @@ def parse_operator( string: str, spec ):
         raise ValueError( "Invalid rating operator" )
     elif spec == Operators.EQUAL:
         if string.startswith( '==' ): return string[ 2: ], '='
-        if string.startswith( '=' ): return string[ 1: ], '='
         if string.startswith( UNICODE_NOT_EQUAL ): return string[ 1: ], '!='
         if string.startswith( '!=' ): return string[ 2: ], '!='
+        if string.startswith( '=' ): return string[ 1: ], '='
         if string.startswith( 'is not' ): return string[ 6: ], '!='
-        if string.startswith( 'is' ): return string[ 2: ], '='
         if string.startswith( 'isn\'t' ): return string[ 5: ], '!='
+        if string.startswith( 'is' ): return string[ 2: ], '='
+        raise ValueError( "Invalid equality operator" )
+    elif spec == Operators.EQUAL_NOT_CONSUMING:
+        
+        # hydev checking in here with some nonsense that catches an awkward situation
+        # system:hash (md5) = blah
+        # we want to see the = but not eat the md5, so in this special case, which isn't hard to parse otherwise, we'll just look for it and return no changes
+        
+        if '==' in string: return string, '='
+        if UNICODE_NOT_EQUAL in string: return string, '!='
+        if '!=' in string: return string, '!='
+        if '=' in string: return string, '='
+        if 'is not' in string: return string, '!='
+        if 'isn\'t' in string: return string, '!='
+        if 'is' in string: return string, '='
         raise ValueError( "Invalid equality operator" )
     elif spec == Operators.FILESERVICE_STATUS:
         match = re.match( '(is )?currently in', string )

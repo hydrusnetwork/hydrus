@@ -12,13 +12,13 @@ import urllib.parse
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusTime
+from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
@@ -2869,7 +2869,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         return earliest_timestamp
         
     
-    def GetExampleFileSeed( self ):
+    def GetExampleURLFileSeed( self ):
         
         with self._lock:
             
@@ -3094,6 +3094,18 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self._NotifyFileSeedsUpdated( updated_file_seeds )
         
         return len( new_file_seeds )
+        
+    
+    def IsURLFileSeeds( self ) -> bool:
+        
+        if len( self._file_seeds ) == 0:
+            
+            return True
+            
+        
+        first = self._file_seeds[0]
+        
+        return first.file_seed_type == FILE_SEED_TYPE_URL
         
     
     def NotifyFileSeedsUpdated( self, file_seeds: typing.Collection[ FileSeed ] ):

@@ -295,7 +295,7 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
 
 class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, controller, file_seed_cache ):
+    def __init__( self, parent, controller, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -582,7 +582,16 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'open sources', 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
+        if self._file_seed_cache.IsURLFileSeeds():
+            
+            open_sources_text = 'open URLs'
+            
+        else:
+            
+            open_sources_text = 'open files\' locations'
+            
+        
+        ClientGUIMenus.AppendMenuItem( menu, open_sources_text, 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
         
         ClientGUIMenus.AppendSeparator( menu )
         

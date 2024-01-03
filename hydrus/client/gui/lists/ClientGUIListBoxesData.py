@@ -516,7 +516,7 @@ class ListBoxItemPredicate( ListBoxItem ):
             
         else:
             
-            text = self._predicate.ToString( with_count = with_counts )
+            text = self._predicate.ToString( with_count = with_counts, for_parsable_export = True )
             
         
         return text

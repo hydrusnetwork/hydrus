@@ -6,7 +6,7 @@ from psd_tools.api.numpy_io import has_transparency, get_transparency_index
 from psd_tools.api.pil_io import get_pil_mode, get_pil_channels, _create_image
 
 from hydrus.core import HydrusExceptions
-from hydrus.core.images import HydrusImageNormalisation
+from hydrus.core.files.images import HydrusImageNormalisation
 
 def PSDHasICCProfile( path: str ):
     

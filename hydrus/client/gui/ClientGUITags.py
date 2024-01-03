@@ -823,57 +823,46 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self.SetValue( tag_filter )
         
     
-    def _AdvancedAddBlacklist( self, tag_slice ):
-        
-        tag_slice = self._CleanTagSliceInput( tag_slice )
-        
-        if tag_slice in self._advanced_blacklist.GetTagSlices():
-            
-            self._advanced_blacklist.RemoveTagSlices( ( tag_slice, ) )
-            
-        else:
-            
-            self._advanced_whitelist.RemoveTagSlices( ( tag_slice, ) )
-            
-            if self._CurrentlyBlocked( tag_slice ):
-                
-                self._ShowRedundantError( HydrusTags.ConvertTagSliceToString( tag_slice ) + ' is already blocked by a broader rule!' )
-                
-            
-            self._advanced_blacklist.AddTagSlices( ( tag_slice, ) )
-            
-        
-        self._UpdateStatus()
-        
-    
     def _AdvancedAddBlacklistMultiple( self, tag_slices ):
         
-        for tag_slice in tag_slices:
+        tag_slices = [ self._CleanTagSliceInput( tag_slice ) for tag_slice in tag_slices ]
+        
+        tag_slices = HydrusData.DedupeList( tag_slices )
+        
+        current_blacklist = set( self._advanced_blacklist.GetTagSlices() )
+        
+        to_remove = set( tag_slices ).intersection( current_blacklist )
+        
+        if len( to_remove ) > 0:
             
-            self._AdvancedAddBlacklist( tag_slice )
+            self._advanced_blacklist.RemoveTagSlices( to_remove )
             
         
-    
-    def _AdvancedAddWhitelist( self, tag_slice ):
+        to_add = [ tag_slice for tag_slice in tag_slices if tag_slice not in to_remove ]
         
-        tag_slice = self._CleanTagSliceInput( tag_slice )
-        
-        if tag_slice in self._advanced_whitelist.GetTagSlices():
+        if len( to_add ) > 0:
             
-            self._advanced_whitelist.RemoveTagSlices( ( tag_slice, ) )
+            self._advanced_whitelist.RemoveTagSlices( to_add )
             
-        else:
+            already_blocked = [ tag_slice for tag_slice in to_add if self._CurrentlyBlocked( tag_slice ) ]
             
-            self._advanced_blacklist.RemoveTagSlices( ( tag_slice, ) )
-            
-            # if it is still blocked after that, it needs whitelisting explicitly
-            
-            if not self._CurrentlyBlocked( tag_slice ) and tag_slice not in ( '', ':' ):
+            if len( already_blocked ) > 0:
                 
-                self._ShowRedundantError( HydrusTags.ConvertTagSliceToString( tag_slice ) + ' is already permitted by a broader rule!' )
+                if len( already_blocked ) == 1:
+                    
+                    message = f'{HydrusTags.ConvertTagSliceToString( already_blocked[0] )} is already blocked by a broader rule!'
+                    
+                else:
+                    
+                    separator = '\n' if len( already_blocked ) < 5 else ', '
+                    
+                    message = 'The tags\n\n' + separator.join( [ HydrusTags.ConvertTagSliceToString( tag_slice ) for tag_slice in already_blocked ] ) + '\n\nare already blocked by a broader rule!'
+                    
+                
+                self._ShowRedundantError( message )
                 
             
-            self._advanced_whitelist.AddTagSlices( ( tag_slice, ) )
+            self._advanced_blacklist.AddTagSlices( to_add )
             
         
         self._UpdateStatus()
@@ -881,10 +870,45 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _AdvancedAddWhitelistMultiple( self, tag_slices ):
         
-        for tag_slice in tag_slices:
+        tag_slices = [ self._CleanTagSliceInput( tag_slice ) for tag_slice in tag_slices ]
+        
+        current_whitelist = set( self._advanced_whitelist.GetTagSlices() )
+        
+        to_remove = set( tag_slices ).intersection( current_whitelist )
+        
+        if len( to_remove ) > 0:
             
-            self._AdvancedAddWhitelist( tag_slice )
+            self._advanced_whitelist.RemoveTagSlices( to_remove )
             
+        
+        to_add = [ tag_slice for tag_slice in tag_slices if tag_slice not in to_remove ]
+        
+        if len( to_add ) > 0:
+            
+            self._advanced_blacklist.RemoveTagSlices( to_add )
+            
+            already_permitted = [ tag_slice for tag_slice in to_add if tag_slice not in ( '', ':' ) and not self._CurrentlyBlocked( tag_slice ) ]
+            
+            if len( already_permitted ) > 0:
+                
+                if len( already_permitted ) == 1:
+                    
+                    message = f'{HydrusTags.ConvertTagSliceToString( to_add[0] )} is already permitted by a broader rule!'
+                    
+                else:
+                    
+                    separator = '\n' if len( already_permitted ) < 5 else ', '
+                    
+                    message = 'The tags\n\n' + separator.join( [ HydrusTags.ConvertTagSliceToString( tag_slice ) for tag_slice in already_permitted ] ) + '\n\nare already permitted by a broader rule!'
+                    
+                
+                self._ShowRedundantError( message )
+                
+            
+            self._advanced_whitelist.AddTagSlices( tag_slices )
+            
+        
+        self._UpdateStatus()
         
     
     def _AdvancedBlacklistEverything( self ):
@@ -1456,25 +1480,24 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SimpleAddWhitelistMultiple( self, tag_slices ):
         
-        for tag_slice in tag_slices:
+        tag_slices = set( tag_slices )
+        
+        for simple in ( '', ':' ):
             
-            if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetTagSlices():
+            if simple in tag_slices and simple in self._simple_whitelist.GetTagSlices():
                 
-                self._AdvancedAddBlacklist( tag_slice )
+                tag_slices.discard( simple )
                 
-            else:
-                
-                self._AdvancedAddWhitelist( tag_slice )
+                self._AdvancedAddBlacklistMultiple( ( simple, ) )
                 
             
+        
+        self._AdvancedAddWhitelistMultiple( tag_slices )
         
     
     def _SimpleBlacklistRemoved( self, tag_slices ):
         
-        for tag_slice in tag_slices:
-            
-            self._AdvancedAddBlacklist( tag_slice )
-            
+        self._AdvancedAddBlacklistMultiple( tag_slices )
         
     
     def _SimpleBlacklistReset( self ):
@@ -1530,14 +1553,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 tag_slices.discard( simple )
                 
-                self._AdvancedAddBlacklist( simple )
+                self._AdvancedAddBlacklistMultiple( ( simple, ) )
                 
             
         
-        for tag_slice in tag_slices:
-            
-            self._AdvancedAddWhitelist( tag_slice )
-            
+        self._AdvancedAddWhitelistMultiple( tag_slices )
         
     
     def _SimpleWhitelistReset( self ):
@@ -1808,7 +1828,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tag_slice = self._simple_blacklist_namespace_checkboxes.GetData( index )
             
-            self._AdvancedAddBlacklist( tag_slice )
+            self._AdvancedAddBlacklistMultiple( ( tag_slice, ) )
             
         
     
@@ -1820,7 +1840,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tag_slice = self._simple_blacklist_global_checkboxes.GetData( index )
             
-            self._AdvancedAddBlacklist( tag_slice )
+            self._AdvancedAddBlacklistMultiple( ( tag_slice, ) )
             
         
     
@@ -1832,12 +1852,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tag_slice = self._simple_whitelist_namespace_checkboxes.GetData( index )
             
-            self._AdvancedAddWhitelist( tag_slice )
+            self._AdvancedAddWhitelistMultiple( ( tag_slice, ) )
             
         
     
     def EventSimpleWhitelistGlobalCheck( self, index ):
-
+        
         index = index.row()
         
         if index != -1:
@@ -1846,11 +1866,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if tag_slice in ( '', ':' ) and tag_slice in self._simple_whitelist.GetTagSlices():
                 
-                self._AdvancedAddBlacklist( tag_slice )
+                self._AdvancedAddBlacklistMultiple( ( tag_slice, ) )
                 
             else:
                 
-                self._AdvancedAddWhitelist( tag_slice )
+                self._AdvancedAddWhitelistMultiple( ( tag_slice, ) )
                 
             
         
@@ -1859,15 +1879,8 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tag_filter = HydrusTags.TagFilter()
         
-        for tag_slice in self._advanced_blacklist.GetTagSlices():
-            
-            tag_filter.SetRule( tag_slice, HC.FILTER_BLACKLIST )
-            
-        
-        for tag_slice in self._advanced_whitelist.GetTagSlices():
-            
-            tag_filter.SetRule( tag_slice, HC.FILTER_WHITELIST )
-            
+        tag_filter.SetRules( self._advanced_blacklist.GetTagSlices(), HC.FILTER_BLACKLIST )
+        tag_filter.SetRules( self._advanced_whitelist.GetTagSlices(), HC.FILTER_WHITELIST )
         
         return tag_filter
         

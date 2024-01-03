@@ -25,7 +25,31 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 === "Windows"
 
-    First of all, you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available to your Windows.  
+    ??? info "Git for Windows"
+        Git is an excellent tool for synchronising code across platforms. Instead of downloading and extracting the whole .zip every time you want to update, it allows you to just run one line and all the code updates are applied in about three seconds. You can also run special versions of the program, or test out changes I committed two minutes ago without having to wait for me to make a whole build. You don't have to, but I recommend you get it.
+        
+        Installing it is simple, but it can be intimidating. These are a bunch of very clever tools coming over from Linux-land, and the installer has a 10+ page wizard with several technical questions. Luckily, the 'default' is broadly fine, but I'll write everything out so you can follow along. I can't promise this list will stay perfectly up to date, so let me know if there is something complex and new you don't understand. <span class="spoiler">This is also a record that I can refer to when I set up a new machine.</span>
+        
+        - First off, get it [here](https://gitforwindows.org/). Run the installer.
+        - On the first page, with checkboxes, I recommend you uncheck 'Windows Explorer Integration', with its 'Open Git xxx here' sub-checkboxes. This stuff will just be annoying for our purposes.
+        - Then set your text editor. Select the one you use, and if you don't recognise anything, set 'notepad'.
+        - Now we enter the meat of the wizard pages. Everything except the default console window is best left as default:
+            - `Let Git decide` on using "master" as the default main branch name
+            - `Git from the command line and also from 3rd-party software`
+            - `Use bundled OpenSSH`
+            - `Use the OpenSSL library`
+            - `Checkout Windows-style, commit Unix-style line endings`
+            - **(NOT DEFAULT)** `Use Windows' default console window`. Let's keep things simple, but it isn't a big deal.
+            - `Fast-forward or merge`
+            - `Git Credential Manager`
+            - Do `Enable file system caching`/Do not `Enable symbolic links`
+            - Do not enable experimental stuff
+        
+        Git should now be installed on your system. Any new terminal window (shift+right-click on any folder and hit 'Open in terminal') now has the `git` command!
+        
+    
+    First of all, you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
+    
 
 === "Linux"
 
@@ -35,9 +59,16 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
     You should already have python of about the correct version.
 
-If you are already on a very new version of python, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on a much older version of python, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
+If you are already on a very new python, like 3.12+, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on a much older version of python, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
 
-Then, get the hydrus source. The github repo is [https://github.com/hydrusnetwork/hydrus](https://github.com/hydrusnetwork/hydrus). If you are familiar with git, you can just clone the repo to the location you want with `git clone https://github.com/hydrusnetwork/hydrus`, but if not, then just go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere. Make sure the directory has write permissions (e.g. don't put it in "Program Files"). Extracting straight to a spare drive, something like "D:\Hydrus Network", is ideal.
+Then, get the hydrus source. It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then enter:
+
+    git clone https://github.com/hydrusnetwork/hydrus
+
+The whole repository will be copied to that location. If Git is not available, then just go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere.
+
+!!! warning "Read-only install locations"
+    Make sure the install directory has convenient write permissions (e.g. on Windows, don't put it in "Program Files"). Extracting straight to a spare drive, something like "D:\Hydrus Network", is ideal.
 
 We will call the base extract directory, the one with 'hydrus_client.py' in it, `install_dir`.
 
@@ -207,7 +238,7 @@ The first start will take a little longer (it has to compile all the code into s
 To update, you do the same thing as for the extract builds.
 
 1. If you installed by extracting the source zip, then download the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) source zip and extract it over the top of the folder you have, overwriting the existing source files.
-2. If you installed with git, then just run `git pull` as normal.
+2. If you installed with git, then just run `git pull` as normal. I have added easy 'git_pull' scripts to the install directory for your convenience (on Windows, just double-click 'git_pull.bat').
 
 If you get a library version error when you try to boot, run the venv setup again. It is worth doing this anyway, every now and then, just to stay up to date.
 
@@ -365,19 +396,21 @@ Almost everything you get through pip is provided as pre-compiled 'wheels' these
 - Get Visual Studio 14/whatever build tools
 - Pick a different library version
 
-Option B is always the simpler. If opencv-headless as the requirements.txt specifies won't compile in Python 3.10, then try a newer version--there will probably be one of these new highly compatible wheels and it'll just work in seconds. Check my build scripts and various requirements.txts for ideas on what versions to try for your python etc...
+Option B is always simpler. If opencv-headless as the requirements.txt specifies won't compile in your python, then try a newer version--there will probably be one of these new highly compatible wheels and it'll just work in seconds. Check my build scripts and various requirements.txts for ideas on what versions to try for your python etc...
 
 If you are confident you need Visual Studio tools, then prepare for headaches. Although the tools are free from Microsoft, it can be a pain to get them through the official (and often huge) downloader installer from Microsoft. Expect a 5GB+ install with an eye-watering number of checkboxes that probably needs some stackexchange searches to figure out.
 
-On Windows 10, [Chocolatey](https://chocolatey.org/) has been the easy answer. Get it installed and and use this one simple line:
+On Windows 10, [Chocolatey](https://chocolatey.org/) has been the easy answer. These can be useful:
 
 ```
-choco install -y vcbuildtools visualstudio2017buildtools windows-sdk-10.0
+choco install -y vcredist-all
+choco install -y vcbuildtools (this is Visual Studio 2015)
+choco install -y visualstudio2017buildtools
+choco install -y visualstudio2022buildtools
+choco install -y windows-sdk-10.0
 ```
 
-Trust me, just do this, it will save a ton of headaches!
-
-_Update:_ On Windows 11, in 2023-01, I had trouble with the above. There's a couple '11' SDKs that installed ok, but the vcbuildtools stuff had unusual errors. I hadn't done this in years, so maybe they are broken for Windows 10 too! The good news is that a basic stock Win 11 install with Python 3.10 is fine getting everything on our requirements and even making a build without any extra compiler tech. 
+_Update:_ On Windows 11, I have had some trouble with the above. The VS2015 seems not to install any more. A basic stock Win 11 install with Python 3.10 or 3.11 is fine getting everything on our requirements, but freezing with PyInstaller may have trouble finding certain 'api-***.dll' files. I am now trying to figure this out with my latest dev machine as of 2024-01. If you try this, let me know what you find out! 
 
 ### Additional Windows Info { id="additional_windows" }
 

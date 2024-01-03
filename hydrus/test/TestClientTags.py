@@ -1843,7 +1843,7 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( ( bytes.fromhex( 'abcd' ), ), 'sha256' ) )
         
-        self.assertEqual( p.ToString(), 'system:sha256 hash is abcd' )
+        self.assertEqual( p.ToString(), 'system:hash is abcd' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
@@ -1941,13 +1941,13 @@ class TestTagObjects( unittest.TestCase ):
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( ( bytes.fromhex( 'abcd' ), ), 5 ) )
         
-        self.assertEqual( p.ToString(), 'system:similar to 1 files using max hamming of 5' )
+        self.assertEqual( p.ToString(), 'system:similar to 1 files with distance of 5' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( ( os.urandom( 32 ), ), ( os.urandom( 32 ), ), 2 ) )
         
-        self.assertEqual( p.ToString(), 'system:similar to 2 similar data hashes using max hamming of 2' )
+        self.assertEqual( p.ToString(), 'system:similar to data (1 pixel, 1 perceptual hashes) with distance of 2' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
@@ -2021,11 +2021,15 @@ class TestTagObjects( unittest.TestCase ):
     def test_system_predicate_parsing( self ):
         
         for ( expected_result_text, sys_pred_text ) in [
-            ( 'system:similar to 4 files using max hamming of 3', "system:similar to e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c08 e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c09 e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c10, e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c11 with distance 3" ),
-            ( 'system:similar to 1 files using max hamming of 5', "system:similar to e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c00 distance 5" ),
-            ( 'system:similar to 2 similar data hashes using max hamming of 4', "system:similar to data b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd91 b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd92 distance 4" ),
-            ( 'system:similar to 2 similar data hashes using max hamming of 4', "system:similar to data 0702790ffeae5c8a 51ad07c228ab7469 distance 4" ),
-            ( 'system:similar to 4 similar data hashes using max hamming of 4', "system:similar to data b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd91 b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd92 51ad07c228ab7469 0702790ffeae5c8a distance 4" ),
+            ( 'system:similar to 4 files with distance of 3', "system:similar to e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c08 e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c09 e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c10, e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c11 with distance 3" ),
+            ( 'system:similar to 1 files with distance of 5', "system:similar to e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c00 distance 5" ),
+            ( 'system:similar to 1 files with distance of 4', "system:similar to e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c00" ),
+            ( 'system:similar to 1 files with distance of 5', "system:similar to e2c1592ce2a3338767bb7990738ae06357cbdfe917669da9a0d04069f9759c00 with distance of 5" ),
+            ( 'system:similar to data (2 pixel hashes)', "system:similar to data b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd91 b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd92 distance 4" ),
+            ( 'system:similar to data (2 pixel hashes)', "system:similar to data b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd91 b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd92" ),
+            ( 'system:similar to data (2 perceptual hashes) with distance of 4', "system:similar to data 0702790ffeae5c8a 51ad07c228ab7469 distance 4" ),
+            ( 'system:similar to data (2 perceptual hashes) with distance of 8', "system:similar to data 0702790ffeae5c8a 51ad07c228ab7469" ),
+            ( 'system:similar to data (2 pixel, 2 perceptual hashes) with distance of 4', "system:similar to data b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd91 b51d75120456d6e2155416f26416a96290b0a524bf1582af50b4fcf46dedcd92 51ad07c228ab7469 0702790ffeae5c8a distance 4" ),
             ( 'system:everything', "system:everything" ),
             ( 'system:inbox', "system:inbox  " ),
             ( 'system:archive', "system:archive " ),
@@ -2071,13 +2075,13 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:filetype is apng, jpeg, png', "system:filetype =   image/jpg, image/png, apng" ),
             ( 'system:filetype is image', "system:filetype is image" ),
             ( 'system:filetype is animated gif, static gif, jpeg', "system:filetype =   static gif, animated gif, jpeg" ),
-            ( 'system:sha256 hash is in 3 hashes', "system:hash = abcdef01 abcdef02 abcdef03" ),
-            ( 'system:md5 hash is in 3 hashes', "system:hash = abcdef01 abcdef, abcdef04 md5" ),
-            ( 'system:md5 hash is abcdef01', "system:hash = abcdef01 md5" ),
-            ( 'system:md5 hash is abcdef01', "system:Hash = Abcdef01 md5" ),
-            ( 'system:md5 hash is not abcdef01', "system:Hash != Abcdef01 md5" ),
-            ( 'system:md5 hash is not abcdef01', "system:Hash is not Abcdef01 md5" ),
-            ( 'system:sha256 hash is abcdef0102', "system:hash = abcdef0102" ),
+            ( 'system:hash is in 3 hashes', "system:hash = cf09faad262075f96bf9a30052b8ec224e096948a4f3a2776df5fa5a777bcfd8 a1b0ab771d11d9a6d1f993efee9d253d3aa78914387a7c8ceab520af88ab3de2 98a7d2f4735a5fcc70e7c94e2dadcc6ea45123fb2035b9cfe7ad1d78e48cae9e" ),
+            ( 'system:hash (md5) is in 3 hashes', "system:hash = ada7a31713ba24652c52e52c6f212e47 546fd4b8c39fc53e77e2f28b59cd1b18, cec888bacb79825621738454a4c9d226 md5" ),
+            ( 'system:hash (md5) is 666d0a395c8d4eebb5b15a0771972a01', "system:hash (md5) = 666d0a395c8d4eebb5b15a0771972a01" ),
+            ( 'system:hash (md5) is 123fec741ebe7596c1faf8d7689693b8', "system:Hash = 123feC741ebe7596c1faf8d7689693b8 md5" ),
+            ( 'system:hash (sha1) is not 2496baf1ded134b5ff7e44f72155240b9561ab5a', "system:Hash (sha1) != 2496baf1ded134b5ff7e44f72155240b9561ab5a" ),
+            ( 'system:hash is not b49f25453c6351403d62cc4d065321106c90f98b5653e83d289dbe0d55ba8c94', "system:Hash is not b49f25453c6351403d62cc4d065321106c90f98b5653e83d289dbe0d55ba8c94 sha256" ),
+            ( 'system:hash is 4d4ff3d42459f824295a36138782c444028f533b6ae5f0f67b27e9bf3c93de5d', "system:hash = 4d4ff3d42459f824295a36138782c444028f533b6ae5f0f67b27e9bf3c93de5d" ),
             ( 'system:archived time: since 60 days ago', "system:archived date < 60 days" ),
             ( 'system:archived time: since 60 days ago', "system:archive date < 60 days" ),
             ( 'system:archived time: since 60 days ago', "system:archived time < 60 days" ),

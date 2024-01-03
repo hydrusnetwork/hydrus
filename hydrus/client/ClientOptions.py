@@ -443,7 +443,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'max_connection_attempts_allowed' ] = 5
         self._dictionary[ 'integers' ][ 'max_request_attempts_allowed_get' ] = 5
         
-        from hydrus.core.images import HydrusImageHandling
+        from hydrus.core.files.images import HydrusImageHandling
         
         self._dictionary[ 'integers' ][ 'thumbnail_scale_type' ] = HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY
         

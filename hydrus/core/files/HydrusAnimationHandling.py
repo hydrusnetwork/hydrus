@@ -7,8 +7,8 @@ from PIL import Image as PILImage
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core.images import HydrusImageHandling
-from hydrus.core.images import HydrusImageOpening
+from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageOpening
 
 def GetAnimationProperties( path, mime ):
     

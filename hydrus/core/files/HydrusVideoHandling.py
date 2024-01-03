@@ -5,12 +5,12 @@ import os
 import re
 import subprocess
 
-from hydrus.core import HydrusAudioHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
+from hydrus.core.files import HydrusAudioHandling
 
 FFMPEG_MISSING_ERROR_PUBBED = False
 FFMPEG_NO_CONTENT_ERROR_PUBBED = False

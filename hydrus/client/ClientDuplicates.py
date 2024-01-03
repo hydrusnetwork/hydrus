@@ -10,9 +10,8 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
-from hydrus.core.images import HydrusImageHandling
-from hydrus.core.images import HydrusImageMetadata
-from hydrus.core.images import HydrusImageOpening
+from hydrus.core.files.images import HydrusImageMetadata
+from hydrus.core.files.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading

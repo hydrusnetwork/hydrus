@@ -4,11 +4,11 @@ import typing
 from PIL import Image as PILImage
 
 from hydrus.core import HydrusExceptions
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageHandling
 
 try:
     
-    from hydrus.core import HydrusPSDTools
+    from hydrus.core.files import HydrusPSDTools
 
     PSD_TOOLS_OK = True
     

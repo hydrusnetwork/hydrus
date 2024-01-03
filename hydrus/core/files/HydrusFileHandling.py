@@ -1,26 +1,26 @@
 import hashlib
 import os
 
-from hydrus.core import HydrusAnimationHandling
-from hydrus.core import HydrusArchiveHandling
-from hydrus.core import HydrusClipHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDocumentHandling
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFlashHandling
-from hydrus.core import HydrusKritaHandling
-from hydrus.core import HydrusProcreateHandling
-from hydrus.core import HydrusPSDHandling
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusSVGHandling
-from hydrus.core import HydrusPDFHandling
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
-from hydrus.core import HydrusUgoiraHandling
-from hydrus.core import HydrusVideoHandling
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files import HydrusAnimationHandling
+from hydrus.core.files import HydrusArchiveHandling
+from hydrus.core.files import HydrusClipHandling
+from hydrus.core.files import HydrusDocumentHandling
+from hydrus.core.files import HydrusFlashHandling
+from hydrus.core.files import HydrusKritaHandling
+from hydrus.core.files import HydrusPDFHandling
+from hydrus.core.files import HydrusProcreateHandling
+from hydrus.core.files import HydrusPSDHandling
+from hydrus.core.files import HydrusSVGHandling
+from hydrus.core.files import HydrusUgoiraHandling
+from hydrus.core.files import HydrusVideoHandling
+from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
 try:
@@ -692,7 +692,14 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
             
             if mime == HC.APPLICATION_ZIP:
                 
-                if not HydrusArchiveHandling.IsOpenableZip( path ):
+                try:
+                    
+                    if HydrusArchiveHandling.IsEncryptedZip( path ):
+                        
+                        return HC.APPLICATION_ZIP
+                        
+                    
+                except HydrusExceptions.DamagedOrUnusualFileException:
                     
                     return HC.APPLICATION_ZIP
                     

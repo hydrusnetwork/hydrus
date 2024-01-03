@@ -799,7 +799,7 @@ class SubscriptionQueryHeader( HydrusSerialisable.SerialisableBase ):
         file_seed_cache = query_log_container.GetFileSeedCache()
         
         self._file_seed_cache_status = file_seed_cache.GetStatus()
-        self._example_file_seed = file_seed_cache.GetExampleFileSeed()
+        self._example_file_seed = file_seed_cache.GetExampleURLFileSeed()
         
     
     def WantsToResyncWithLogContainer( self ):

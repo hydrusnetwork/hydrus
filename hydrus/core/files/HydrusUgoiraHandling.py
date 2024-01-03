@@ -1,10 +1,10 @@
 import zipfile
 
-from hydrus.core import HydrusArchiveHandling
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusTemp
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files import HydrusArchiveHandling
+from hydrus.core.files.images import HydrusImageHandling
 
 def ExtractFrame( path_to_zip, frame_index, extract_path ):
     
@@ -58,7 +58,14 @@ def GetUgoiraProperties( path_to_zip ):
             
             with zipfile.ZipFile( path_to_zip ) as zip_handle:
                 
-                num_frames = len( zip_handle.infolist() )
+                # let's discount the .js or .json
+                
+                def is_js_stuff( s ):
+                    
+                    return s.endswith( '.js' ) or s.endswith( '.json' )
+                    
+                
+                num_frames = len( [ 1 for zip_info in zip_handle.infolist() if not is_js_stuff( zip_info.filename ) ] )
                 
             
         except:

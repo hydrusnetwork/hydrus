@@ -69,7 +69,7 @@ def GetZipAsPath( path_to_zip, path_in_zip="" ):
     return zipfile.Path( path_to_zip, at=path_in_zip )
     
 
-def IsOpenableZip( path_to_zip ):
+def IsEncryptedZip( path_to_zip ):
     
     ENCRYPTED_FLAG = 0x1
     
@@ -85,17 +85,47 @@ def IsOpenableZip( path_to_zip ):
                 
                 if is_encrypted:
                     
-                    return False
+                    return True
                     
                 
             
-            return True
+            return False
             
         
     except:
         
-        return False
+        raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not open this zip at all!' )
         
+    
+
+def filename_has_image_ext( filename: str ):
+    
+    if '.' in filename:
+        
+        ext_with_dot = '.' + filename.split( '.' )[-1]
+        
+        if ext_with_dot in HC.IMAGE_FILE_EXTS:
+            
+            return True
+            
+        
+    
+    return False
+    
+
+def filename_has_video_ext( filename: str ):
+    
+    if '.' in filename:
+        
+        ext_with_dot = '.' + filename.split( '.' )[-1]
+        
+        if ext_with_dot in HC.VIDEO_FILE_EXTS:
+            
+            return True
+            
+        
+    
+    return False
     
 
 def ZipLooksLikeCBZ( path_to_zip ):
@@ -148,27 +178,22 @@ def ZipLooksLikeCBZ( path_to_zip ):
                 continue
                 
             
-            if '.' in filename:
+            if filename_has_image_ext( filename ):
                 
-                ext_with_dot = '.' + filename.split( '.' )[-1]
+                num_images += 1
                 
-                if ext_with_dot in HC.IMAGE_FILE_EXTS:
-                    
-                    num_images += 1
-                    
-                    directories_to_image_filenames[ directory_path ].add( filename )
-                    
-                    continue
-                    
-                elif ext_with_dot in HC.VIDEO_FILE_EXTS:
-                    
-                    # this catches some zips nicely
-                    return False
-                    
-                else:
-                    
-                    num_weird_files += 1
-                    
+                directories_to_image_filenames[ directory_path ].add( filename )
+                
+                continue
+                
+            elif filename_has_video_ext( filename ):
+                
+                # this catches some zips nicely
+                return False
+                
+            else:
+                
+                num_weird_files += 1
                 
             
         
@@ -191,16 +216,16 @@ def ZipLooksLikeCBZ( path_to_zip ):
         
         directories_to_looks_good_scores = {}
         
-        for ( directory_path, filenames ) in directories_to_image_filenames.items():
+        for ( directory_path, image_filenames ) in directories_to_image_filenames.items():
             
             # ok, so a zip that has fifteen different filename styles is not a cbz
             # one that is all "Coolguy Adventures-c4-p001.jpg" however is!
             
-            # so let's take all the numbers and figure out how commonly the filenames are templated
+            # so let's take all the numbers and figure out how commonly the image filenames are templated
             
-            unique_numberless_filenames = { re.sub( r'\d', '', filename ) for filename in filenames }
+            unique_numberless_filenames = { re.sub( r'\d', '', filename ) for filename in image_filenames }
             
-            magical_uniqueness_percentage = len( unique_numberless_filenames ) / len( filenames )
+            magical_uniqueness_percentage = ( len( unique_numberless_filenames ) - 1 ) / len( image_filenames )
             
             directories_to_looks_good_scores[ directory_path ] = magical_uniqueness_percentage
             
@@ -209,7 +234,7 @@ def ZipLooksLikeCBZ( path_to_zip ):
         
         average_directory_good = sum( all_percentages ) / len( all_percentages )
         
-        # experimentally, I haven't seen it go above 0.138 on a legit cbz
+        # experimentally, I haven't seen this go above 0.103 on a legit cbz
         if average_directory_good > 0.2:
             
             return False

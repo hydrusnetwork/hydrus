@@ -1300,19 +1300,45 @@ class ResponseContext( object ):
         return self._body_bytes
         
     
-    def GetCookies( self ): return self._cookies
+    def GetCookies( self ):
+        
+        return self._cookies
+        
     
-    def GetMime( self ): return self._mime
+    def GetMime( self ):
+        
+        return self._mime
+        
     
-    def GetPath( self ): return self._path
+    def GetPath( self ):
+        
+        return self._path
+        
     
-    def GetStatusCode( self ): return self._status_code
+    def GetStatusCode( self ):
+        
+        return self._status_code
+        
 
-    def GetMaxAge( self ): return self._max_age
+    def GetMaxAge( self ):
+        
+        return self._max_age
+        
     
-    def HasBody( self ): return self._body_bytes is not None
+    def SetMaxAge( self, age ):
+        
+        self._max_age = age
+        
     
-    def HasPath( self ): return self._path is not None
+    def HasBody( self ):
+        
+        return self._body_bytes is not None
+        
+    
+    def HasPath( self ):
+        
+        return self._path is not None
+        
     
     def IsAttachmentDownload( self ):
         

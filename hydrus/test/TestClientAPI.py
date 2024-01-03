@@ -19,7 +19,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
@@ -4884,6 +4884,11 @@ class TestClientAPI( unittest.TestCase ):
                 ratings_dict[ HG.test_controller.example_incdec_rating_service_key ] = int( random.random() * 16 )
                 
             
+            if random.random() > 0.8:
+                
+                file_info_manager.original_mime = HC.IMAGE_PNG
+                
+            
             ratings_manager = ClientMediaManagers.RatingsManager( {} )
             notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
             file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
@@ -4920,6 +4925,15 @@ class TestClientAPI( unittest.TestCase ):
                 'num_frames' : file_info_manager.num_frames,
                 'num_words' : file_info_manager.num_words
             }
+            
+            filetype_forced = file_info_manager.FiletypeIsForced()
+            
+            metadata_row[ 'filetype_forced' ] = filetype_forced
+            
+            if filetype_forced:
+                
+                metadata_row[ 'original_mime' ] = HC.mime_mimetype_string_lookup[ file_info_manager.original_mime ]
+                
             
             only_return_basic_information_metadata.append( dict( metadata_row ) )
             

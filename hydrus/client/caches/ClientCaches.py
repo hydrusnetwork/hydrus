@@ -6,13 +6,13 @@ import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
-from hydrus.core.images import HydrusBlurhash
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files.images import HydrusBlurhash
+from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles

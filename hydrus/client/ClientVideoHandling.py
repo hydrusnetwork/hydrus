@@ -4,8 +4,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
-from hydrus.core.images import HydrusImageHandling
-from hydrus.core.images import HydrusImageNormalisation
+from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageNormalisation
 
 class GIFRenderer( object ):
     

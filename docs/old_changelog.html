@@ -35,6 +35,37 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_557"><a href="#version_557">version 557</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>optimised large tag filter edit UI. you can now paste 5,000 items into an empty tag filter blacklist in less than a second, and if you have a big tag filter, removing or adding one thing is now instant (previously, this stuff would lag 4 seconds or more, sometimes multiple minutes!!)</li>
+                        <li>the ugoira 'num frames' counting method now discludes files ending in .js/.json, to catch future bundling of frame timings</li>
+                        <li>the cbz scanning tech should now recognise cbzs with four or fewer pages</li>
+                        <li>a legacy 'is this image all good?' check that happens on PIL-loading is now gone. this improves rendering for a variety of truncated files and clarifies some error messages (previously, this thing was just failing silently)</li>
+                        <li>fixed the delete file pre-flight logic so users on the non-advanced delete dialog can now delete repository updates. previously, they saw the menu entry, but hitting it was a no-op</li>
+                        <li><h3>better hash predicate parsing</h3></li>
+                        <li>`system:hash` labels are a little different now. they'll say `system:hash (md5) is abcd...`, with the algorithm after the "hash". hash is omitted for sha256 (the hydrus default). this eases parsing</li>
+                        <li>`system:similar to data` labels are a little different. they'll say 'distance' instead of 'max hamming', and the number and type of hashes they hold, and if they hold only pixel hashes, the distance is not stated</li>
+                        <li>`system:hash` predicate parsing is now more flexible. you can put the hash type pretty much anywhere now.</li>
+                        <li>`system:similar to` and `system:similar to data` predicate parsing is now more flexible. more combinations are allowed, and you can not include distance and it'll be fine</li>
+                        <li>these three hash predicates now copy to clipboard with all their hashes explicitly enumerated, making strings that are fully parsable! this is a big step forward in a completely sealed import-export predicate parsing loop; now I have the tech set up to export a different phrase to clipboard than what you see in the label, I just need the examples of where it goes wrong. if there is a system predicate that copies to clipboard in a way that won't parse back, let me know and I'll see if I can fix it.</li>
+                        <li>added more unit tests for this parsing</li>
+                        <li><h3>documentation and cleanup</h3></li>
+                        <li>wrote a guide on how to install 'Git for Windows' for the 'running from source' help. although most of the settings in its marathon 12-page install wizard can be left as default, the technical questions can be intimidating, so I've written them all out for a nice simple install. also brushed up some of the surrounding help here</li>
+                        <li>added a warning to the regular 'installing and updating' help regarding the danger of test-running extract releases before updating (you can overwrite your database by accident)</li>
+                        <li>thanks to a user, the filetypes help document is updated with Ugoira and CBZ info</li>
+                        <li>all the 'HydrusFiletypeHandling' files are refactored to a new 'files' module. there's a bunch of them these days!</li>
+                        <li>the hydrus.core.images module is moved beneath this 'files' module too</li>
+                        <li>the file log list panel right-click menu now says 'open URLs'/'open files' locations' depending on whether you are looking at a URL import log or local HDD import log</li>
+                        <li><h3>client api</h3></li>
+                        <li>the `file_metadata` call now returns `filetype_forced` and, if so, also `original_mime` to talk about the new forced filetype system</li>
+                        <li>the client api help and unit tests are updated to test this is working ok</li>
+                        <li>fixed a typo that was causing too much work in the updated file info manager call (and was often returning 'null' results for half-cached `file_metadata` requests with `only_return_basic_information=true`)</li>
+                        <li>thanks to a user, the `/add_urls/get_url_info` Client API call now has a cache timeout of ten minutes, and the `/add_urls/get_url_files` call now has a timeout of 30 seconds if all the files are 'already in db'. this should automatically reduce some overhead for several programs that talk to the Client API a lot about URLs</li>
+                        <li>the client api version is now 58</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_556"><a href="#version_556">version 556</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -430,7 +461,7 @@
                         <li>moved the new blurhash methods to a new `HydrusBlurhash` file</li>
                         <li>moved various normalisation routines to a new `HydrusImageNormalisation` file</li>
                         <li>moved various channel scanning and adjusting code to a new `HydrusImageColours` file</li>
-                        <li>moved the hydrus image files to the new 'hydrus.core.images' module</li>
+                        <li>moved the hydrus image files to the new 'hydrus.core.files.images' module</li>
                         <li>cleaned up some image loading code</li>
                         <li>deleted ancient and no-longer-used client db code regarding imageboard definitions, status texts, and more</li>
                         <li>removed the ancient `OPENCV_OK` fallback code, which was only used, superfluously, in a couple of final places. OpenCV is not optional to run hydrus, server or client</li>

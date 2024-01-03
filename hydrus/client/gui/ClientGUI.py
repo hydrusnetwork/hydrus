@@ -22,7 +22,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusFileHandling
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusMemory
 from hydrus.core import HydrusPaths
@@ -32,9 +31,10 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
-from hydrus.core import HydrusVideoHandling
-from hydrus.core import HydrusPSDHandling
-from hydrus.core.images import HydrusImageHandling
+from hydrus.core.files import HydrusFileHandling
+from hydrus.core.files import HydrusPSDHandling
+from hydrus.core.files import HydrusVideoHandling
+from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
