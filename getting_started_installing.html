@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.2">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.3">
     
     
       
@@ -2424,7 +2424,7 @@ Then please do this:  <ol>
 <h2 id="updating">Updating<a class="headerlink" href="#updating" title="Permanent link">&para;</a></h2>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>Hydrus is imageboard-tier software, wild and fun but unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!</p>
+<p>Hydrus is imageboard-tier software, wild and fun--but also unprofessional. It is written by one Anon spinning a lot of plates. Mistakes happen from time to time, usually in the update process. There are also no training wheels to stop you from accidentally overwriting your whole db if you screw around. Be careful when updating. Make backups beforehand!</p>
 </div>
 <p><strong>Hydrus does not auto-update. It will stay the same version unless you download and install a new one.</strong></p>
 <p>Although I put out a new version every week, you can update far less often if you prefer. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.</p>
@@ -2445,9 +2445,14 @@ Then please do this:  <ol>
 <li>If the client is running, close it!</li>
 <li>If you maintain a backup, run it now!</li>
 <li>If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.</li>
-<li>If you extract, then just extract the new version right on top of your current install and overwrite manually.</li>
+<li>If you extract, then just extract the new version right on top of your current install and overwrite manually. <em>It is wise to extract it straight from the archive to your install folder.</em></li>
 <li>Start your client or server. It may take a few minutes to update its database. I will say in the release post if it is likely to take longer.</li>
 </ul>
+<details class="warning">
+<summary>Be extremely careful making test runs of the Extract release</summary>
+<p><strong>Do not test-run the extract before copying it over your install!</strong> Running the program anywhere will create database files in the /db/ dir, and if you then copy that once-run folder on top of your real install, you will overwrite your real database! <span class="spoiler">Of course it doesn't really matter, because you made a full backup before you started, right? :^)</span></p>
+<p>If you need to perform tests of an update, make sure you have a good backup before you start and then remember to delete any functional test extracts before extracting from the original archive once more for the actual 'install'.</p>
+</details>
 <p>Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.</p>
 <p>Releases typically need to update your database to their version. New releases can retroactively perform older database updates, so if the new version is v255 but your database is on v250, you generally only need to get the v255 release, and it'll do all the intervening v250-&gt;v251, v251-&gt;v252, etc... update steps in order as soon as you boot it. If you need to update from a release more than, say, ten versions older than current, see below. You might also like to skim the release posts or <a href="changelog.html">changelog</a> to see what is new.</p>
 <p>Clients and servers of different versions can usually connect to one another, but from time to time, I make a change to the network protocol, and you will get polite error messages if you try to connect to a newer server with an older client or <em>vice versa</em>. There is still no <em>need</em> to update the client--it'll still do local stuff like searching for files completely fine. Read my release posts and judge for yourself what you want to do.</p>
@@ -2556,7 +2561,7 @@ Almost every OS you can name.</p>
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 27, 2023</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 3, 2024</span>
   </span>
 
     
