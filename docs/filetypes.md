@@ -76,6 +76,7 @@ The filetype for a file can be overridden with `manage -> force filetype` in the
 | pdf      | `.pdf`    | `application/pdf`               |     ✅     |         ❌         | 300 DPI assumed for resolution. No thumbnails for encrypted PDFs. |
 | epub     | `.epub`   | `application/epub+zip`          |     ❌     |         ❌         |                                                                   |
 | djvu     | `.djvu`   | `image/vnd.djvu`                |     ❌     |         ❌         |                                                                   |
+| rtf      | `.rtf`    | `application/rtf`               |     ❌     |         ❌         |                                                                   |
 
 
 ## Image Project Files
