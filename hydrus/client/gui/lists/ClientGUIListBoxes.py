@@ -2005,10 +2005,24 @@ class ListBox( QW.QScrollArea ):
                         
                     elif self._last_hit_logical_index is not None:
                         
-                        if key_code in ( QC.Qt.Key_Up, ):
+                        if ctrl and key_code in ( ord( 'P' ), ord( 'p' ) ):
+                            
+                            # remove ctrl key to make it act exactly like the up arrow
+                            ctrl = False
                             
                             hit_logical_index = ( self._last_hit_logical_index - 1 ) % len( self._ordered_terms )
+                        
+                        elif ctrl and key_code in ( ord( 'N' ), ord( 'n' ) ):
                             
+                            # remove ctrl key to make it act exactly like the down arrow
+                            ctrl = False
+                            
+                            hit_logical_index = ( self._last_hit_logical_index + 1 ) % len( self._ordered_terms )
+                        
+                        elif key_code in ( QC.Qt.Key_Up, ):
+                            
+                            hit_logical_index = ( self._last_hit_logical_index - 1 ) % len( self._ordered_terms )
+                        
                         elif key_code in ( QC.Qt.Key_Down, ):
                             
                             hit_logical_index = ( self._last_hit_logical_index + 1 ) % len( self._ordered_terms )
