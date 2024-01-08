@@ -1,0 +1,95 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-20.04
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: hydrus
+      -
+        name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          architecture: x64
+      -
+        name: APT Install
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmpv1
+      -
+        name: Pip Install
+        run: python3 -m pip install -r hydrus/static/build_files/linux/requirements.txt
+      -
+        name: Build docs to /help
+        run: mkdocs build -d help
+        working-directory: hydrus
+      -
+        name: Build Hydrus
+        run: |
+          cp hydrus/static/build_files/linux/hydrus_client.spec hydrus_client.spec
+          cp hydrus/static/build_files/linux/hydrus_server.spec hydrus_server.spec
+          pyinstaller hydrus_server.spec
+          pyinstaller hydrus_client.spec
+      -
+        name: Remove Chonk
+        run: |
+            find dist/hydrus_client/ -type f -name "*.pyc" -delete
+            while read line; do find dist/hydrus_client/ -type f -name "${line}" -delete ; done < hydrus/static/build_files/linux/files_to_delete.txt
+      -
+        name: Remove Surplus File
+        run: |
+          rm -f dist/hydrus_client/libxkbcommon.so*
+      -
+        name: Set Permissions
+        run: |
+            sudo chown --recursive 1000:1000 dist/hydrus_client
+            sudo find dist/hydrus_client -type d -exec chmod 0755 {} \;
+            sudo chmod +x dist/hydrus_client/hydrus_client dist/hydrus_client/hydrus_server dist/hydrus_client/bin/swfrender_linux
+      -
+        name: Compress Client
+        run: |
+            mv dist/hydrus_client "dist/Hydrus Network"
+            tar --zstd -cvf Ubuntu-Extract.tar.zst -C dist "Hydrus Network"
+      -
+        name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: Ubuntu-Extract
+          path: Ubuntu-Extract.tar.zst
+          if-no-files-found: error
+          retention-days: 2
+
+  create-release:
+    name: Upload to Release
+    runs-on: ubuntu-20.04
+    needs: [build-ubuntu]
+    steps:
+      -
+        name: Get All Artifacts
+        uses: actions/download-artifact@v3
+      - 
+        name: Extract Version Metadata
+        id: meta
+        run: |
+          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
+      - 
+        name: Rename Files
+        run: |
+          mkdir ubuntu
+          mv Ubuntu-Extract/Ubuntu-Extract.tar.zst Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst
+      - 
+        name: Upload Files
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst

@@ -1,0 +1,101 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-macos:
+    runs-on: macos-11
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      -
+        name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      -
+        name: Build docs to /help
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install --upgrade wheel
+          python3 -m pip install mkdocs-material
+          mkdocs build -d help
+      -
+        name: Install PyOxidizer
+        run: python3 -m pip install pyoxidizer==0.22.0
+      -
+        name: Download ffmpeg
+        uses: carlosperate/download-file-action@v2
+        id: download_ffmpeg
+        with:
+          file-url: 'https://evermeet.cx/ffmpeg/getrelease/ffmpeg/7z'
+          file-name: 'ffmpeg-macos.7z'
+          location: '.'
+      -
+        name: Process ffmpeg
+        run: |
+          cd $GITHUB_WORKSPACE
+          7z e ffmpeg-macos.7z -obin "ffmpeg"
+      -
+        name: Build Hydrus
+        run: |
+          cd $GITHUB_WORKSPACE
+          cp static/build_files/macos/pyoxidizer.bzl pyoxidizer.bzl
+          cp static/build_files/macos/requirements.txt requirements.txt
+          basename $(rustc --print sysroot) | sed -e "s/^stable-//" > triple.txt
+          pyoxidizer build --release
+          cd build/$(head -n 1 triple.txt)/release
+          mkdir -p "Hydrus Network.app/Contents/MacOS"
+          mkdir -p "Hydrus Network.app/Contents/Resources"
+          mkdir -p "Hydrus Network.app/Contents/Frameworks"
+          mv install/static/icon.icns "Hydrus Network.app/Contents/Resources/icon.icns"
+          cp install/static/build_files/macos/Info.plist "Hydrus Network.app/Contents/Info.plist"
+          cp install/static/build_files/macos/ReadMeFirst.rtf ./ReadMeFirst.rtf
+          cp install/static/build_files/macos/running_from_app "install/running_from_app"
+          ln -s /Applications ./Applications
+          mv install/* "Hydrus Network.app/Contents/MacOS/"
+          rm -rf install
+      -
+        name: Build DMG
+        run: |
+          cd $GITHUB_WORKSPACE
+          temp_dmg="$(mktemp).dmg"
+          hdiutil create "$temp_dmg" -ov -volname "HydrusNetwork" -fs HFS+ -format UDZO -srcfolder "$GITHUB_WORKSPACE/build/$(head -n 1 triple.txt)/release"
+          mv "$temp_dmg" HydrusNetwork.dmg
+      -
+        name: Upload a Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: MacOS-DMG
+          path: HydrusNetwork.dmg
+          if-no-files-found: error
+          retention-days: 2
+
+  create-release:
+    name: Upload to Release
+    runs-on: ubuntu-20.04
+    needs: [build-macos]
+    steps:
+      -
+        name: Get Artifacts
+        uses: actions/download-artifact@v3
+      - 
+        name: Extract Version Metadata
+        id: meta
+        run: |
+          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
+          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
+      - 
+        name: Rename Files
+        run: |
+          mv MacOS-DMG/HydrusNetwork.dmg          Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
+      - 
+        name: Upload Files
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
