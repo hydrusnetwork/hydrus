@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_558"><a href="#version_558">version 558</a></h2>
+                    <ul>
+                        <li><h3>user contributions</h3></li>
+                        <li>thanks to a user, we now have rtf support! no word count yet, but it should be doable in future.</li>
+                        <li>thanks to a user, ctrl+p and ctrl+n now move the tag listbox selection up and down, in case the arrow keys aren't what you want. it also works on the tag autocomplete results from the text input</li>
+                        <li>added a link to 'Hydra Vista', https://github.com/konkrotte/hydravista, a macOS booru-like browser that talks to a hydrus client, to the main Client API help</li>
+                        <li><h3>misc</h3></li>
+                        <li>if you right-click on a selection of multiple tags, you can now hide them or their namespaces en masse</li>
+                        <li>if you right-click on a selection of multiple tags, you can now add or remove them from the favourites list en masse. if you select a mix of tags that are part-in, part-out of the list, you'll get both add and remove menu entries summarising what's going on. also, this command is now wrapped in a yes/no confirmation with full summary of what's being added/removed</li>
+                        <li>the 'favourites' "tag suggestions" section is renamed to 'most used'. this was often confused with the favourites that sit under a tag autocomplete, and these tags aren't really 'favourite' anyway, just most-used, so they are renamed</li>
+                        <li>if you have 'remove files from view when they are sent to the trash' set, then moving a file from one local file domain to another or removing one of multiple local file domains will no longer trigger a 'remove media'! sorry for the trouble, it was dumb logic on my part</li>
+                        <li>fixed the 'known urls' menu's url class section ('open all blahbooru urls' etc...) not appearing when right-clicking a single 'collection' thumbnail</li>
+                        <li>fixed the 'known urls' menu's open/copy specific urls not appearing when right-clicking any collection. it now shows the front 'display media's' urls</li>
+                        <li>if you change the darkmode in _options->colours_, the _help->darkmode_ menu item now updates correctly. just a side note: I hate much of this system and will eventually unify it with the style system</li>
+                        <li>fixed a bunch of 'number of x' tests at the database level when the operator is `≠`</li>
+                        <li><h3>system:number of urls</h3></li>
+                        <li>added `system:number of urls`! note this counts raw URLs at the moment--I just don't have fast database filtering of post urls vs file urls or url-classless urls or whatever. it does a raw count.</li>
+                        <li>`system:known urls` is now tucked with this new `system:number of urls` under a new stub predicate called `system:urls`</li>
+                        <li>a variety of 'system:number of words: has/no words' predicates now parse correctly when typed</li>
+                        <li>wrote some new system predicate parsing tests</li>
+                        <li><h3>more cbz rules</h3></li>
+                        <li>cbzs' non-image files must now have an appropriate extension like .txt, .nfo, or .xml</li>
+                        <li>the test regarding the count of non-image files (typically allowing up to 5 non-image files per directory) is more precise with regards to subdirectories, meaning a cbz with a single subdirectory and three non-image files now counts as a cbz</li>
+                        <li>every cbz must now have at least two image files that contain a number of some sort</li>
+                        <li><h3>cleanup and boring stuff</h3></li>
+                        <li>I split the github workflow build file into three, so the windows, linux, and macOS builds now all happen and upload in parallel. previously, the upload step was blocked on the slowest of the three, which was typically the macOS build by about ten minutes; now they all upload whenever they are ready. this will also help some future testing situations. the newly split scripts are a little unclean/inefficient, so there is also more work to do here</li>
+                        <li>I think I fixed the non-Windows executable permission bits for the various .sh and .command files in the base directory, which were lacking them, and I removed it from a couple dozen pngs across the docs and static directories, which somehow had them. let me know if I missed anything or messed anything up!</li>
+                        <li>if you click one of the static system predicate buttons that appear in the system pred edit UI, for instance 'system:has duration', this no longer gets promoted to the 'recent' predicates list the next time you open the panel</li>
+                        <li>some sytem predicate edit panels should stretch vertically a bit better</li>
+                        <li>some 'number of tags' queries should be a little faster</li>
+                        <li>the 'tag suggestions' options page has a bit of brushed up UI and some new explanation labels</li>
+                        <li>unified the various thumbnail generation error reporting for all the different filetypes. it should also print the file's hash, too, since most of these error contexts only have a temporary path to talk about at this stage, which isn't useful after the fact</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_557"><a href="#version_557">version 557</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
