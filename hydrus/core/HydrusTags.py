@@ -731,12 +731,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     def SetRule( self, tag_slice, rule ):
         
-        with self._lock:
-            
-            self._tag_slices_to_rules[ tag_slice ] = rule
-            
-            self._UpdateRuleCache()
-            
+        self.SetRules( ( tag_slice, ), rule )
         
     
     def SetRules( self, tag_slices, rule ):

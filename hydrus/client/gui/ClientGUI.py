@@ -3320,7 +3320,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         currently_darkmode = self._new_options.GetString( 'current_colourset' ) == 'darkmode'
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'darkmode', 'Set the \'darkmode\' colourset on and off.', currently_darkmode, self.FlipDarkmode )
+        self._menu_item_help_darkmode = ClientGUIMenus.AppendMenuCheckItem( menu, 'darkmode', 'Set the \'darkmode\' colourset on and off.', currently_darkmode, self.FlipDarkmode )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'advanced_mode' )
         
@@ -4373,6 +4373,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._controller.pub( 'refresh_page_name' )
         self._controller.pub( 'notify_new_colourset' )
         self._controller.pub( 'notify_new_favourite_tags' )
+        
+        self._menu_item_help_darkmode.setChecked( HG.client_controller.new_options.GetString( 'current_colourset' ) == 'darkmode' )
         
         self._UpdateSystemTrayIcon()
         

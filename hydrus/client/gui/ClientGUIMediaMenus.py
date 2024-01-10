@@ -348,6 +348,11 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
     
     # figure out which urls this focused file has
     
+    if focus_media.IsCollection():
+        
+        focus_media = focus_media.GetDisplayMedia()
+        
+    
     focus_urls = focus_media.GetLocationsManager().GetURLs()
     
     focus_matched_labels_and_urls = []
@@ -392,50 +397,53 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
     selected_media_url_classes = set()
     multiple_or_unmatching_selection_url_classes = False
     
-    if selected_media is not None and len( selected_media ) > 1:
+    if selected_media is not None:
         
         selected_media = ClientMedia.FlattenMedia( selected_media )
         
-        SAMPLE_SIZE = 256
-        
-        if len( selected_media ) > SAMPLE_SIZE:
+        if len( selected_media ) > 1:
             
-            selected_media_sample = random.sample( selected_media, SAMPLE_SIZE )
+            SAMPLE_SIZE = 256
             
-        else:
-            
-            selected_media_sample = selected_media
-            
-        
-        for media in selected_media_sample:
-            
-            media_urls = media.GetLocationsManager().GetURLs()
-            
-            for url in media_urls:
+            if len( selected_media ) > SAMPLE_SIZE:
                 
-                try:
-                    
-                    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
-                    
-                except HydrusExceptions.URLClassException:
-                    
-                    continue
-                    
+                selected_media_sample = random.sample( selected_media, SAMPLE_SIZE )
                 
-                if url_class is None:
-                    
-                    multiple_or_unmatching_selection_url_classes = True
-                    
-                else:
-                    
-                    selected_media_url_classes.add( url_class )
-                    
+            else:
+                
+                selected_media_sample = selected_media
                 
             
-        
-        if len( selected_media_url_classes ) > 1:
+            for media in selected_media_sample:
+                
+                media_urls = media.GetLocationsManager().GetURLs()
+                
+                for url in media_urls:
+                    
+                    try:
+                        
+                        url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                        
+                    except HydrusExceptions.URLClassException:
+                        
+                        continue
+                        
+                    
+                    if url_class is None:
+                        
+                        multiple_or_unmatching_selection_url_classes = True
+                        
+                    else:
+                        
+                        selected_media_url_classes.add( url_class )
+                        
+                    
+                
             
-            multiple_or_unmatching_selection_url_classes = True
+            if len( selected_media_url_classes ) > 1:
+                
+                multiple_or_unmatching_selection_url_classes = True
+                
             
         
     

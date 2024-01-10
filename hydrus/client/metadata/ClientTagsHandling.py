@@ -870,11 +870,16 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
     
     def HideTag( self, tag_display_type, service_key, tag ):
         
+        self.HideTags( tag_display_type, service_key, ( tag, ) )
+        
+    
+    def HideTags( self, tag_display_type, service_key, tags ):
+        
         with self._lock:
             
             tag_filter = self._tag_display_types_to_service_keys_to_tag_filters[ tag_display_type ][ service_key ]
             
-            tag_filter.SetRule( tag, HC.FILTER_BLACKLIST )
+            tag_filter.SetRules( tags, HC.FILTER_BLACKLIST )
             
             self._dirty = True
             

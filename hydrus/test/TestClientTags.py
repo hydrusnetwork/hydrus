@@ -1913,6 +1913,12 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( '<', 5 ) )
+        
+        self.assertEqual( p.ToString(), 'system:number of urls < 5' )
+        self.assertEqual( p.GetNamespace(), 'system' )
+        self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
+        
         p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
         
         self.assertEqual( p.ToString(), 'system:number of words < 5,000' )
@@ -2059,7 +2065,18 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:number of character tags > 5', "system:number of character tags > 5" ),
             ( f'system:number of tags {HC.UNICODE_APPROX_EQUAL} 10', "system:number of tags ~= 10" ),
             ( 'system:has tags', "system:number of tags > 0  " ),
-            ( 'system:number of words < 2', "system:number of words < 2" ),
+            ( 'system:number of urls < 2', 'system:number of urls < 2' ),
+            ( 'system:number of urls < 2', 'system:num urls < 2' ),
+            ( 'system:number of urls: has urls', 'system:num urls > 0' ),
+            ( 'system:number of urls: has urls', 'system:num urls: has urls' ),
+            ( 'system:number of urls: no urls', 'system:num urls = 0' ),
+            ( 'system:number of urls: no urls', 'system:number of urls: no urls' ),
+            ( 'system:number of urls < 2', 'system:number of urls < 2' ),
+            ( 'system:number of urls < 2', 'system:num urls < 2' ),
+            ( 'system:number of words: has words', 'system:num words > 0' ),
+            ( 'system:number of words: has words', 'system:num words: has words' ),
+            ( 'system:number of words: no words', 'system:num words = 0' ),
+            ( 'system:number of words: no words', 'system:number of words: no words' ),
             ( 'system:height = 600', "system:height = 600px" ),
             ( 'system:height = 800', "system:height is 800" ),
             ( 'system:height > 900', "system:height > 900" ),

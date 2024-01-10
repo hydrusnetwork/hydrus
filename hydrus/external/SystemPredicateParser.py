@@ -108,6 +108,7 @@ class Predicate( Enum ):
     UNTAGGED = auto()
     NUM_OF_TAGS = auto()
     NUM_OF_TAGS_WITH_NAMESPACE = auto()
+    NUM_OF_URLS = auto()
     NUM_OF_WORDS = auto()
     HEIGHT = auto()
     WIDTH = auto()
@@ -234,7 +235,8 @@ SYSTEM_PREDICATES = {
     'untagged|no tags': (Predicate.UNTAGGED, None, None, None),
     'num(ber)?( of)? tags': (Predicate.NUM_OF_TAGS, Operators.RELATIONAL, Value.NATURAL, None),
     'num(ber)?( of)? (?=[^\\s].* tags)': (Predicate.NUM_OF_TAGS_WITH_NAMESPACE, None, Value.NAMESPACE_AND_NUM_TAGS, None),
-    'num(ber)?( of)? words': (Predicate.NUM_OF_WORDS, Operators.RELATIONAL, Value.NATURAL, None),
+    'num(ber)?( of)? urls': (Predicate.NUM_OF_URLS, Operators.RELATIONAL, Value.NATURAL, None),
+    'num(ber)?( of)? words': (Predicate.NUM_OF_WORDS, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
     'height': (Predicate.HEIGHT, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'width': (Predicate.WIDTH, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
     'file ?size': (Predicate.FILESIZE, Operators.RELATIONAL, Value.NATURAL, Units.FILESIZE),
@@ -295,6 +297,9 @@ def string_looks_like_date( string ):
 # then trying to parse it by consuming the input string.
 # The parse_* functions consume some of the string and return a (remaining part of the string, parsed value) tuple.
 def parse_system_predicate( string: str ):
+    
+    # TODO: (hydev): rework this thing into passing around a 'parse result object' that the operator parser can set a value for and say 'yeah value is sorted' for things like 'has words' = '> 0' in one swoop
+    
     string = string.lower().strip()
     string = string.replace( '_', ' ' )
     if string.startswith( "-" ):
@@ -370,12 +375,20 @@ def parse_unit( string: str, spec ):
     
 
 def parse_value( string: str, spec ):
+    
     string = string.strip()
+    
     if spec is None:
         
         return string, None
         
     elif spec in ( Value.NATURAL, Value.INTEGER ):
+        
+        # 'has urls', 'has words'
+        if string.startswith( 'has' ) or string.startswith( 'no' ):
+            
+            return '', 0
+            
         
         match = re.match( '-?[0-9,]+', string )
         
@@ -472,10 +485,13 @@ def parse_value( string: str, spec ):
         
     
     elif spec == Value.FILETYPE_LIST:
+        
         valid_values = sorted( FILETYPES.keys(), key = lambda k: len( k ), reverse = True )
         ftype_regex = '(' + '|'.join( [ '(' + val + ')' for val in valid_values ] ) + ')'
         match = re.match( '(' + ftype_regex + '(\s|,)+)*' + ftype_regex, string )
+        
         if match:
+            
             found_ftypes_all = re.sub( '\s', ' ', match[ 0 ].replace( ',', '|' ) ).split( '|' )
             found_ftypes_good = [ ]
             for ftype in found_ftypes_all:
@@ -483,7 +499,10 @@ def parse_value( string: str, spec ):
                 if len( ftype ) > 0 and ftype in FILETYPES:
                     found_ftypes_good.extend( FILETYPES[ ftype ] )
             return string[ len( match[ 0 ] ): ], set( found_ftypes_good )
+            
+        
         raise ValueError( "Invalid value, expected a list of file types" )
+        
     elif spec == Value.DATE_OR_TIME_INTERVAL:
         
         if DATEPARSER_OK:
@@ -535,6 +554,8 @@ def parse_value( string: str, spec ):
                     
                 
                 return string_result, (years, months, days, hours)
+                
+            
             match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
             if match:
                 # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
@@ -748,6 +769,8 @@ def parse_operator( string: str, spec ):
         for op in ops:
             if string.startswith( op ): return string[ len( op ): ], op
         if string.startswith( 'is' ): return string[ 2: ], '='
+        if string.startswith( 'has' ): return string, '>'
+        if string.startswith( 'no' ): return string, '='
         raise ValueError( "Invalid relational operator" )
     elif spec == Operators.RELATIONAL_FOR_RATING_SERVICE:
         

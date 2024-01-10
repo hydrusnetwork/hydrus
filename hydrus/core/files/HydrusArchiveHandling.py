@@ -135,25 +135,26 @@ def ZipLooksLikeCBZ( path_to_zip ):
     # what does a Comic Book Archive look like? it is ad-hoc, not rigorous, so be forgiving
     # it is a list of images
     # they may be flat in the base, or they may be in one or more subfolders
-    # they may be accomanied by extra metadata files like: md5sum, .sfv/.SFV, .nfo, comicbook.xml, metadata.txt
+    # they may be accompanied by extra metadata files like: md5sum, .sfv/.SFV, .nfo, comicbook.xml, metadata.txt
+    # they _cannot_ be accompanied by .exe, .zip, .unitypackage, .psd, or other gubbins
     # nothing else
     
     directories_to_image_filenames = collections.defaultdict( set )
     
-    num_directories = 1
+    directories_with_stuff_in = set()
     num_weird_files = 0
     num_images = 0
+    num_images_with_numbers = 0
     num_weird_files_allowed_per_directory = 5
     num_images_needed_per_directory = 1
-    ok_weird_filenames = { 'md5sum', 'comicbook.xml', 'metadata.txt', 'info.txt' }
+    totally_ok_weird_filenames = { 'md5sum', 'comicbook.xml', 'metadata.txt', 'info.txt' }
+    weird_filename_extension_whitelist = { '.sfv', '.nfo', '.txt', '.xml', '.json' }
     
     with zipfile.ZipFile( path_to_zip ) as zip_handle:
         
         for zip_info in zip_handle.infolist():
             
             if zip_info.is_dir():
-                
-                num_directories += 1
                 
                 continue
                 
@@ -171,9 +172,11 @@ def ZipLooksLikeCBZ( path_to_zip ):
                 directory_path = ''
                 
             
+            directories_with_stuff_in.add( directory_path )
+            
             filename = filename.lower()
             
-            if filename in ok_weird_filenames:
+            if filename in totally_ok_weird_filenames:
                 
                 continue
                 
@@ -182,19 +185,44 @@ def ZipLooksLikeCBZ( path_to_zip ):
                 
                 num_images += 1
                 
+                if re.search( r'\d', filename ) is not None:
+                    
+                    num_images_with_numbers += 1
+                    
+                
                 directories_to_image_filenames[ directory_path ].add( filename )
                 
                 continue
                 
-            elif filename_has_video_ext( filename ):
-                
-                # this catches some zips nicely
-                return False
-                
             else:
                 
-                num_weird_files += 1
+                if '.' in filename:
+                    
+                    ext_with_dot = '.' + filename.split( '.' )[-1]
+                    
+                    if ext_with_dot in weird_filename_extension_whitelist:
+                        
+                        num_weird_files += 1
+                        
+                    else:
+                        
+                        # we got ourselves a .mp4 or .unitypackage or whatever. not a cbz!
+                        return False
+                        
+                    
+                else:
+                    
+                    # we out here with a 'gonk' file. not a cbz!
+                    return False
+                    
                 
+            
+        
+        # although we want to broadly check there are files with numbers, we don't want tempt ourselves into searching for 0 or 1. some 'chapters' start at page 55
+        # a two-paged comic is the minimum permissible
+        if num_images_with_numbers <= 1:
+            
+            return False
             
         
         try:
@@ -241,12 +269,12 @@ def ZipLooksLikeCBZ( path_to_zip ):
             
         
     
-    if num_weird_files * num_directories > num_weird_files_allowed_per_directory:
+    if num_weird_files * len( directories_with_stuff_in ) > num_weird_files_allowed_per_directory:
         
         return False
         
     
-    if num_images * num_directories < num_images_needed_per_directory:
+    if num_images * len( directories_with_stuff_in ) < num_images_needed_per_directory:
         
         return False
         

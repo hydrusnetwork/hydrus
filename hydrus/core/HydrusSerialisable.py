@@ -9,7 +9,6 @@ from hydrus.core import HydrusCompression
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTime
 
 META_SERIALISABLE_TYPE_JSON_OK = 0
 META_SERIALISABLE_TYPE_JSON_BYTES = 1

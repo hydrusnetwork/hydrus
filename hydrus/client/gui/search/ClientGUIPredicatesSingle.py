@@ -1936,6 +1936,56 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
         return predicates
         
     
+
+class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
+    
+    def __init__( self, parent, predicate ):
+        
+        PanelPredicateSystemSingle.__init__( self, parent )
+        
+        self._sign = QP.RadioBox( self, choices=['<','=',HC.UNICODE_NOT_EQUAL,'>'] )
+        
+        self._num_urls = ClientGUICommon.BetterSpinBox( self, max=1000000, width = 60 )
+        
+        #
+        
+        predicate = self._GetPredicateToInitialisePanelWith( predicate )
+        
+        ( sign, num_urls ) = predicate.GetValue()
+        
+        self._sign.SetStringSelection( sign )
+        
+        self._num_urls.setValue( num_urls )
+        
+        #
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self,'system:number of urls' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._num_urls, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetDefaultPredicate( self ):
+        
+        sign = '>'
+        num_urls = 0
+        
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( sign, num_urls ) )
+        
+    
+    def GetPredicates( self ):
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( self._sign.GetStringSelection(), self._num_urls.value() ) ), )
+        
+        return predicates
+        
+    
+
 class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
@@ -1984,6 +2034,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         return predicates
         
     
+
 class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):

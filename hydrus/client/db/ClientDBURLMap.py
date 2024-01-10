@@ -4,10 +4,10 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusTime
 
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
+from hydrus.client.search import ClientSearch
 
 class ClientDBURLMap( ClientDBModule.ClientDBModule ):
     
@@ -55,6 +55,65 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM url_map NATURAL JOIN urls WHERE url = ?;', ( search_url, ) ) )
         
         return hash_ids
+        
+    
+    def GetHashIdsFromCountTests( self, num_urls_tests: typing.List[ ClientSearch.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str ):
+        
+        # we'll have to natural join 'urls' or 'urls-class-map-cache' or whatever when we add a proper filter to this guy
+        
+        table_join = 'url_map'
+        
+        if len( hash_ids ) < 50000:
+            
+            table_join += ' NATURAL JOIN {}'.format( hash_ids_table_name )
+            
+        
+        #
+        
+        result_hash_ids = set( hash_ids )
+        
+        specific_num_urls_tests = [ number_test for number_test in num_urls_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
+        
+        megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_num_urls_tests )
+        
+        is_zero = True in ( number_test.IsZero() for number_test in num_urls_tests )
+        is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in num_urls_tests )
+        wants_zero = True in ( number_test.WantsZero() for number_test in num_urls_tests )
+        
+        if is_zero or is_anything_but_zero or wants_zero:
+            
+            select = f'SELECT DISTINCT hash_id FROM {table_join};'
+            
+            nonzero_url_query_hash_ids = self._STS( self._Execute( select ) )
+            
+            if is_zero:
+                
+                result_hash_ids.difference_update( nonzero_url_query_hash_ids )
+                
+            
+            if is_anything_but_zero:
+                
+                result_hash_ids.intersection_update( nonzero_url_query_hash_ids )
+                
+            
+        
+        if len( specific_num_urls_tests ) > 0:
+            
+            select = f'SELECT hash_id, COUNT( url_id ) FROM {table_join} GROUP BY hash_id;'
+            
+            good_url_count_hash_ids = { hash_id for ( hash_id, count ) in self._Execute( select ) if megalambda( count ) }
+            
+            if wants_zero:
+                
+                zero_hash_ids = result_hash_ids.difference( nonzero_url_query_hash_ids )
+                
+                good_url_count_hash_ids.update( zero_hash_ids )
+                
+            
+            result_hash_ids.intersection_update( good_url_count_hash_ids )
+            
+        
+        return result_hash_ids
         
     
     def GetHashIdsFromURLRule( self, rule_type, rule, hash_ids = None, hash_ids_table_name = None ):

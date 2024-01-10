@@ -3274,7 +3274,6 @@ class DB( HydrusDB.HydrusDB ):
         blank_pred_types = {
             ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS,
             ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT,
-            ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
             ClientSearch.PREDICATE_TYPE_SYSTEM_HASH,
             ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
             ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
@@ -3435,6 +3434,7 @@ class DB( HydrusDB.HydrusDB ):
                 ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+                ClientSearch.PREDICATE_TYPE_SYSTEM_URLS,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
                 ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO
                 ] )

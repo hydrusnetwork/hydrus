@@ -1150,7 +1150,7 @@ class MediaList( object ):
                         #
                         
                         physically_deleted = service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY
-                        trashed = service_key in local_file_domains
+                        possibly_trashed = service_key in local_file_domains and action == HC.CONTENT_UPDATE_DELETE
                         deleted_from_our_domain = self._location_context.IsOneDomain() and service_key in self._location_context.current_service_keys
                         
                         we_are_looking_at_trash = self._location_context.IsOneDomain() and CC.TRASH_SERVICE_KEY in self._location_context.current_service_keys
@@ -1162,12 +1162,21 @@ class MediaList( object ):
                         # case two, disappeared from repo hard drive while we are looking at it
                         deleted_from_repo_and_repo_view = service_key not in all_local_file_services and deleted_from_our_domain
                         
-                        # case three, user asked for this to happen
-                        user_says_remove_and_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and trashed and not we_are_looking_at_trash
+                        user_says_remove_and_possibly_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and possibly_trashed and not we_are_looking_at_trash
                         
-                        if physically_deleted_and_local_view or user_says_remove_and_trashed_from_non_trash_local_view or deleted_from_repo_and_repo_view:
+                        if physically_deleted_and_local_view or user_says_remove_and_possibly_trashed_from_non_trash_local_view or deleted_from_repo_and_repo_view:
                             
-                            self._RemoveMediaByHashes( hashes )
+                            if user_says_remove_and_possibly_trashed_from_non_trash_local_view:
+                                
+                                actual_trash_hashes = self.GetHashes( is_in_file_service_key = CC.TRASH_SERVICE_KEY )
+                                
+                                hashes = set( hashes ).intersection( actual_trash_hashes )
+                                
+                            
+                            if len( hashes ) > 0:
+                                
+                                self._RemoveMediaByHashes( hashes )
+                                
                             
                         
                     

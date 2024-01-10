@@ -2536,59 +2536,43 @@ class ListBoxTags( ListBox ):
         
         if command in ( 'hide', 'hide_namespace' ):
             
-            if len( tags ) == 1:
+            if command == 'hide':
                 
-                ( tag, ) = tags
+                message = f'Hide{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}from here?'
                 
-                if command == 'hide':
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.Accepted:
                     
-                    message = 'Hide "{}" from here?'.format( tag )
-                    
-                    from hydrus.client.gui import ClientGUIDialogsQuick
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                    
-                    if result != QW.QDialog.Accepted:
-                        
-                        return
-                        
-                    
-                    HG.client_controller.tag_display_manager.HideTag( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tag )
-                    
-                elif command == 'hide_namespace':
-                    
-                    ( namespace, subtag ) = HydrusTags.SplitTag( tag )
-                    
-                    if namespace == '':
-                        
-                        insert = 'unnamespaced'
-                        
-                    else:
-                        
-                        insert = '"{}"'.format( namespace )
-                        
-                    
-                    message = 'Hide {} tags from here?'.format( insert )
-                    
-                    from hydrus.client.gui import ClientGUIDialogsQuick
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                    
-                    if result != QW.QDialog.Accepted:
-                        
-                        return
-                        
-                    
-                    if namespace != '':
-                        
-                        namespace += ':'
-                        
-                    
-                    HG.client_controller.tag_display_manager.HideTag( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, namespace )
+                    return
                     
                 
-                HG.client_controller.pub( 'notify_new_tag_display_rules' )
+                HG.client_controller.tag_display_manager.HideTags( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tags )
                 
+            elif command == 'hide_namespace':
+                
+                namespaces = { namespace for ( namespace, subtag ) in ( HydrusTags.SplitTag( tag ) for tag in tags ) }
+                nice_namespaces = [ ClientTags.RenderNamespaceForUser( namespace ) for namespace in namespaces ]
+                
+                message = f'Hide{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( nice_namespaces )}tags from here?'
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.Accepted:
+                    
+                    return
+                    
+                
+                tag_slices = [ namespace if namespace == '' else namespace + ':' for namespace in namespaces ]
+                
+                HG.client_controller.tag_display_manager.HideTags( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tag_slices )
+                
+            
+            HG.client_controller.pub( 'notify_new_tag_display_rules' )
             
         else:
             
@@ -3255,61 +3239,144 @@ class ListBoxTags( ListBox ):
                 
             
         
-        if len( selected_actual_tags ) == 1:
-            
-            ( selected_tag, ) = selected_actual_tags
+        if len( selected_actual_tags ) > 0:
             
             if self._tag_display_type in ( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, ClientTags.TAG_DISPLAY_SELECTION_LIST ):
                 
                 ClientGUIMenus.AppendSeparator( menu )
                 
-                ( namespace, subtag ) = HydrusTags.SplitTag( selected_tag )
+                namespaces = set()
+                
+                for selected_actual_tag in selected_actual_tags:
+                    
+                    ( namespace, subtag ) = HydrusTags.SplitTag( selected_actual_tag )
+                    
+                    namespaces.add( namespace )
+                    
+                
+                if len( namespaces ) == 1:
+                    
+                    namespace = list( namespaces )[0]
+                    
+                    namespace_label = f'"{ClientTags.RenderNamespaceForUser( namespace )}" tags from here'
+                    
+                else:
+                    
+                    namespace_label = f'{HydrusData.ToHumanInt( len( namespaces ) )} selected namespaces from here'
+                    
+                
+                if len( selected_actual_tags ) == 1:
+                    
+                    actual_tag = list( selected_actual_tags )[0]
+                    
+                    actual_tag_label = f'"{actual_tag}" from here'
+                    
+                else:
+                    
+                    actual_tag_label = f'{HydrusData.ToHumanInt( len( selected_actual_tags ) )} selected tags from here'
+                    
                 
                 hide_menu = ClientGUIMenus.GenerateMenu( menu )
                 
-                ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" tags from here'.format( ClientTags.RenderNamespaceForUser( namespace ) ), 'Hide this namespace from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
-                ClientGUIMenus.AppendMenuItem( hide_menu, '"{}" from here'.format( selected_tag ), 'Hide this tag from view in future.', self._ProcessMenuTagEvent, 'hide' )
+                ClientGUIMenus.AppendMenuItem( hide_menu, namespace_label, 'Hide these namespaces from view in future.', self._ProcessMenuTagEvent, 'hide_namespace' )
+                ClientGUIMenus.AppendMenuItem( hide_menu, actual_tag_label, 'Hide these tags from view in future.', self._ProcessMenuTagEvent, 'hide' )
                 
                 ClientGUIMenus.AppendMenu( menu, hide_menu, 'hide' )
                 
             
-            def set_favourite_tags( tag ):
+        
+        #
+        
+        def add_favourite_tags( tags ):
+            
+            message = f'Add{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}to the favourites list?'
+            
+            from hydrus.client.gui import ClientGUIDialogsQuick
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
                 
-                favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
-                
-                if selected_tag in favourite_tags:
-                    
-                    favourite_tags.remove( tag )
-                    
-                else:
-                    
-                    favourite_tags.append( tag )
-                    
-                
-                HG.client_controller.new_options.SetStringList( 'favourite_tags', favourite_tags )
-                
-                HG.client_controller.pub( 'notify_new_favourite_tags' )
+                return
                 
             
-            favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+            favourite_tags = set( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
             
-            if selected_tag in favourite_tags:
+            favourite_tags.update( tags )
+            
+            HG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
+            
+            HG.client_controller.pub( 'notify_new_favourite_tags' )
+            
+        
+        def remove_favourite_tags( tags ):
+            
+            message = f'Remove{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}from the favourites list?'
+            
+            from hydrus.client.gui import ClientGUIDialogsQuick
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
                 
-                label = 'remove "{}" from favourites'.format( selected_tag )
-                description = 'Remove this tag from your favourites'
+                return
+                
+            
+            favourite_tags = set( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+            
+            favourite_tags.difference_update( tags )
+            
+            HG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
+            
+            HG.client_controller.pub( 'notify_new_favourite_tags' )
+            
+        
+        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+        
+        to_add = set( selected_actual_tags ).difference( favourite_tags )
+        to_remove = set( selected_actual_tags ).intersection( favourite_tags )
+        
+        favourites_menu = ClientGUIMenus.GenerateMenu( menu )
+        
+        if len( to_add ) > 0:
+            
+            if len( to_add ) == 1:
+                
+                tag = list( to_add )[0]
+                
+                label = f'Add "{tag}" to favourites'
                 
             else:
                 
-                label = 'add "{}" to favourites'.format( selected_tag )
-                description = 'Add this tag from your favourites'
+                label = f'Add {HydrusData.ToHumanInt( len( to_add ) )} selected tags to favourites'
                 
             
-            favourites_menu = ClientGUIMenus.GenerateMenu( menu )
+            description = 'Add these tags to the favourites list.'
             
-            ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, set_favourite_tags, selected_tag )
+            ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, add_favourite_tags, to_add )
             
-            m = ClientGUIMenus.AppendMenu( menu, favourites_menu, 'favourites' )
+        
+        if len( to_remove ) > 0:
             
+            if len( to_remove ) == 1:
+                
+                tag = list( to_remove )[0]
+                
+                label = f'Remove "{tag}" from favourites'
+                
+            else:
+                
+                label = f'Remove {HydrusData.ToHumanInt( len( to_remove ) )} selected tags from favourites'
+                
+            
+            description = 'Add these tags to the favourites list.'
+            
+            ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, remove_favourite_tags, to_remove )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, favourites_menu, 'favourites' )
+        
+        #
         
         self.AddAdditionalMenuItems( menu )
         

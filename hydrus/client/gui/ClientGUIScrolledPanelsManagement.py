@@ -4383,7 +4383,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             for item in [ 'favourites', 'related', 'file_lookup_scripts', 'recent' ]:
                 
-                self._default_suggested_tags_notebook_page.addItem( item, item )
+                label = 'most used' if item == 'favourites' else item
+                
+                self._default_suggested_tags_notebook_page.addItem( label, item )
                 
             
             suggest_tags_panel_notebook = QW.QTabWidget( suggested_tags_panel )
@@ -4513,7 +4515,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             panel_vbox = QP.VBoxLayout()
             
-            QP.AddToLayout( panel_vbox, self._suggested_favourites_services, CC.FLAGS_EXPAND_PERPENDICULAR )
+            st = ClientGUICommon.BetterStaticText( suggested_tags_favourites_panel, 'Add your most used tags for each particular service here, and then you can just double-click to add, rather than typing every time.' )
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Tag service: ', self._suggested_favourites_services ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
+            
+            QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, self._suggested_favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( panel_vbox, self._suggested_favourites_input, CC.FLAGS_EXPAND_PERPENDICULAR )
             
@@ -4533,13 +4546,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_related_panel, rows )
             
-            desc = 'This will search the database for tags statistically related to what your files already have.'
-            
             search_tag_slices_weight_box.Add( search_tag_slices_weight_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             result_tag_slices_weight_box.Add( result_tag_slices_weight_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
-            QP.AddToLayout( panel_vbox, ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            desc = 'This will search the database for tags statistically related to what your files already have. It only searches within the specific service atm. The score weights are advanced, so only change them if you know what is going on!'
+            st = ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc )
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, search_tag_slices_weight_box, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( panel_vbox, result_tag_slices_weight_box, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -4557,6 +4572,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gridbox = ClientGUICommon.WrapInGrid( suggested_tags_file_lookup_script_panel, rows )
             
+            desc = 'This is an increasingly defunct system, do not expect miracles!'
+            st = ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc )
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             suggested_tags_file_lookup_script_panel.setLayout( panel_vbox )
@@ -4565,6 +4585,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             panel_vbox = QP.VBoxLayout()
             
+            desc = 'This simply saves the last n tags you have added for each service.'
+            st = ClientGUICommon.BetterStaticText( suggested_tags_related_panel, desc )
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( panel_vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( panel_vbox, self._num_recent_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             panel_vbox.addStretch( 1 )
@@ -4573,7 +4598,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            suggest_tags_panel_notebook.addTab( suggested_tags_favourites_panel, 'favourites' )
+            suggest_tags_panel_notebook.addTab( suggested_tags_favourites_panel, 'most used' )
             suggest_tags_panel_notebook.addTab( suggested_tags_related_panel, 'related' )
             suggest_tags_panel_notebook.addTab( suggested_tags_file_lookup_script_panel, 'file lookup scripts' )
             suggest_tags_panel_notebook.addTab( suggested_tags_recent_panel, 'recent' )

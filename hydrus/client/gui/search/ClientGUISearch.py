@@ -41,6 +41,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_ICC_PROFILE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_MIME,
     ClientSearch.PREDICATE_TYPE_SYSTEM_RATING,
     ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO,
@@ -48,6 +49,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES,
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
     ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER,
+    ClientSearch.PREDICATE_TYPE_SYSTEM_URLS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS,
     ClientSearch.PREDICATE_TYPE_SYSTEM_NOTES,
     ClientSearch.PREDICATE_TYPE_SYSTEM_TIME,
@@ -321,6 +323,10 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
                     self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemKnownURLsURLClass( self, predicate ) )
                     
                 
+            elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS:
+                
+                self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemNumURLs( self, predicate ) )
+                
             elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_HASH:
                 
                 self._editable_pred_panels.append( ClientGUIPredicatesSingle.PanelPredicateSystemHash( self, predicate ) )
@@ -569,6 +575,34 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemKnownURLsRegex, predicate ) )
             editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemKnownURLsURLClass, predicate ) )
             
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS:
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumURLs, predicate ) )
+            
+        elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_URLS:
+            
+            label = 'Note that "number of urls" counts all URLs, regardless of how important.'
+            
+            recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS ]
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemKnownURLsExactURL, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemKnownURLsDomain, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemKnownURLsRegex, predicate ) )
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemKnownURLsURLClass, predicate ) )
+            
+            pages.append( ( 'known urls', recent_predicate_types, static_pred_buttons, editable_pred_panels ) )
+            
+            page_name = 'number of urls'
+            
+            recent_predicate_types = [ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS ]
+            static_pred_buttons = []
+            editable_pred_panels = []
+            
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( '>', 0 ) ), ), show_remove_button = False ) )
+            static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( '=', 0 ) ), ), show_remove_button = False ) )
+            
+            editable_pred_panels.append( self._PredOKPanel( self, ClientGUIPredicatesSingle.PanelPredicateSystemNumURLs, predicate ) )
+            
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_PROPERTIES:
             
             recent_predicate_types = []
@@ -742,9 +776,18 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             recent_predicates = []
             
+            all_static_preds = set()
+            
+            for pred_button in static_pred_buttons:
+                
+                all_static_preds.update( pred_button.GetPredicates() )
+                
+            
             if len( recent_predicate_types ) > 0:
                 
                 recent_predicates = HG.client_controller.new_options.GetRecentPredicates( recent_predicate_types )
+                
+                recent_predicates = [ pred for pred in recent_predicates if pred not in all_static_preds ]
                 
                 if len( recent_predicates ) > 0:
                     
@@ -768,18 +811,6 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 preds = button.GetPredicates()
                 
-                if len( preds ) == 1:
-                    
-                    pred = list( preds )[0]
-                    
-                    if pred in recent_predicates:
-                        
-                        button.setVisible( False )
-                        
-                        continue
-                        
-                    
-                
                 QP.AddToLayout( page_vbox, button, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
                 button.predicatesChosen.connect( self.StaticButtonClicked )
@@ -790,6 +821,8 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 QP.AddToLayout( page_vbox, panel, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
+            
+            page_vbox.addStretch( 1 )
             
             page_panel.setLayout( page_vbox )
             

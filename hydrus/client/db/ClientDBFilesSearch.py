@@ -2174,6 +2174,18 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
+        num_urls_tests = system_predicates.GetNumURLsNumberTests()
+        
+        if len( num_urls_tests ) > 0:
+            
+            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                url_hash_ids = self.modules_url_map.GetHashIdsFromCountTests( num_urls_tests, query_hash_ids, temp_table_name )
+                
+            
+            query_hash_ids = intersection_update_qhi( query_hash_ids, url_hash_ids )
+            
+        
         if 'known_url_rules' in simple_preds:
             
             for ( operator, rule_type, rule ) in simple_preds[ 'known_url_rules' ]:
@@ -2216,26 +2228,23 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 namespace_wildcard = '*'
                 
             
-            is_zero = True in ( number_test.IsZero() for number_test in number_tests )
-            is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )
-            
             specific_number_tests = [ number_test for number_test in number_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
             
-            lambdas = [ number_test.GetLambda() for number_test in specific_number_tests ]
+            megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_number_tests )
             
-            megalambda = lambda x: False not in ( lamb( x ) for lamb in lambdas )
+            is_zero = True in ( number_test.IsZero() for number_test in number_tests )
+            is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )
+            wants_zero = True in ( number_test.WantsZero() for number_test in number_tests )
             
-            with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+            nonzero_tag_query_hash_ids = set()
+            
+            if is_zero or is_anything_but_zero or wants_zero:
                 
-                self._AnalyzeTempTable( temp_table_name )
-                
-                nonzero_tag_query_hash_ids = set()
-                nonzero_tag_query_hash_ids_populated = False
-                
-                if is_zero or is_anything_but_zero:
+                with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
+                    
+                    self._AnalyzeTempTable( temp_table_name )
                     
                     nonzero_tag_query_hash_ids = self.modules_files_search_tags.GetHashIdsThatHaveTagsComplexLocation( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, location_context, tag_context, hash_ids_table_name = temp_table_name, namespace_wildcard = namespace_wildcard, job_status = job_status )
-                    nonzero_tag_query_hash_ids_populated = True
                     
                     if is_zero:
                         
@@ -2257,11 +2266,6 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 if megalambda( 0 ): # files with zero count are needed
                     
-                    if not nonzero_tag_query_hash_ids_populated:
-                        
-                        nonzero_tag_query_hash_ids = { hash_id for ( hash_id, count ) in hash_id_tag_counts }
-                        
-                    
                     zero_hash_ids = query_hash_ids.difference( nonzero_tag_query_hash_ids )
                     
                     good_tag_count_hash_ids.update( zero_hash_ids )
@@ -2269,7 +2273,6 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, good_tag_count_hash_ids )
                 
-            
             
         
         if job_status.IsCancelled():

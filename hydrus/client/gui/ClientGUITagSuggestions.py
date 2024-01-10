@@ -821,7 +821,7 @@ class SuggestedTagsPanel( QW.QWidget ):
             
             self._favourite_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
             
-            panels.append( ( 'favourites', self._favourite_tags ) )
+            panels.append( ( 'most used', self._favourite_tags ) )
             
         
         self._related_tags = None
@@ -870,6 +870,7 @@ class SuggestedTagsPanel( QW.QWidget ):
             
             name_to_page_dict = {
                 'favourites' : self._favourite_tags,
+                'most used' : self._favourite_tags,
                 'related' : self._related_tags,
                 'file_lookup_scripts' : self._file_lookup_script_tags,
                 'recent' : self._recent_tags

@@ -71,6 +71,8 @@ PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA = 48
 PREDICATE_TYPE_SYSTEM_SIMILAR_TO = 49
 PREDICATE_TYPE_SYSTEM_HAS_TRANSPARENCY = 50
 PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE = 51
+PREDICATE_TYPE_SYSTEM_NUM_URLS = 52
+PREDICATE_TYPE_SYSTEM_URLS = 53
 
 SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_EVERYTHING,
@@ -116,6 +118,8 @@ SYSTEM_PREDICATE_TYPES = {
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT,
     PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING,
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+    PREDICATE_TYPE_SYSTEM_NUM_URLS,
+    PREDICATE_TYPE_SYSTEM_URLS,
     PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS,
     PREDICATE_TYPE_SYSTEM_TIME,
     PREDICATE_TYPE_SYSTEM_HAS_FORCED_FILETYPE
@@ -362,11 +366,15 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             
             return lambda x: lower < x < upper
             
+        elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
+            
+            return lambda x: x != self.value
+            
         
     
     def IsAnythingButZero( self ):
         
-        return self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN and self.value == 0
+        return self.operator in ( NUMBER_TEST_OPERATOR_NOT_EQUAL, NUMBER_TEST_OPERATOR_GREATER_THAN ) and self.value == 0
         
     
     def IsZero( self ):
@@ -388,6 +396,14 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         operator = number_test_str_to_operator_lookup[ operator_str ]
         
         return NumberTest( operator, value )
+        
+    
+    @staticmethod
+    def STATICCreateMegaLambda( number_tests: typing.Collection[ "NumberTest" ] ):
+        
+        lambdas = [ number_test.GetLambda() for number_test in number_tests ]
+        
+        return lambda x: False not in ( lamb( x ) for lamb in lambdas )
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST ] = NumberTest
@@ -416,6 +432,7 @@ class FileSystemPredicates( object ):
         self._ratings_predicates = []
         
         self._num_tags_predicates = []
+        self._num_urls_predicates = []
         
         self._duplicate_count_predicates = []
         
@@ -697,6 +714,11 @@ class FileSystemPredicates( object ):
                 self._num_tags_predicates.append( predicate.Duplicate() )
                 
             
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
+                
+                self._num_urls_predicates.append( predicate.Duplicate() )
+                
+            
             if predicate_type == PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
                 
                 ( namespace, operator, num ) = value
@@ -928,6 +950,22 @@ class FileSystemPredicates( object ):
             
         
         return namespaces_to_tests
+        
+    
+    def GetNumURLsNumberTests( self ) -> typing.List[ NumberTest ]:
+        
+        tests = []
+        
+        for predicate in self._num_urls_predicates:
+            
+            ( operator, value ) = predicate.GetValue()
+            
+            test = NumberTest.STATICCreateFromCharacters( operator, value )
+            
+            tests.append( test )
+            
+        
+        return tests
         
     
     def GetRatingsPredicates( self ):
@@ -1630,6 +1668,7 @@ EDIT_PRED_TYPES = {
     PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
     PREDICATE_TYPE_SYSTEM_FILE_SERVICE,
     PREDICATE_TYPE_SYSTEM_KNOWN_URLS,
+    PREDICATE_TYPE_SYSTEM_NUM_URLS,
     PREDICATE_TYPE_SYSTEM_HASH,
     PREDICATE_TYPE_SYSTEM_LIMIT,
     PREDICATE_TYPE_SYSTEM_MIME,
@@ -2155,7 +2194,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             return Predicate( self._predicate_type, not self._value )
             
-        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
             
             ( operator, value ) = self._value
             
@@ -2413,9 +2452,10 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DIMENSIONS: base = 'dimensions'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_SIMILAR_TO: base = 'similar files'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_TIME: base = 'time'
+            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_URLS: base = 'urls'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTES: base = 'notes'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
                 
                 has_phrase = None
                 not_has_phrase = None
@@ -2433,6 +2473,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     base = 'number of notes'
                     has_phrase = ': has notes'
                     not_has_phrase = ': no notes'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
+                    
+                    base = 'number of urls'
+                    has_phrase = ': has urls'
+                    not_has_phrase = ': no urls'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
                     

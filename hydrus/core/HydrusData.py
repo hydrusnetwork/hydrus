@@ -164,6 +164,37 @@ def ConvertIntToPrettyOrdinalString( num: int ):
     
     return s
     
+
+def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ str ], do_sort: bool = True ) -> str:
+    """
+    The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
+    """
+    texts = list( texts )
+    
+    if do_sort:
+        
+        HydrusText.SortStringsIgnoringCase( texts )
+        
+    
+    if len( texts ) == 1:
+        
+        return f' "{texts[0]}" '
+        
+    else:
+        
+        if len( texts ) <= 4:
+            
+            t = '\n'.join( texts )
+            
+        else:
+            
+            t = ', '.join( texts )
+            
+        
+        return f'\n\n{t}\n\n'
+        
+    
+
 def ConvertIntToUnit( unit ):
     
     if unit == 1: return 'B'
@@ -311,6 +342,7 @@ def GenerateKey():
     
     return os.urandom( HC.HYDRUS_KEY_LENGTH )
     
+
 def Get64BitHammingDistance( perceptual_hash1, perceptual_hash2 ):
     
     # old slow strategy:
