@@ -121,257 +121,257 @@ class FileInfoManager( object ):
         
     
 
-class TimestampsManager( object ):
+class TimesManager( object ):
     
     def __init__( self ):
         
-        self._simple_timestamp_types_to_timestamps = {}
-        self._domains_to_modified_timestamps = {}
+        self._simple_timestamp_types_to_timestamps_ms = {}
+        self._domains_to_modified_timestamps_ms = {}
         
-        self._timestamp_types_to_service_keys_to_timestamps = { timestamp_type : {} for timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES }
+        self._timestamp_types_to_service_keys_to_timestamps_ms = { timestamp_type : {} for timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES }
         
-        self._canvas_types_to_last_viewed_timestamps = {}
+        self._canvas_types_to_last_viewed_timestamps_ms = {}
         
         # we can complete this task and not populate the dict, so we'll handle 'did we do it?' checks with a bool, otherwise we'll loop the non-generation over and over
         self._aggregate_modified_is_generated = False
         
     
-    def _ClearAggregateModifiedTimestamp( self ):
+    def _ClearAggregateModifiedTime( self ):
         
-        if HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE in self._simple_timestamp_types_to_timestamps:
+        if HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE in self._simple_timestamp_types_to_timestamps_ms:
             
-            del self._simple_timestamp_types_to_timestamps[ HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE ]
+            del self._simple_timestamp_types_to_timestamps_ms[ HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE ]
             
         
         self._aggregate_modified_is_generated = False
         
     
-    def _ClearFileServiceTimestamp( self, timestamp_type: int, service_key: bytes ):
+    def _ClearFileServiceTime( self, timestamp_type: int, service_key: bytes ):
         
-        service_keys_to_timestamps = self._timestamp_types_to_service_keys_to_timestamps[ timestamp_type ]
+        service_keys_to_timestamps_ms = self._timestamp_types_to_service_keys_to_timestamps_ms[ timestamp_type ]
         
-        if service_key in service_keys_to_timestamps:
+        if service_key in service_keys_to_timestamps_ms:
             
-            del service_keys_to_timestamps[ service_key ]
-            
-        
-    
-    def _ClearLastViewedTimestamp( self, canvas_type: int ):
-        
-        if canvas_type in self._canvas_types_to_last_viewed_timestamps:
-            
-            del self._canvas_types_to_last_viewed_timestamps[ canvas_type ]
+            del service_keys_to_timestamps_ms[ service_key ]
             
         
     
-    def _ClearSimpleTimestamp( self, timestamp_type: int ):
+    def _ClearLastViewedTime( self, canvas_type: int ):
         
-        if timestamp_type in self._simple_timestamp_types_to_timestamps:
+        if canvas_type in self._canvas_types_to_last_viewed_timestamps_ms:
             
-            del self._simple_timestamp_types_to_timestamps[ timestamp_type ]
+            del self._canvas_types_to_last_viewed_timestamps_ms[ canvas_type ]
+            
+        
+    
+    def _ClearSimpleTime( self, timestamp_type: int ):
+        
+        if timestamp_type in self._simple_timestamp_types_to_timestamps_ms:
+            
+            del self._simple_timestamp_types_to_timestamps_ms[ timestamp_type ]
             
             if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE:
                 
-                self._ClearAggregateModifiedTimestamp()
+                self._ClearAggregateModifiedTime()
                 
             
         
     
-    def _GenerateAggregateModifiedTimestamp( self ):
+    def _GenerateAggregateModifiedTime( self ):
         
-        all_timestamps = { timestamp for ( domain, timestamp ) in self._domains_to_modified_timestamps.items() }
+        all_timestamps_ms = { timestamp_ms for ( domain, timestamp_ms ) in self._domains_to_modified_timestamps_ms.items() }
         
-        if HC.TIMESTAMP_TYPE_MODIFIED_FILE in self._simple_timestamp_types_to_timestamps:
+        if HC.TIMESTAMP_TYPE_MODIFIED_FILE in self._simple_timestamp_types_to_timestamps_ms:
             
-            all_timestamps.add( self._simple_timestamp_types_to_timestamps[ HC.TIMESTAMP_TYPE_MODIFIED_FILE ])
+            all_timestamps_ms.add( self._simple_timestamp_types_to_timestamps_ms[ HC.TIMESTAMP_TYPE_MODIFIED_FILE ])
             
         
-        if len( all_timestamps ) > 0:
+        if len( all_timestamps_ms ) > 0:
             
-            self._simple_timestamp_types_to_timestamps[ HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE ] = min( all_timestamps )
+            self._simple_timestamp_types_to_timestamps_ms[ HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE ] = min( all_timestamps_ms )
             
         
         self._aggregate_modified_is_generated = True
         
     
-    def _GetFileServiceTimestamp( self, timestamp_type: int, service_key: bytes ) -> typing.Optional[ int ]:
+    def _GetFileServiceTimestampMS( self, timestamp_type: int, service_key: bytes ) -> typing.Optional[ int ]:
         
-        return self._timestamp_types_to_service_keys_to_timestamps[ timestamp_type ].get( service_key, None )
-        
-    
-    def _GetLastViewedTimestamp( self, canvas_type: int ) -> typing.Optional[ int ]:
-        
-        return self._canvas_types_to_last_viewed_timestamps.get( canvas_type, None )
+        return self._timestamp_types_to_service_keys_to_timestamps_ms[ timestamp_type ].get( service_key, None )
         
     
-    def _GetSimpleTimestamp( self, timestamp_type: int ) -> typing.Optional[ int ]:
+    def _GetLastViewedTimestampMS( self, canvas_type: int ) -> typing.Optional[ int ]:
+        
+        return self._canvas_types_to_last_viewed_timestamps_ms.get( canvas_type, None )
+        
+    
+    def _GetSimpleTimestampMS( self, timestamp_type: int ) -> typing.Optional[ int ]:
         
         if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE and not self._aggregate_modified_is_generated:
             
-            self._GenerateAggregateModifiedTimestamp()
+            self._GenerateAggregateModifiedTime()
             
         
-        return self._simple_timestamp_types_to_timestamps.get( timestamp_type, None )
+        return self._simple_timestamp_types_to_timestamps_ms.get( timestamp_type, None )
         
     
-    def _GetDomainModifiedTimestamp( self, domain: str ):
+    def _GetDomainModifiedTimestampMS( self, domain: str ) -> typing.Optional[ int ]:
         
-        return self._domains_to_modified_timestamps.get( domain, None )
-        
-    
-    def _SetDomainModifiedTimestamp( self, domain: str, timestamp: int ):
-        
-        self._domains_to_modified_timestamps[ domain ] = timestamp
-        
-        self._ClearAggregateModifiedTimestamp()
+        return self._domains_to_modified_timestamps_ms.get( domain, None )
         
     
-    def _SetFileServiceTimestamp( self, timestamp_type: int, service_key: bytes, timestamp: int ):
+    def _SetDomainModifiedTimestampMS( self, domain: str, timestamp_ms: int ):
         
-        self._timestamp_types_to_service_keys_to_timestamps[ timestamp_type ][ service_key ] = timestamp
+        self._domains_to_modified_timestamps_ms[ domain ] = timestamp_ms
         
-    
-    def _SetLastViewedTimestamp( self, canvas_type: int, timestamp: int ):
-        
-        self._canvas_types_to_last_viewed_timestamps[ canvas_type ] = timestamp
+        self._ClearAggregateModifiedTime()
         
     
-    def _SetSimpleTimestamp( self, timestamp_type: int, timestamp: int ):
+    def _SetFileServiceTimestampMS( self, timestamp_type: int, service_key: bytes, timestamp_ms: int ):
         
-        self._simple_timestamp_types_to_timestamps[ timestamp_type ] = timestamp
+        self._timestamp_types_to_service_keys_to_timestamps_ms[ timestamp_type ][ service_key ] = timestamp_ms
+        
+    
+    def _SetLastViewedTimestampMS( self, canvas_type: int, timestamp_ms: int ):
+        
+        self._canvas_types_to_last_viewed_timestamps_ms[ canvas_type ] = timestamp_ms
+        
+    
+    def _SetSimpleTimestampMS( self, timestamp_type: int, timestamp_ms: int ):
+        
+        self._simple_timestamp_types_to_timestamps_ms[ timestamp_type ] = timestamp_ms
         
         if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE:
             
-            self._ClearAggregateModifiedTimestamp()
+            self._ClearAggregateModifiedTime()
             
         
     
-    def ClearArchivedTimestamp( self ):
+    def ClearArchivedTime( self ):
         
-        self._ClearSimpleTimestamp( HC.TIMESTAMP_TYPE_ARCHIVED )
-        
-    
-    def ClearDeletedTimestamp( self, service_key: bytes ):
-        
-        self._ClearFileServiceTimestamp( HC.TIMESTAMP_TYPE_DELETED, service_key )
+        self._ClearSimpleTime( HC.TIMESTAMP_TYPE_ARCHIVED )
         
     
-    def ClearImportedTimestamp( self, service_key: bytes ):
+    def ClearDeletedTime( self, service_key: bytes ):
         
-        self._ClearFileServiceTimestamp( HC.TIMESTAMP_TYPE_IMPORTED, service_key )
-        
-    
-    def ClearLastViewedTimestamp( self, canvas_type: int ):
-        
-        self._ClearLastViewedTimestamp( canvas_type )
+        self._ClearFileServiceTime( HC.TIMESTAMP_TYPE_DELETED, service_key )
         
     
-    def ClearPreviouslyImportedTimestamp( self, service_key: bytes ):
+    def ClearImportedTime( self, service_key: bytes ):
         
-        self._ClearFileServiceTimestamp( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key )
+        self._ClearFileServiceTime( HC.TIMESTAMP_TYPE_IMPORTED, service_key )
         
     
-    def ClearTimestamp( self, timestamp_data: ClientTime.TimestampData ):
+    def ClearLastViewedTime( self, canvas_type: int ):
+        
+        self._ClearLastViewedTime( canvas_type )
+        
+    
+    def ClearPreviouslyImportedTime( self, service_key: bytes ):
+        
+        self._ClearFileServiceTime( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key )
+        
+    
+    def ClearTime( self, timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
-            if timestamp_data.location in self._domains_to_modified_timestamps:
+            if timestamp_data.location in self._domains_to_modified_timestamps_ms:
                 
-                del self._domains_to_modified_timestamps[ timestamp_data.location ]
+                del self._domains_to_modified_timestamps_ms[ timestamp_data.location ]
                 
-                self._ClearAggregateModifiedTimestamp()
+                self._ClearAggregateModifiedTime()
                 
             
         elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
             
-            self._ClearLastViewedTimestamp( timestamp_data.location )
+            self._ClearLastViewedTime( timestamp_data.location )
             
         elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
             
-            self._ClearFileServiceTimestamp( timestamp_data.timestamp_type, timestamp_data.location )
+            self._ClearFileServiceTime( timestamp_data.timestamp_type, timestamp_data.location )
             
         elif timestamp_data.timestamp_type in ClientTime.SIMPLE_TIMESTAMP_TYPES:
             
-            self._ClearSimpleTimestamp( timestamp_data.timestamp_type )
+            self._ClearSimpleTime( timestamp_data.timestamp_type )
             
         
     
-    def Duplicate( self ) -> "TimestampsManager":
+    def Duplicate( self ) -> "TimesManager":
         
-        timestamps_manager = TimestampsManager()
+        times_manager = TimesManager()
         
-        timestamps_manager._simple_timestamp_types_to_timestamps = dict( self._simple_timestamp_types_to_timestamps )
-        timestamps_manager._domains_to_modified_timestamps = dict( self._domains_to_modified_timestamps )
+        times_manager._simple_timestamp_types_to_timestamps_ms = dict( self._simple_timestamp_types_to_timestamps_ms )
+        times_manager._domains_to_modified_timestamps_ms = dict( self._domains_to_modified_timestamps_ms )
         
-        return timestamps_manager
-        
-    
-    def GetAggregateModifiedTimestamp( self ):
-        
-        return self._GetSimpleTimestamp( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE )
+        return times_manager
         
     
-    def GetArchivedTimestamp( self ) -> typing.Optional[ int ]:
+    def GetAggregateModifiedTimestampMS( self ):
         
-        return self._GetSimpleTimestamp( HC.TIMESTAMP_TYPE_ARCHIVED )
-        
-    
-    def GetDeletedTimestamp( self, service_key: bytes ) -> typing.Optional[ int ]:
-        
-        return self._GetFileServiceTimestamp( HC.TIMESTAMP_TYPE_DELETED, service_key )
+        return self._GetSimpleTimestampMS( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE )
         
     
-    def GetDomainModifiedTimestamp( self, domain: str ) -> typing.Optional[ int ]:
+    def GetArchivedTimestampMS( self ) -> typing.Optional[ int ]:
         
-        return self._GetDomainModifiedTimestamp( domain )
+        return self._GetSimpleTimestampMS( HC.TIMESTAMP_TYPE_ARCHIVED )
         
     
-    def GetDomainModifiedTimestamps( self ) -> typing.Dict[ str, int ]:
+    def GetDeletedTimestampMS( self, service_key: bytes ) -> typing.Optional[ int ]:
         
-        return dict( self._domains_to_modified_timestamps )
+        return self._GetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_DELETED, service_key )
+        
+    
+    def GetDomainModifiedTimestampMS( self, domain: str ) -> typing.Optional[ int ]:
+        
+        return self._GetDomainModifiedTimestampMS( domain )
+        
+    
+    def GetDomainModifiedTimestampsMS( self ) -> typing.Dict[ str, int ]:
+        
+        return dict( self._domains_to_modified_timestamps_ms )
         
     
     def GetDomainModifiedTimestampDatas( self ) -> typing.Collection[ ClientTime.TimestampData ]:
         
-        return [ ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp = timestamp ) for ( domain, timestamp ) in self._domains_to_modified_timestamps.items() ]
+        return [ ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp_ms = timestamp_ms ) for ( domain, timestamp_ms ) in self._domains_to_modified_timestamps_ms.items() ]
         
     
-    def GetFileModifiedTimestamp( self ) -> typing.Optional[ int ]:
+    def GetFileModifiedTimestampMS( self ) -> typing.Optional[ int ]:
         
-        return self._GetSimpleTimestamp( HC.TIMESTAMP_TYPE_MODIFIED_FILE )
+        return self._GetSimpleTimestampMS( HC.TIMESTAMP_TYPE_MODIFIED_FILE )
         
     
     def GetFileServiceTimestampDatas( self ) -> typing.Collection[ ClientTime.TimestampData ]:
         
         result = []
         
-        for ( timestamp_type, service_keys_to_timestamps ) in self._timestamp_types_to_service_keys_to_timestamps.items():
+        for ( timestamp_type, service_keys_to_timestamps_ms ) in self._timestamp_types_to_service_keys_to_timestamps_ms.items():
             
-            for ( service_key, timestamp ) in service_keys_to_timestamps.items():
+            for ( service_key, timestamp_ms ) in service_keys_to_timestamps_ms.items():
                 
-                result.append( ClientTime.TimestampData( timestamp_type = timestamp_type, location = service_key, timestamp = timestamp ) )
+                result.append( ClientTime.TimestampData( timestamp_type = timestamp_type, location = service_key, timestamp_ms = timestamp_ms ) )
                 
             
         
         return result
         
     
-    def GetImportedTimestamp( self, service_key: bytes ) -> typing.Optional[ int ]:
+    def GetImportedTimestampMS( self, service_key: bytes ) -> typing.Optional[ int ]:
         
-        return self._GetFileServiceTimestamp( HC.TIMESTAMP_TYPE_IMPORTED, service_key )
-        
-    
-    def GetLastViewedTimestamp( self, canvas_type ):
-        
-        return self._GetLastViewedTimestamp( canvas_type )
+        return self._GetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_IMPORTED, service_key )
         
     
-    def GetPreviouslyImportedTimestamp( self, service_key: bytes ) -> typing.Optional[ int ]:
+    def GetLastViewedTimestampMS( self, canvas_type ) -> typing.Optional[ int ]:
         
-        return self._GetFileServiceTimestamp( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key )
+        return self._GetLastViewedTimestampMS( canvas_type )
         
     
-    def GetTimestampFromStub( self, timestamp_data_stub: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+    def GetPreviouslyImportedTimestampMS( self, service_key: bytes ) -> typing.Optional[ int ]:
+        
+        return self._GetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key )
+        
+    
+    def GetTimestampMSFromStub( self, timestamp_data_stub: ClientTime.TimestampData ) -> typing.Optional[ int ]:
         
         if timestamp_data_stub.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
@@ -380,7 +380,7 @@ class TimestampsManager( object ):
                 return None
                 
             
-            return self._GetDomainModifiedTimestamp( timestamp_data_stub.location )
+            return self._GetDomainModifiedTimestampMS( timestamp_data_stub.location )
             
         elif timestamp_data_stub.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
             
@@ -389,7 +389,7 @@ class TimestampsManager( object ):
                 return None
                 
             
-            return self._GetLastViewedTimestamp( timestamp_data_stub.location )
+            return self._GetLastViewedTimestampMS( timestamp_data_stub.location )
             
         elif timestamp_data_stub.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
             
@@ -398,78 +398,78 @@ class TimestampsManager( object ):
                 return None
                 
             
-            return self._GetFileServiceTimestamp( timestamp_data_stub.timestamp_type, timestamp_data_stub.location )
+            return self._GetFileServiceTimestampMS( timestamp_data_stub.timestamp_type, timestamp_data_stub.location )
             
         elif timestamp_data_stub.timestamp_type in ClientTime.SIMPLE_TIMESTAMP_TYPES:
             
-            return self._GetSimpleTimestamp( timestamp_data_stub.timestamp_type )
+            return self._GetSimpleTimestampMS( timestamp_data_stub.timestamp_type )
             
         
         return None
         
     
-    def SetArchivedTimestamp( self, timestamp: int ):
+    def SetArchivedTimestampMS( self, timestamp_ms: int ):
         
-        self._SetSimpleTimestamp( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp )
-        
-    
-    def SetDeletedTimestamp( self, service_key: bytes, timestamp: int ):
-        
-        self._SetFileServiceTimestamp( HC.TIMESTAMP_TYPE_DELETED, service_key, timestamp )
+        self._SetSimpleTimestampMS( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms )
         
     
-    def SetDeletedTimestamps( self, service_keys_to_timestamps: typing.Dict[ bytes, int ] ):
+    def SetDeletedTimestampMS( self, service_key: bytes, timestamp_ms: int ):
         
-        for ( service_key, timestamp ) in service_keys_to_timestamps.items():
+        self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_DELETED, service_key, timestamp_ms )
+        
+    
+    def SetDeletedTimestampsMS( self, service_keys_to_timestamps_ms: typing.Dict[ bytes, int ] ):
+        
+        for ( service_key, timestamp_ms ) in service_keys_to_timestamps_ms.items():
             
-            self._SetFileServiceTimestamp( HC.TIMESTAMP_TYPE_DELETED, service_key, timestamp )
-            
-        
-    
-    def SetDomainModifiedTimestamp( self, domain: str, timestamp: int ):
-        
-        self._SetDomainModifiedTimestamp( domain, timestamp )
-        
-    
-    def SetFileModifiedTimestamp( self, timestamp: int ):
-        
-        self._SetSimpleTimestamp( HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp )
-        
-    
-    def SetLastViewedTimestamp( self, canvas_type, timestamp ):
-        
-        self._SetLastViewedTimestamp( canvas_type, timestamp )
-        
-    
-    def SetPreviouslyImportedTimestamp( self, service_key, timestamp ):
-        
-        self._SetFileServiceTimestamp( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key, timestamp )
-        
-    
-    def SetPreviouslyImportedTimestamps( self, service_keys_to_timestamps: typing.Dict[ bytes, int ] ):
-        
-        for ( service_key, timestamp ) in service_keys_to_timestamps.items():
-            
-            self._SetFileServiceTimestamp( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key, timestamp )
+            self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_DELETED, service_key, timestamp_ms )
             
         
     
-    def SetImportedTimestamp( self, service_key: bytes, timestamp: int ):
+    def SetDomainModifiedTimestampMS( self, domain: str, timestamp_ms: int ):
         
-        self._SetFileServiceTimestamp( HC.TIMESTAMP_TYPE_IMPORTED, service_key, timestamp )
-        
-    
-    def SetImportedTimestamps( self, service_keys_to_timestamps: typing.Dict[ bytes, int ] ):
-        
-        for ( service_key, timestamp ) in service_keys_to_timestamps.items():
-            
-            self._SetFileServiceTimestamp( HC.TIMESTAMP_TYPE_IMPORTED, service_key, timestamp )
-            
+        self._SetDomainModifiedTimestampMS( domain, timestamp_ms )
         
     
-    def SetTimestamp( self, timestamp_data: ClientTime.TimestampData ):
+    def SetFileModifiedTimestampMS( self, timestamp_ms: int ):
         
-        if timestamp_data.timestamp is None:
+        self._SetSimpleTimestampMS( HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp_ms )
+        
+    
+    def SetLastViewedTimestampMS( self, canvas_type, timestamp_ms ):
+        
+        self._SetLastViewedTimestampMS( canvas_type, timestamp_ms )
+        
+    
+    def SetPreviouslyImportedTimestampMS( self, service_key, timestamp_ms ):
+        
+        self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key, timestamp_ms )
+        
+    
+    def SetPreviouslyImportedTimestampsMS( self, service_keys_to_timestamps_ms: typing.Dict[ bytes, int ] ):
+        
+        for ( service_key, timestamp_ms ) in service_keys_to_timestamps_ms.items():
+            
+            self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, service_key, timestamp_ms )
+            
+        
+    
+    def SetImportedTimestampMS( self, service_key: bytes, timestamp_ms: int ):
+        
+        self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_IMPORTED, service_key, timestamp_ms )
+        
+    
+    def SetImportedTimestampsMS( self, service_keys_to_timestamps_ms: typing.Dict[ bytes, int ] ):
+        
+        for ( service_key, timestamp_ms ) in service_keys_to_timestamps_ms.items():
+            
+            self._SetFileServiceTimestampMS( HC.TIMESTAMP_TYPE_IMPORTED, service_key, timestamp_ms )
+            
+        
+    
+    def SetTime( self, timestamp_data: ClientTime.TimestampData ):
+        
+        if timestamp_data.timestamp_ms is None:
             
             return
             
@@ -481,7 +481,7 @@ class TimestampsManager( object ):
                 return
                 
             
-            self._SetDomainModifiedTimestamp( timestamp_data.location, timestamp_data.timestamp )
+            self._SetDomainModifiedTimestampMS( timestamp_data.location, timestamp_data.timestamp_ms )
             
         elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
             
@@ -490,7 +490,7 @@ class TimestampsManager( object ):
                 return
                 
             
-            self._SetLastViewedTimestamp( timestamp_data.location, timestamp_data.timestamp )
+            self._SetLastViewedTimestampMS( timestamp_data.location, timestamp_data.timestamp_ms )
             
         elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
             
@@ -499,33 +499,33 @@ class TimestampsManager( object ):
                 return
                 
             
-            self._SetFileServiceTimestamp( timestamp_data.timestamp_type, timestamp_data.location, timestamp_data.timestamp )
+            self._SetFileServiceTimestampMS( timestamp_data.timestamp_type, timestamp_data.location, timestamp_data.timestamp_ms )
             
         elif timestamp_data.timestamp_type in ClientTime.SIMPLE_TIMESTAMP_TYPES:
             
-            self._SetSimpleTimestamp( timestamp_data.timestamp_type, timestamp_data.timestamp )
+            self._SetSimpleTimestampMS( timestamp_data.timestamp_type, timestamp_data.timestamp_ms )
             
         
     
-    def UpdateTimestamp( self, timestamp_data: ClientTime.TimestampData ):
+    def UpdateTime( self, timestamp_data: ClientTime.TimestampData ):
         
-        if timestamp_data.timestamp is None:
+        if timestamp_data.timestamp_ms is None:
             
             return
             
         
         if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
-            existing_timestamp = self._GetDomainModifiedTimestamp( timestamp_data.location )
+            existing_timestamp_ms = self._GetDomainModifiedTimestampMS( timestamp_data.location )
             
         else:
             
-            existing_timestamp = self._GetSimpleTimestamp( timestamp_data.timestamp_type )
+            existing_timestamp_ms = self._GetSimpleTimestampMS( timestamp_data.timestamp_type )
             
         
-        if existing_timestamp is None or ClientTime.ShouldUpdateModifiedTime( existing_timestamp, timestamp_data.timestamp ):
+        if existing_timestamp_ms is None or ClientTime.ShouldUpdateModifiedTime( existing_timestamp_ms, timestamp_data.timestamp_ms ):
             
-            self.SetTimestamp( timestamp_data )
+            self.SetTime( timestamp_data )
             
         
     
@@ -534,20 +534,20 @@ class FileViewingStatsManager( object ):
     
     def __init__(
         self,
-        timestamps_manager: TimestampsManager,
+        times_manager: TimesManager,
         view_rows: typing.Collection
     ):
         
-        self._timestamps_manager = timestamps_manager
+        self._times_manager = times_manager
         
         self.views = collections.Counter()
         self.viewtimes = collections.Counter()
         
-        for ( canvas_type, last_viewed_timestamp, views, viewtime ) in view_rows:
+        for ( canvas_type, last_viewed_timestamp_ms, views, viewtime ) in view_rows:
             
-            if last_viewed_timestamp is not None:
+            if last_viewed_timestamp_ms is not None:
                 
-                self._timestamps_manager.SetLastViewedTimestamp( canvas_type, last_viewed_timestamp )
+                self._times_manager.SetLastViewedTimestampMS( canvas_type, last_viewed_timestamp_ms )
                 
             
             if views != 0:
@@ -562,21 +562,21 @@ class FileViewingStatsManager( object ):
             
         
     
-    def Duplicate( self, timestamps_manager: TimestampsManager ) -> "FileViewingStatsManager":
+    def Duplicate( self, pre_duped_times_manager: TimesManager ) -> "FileViewingStatsManager":
         
         view_rows = []
         
         for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ):
             
-            last_viewed_timestamp = self._timestamps_manager.GetLastViewedTimestamp( canvas_type )
+            last_viewed_timestamp_ms = self._times_manager.GetLastViewedTimestampMS( canvas_type )
             
             views = self.views[ canvas_type ]
             viewtime = self.viewtimes[ canvas_type ]
             
-            view_rows.append( ( canvas_type, last_viewed_timestamp, views, viewtime ) )
+            view_rows.append( ( canvas_type, last_viewed_timestamp_ms, views, viewtime ) )
             
         
-        return FileViewingStatsManager( timestamps_manager, view_rows )
+        return FileViewingStatsManager( pre_duped_times_manager, view_rows )
         
     
     def GetPrettyViewsLine( self, canvas_types: typing.Collection[ int ] ) -> str:
@@ -602,33 +602,33 @@ class FileViewingStatsManager( object ):
             return 'no view record{}'.format( info_string )
             
         
-        last_viewed_times = []
+        last_viewed_times_ms = []
         
         for canvas_type in canvas_types:
             
-            last_viewed_time = self._timestamps_manager.GetLastViewedTimestamp( canvas_type )
+            last_viewed_timestamp_ms = self._times_manager.GetLastViewedTimestampMS( canvas_type )
             
-            if last_viewed_time is not None:
+            if last_viewed_timestamp_ms is not None:
                 
-                last_viewed_times.append( last_viewed_time )
+                last_viewed_times_ms.append( last_viewed_timestamp_ms )
                 
             
         
-        if len( last_viewed_times ) == 0:
+        if len( last_viewed_times_ms ) == 0:
             
             last_viewed_string = 'no recorded last view time'
             
         else:
             
-            last_viewed_string = 'last {}'.format( HydrusTime.TimestampToPrettyTimeDelta( max( last_viewed_times ) ) )
+            last_viewed_string = 'last {}'.format( HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( max( last_viewed_times_ms ) ) ) )
             
         
         return 'viewed {} times{}, totalling {}, {}'.format( HydrusData.ToHumanInt( views_total ), info_string, HydrusTime.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
         
     
-    def GetTimestampsManager( self ) -> TimestampsManager:
+    def GetTimesManager( self ) -> TimesManager:
         
-        return self._timestamps_manager
+        return self._times_manager
         
     
     def GetViews( self, canvas_type: int ) -> int:
@@ -645,15 +645,15 @@ class FileViewingStatsManager( object ):
         
         for canvas_type in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ):
             
-            timestamps = { self._timestamps_manager.GetLastViewedTimestamp( canvas_type ), file_viewing_stats_manager.GetTimestampsManager().GetLastViewedTimestamp( canvas_type ) }
+            timestamps_ms = { self._times_manager.GetLastViewedTimestampMS( canvas_type ), file_viewing_stats_manager.GetTimesManager().GetLastViewedTimestampMS( canvas_type ) }
             
-            timestamps.discard( None )
+            timestamps_ms.discard( None )
             
-            if len( timestamps ) > 0:
+            if len( timestamps_ms ) > 0:
                 
-                last_viewed_timestamp = max( timestamps )
+                last_viewed_timestamp_ms = max( timestamps_ms )
                 
-                self._timestamps_manager.SetLastViewedTimestamp( canvas_type, last_viewed_timestamp )
+                self._times_manager.SetLastViewedTimestampMS( canvas_type, last_viewed_timestamp_ms )
                 
             
         
@@ -667,11 +667,11 @@ class FileViewingStatsManager( object ):
         
         if action == HC.CONTENT_UPDATE_ADD:
             
-            ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta ) = row
+            ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta ) = row
             
-            if view_timestamp is not None:
+            if view_timestamp_ms is not None:
                 
-                self._timestamps_manager.SetLastViewedTimestamp( canvas_type, view_timestamp )
+                self._times_manager.SetLastViewedTimestampMS( canvas_type, view_timestamp_ms )
                 
             
             self.views[ canvas_type ] += views_delta
@@ -679,8 +679,8 @@ class FileViewingStatsManager( object ):
             
         elif action == HC.CONTENT_UPDATE_DELETE:
             
-            self._timestamps_manager.ClearLastViewedTimestamp( CC.CANVAS_MEDIA_VIEWER )
-            self._timestamps_manager.ClearLastViewedTimestamp( CC.CANVAS_PREVIEW )
+            self._times_manager.ClearLastViewedTime( CC.CANVAS_MEDIA_VIEWER )
+            self._times_manager.ClearLastViewedTime( CC.CANVAS_PREVIEW )
             
             self.views = collections.Counter()
             self.viewtimes = collections.Counter()
@@ -690,7 +690,7 @@ class FileViewingStatsManager( object ):
     @staticmethod
     def STATICGenerateCombinedManager( sub_fvsms: typing.Iterable[ "FileViewingStatsManager" ] ):
         
-        fvsm = FileViewingStatsManager.STATICGenerateEmptyManager( TimestampsManager() )
+        fvsm = FileViewingStatsManager.STATICGenerateEmptyManager( TimesManager() )
         
         for sub_fvsm in sub_fvsms:
             
@@ -701,9 +701,9 @@ class FileViewingStatsManager( object ):
         
     
     @staticmethod
-    def STATICGenerateEmptyManager( timestamps_manager: TimestampsManager ):
+    def STATICGenerateEmptyManager( times_manager: TimesManager ):
         
-        return FileViewingStatsManager( timestamps_manager, [] )
+        return FileViewingStatsManager( times_manager, [] )
         
     
 
@@ -715,7 +715,7 @@ class LocationsManager( object ):
         deleted: typing.Set[ bytes ],
         pending: typing.Set[ bytes ],
         petitioned: typing.Set[ bytes ],
-        timestamps_manager: TimestampsManager,
+        times_manager: TimesManager,
         inbox: bool = False,
         urls: typing.Optional[ typing.Set[ str ] ] = None,
         service_keys_to_filenames: typing.Optional[ typing.Dict[ bytes, str ] ] = None,
@@ -726,7 +726,7 @@ class LocationsManager( object ):
         self._deleted = deleted
         self._pending = pending
         self._petitioned = petitioned
-        self._timestamps_manager = timestamps_manager
+        self._times_manager = times_manager
         
         self.inbox = inbox
         
@@ -747,33 +747,33 @@ class LocationsManager( object ):
         self._local_file_deletion_reason = local_file_deletion_reason
         
     
-    def _AddToService( self, service_key, do_undelete = False, forced_import_time = None ):
+    def _AddToService( self, service_key, do_undelete = False, forced_import_time_ms = None ):
         
         service_type = HG.client_controller.services_manager.GetServiceType( service_key )
         
-        if forced_import_time is None:
+        if forced_import_time_ms is None:
             
-            import_time = HydrusTime.GetNow()
+            import_timestamp_ms = HydrusTime.GetNowMS()
             
         else:
             
-            import_time = forced_import_time
+            import_timestamp_ms = forced_import_time_ms
             
         
         if service_key in self._deleted:
             
             if do_undelete:
                 
-                previously_imported_time = self._timestamps_manager.GetPreviouslyImportedTimestamp( service_key )
+                previously_imported_timestamp_ms = self._times_manager.GetPreviouslyImportedTimestampMS( service_key )
                 
-                if previously_imported_time is not None:
+                if previously_imported_timestamp_ms is not None:
                     
-                    import_time = previously_imported_time
+                    import_timestamp_ms = previously_imported_timestamp_ms
                     
                 
             
-            self._timestamps_manager.ClearDeletedTimestamp( service_key )
-            self._timestamps_manager.ClearPreviouslyImportedTimestamp( service_key )
+            self._times_manager.ClearDeletedTime( service_key )
+            self._times_manager.ClearPreviouslyImportedTime( service_key )
             
             self._deleted.discard( service_key )
             
@@ -792,20 +792,20 @@ class LocationsManager( object ):
             
             if CC.TRASH_SERVICE_KEY in self._current:
                 
-                self._timestamps_manager.ClearImportedTimestamp( CC.TRASH_SERVICE_KEY )
+                self._times_manager.ClearImportedTime( CC.TRASH_SERVICE_KEY )
                 
                 self._current.discard( CC.TRASH_SERVICE_KEY )
                 
             
             # forced import time here to handle do_undelete, ensuring old timestamp is propagated
             
-            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, forced_import_time = import_time )
-            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, forced_import_time = import_time )
+            self._AddToService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
+            self._AddToService( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, forced_import_time_ms = import_timestamp_ms )
             
         
         if service_key not in self._current:
             
-            self._timestamps_manager.SetImportedTimestamp( service_key, import_time )
+            self._times_manager.SetImportedTimestampMS( service_key, import_timestamp_ms )
             
             self._current.add( service_key )
             
@@ -834,15 +834,15 @@ class LocationsManager( object ):
         
         if service_key in self._current:
             
-            previously_imported_timestamp = self._timestamps_manager.GetImportedTimestamp( service_key )
+            previously_imported_timestamp_ms = self._times_manager.GetImportedTimestampMS( service_key )
             
-            self._timestamps_manager.ClearImportedTimestamp( service_key )
+            self._times_manager.ClearImportedTime( service_key )
             
             self._current.discard( service_key )
             
         else:
             
-            previously_imported_timestamp = None
+            previously_imported_timestamp_ms = None
             
         
         if service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE:
@@ -854,8 +854,8 @@ class LocationsManager( object ):
         
         if make_a_delete_record:
             
-            self._timestamps_manager.SetDeletedTimestamp( service_key, HydrusTime.GetNow() )
-            self._timestamps_manager.SetPreviouslyImportedTimestamp( service_key, previously_imported_timestamp )
+            self._times_manager.SetDeletedTimestampMS( service_key, HydrusTime.GetNowMS() )
+            self._times_manager.SetPreviouslyImportedTimestampMS( service_key, previously_imported_timestamp_ms )
             
             self._deleted.add( service_key )
             
@@ -901,7 +901,7 @@ class LocationsManager( object ):
         self._petitioned.discard( service_key )
         
     
-    def Duplicate( self, timestamps_manager: TimestampsManager ):
+    def Duplicate( self, times_manager: TimesManager ):
         
         current = set( self._current )
         deleted = set( self._deleted )
@@ -915,7 +915,7 @@ class LocationsManager( object ):
             deleted,
             pending,
             petitioned,
-            timestamps_manager,
+            times_manager,
             inbox = self.inbox,
             urls = urls,
             service_keys_to_filenames = service_keys_to_filenames,
@@ -988,17 +988,17 @@ class LocationsManager( object ):
     
     def GetBestCurrentTimestamp( self, location_context: ClientLocation.LocationContext ):
         
-        timestamps = { self._timestamps_manager.GetImportedTimestamp( service_key ) for service_key in location_context.current_service_keys }
+        timestamps_ms = { self._times_manager.GetImportedTimestampMS( service_key ) for service_key in location_context.current_service_keys }
         
-        timestamps.discard( None )
+        timestamps_ms.discard( None )
         
-        if len( timestamps ) == 0:
+        if len( timestamps_ms ) == 0:
             
             return None
             
         else:
             
-            return min( timestamps )
+            return min( timestamps_ms )
             
         
     
@@ -1031,9 +1031,9 @@ class LocationsManager( object ):
         return dict( self._service_keys_to_filenames )
         
     
-    def GetTimestampsManager( self ) -> TimestampsManager:
+    def GetTimesManager( self ) -> TimesManager:
         
-        return self._timestamps_manager
+        return self._times_manager
         
     
     def GetURLs( self ):
@@ -1113,8 +1113,8 @@ class LocationsManager( object ):
                     
                     for service_key in service_keys:
                         
-                        self._timestamps_manager.ClearDeletedTimestamp( service_key )
-                        self._timestamps_manager.ClearPreviouslyImportedTimestamp( service_key )
+                        self._times_manager.ClearDeletedTime( service_key )
+                        self._times_manager.ClearPreviouslyImportedTime( service_key )
                         
                         self._deleted.discard( service_key )
                         
@@ -1126,26 +1126,35 @@ class LocationsManager( object ):
                     
                     self.inbox = False
                     
-                    self._timestamps_manager.SetArchivedTimestamp( HydrusTime.GetNow() )
+                    self._times_manager.SetArchivedTimestampMS( HydrusTime.GetNowMS() )
                     
                 
             elif action == HC.CONTENT_UPDATE_INBOX:
                 
                 self.inbox = True
                 
-                self._timestamps_manager.ClearArchivedTimestamp()
+                self._times_manager.ClearArchivedTime()
                 
             elif action == HC.CONTENT_UPDATE_ADD:
                 
-                self._AddToService( service_key )
-
                 service_type = HG.client_controller.services_manager.GetServiceType( service_key )
-
+                
                 if service_type == HC.IPFS:
                     
-                    ( file_info_manager, multihash ) = row
+                    self._AddToService( service_key )
                     
-                    self._service_keys_to_filenames[ service_key ] = multihash
+                    if service_type == HC.IPFS:
+                        
+                        ( file_info_manager, multihash ) = row
+                        
+                        self._service_keys_to_filenames[ service_key ] = multihash
+                        
+                    
+                else:
+                    
+                    ( file_info_manager, timestamp_ms ) = row
+                    
+                    self._AddToService( service_key, forced_import_time_ms = timestamp_ms )
                     
                 
             elif action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
@@ -1246,24 +1255,24 @@ class LocationsManager( object ):
             
             if action == HC.CONTENT_UPDATE_ADD:
                 
-                self._timestamps_manager.UpdateTimestamp( timestamp_data )
+                self._times_manager.UpdateTime( timestamp_data )
                 
             elif action == HC.CONTENT_UPDATE_SET:
                 
-                self._timestamps_manager.SetTimestamp( timestamp_data )
+                self._times_manager.SetTime( timestamp_data )
                 
             elif action == HC.CONTENT_UPDATE_DELETE:
                 
-                self._timestamps_manager.ClearTimestamp( timestamp_data )
+                self._times_manager.ClearTime( timestamp_data )
                 
             
         
     
     def ResetService( self, service_key ):
         
-        self._timestamps_manager.ClearImportedTimestamp( service_key )
-        self._timestamps_manager.ClearDeletedTimestamp( service_key )
-        self._timestamps_manager.ClearPreviouslyImportedTimestamp( service_key )
+        self._times_manager.ClearImportedTime( service_key )
+        self._times_manager.ClearDeletedTime( service_key )
+        self._times_manager.ClearPreviouslyImportedTime( service_key )
         
         self._current.discard( service_key )
         self._deleted.discard( service_key )

@@ -75,15 +75,17 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
         
         hash = self.modules_hashes_local_cache.GetHash( hash_id )
         
-        ( is_deleted, timestamp, file_deletion_reason ) = self.modules_files_storage.GetDeletionStatus( self.modules_services.combined_local_file_service_id, hash_id )
+        ( is_deleted, timestamp_ms, file_deletion_reason ) = self.modules_files_storage.GetDeletionStatus( self.modules_services.combined_local_file_service_id, hash_id )
         
         if is_deleted:
             
-            if timestamp is None:
+            if timestamp_ms is None:
                 
                 note = 'Deleted from the client before delete times were tracked ({}).'.format( file_deletion_reason )
                 
             else:
+                
+                timestamp = HydrusTime.SecondiseMS( timestamp_ms )
                 
                 note = 'Deleted from the client {} ({}), which was {} before this check.'.format( HydrusTime.TimestampToPrettyTime( timestamp ), file_deletion_reason, HydrusTime.BaseTimestampToPrettyTimeDelta( timestamp ) )
                 
@@ -91,22 +93,26 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
             return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
         
-        result = self.modules_files_storage.GetImportedTimestamp( self.modules_services.trash_service_id, hash_id )
+        result = self.modules_files_storage.GetImportedTimestampMS( self.modules_services.trash_service_id, hash_id )
         
         if result is not None:
             
-            timestamp = result
+            timestamp_ms = result
+            
+            timestamp = HydrusTime.SecondiseMS( timestamp_ms )
             
             note = 'Currently in trash ({}). Sent there at {}, which was {} before this check.'.format( file_deletion_reason, HydrusTime.TimestampToPrettyTime( timestamp ), HydrusTime.BaseTimestampToPrettyTimeDelta( timestamp, just_now_threshold = 0 ) )
             
             return ClientImportFiles.FileImportStatus( CC.STATUS_DELETED, hash, note = prefix + note )
             
         
-        result = self.modules_files_storage.GetImportedTimestamp( self.modules_services.combined_local_file_service_id, hash_id )
+        result = self.modules_files_storage.GetImportedTimestampMS( self.modules_services.combined_local_file_service_id, hash_id )
         
         if result is not None:
             
-            timestamp = result
+            timestamp_ms = result
+            
+            timestamp = HydrusTime.SecondiseMS( timestamp_ms )
             
             mime = self.modules_files_metadata_basic.GetMime( hash_id )
             

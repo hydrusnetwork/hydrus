@@ -312,9 +312,9 @@ def THREADUploadPending( service_key ):
                         
                         file_info_manager = media_result.GetFileInfoManager()
                         
-                        timestamp = HydrusTime.GetNow()
+                        timestamp_ms = HydrusTime.GetNowMS()
                         
-                        content_update_row = ( file_info_manager, timestamp )
+                        content_update_row = ( file_info_manager, timestamp_ms )
                         
                         content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
@@ -2555,14 +2555,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if len( gui_session_names ) > 0:
                 
-                gui_session_names_to_backup_timestamps = HG.client_controller.Read( 'serialisable_names_to_backup_timestamps', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
+                gui_session_names_to_backup_timestamps_ms = HG.client_controller.Read( 'serialisable_names_to_backup_timestamps_ms', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
                 
             else:
                 
-                gui_session_names_to_backup_timestamps = {}
+                gui_session_names_to_backup_timestamps_ms = {}
                 
             
-            return ( gui_session_names, gui_session_names_to_backup_timestamps )
+            return ( gui_session_names, gui_session_names_to_backup_timestamps_ms )
             
         
         def publish_callable( result ):
@@ -2571,7 +2571,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             #
             
-            ( gui_session_names, gui_session_names_to_backup_timestamps ) = result
+            ( gui_session_names, gui_session_names_to_backup_timestamps_ms ) = result
             
             gui_session_names = sorted( gui_session_names )
             
@@ -2599,19 +2599,19 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 ClientGUIMenus.AppendMenu( self._menubar_pages_sessions_submenu, append, 'append' )
                 
-                if len( gui_session_names_to_backup_timestamps ) > 0:
+                if len( gui_session_names_to_backup_timestamps_ms ) > 0:
                     
                     append_backup = ClientGUIMenus.GenerateMenu( self._menubar_pages_sessions_submenu )
                     
-                    rows = sorted( gui_session_names_to_backup_timestamps.items() )
+                    rows = sorted( gui_session_names_to_backup_timestamps_ms.items() )
                     
-                    for ( name, timestamps ) in rows:
+                    for ( name, timestamps_ms ) in rows:
                         
                         submenu = ClientGUIMenus.GenerateMenu( append_backup )
                         
-                        for timestamp in timestamps:
+                        for timestamp_ms in timestamps_ms:
                             
-                            ClientGUIMenus.AppendMenuItem( submenu, HydrusTime.TimestampToPrettyTime( timestamp ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp )
+                            ClientGUIMenus.AppendMenuItem( submenu, HydrusTime.TimestampToPrettyTime( HydrusTime.SecondiseMS( timestamp_ms ) ), 'Append this backup session to whatever pages are already open.', self._notebook.AppendGUISessionBackup, name, timestamp_ms )
                             
                         
                         ClientGUIMenus.AppendMenu( append_backup, submenu, name )
@@ -8021,11 +8021,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
         global_tracker = self._controller.network_engine.bandwidth_manager.GetMySessionTracker()
         
-        boot_time = self._controller.GetBootTime()
+        boot_time_ms = self._controller.GetBootTimestampMS()
         
-        time_since_boot = max( 1, HydrusTime.GetNow() - boot_time )
+        time_since_boot_ms = max( 1000, HydrusTime.GetNowMS() - boot_time_ms )
         
-        usage_since_boot = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, time_since_boot )
+        usage_since_boot = global_tracker.GetUsage( HC.BANDWIDTH_TYPE_DATA, HydrusTime.SecondiseMS( time_since_boot_ms ) )
         
         bandwidth_status = HydrusData.ToHumanBytes( usage_since_boot )
         

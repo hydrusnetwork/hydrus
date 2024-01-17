@@ -882,7 +882,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         self._status = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
         
-        services = HG.client_controller.services_manager.GetServices( HC.FILE_SERVICES )
+        services = HG.client_controller.services_manager.GetServices( HC.REAL_FILE_SERVICES )
         
         choices = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         

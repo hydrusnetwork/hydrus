@@ -109,7 +109,7 @@ def file_service_pred_generator( o, v, u ):
         
         service_name = v
         
-        service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.FILE_SERVICES, service_name )
+        service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_FILE_SERVICES, service_name )
         
     except:
         

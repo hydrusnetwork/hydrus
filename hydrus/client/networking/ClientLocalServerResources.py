@@ -40,6 +40,7 @@ from hydrus.client import ClientOptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
+from hydrus.client import ClientTime
 from hydrus.client import ClientRendering
 from hydrus.client import ClientImageHandling
 from hydrus.client.importing import ClientImportFiles
@@ -71,7 +72,7 @@ LOCAL_BOORU_JSON_BYTE_LIST_PARAMS = set()
 CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key', 'job_status_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
-CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system', 'only_in_view' }
+CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_milliseconds', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system', 'only_in_view' }
 CLIENT_API_JSON_BYTE_LIST_PARAMS = { 'file_service_keys', 'deleted_file_service_keys', 'hashes' }
 CLIENT_API_JSON_BYTE_DICT_PARAMS = { 'service_keys_to_tags', 'service_keys_to_actions_to_tags', 'service_keys_to_additional_tags' }
 
@@ -1925,6 +1926,7 @@ class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceCli
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddNotes( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1932,6 +1934,7 @@ class HydrusResourceClientAPIRestrictedAddNotes( HydrusResourceClientAPIRestrict
         request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_ADD_NOTES )
         
     
+
 class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPIRestrictedAddNotes ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2770,6 +2773,133 @@ class HydrusResourceClientAPIRestrictedEditRatingsSetRating( HydrusResourceClien
         
     
 
+class HydrusResourceClientAPIRestrictedEditTimes( HydrusResourceClientAPIRestricted ):
+    
+    def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.client_api_permissions.CheckPermission( ClientAPI.CLIENT_API_PERMISSION_EDIT_TIMES )
+        
+    
+
+class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPIRestrictedEditTimes ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        hashes = ParseHashes( request )
+        
+        if len( hashes ) == 0:
+            
+            raise HydrusExceptions.BadRequestException( 'Did not find any hashes to apply the times to!' )
+            
+        
+        if 'timestamp' in request.parsed_request_args:
+            
+            timestamp = request.parsed_request_args.GetValueOrNone( 'timestamp', float )
+            
+            timestamp_ms = HydrusTime.MillisecondiseS( timestamp )
+            
+        elif 'timestamp_ms' in request.parsed_request_args:
+            
+            timestamp_ms = request.parsed_request_args.GetValueOrNone( 'timestamp_ms', int )
+            
+        else:
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, you have to specify a timestamp, even if you want to send "null"!' )
+            
+        
+        location = None
+        
+        timestamp_type = request.parsed_request_args.GetValue( 'timestamp_type', int )
+        
+        if timestamp_type is None:
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, you have to specify the timestamp type!' )
+            
+        
+        if timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+            
+            domain = request.parsed_request_args.GetValue( 'domain', str )
+            
+            if domain == 'local':
+                
+                timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_FILE
+                
+            else:
+                
+                location = domain
+                
+            
+        elif timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
+            
+            canvas_type = request.parsed_request_args.GetValueOrNone( 'canvas_type', int )
+            
+            if canvas_type is None:
+                
+                canvas_type = CC.CANVAS_MEDIA_VIEWER
+                
+            
+            if canvas_type not in ( CC.CANVAS_MEDIA_VIEWER, CC.CANVAS_PREVIEW ):
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, the canvas type needs to be either 0 or 1!' )
+                
+            
+            location = canvas_type
+            
+        elif timestamp_type in ( HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_DELETED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED ):
+            
+            file_service_key = request.parsed_request_args.GetValue( 'file_service_key', bytes )
+            
+            if not HG.client_controller.services_manager.ServiceExists( file_service_key ):
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, do not know that service!' )
+                
+            
+            if HG.client_controller.services_manager.GetServiceType( file_service_key ) not in HC.REAL_FILE_SERVICES:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, you have to specify a file service service key!' )
+                
+            
+            location = file_service_key
+            
+            if timestamp_ms is None:
+                
+                raise HydrusExceptions.BadRequestException( 'You set no timestamp, but I am sorry, for now, I am not going to allow the deletion of file service timestamps!' )
+                
+            
+        elif timestamp_type in ( HC.TIMESTAMP_TYPE_MODIFIED_FILE, HC.TIMESTAMP_TYPE_ARCHIVED ):
+            
+            pass # simple; no additional location data
+            
+        else:
+            
+            raise HydrusExceptions.BadRequestException( f'Sorry, do not understand that timestamp type "{timestamp_type}"!' )
+            
+        
+        timestamp_data = ClientTime.TimestampData( timestamp_type = timestamp_type, location = location, timestamp_ms = timestamp_ms )
+        
+        if timestamp_ms is None:
+            
+            action = HC.CONTENT_UPDATE_DELETE
+            
+        else:
+            
+            action = HC.CONTENT_UPDATE_SET
+            
+        
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( hash, timestamp_data ) ) for hash in hashes ]
+        
+        service_keys_to_content_updates = collections.defaultdict( list )
+        
+        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( content_updates )
+        
+        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
 class HydrusResourceClientAPIRestrictedGetFiles( HydrusResourceClientAPIRestricted ):
     
     def _CheckAPIPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -3066,9 +3196,19 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
         hide_service_keys_tags = request.parsed_request_args.GetValue( 'hide_service_keys_tags', bool, default_value = True )
         detailed_url_information = request.parsed_request_args.GetValue( 'detailed_url_information', bool, default_value = False )
         include_notes = request.parsed_request_args.GetValue( 'include_notes', bool, default_value = False )
+        include_milliseconds = request.parsed_request_args.GetValue( 'include_milliseconds', bool, default_value = False )
         include_services_object = request.parsed_request_args.GetValue( 'include_services_object', bool, default_value = True )
         create_new_file_ids = request.parsed_request_args.GetValue( 'create_new_file_ids', bool, default_value = False )
         include_blurhash = request.parsed_request_args.GetValue( 'include_blurhash', bool, default_value = False )
+        
+        if include_milliseconds:
+            
+            time_converter = lambda t: t / 1000
+            
+        else:
+            
+            time_converter = HydrusTime.SecondiseMS
+            
         
         hashes = ParseHashes( request )
         
@@ -3234,7 +3374,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                         'deleted' : {}
                     }
                     
-                    timestamps_manager = locations_manager.GetTimestampsManager()
+                    times_manager = locations_manager.GetTimesManager()
                     
                     current = locations_manager.GetCurrent()
                     
@@ -3244,7 +3384,7 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                             'name' : service_keys_to_names[ file_service_key ],
                             'type' : service_keys_to_types[ file_service_key ],
                             'type_pretty' : HC.service_string_lookup[ service_keys_to_types[ file_service_key ] ],
-                            'time_imported' : timestamps_manager.GetImportedTimestamp( file_service_key )
+                            'time_imported' : time_converter( times_manager.GetImportedTimestampMS( file_service_key ) )
                         }
                         
                     
@@ -3256,23 +3396,23 @@ class HydrusResourceClientAPIRestrictedGetFilesFileMetadata( HydrusResourceClien
                             'name' : service_keys_to_names[ file_service_key ],
                             'type' : service_keys_to_types[ file_service_key ],
                             'type_pretty' : HC.service_string_lookup[ service_keys_to_types[ file_service_key ] ],
-                            'time_deleted' : timestamps_manager.GetDeletedTimestamp( file_service_key ),
-                            'time_imported' : timestamps_manager.GetPreviouslyImportedTimestamp( file_service_key )
+                            'time_deleted' : time_converter( times_manager.GetDeletedTimestampMS( file_service_key ) ),
+                            'time_imported' : time_converter( times_manager.GetPreviouslyImportedTimestampMS( file_service_key ) )
                         }
                         
                     
-                    metadata_row[ 'time_modified' ] = timestamps_manager.GetAggregateModifiedTimestamp()
+                    metadata_row[ 'time_modified' ] = time_converter( times_manager.GetAggregateModifiedTimestampMS() )
                     
-                    time_modified_details = timestamps_manager.GetDomainModifiedTimestamps()
+                    domains_to_file_modified_timestamps_ms = times_manager.GetDomainModifiedTimestampsMS()
                     
-                    local_modified = timestamps_manager.GetFileModifiedTimestamp()
+                    local_modified_timestamp_ms = times_manager.GetFileModifiedTimestampMS()
                     
-                    if local_modified is not None:
+                    if local_modified_timestamp_ms is not None:
                         
-                        time_modified_details[ 'local' ] = local_modified
+                        domains_to_file_modified_timestamps_ms[ 'local' ] = local_modified_timestamp_ms
                         
                     
-                    metadata_row[ 'time_modified_details' ] = time_modified_details
+                    metadata_row[ 'time_modified_details' ] = { domain : time_converter( timestamp_ms ) for ( domain, timestamp_ms ) in domains_to_file_modified_timestamps_ms.items() }
                     
                     metadata_row[ 'is_inbox' ] = locations_manager.inbox
                     metadata_row[ 'is_local' ] = locations_manager.IsLocal()
@@ -3666,7 +3806,7 @@ def RenderNetworkContextToJSONObject( network_context: ClientNetworkingContexts.
         
         result[ 'data' ] = network_context.context_data.hex()
         
-    elif isinstance( network_context.context_data, str ) or network_context.context_data is None:
+    elif network_context.context_data is None or isinstance( network_context.context_data, str ):
         
         result[ 'data' ] = network_context.context_data
         

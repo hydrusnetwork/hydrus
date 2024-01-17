@@ -414,6 +414,7 @@ def ParseTwistedRequestGETArgs( requests_args: dict, int_params, byte_params, st
 variable_type_to_text_lookup = collections.defaultdict( lambda: 'unknown!' )
 
 variable_type_to_text_lookup[ int ] = 'integer'
+variable_type_to_text_lookup[ float ] = 'float'
 variable_type_to_text_lookup[ str ] = 'string'
 variable_type_to_text_lookup[ bytes ] = 'hex-encoded bytestring'
 variable_type_to_text_lookup[ bool ] = 'boolean'
@@ -447,6 +448,11 @@ def GetValueFromDict( dictionary: dict, key, expected_type, expected_list_type =
 def TestVariableType( name: str, value: typing.Any, expected_type: type, expected_list_type = None, expected_dict_types = None, allowed_values = None ):
     
     if not isinstance( value, expected_type ):
+        
+        if expected_type is float and isinstance( value, int ):
+            
+            return
+            
         
         type_error_text = variable_type_to_text_lookup[ expected_type ]
         

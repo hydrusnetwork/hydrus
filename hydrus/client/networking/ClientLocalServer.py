@@ -59,11 +59,17 @@ class HydrusServiceClientAPI( HydrusClientService ):
         add_files.putChild( b'unarchive_files', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( self._service, self._client_requests_domain ) )
         add_files.putChild( b'generate_hashes', ClientLocalServerResources.HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( self._service, self._client_requests_domain ) )
         
-        add_tags = NoResource()
+        edit_ratings = NoResource()
         
-        root.putChild( b'edit_ratings', add_tags )
+        root.putChild( b'edit_ratings', edit_ratings )
         
-        add_tags.putChild( b'set_rating', ClientLocalServerResources.HydrusResourceClientAPIRestrictedEditRatingsSetRating( self._service, self._client_requests_domain ) )
+        edit_ratings.putChild( b'set_rating', ClientLocalServerResources.HydrusResourceClientAPIRestrictedEditRatingsSetRating( self._service, self._client_requests_domain ) )
+        
+        edit_times = NoResource()
+        
+        root.putChild( b'edit_times', edit_times )
+        
+        edit_times.putChild( b'set_time', ClientLocalServerResources.HydrusResourceClientAPIRestrictedEditTimesSetTime( self._service, self._client_requests_domain ) )
         
         add_tags = NoResource()
         

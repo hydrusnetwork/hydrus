@@ -131,7 +131,7 @@ class FileImportJob( object ):
         self._has_human_readable_embedded_metadata = None
         self._has_icc_profile = None
         self._pixel_hash = None
-        self._file_modified_timestamp = None
+        self._file_modified_timestamp_ms = None
         self._blurhash = None
         
     
@@ -219,13 +219,13 @@ class FileImportJob( object ):
                 if len( file_service_keys_to_add_to ) > 0:
                     
                     file_info_manager = media_result.GetFileInfoManager()
-                    now = HydrusTime.GetNow()
+                    now_ms = HydrusTime.GetNowMS()
                     
                     service_keys_to_content_updates = {}
                     
                     for service_key in file_service_keys_to_add_to:
                         
-                        service_keys_to_content_updates[ service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now ) ) ]
+                        service_keys_to_content_updates[ service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) ]
                         
                     
                     HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
@@ -477,7 +477,7 @@ class FileImportJob( object ):
                 
             
         
-        self._file_modified_timestamp = HydrusFileHandling.GetFileModifiedTimestamp( self._temp_path )
+        self._file_modified_timestamp_ms = HydrusFileHandling.GetFileModifiedTimestampMS( self._temp_path )
         
     
     def GetExtraHashes( self ):
@@ -495,9 +495,9 @@ class FileImportJob( object ):
         return self._file_info
         
     
-    def GetFileModifiedTimestamp( self ):
+    def GetFileModifiedTimestampMS( self ):
         
-        return self._file_modified_timestamp
+        return self._file_modified_timestamp_ms
         
     
     def GetHash( self ):

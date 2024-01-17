@@ -306,12 +306,13 @@ class DateTimeButton( ClientGUICommon.BetterButton ):
     
     dateTimeChanged = QC.Signal()
     
-    def __init__( self, parent, time_allowed = True, seconds_allowed = False, none_allowed = False, only_past_dates = False ):
+    def __init__( self, parent, time_allowed = True, seconds_allowed = False, milliseconds_allowed = False, none_allowed = False, only_past_dates = False ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'initialising', self._EditDateTime )
         
         self._time_allowed = time_allowed
         self._seconds_allowed = seconds_allowed
+        self._milliseconds_allowed = milliseconds_allowed
         self._none_allowed = none_allowed
         self._only_past_dates = only_past_dates
         
@@ -331,7 +332,7 @@ class DateTimeButton( ClientGUICommon.BetterButton ):
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            control = DateTimeCtrl( self, time_allowed = self._time_allowed, seconds_allowed = self._seconds_allowed, none_allowed = self._none_allowed, only_past_dates = self._only_past_dates )
+            control = DateTimeCtrl( self, time_allowed = self._time_allowed, seconds_allowed = self._seconds_allowed, milliseconds_allowed = self._milliseconds_allowed, none_allowed = self._none_allowed, only_past_dates = self._only_past_dates )
             
             control.SetValue( self._value )
             
@@ -358,7 +359,11 @@ class DateTimeButton( ClientGUICommon.BetterButton ):
             
             if self._time_allowed:
                 
-                if self._seconds_allowed:
+                if self._milliseconds_allowed:
+                    
+                    f = 'yyyy/MM/dd hh:mm:ss.zzz'
+                    
+                elif self._seconds_allowed:
                     
                     f = 'yyyy/MM/dd hh:mm:ss'
                     
@@ -383,7 +388,7 @@ class DateTimeButton( ClientGUICommon.BetterButton ):
         return self._value
         
     
-    def GetValueTimestamp( self ) -> typing.Optional[ int ]:
+    def GetValueTimestampMS( self ) -> typing.Optional[ int ]:
         
         if self._value is None:
             
@@ -391,7 +396,7 @@ class DateTimeButton( ClientGUICommon.BetterButton ):
             
         else:
             
-            return self._value.toSecsSinceEpoch()
+            return self._value.toMSecsSinceEpoch()
             
         
     
@@ -412,9 +417,9 @@ class DateTimeButton( ClientGUICommon.BetterButton ):
             
         
     
-    def SetValueTimestamp( self, value: typing.Optional[ int ] ):
+    def SetValueTimestampMS( self, timestamp_ms: typing.Optional[ int ] ):
         
-        if value is None:
+        if timestamp_ms is None:
             
             value_dt = None
             
@@ -422,7 +427,7 @@ class DateTimeButton( ClientGUICommon.BetterButton ):
             
             timeZone = QC.QTimeZone.systemTimeZone()
             
-            value_dt = QC.QDateTime.fromSecsSinceEpoch( value, timeZone )
+            value_dt = QC.QDateTime.fromMSecsSinceEpoch( timestamp_ms, timeZone )
             
         
         self.SetValueDT( value_dt )
@@ -433,12 +438,13 @@ class DateTimeCtrl( QW.QWidget ):
     
     dateTimeChanged = QC.Signal()
     
-    def __init__( self, parent, time_allowed = True, seconds_allowed = False, none_allowed = False, only_past_dates = False ):
+    def __init__( self, parent, time_allowed = True, seconds_allowed = False, milliseconds_allowed = False, none_allowed = False, only_past_dates = False ):
         
         QW.QWidget.__init__( self, parent )
         
         self._time_allowed = time_allowed
         self._seconds_allowed = seconds_allowed
+        self._milliseconds_allowed = milliseconds_allowed
         self._none_allowed = none_allowed
         self._only_past_dates = only_past_dates
         
@@ -491,7 +497,11 @@ class DateTimeCtrl( QW.QWidget ):
         
         if self._time_allowed:
             
-            if self._seconds_allowed:
+            if self._milliseconds_allowed:
+                
+                self._time.setDisplayFormat( 'hh:mm:ss.zzz' )
+                
+            elif self._seconds_allowed:
                 
                 self._time.setDisplayFormat( 'hh:mm:ss' )
                 
@@ -531,14 +541,14 @@ class DateTimeCtrl( QW.QWidget ):
         
         if qt_time is None:
             
-            timestamp = None
+            timestamp_ms = None
             
         else:
             
-            timestamp = qt_time.toSecsSinceEpoch()
+            timestamp_ms = qt_time.toMSecsSinceEpoch()
             
         
-        text = json.dumps( timestamp )
+        text = json.dumps( timestamp_ms / 1000 )
         
         HG.client_controller.pub( 'clipboard', 'text', text )
         
@@ -574,7 +584,7 @@ class DateTimeCtrl( QW.QWidget ):
                 
                 try:
                     
-                    timestamp = int( timestamp )
+                    timestamp = float( timestamp )
                     
                 except ValueError:
                     
@@ -582,7 +592,7 @@ class DateTimeCtrl( QW.QWidget ):
                     
                 
             
-            looks_good = timestamp is None or isinstance( timestamp, int )
+            looks_good = timestamp is None or isinstance( timestamp, float )
             
             if not looks_good:
                 
@@ -595,7 +605,9 @@ class DateTimeCtrl( QW.QWidget ):
                 
             else:
                 
-                qt_time = QC.QDateTime.fromSecsSinceEpoch( timestamp )
+                timestamp_ms = HydrusTime.MillisecondiseS( timestamp )
+                
+                qt_time = QC.QDateTime.fromMSecsSinceEpoch( timestamp_ms )
                 
             
         except Exception as e:
@@ -981,7 +993,7 @@ class TimestampDataStubCtrl( QW.QWidget ):
         
         self._current_file_service = ClientGUICommon.BetterChoice( self )
         
-        for service in HG.client_controller.services_manager.GetServices( HC.FILE_SERVICES ):
+        for service in HG.client_controller.services_manager.GetServices( HC.REAL_FILE_SERVICES ):
             
             self._current_file_service.addItem( service.GetName(), service.GetServiceKey() )
             

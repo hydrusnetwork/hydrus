@@ -1386,19 +1386,19 @@ class MediaCollection( MediaList, Media ):
         if self._locations_manager is not None:
             
             all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
-            all_timestamp_managers = [ location_manager.GetTimestampsManager() for location_manager in all_locations_managers ]
+            all_timestamp_managers = [ location_manager.GetTimesManager() for location_manager in all_locations_managers ]
             
-            archived_times = { timestamps_manager.GetArchivedTimestamp() for timestamps_manager in all_timestamp_managers }
+            archived_timestamps_ms = { times_manager.GetArchivedTimestampMS() for times_manager in all_timestamp_managers }
             
-            archived_times.discard( None )
+            archived_timestamps_ms.discard( None )
             
-            if len( archived_times ) > 0:
+            if len( archived_timestamps_ms ) > 0:
                 
-                self._locations_manager.GetTimestampsManager().SetArchivedTimestamp( max( archived_times ) )
+                self._locations_manager.GetTimesManager().SetArchivedTimestampMS( max( archived_timestamps_ms ) )
                 
             else:
                 
-                self._locations_manager.GetTimestampsManager().ClearArchivedTimestamp()
+                self._locations_manager.GetTimesManager().ClearArchivedTime()
                 
             
         
@@ -1413,67 +1413,67 @@ class MediaCollection( MediaList, Media ):
         MediaList._RecalcHashes( self )
         
         all_locations_managers = [ media.GetLocationsManager() for media in self._sorted_media ]
-        all_timestamp_managers = [ location_manager.GetTimestampsManager() for location_manager in all_locations_managers ]
+        all_timestamp_managers = [ location_manager.GetTimesManager() for location_manager in all_locations_managers ]
         
-        current_to_timestamps = {}
-        deleted_to_timestamps = {}
-        deleted_to_previously_imported_timestamps = {}
+        current_to_timestamps_ms = {}
+        deleted_to_timestamps_ms = {}
+        deleted_to_previously_imported_timestamps_ms = {}
         
-        for service_key in HG.client_controller.services_manager.GetServiceKeys( HC.FILE_SERVICES ):
+        for service_key in HG.client_controller.services_manager.GetServiceKeys( HC.REAL_FILE_SERVICES ):
             
-            current_timestamps = [ timestamp for timestamp in ( timestamps_manager.GetImportedTimestamp( service_key ) for timestamps_manager in all_timestamp_managers ) if timestamp is not None ]
+            current_timestamps_ms = [ timestamp_ms for timestamp_ms in ( times_manager.GetImportedTimestampMS( service_key ) for times_manager in all_timestamp_managers ) if timestamp_ms is not None ]
             
-            if len( current_timestamps ) > 0:
+            if len( current_timestamps_ms ) > 0:
                 
-                current_to_timestamps[ service_key ] = max( current_timestamps )
-                
-            
-            deleted_timestamps = [ timestamp for timestamp in ( timestamps_manager.GetDeletedTimestamp( service_key ) for timestamps_manager in all_timestamp_managers ) if timestamp is not None ]
-            
-            if len( deleted_timestamps ) > 0:
-                
-                deleted_to_timestamps[ service_key ] = max( deleted_timestamps )
+                current_to_timestamps_ms[ service_key ] = max( current_timestamps_ms )
                 
             
-            previously_imported_timestamps = [ timestamp for timestamp in ( timestamps_manager.GetPreviouslyImportedTimestamp( service_key ) for timestamps_manager in all_timestamp_managers ) if timestamp is not None ]
+            deleted_timestamps_ms = [ timestamp_ms for timestamp_ms in ( times_manager.GetDeletedTimestampMS( service_key ) for times_manager in all_timestamp_managers ) if timestamp_ms is not None ]
             
-            if len( previously_imported_timestamps ) > 0:
+            if len( deleted_timestamps_ms ) > 0:
                 
-                deleted_to_previously_imported_timestamps[ service_key ] = max( previously_imported_timestamps )
+                deleted_to_timestamps_ms[ service_key ] = max( deleted_timestamps_ms )
+                
+            
+            previously_imported_timestamps_ms = [ timestamp_ms for timestamp_ms in ( times_manager.GetPreviouslyImportedTimestampMS( service_key ) for times_manager in all_timestamp_managers ) if timestamp_ms is not None ]
+            
+            if len( previously_imported_timestamps_ms ) > 0:
+                
+                deleted_to_previously_imported_timestamps_ms[ service_key ] = max( previously_imported_timestamps_ms )
                 
             
         
-        current = set( current_to_timestamps.keys() )
-        deleted = set( deleted_to_timestamps.keys() )
+        current = set( current_to_timestamps_ms.keys() )
+        deleted = set( deleted_to_timestamps_ms.keys() )
         
         pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
         petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
-        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        times_manager = ClientMediaManagers.TimesManager()
         
-        modified_times = { timestamps_manager.GetAggregateModifiedTimestamp() for timestamps_manager in all_timestamp_managers }
+        modified_timestamps_ms = { times_manager.GetAggregateModifiedTimestampMS() for times_manager in all_timestamp_managers }
         
-        modified_times.discard( None )
+        modified_timestamps_ms.discard( None )
         
-        if len( modified_times ) > 0:
+        if len( modified_timestamps_ms ) > 0:
             
-            timestamps_manager.SetFileModifiedTimestamp( max( modified_times ) )
-            
-        
-        archived_times = { timestamps_manager.GetArchivedTimestamp() for timestamps_manager in all_timestamp_managers }
-        
-        archived_times.discard( None )
-        
-        if len( archived_times ) > 0:
-            
-            timestamps_manager.SetArchivedTimestamp( max( archived_times ) )
+            times_manager.SetFileModifiedTimestampMS( max( modified_timestamps_ms ) )
             
         
-        timestamps_manager.SetImportedTimestamps( current_to_timestamps )
-        timestamps_manager.SetDeletedTimestamps( deleted_to_timestamps )
-        timestamps_manager.SetPreviouslyImportedTimestamps( deleted_to_previously_imported_timestamps )
+        archived_timestamps_ms = { times_manager.GetArchivedTimestampMS() for times_manager in all_timestamp_managers }
         
-        self._locations_manager = ClientMediaManagers.LocationsManager( current, deleted, pending, petitioned, timestamps_manager )
+        archived_timestamps_ms.discard( None )
+        
+        if len( archived_timestamps_ms ) > 0:
+            
+            times_manager.SetArchivedTimestampMS( max( archived_timestamps_ms ) )
+            
+        
+        times_manager.SetImportedTimestampsMS( current_to_timestamps_ms )
+        times_manager.SetDeletedTimestampsMS( deleted_to_timestamps_ms )
+        times_manager.SetPreviouslyImportedTimestampsMS( deleted_to_previously_imported_timestamps_ms )
+        
+        self._locations_manager = ClientMediaManagers.LocationsManager( current, deleted, pending, petitioned, times_manager )
         
     
     def _RecalcInternals( self ):
@@ -1830,10 +1830,10 @@ class MediaSingleton( Media ):
     
     def GetPrettyInfoLines( self, only_interesting_lines = False ):
         
-        def timestamp_is_interesting( timestamp_1, timestamp_2 ):
+        def timestamp_ms_is_interesting( timestamp_ms_1, timestamp_ms_2 ):
             
-            distance_1 = abs( timestamp_1 - HydrusTime.GetNow() )
-            distance_2 = abs( timestamp_2 - HydrusTime.GetNow() )
+            distance_1 = abs( timestamp_ms_1 - HydrusTime.GetNowMS() )
+            distance_2 = abs( timestamp_ms_2 - HydrusTime.GetNowMS() )
             
             # 50000 / 51000 = 0.98 = not interesting
             # 10000 / 51000 = 0.20 = interesting
@@ -1844,7 +1844,7 @@ class MediaSingleton( Media ):
         
         file_info_manager = self._media_result.GetFileInfoManager()
         locations_manager = self._media_result.GetLocationsManager()
-        timestamps_manager = locations_manager.GetTimestampsManager()
+        times_manager = locations_manager.GetTimesManager()
         
         ( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
         
@@ -1857,7 +1857,7 @@ class MediaSingleton( Media ):
         
         if duration is not None:
             
-            info_string += f', {HydrusTime.MillisecondsToPrettyTime( duration )}'
+            info_string += f', {HydrusTime.MillisecondsDurationToPrettyTime( duration )}'
             
         
         if num_frames is not None:
@@ -1898,7 +1898,7 @@ class MediaSingleton( Media ):
         
         local_file_services = HG.client_controller.services_manager.GetLocalMediaFileServices()
         
-        seen_local_file_service_timestamps = set()
+        seen_local_file_service_timestamps_ms = set()
         
         current_local_file_services = [ service for service in local_file_services if service.GetServiceKey() in current_service_keys ]
         
@@ -1906,33 +1906,33 @@ class MediaSingleton( Media ):
             
             for local_file_service in current_local_file_services:
                 
-                timestamp = timestamps_manager.GetImportedTimestamp( local_file_service.GetServiceKey() )
+                import_timestamp_ms = times_manager.GetImportedTimestampMS( local_file_service.GetServiceKey() )
                 
-                lines.append( ( True, 'added to {}: {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) ) ) )
+                lines.append( ( True, 'added to {}: {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( import_timestamp_ms ) ) ) ) )
                 
-                seen_local_file_service_timestamps.add( timestamp )
+                seen_local_file_service_timestamps_ms.add( import_timestamp_ms )
                 
             
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in current_service_keys:
             
-            import_timestamp = timestamps_manager.GetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            import_timestamp_ms = times_manager.GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
             if HG.client_controller.new_options.GetBoolean( 'hide_uninteresting_local_import_time' ):
                 
                 # if we haven't already printed this timestamp somewhere
-                line_is_interesting = False not in ( timestamp_is_interesting( t, import_timestamp ) for t in seen_local_file_service_timestamps )
+                line_is_interesting = False not in ( timestamp_ms_is_interesting( timestamp_ms, import_timestamp_ms ) for timestamp_ms in seen_local_file_service_timestamps_ms )
                 
             else:
                 
                 line_is_interesting = True
                 
             
-            lines.append( ( line_is_interesting, 'imported: {}'.format( ClientTime.TimestampToPrettyTimeDelta( import_timestamp ) ) ) )
+            lines.append( ( line_is_interesting, 'imported: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( import_timestamp_ms ) ) ) ) )
             
             if line_is_interesting:
                 
-                seen_local_file_service_timestamps.add( import_timestamp )
+                seen_local_file_service_timestamps_ms.add( import_timestamp_ms )
                 
             
         
@@ -1942,9 +1942,9 @@ class MediaSingleton( Media ):
         
         if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in deleted_service_keys:
             
-            timestamp = timestamps_manager.GetDeletedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+            timestamp_ms = times_manager.GetDeletedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            lines.append( ( True, 'deleted from this client {} ({})'.format( ClientTime.TimestampToPrettyTimeDelta( timestamp ), local_file_deletion_reason ) ) )
+            lines.append( ( True, 'deleted from this client {} ({})'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ), local_file_deletion_reason ) ) )
             
         elif CC.TRASH_SERVICE_KEY in current_service_keys:
             
@@ -1952,9 +1952,9 @@ class MediaSingleton( Media ):
             
             for local_file_service in deleted_local_file_services:
                 
-                timestamp = timestamps_manager.GetDeletedTimestamp( local_file_service.GetServiceKey() )
+                timestamp_ms = times_manager.GetDeletedTimestampMS( local_file_service.GetServiceKey() )
                 
-                line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) )
+                line = 'removed from {} {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) )
                 
                 if len( deleted_local_file_services ) == 1:
                     
@@ -1975,36 +1975,36 @@ class MediaSingleton( Media ):
             lines.append( ( True, 'in the trash' ) )
             
         
-        timestamps_manager = locations_manager.GetTimestampsManager()
+        times_manager = locations_manager.GetTimesManager()
         
-        file_modified_timestamp = timestamps_manager.GetAggregateModifiedTimestamp()
+        file_modified_timestamp_ms = times_manager.GetAggregateModifiedTimestampMS()
         
-        if file_modified_timestamp is not None:
+        if file_modified_timestamp_ms is not None:
             
             if HG.client_controller.new_options.GetBoolean( 'hide_uninteresting_modified_time' ):
                 
                 # if we haven't already printed this timestamp somewhere
-                line_is_interesting = False not in ( timestamp_is_interesting( timestamp, file_modified_timestamp ) for timestamp in seen_local_file_service_timestamps )
+                line_is_interesting = False not in ( timestamp_ms_is_interesting( timestamp_ms, file_modified_timestamp_ms ) for timestamp_ms in seen_local_file_service_timestamps_ms )
                 
             else:
                 
                 line_is_interesting = True
                 
             
-            lines.append( ( line_is_interesting, 'modified: {}'.format( ClientTime.TimestampToPrettyTimeDelta( file_modified_timestamp ) ) ) )
+            lines.append( ( line_is_interesting, 'modified: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( file_modified_timestamp_ms ) ) ) ) )
             
             modified_timestamp_lines = []
             
-            timestamp = timestamps_manager.GetFileModifiedTimestamp()
+            timestamp_ms = times_manager.GetFileModifiedTimestampMS()
             
-            if timestamp is not None:
+            if timestamp_ms is not None:
                 
-                modified_timestamp_lines.append( 'local: {}'.format( ClientTime.TimestampToPrettyTimeDelta( timestamp ) ) )
+                modified_timestamp_lines.append( 'local: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) ) )
                 
             
-            for ( domain, timestamp ) in sorted( timestamps_manager.GetDomainModifiedTimestamps().items() ):
+            for ( domain, timestamp_ms ) in sorted( times_manager.GetDomainModifiedTimestampsMS().items() ):
                 
-                modified_timestamp_lines.append( '{}: {}'.format( domain, ClientTime.TimestampToPrettyTimeDelta( timestamp ) ) )
+                modified_timestamp_lines.append( '{}: {}'.format( domain, ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) ) )
                 
             
             if len( modified_timestamp_lines ) > 1:
@@ -2015,17 +2015,17 @@ class MediaSingleton( Media ):
         
         if not locations_manager.inbox:
             
-            archive_timestamp = timestamps_manager.GetArchivedTimestamp()
+            archived_timestamp_ms = times_manager.GetArchivedTimestampMS()
             
-            if archive_timestamp is not None:
+            if archived_timestamp_ms is not None:
                 
-                lines.append( ( True, 'archived: {}'.format( ClientTime.TimestampToPrettyTimeDelta( archive_timestamp ) ) ) )
+                lines.append( ( True, 'archived: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) ) ) )
                 
             
         
         for service_key in current_service_keys.intersection( HG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
             
-            timestamp = timestamps_manager.GetImportedTimestamp( service_key )
+            timestamp_ms = times_manager.GetImportedTimestampMS( service_key )
             
             try:
                 
@@ -2047,7 +2047,7 @@ class MediaSingleton( Media ):
                 status_label = 'uploaded'
                 
             
-            lines.append( ( True, '{} to {} {}'.format( status_label, service.GetName(), ClientTime.TimestampToPrettyTimeDelta( timestamp ) ) ) )
+            lines.append( ( True, '{} to {} {}'.format( status_label, service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( timestamp_ms ) ) ) ) )
             
         
         if self.GetFileInfoManager().has_audio:
@@ -2579,18 +2579,18 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
                 def sort_key( x ):
                     
-                    return deal_with_none( x.GetLocationsManager().GetTimestampsManager().GetAggregateModifiedTimestamp() )
+                    return deal_with_none( x.GetLocationsManager().GetTimesManager().GetAggregateModifiedTimestampMS() )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_LAST_VIEWED_TIME:
                 
                 def sort_key( x ):
                     
-                    timestamps_manager = x.GetFileViewingStatsManager().GetTimestampsManager()
+                    times_manager = x.GetFileViewingStatsManager().GetTimesManager()
                     
                     # do not do viewtime as a secondary sort here, to allow for user secondary sort to help out
                     
-                    return deal_with_none( timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_MEDIA_VIEWER ) )
+                    return deal_with_none( times_manager.GetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP:
@@ -2599,7 +2599,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     locations_manager = x.GetLocationsManager()
                     
-                    return ( not locations_manager.inbox, deal_with_none( x.GetLocationsManager().GetTimestampsManager().GetArchivedTimestamp() ) )
+                    return ( not locations_manager.inbox, deal_with_none( x.GetLocationsManager().GetTimesManager().GetArchivedTimestampMS() ) )
                     
                 
             elif sort_data == CC.SORT_FILES_BY_HEIGHT:

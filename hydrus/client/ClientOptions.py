@@ -514,7 +514,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_number' ] = 3
         self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_time_delta' ] = 600
         
-        self._dictionary[ 'integers' ][ 'ac_read_list_height_num_chars' ] = 19
+        self._dictionary[ 'integers' ][ 'ac_read_list_height_num_chars' ] = 21
         self._dictionary[ 'integers' ][ 'ac_write_list_height_num_chars' ] = 11
         
         self._dictionary[ 'integers' ][ 'system_busy_cpu_percent' ] = 50

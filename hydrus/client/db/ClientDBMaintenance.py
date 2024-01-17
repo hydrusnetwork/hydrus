@@ -60,8 +60,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         return {
             'main.last_shutdown_work_time' : ( 'CREATE TABLE IF NOT EXISTS {} ( last_shutdown_work_time INTEGER );', 400 ),
-            'main.analyze_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, num_rows INTEGER, timestamp INTEGER );', 400 ),
-            'main.vacuum_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, timestamp INTEGER );', 400 ),
+            'main.analyze_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, num_rows INTEGER, timestamp_ms INTEGER );', 400 ),
+            'main.vacuum_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, timestamp_ms INTEGER );', 400 ),
             'main.deferred_delete_tables' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT, num_rows INTEGER );', 567 )
         }
         
@@ -161,7 +161,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         # The KISS approach works superfast, who would have guessed. This was 1.5s minimum overhead on a 30m row table, screwing with the autothrottle, and the other one does 20k row/s easy
         # I'm leaving this here because it was neat anyway and a good reminder of hubris
         
-        # this mess is predicated 'DELETE FROM blah LIMIT n;' not being supported by default compile time options in SQLite wew lad
+        # this mess is predicated on 'DELETE FROM blah LIMIT n;' not being supported by default compile time options in SQLite wew lad
         # so instead we set up the valid delete range with WITH
         # then we say 'delete from the table where there's a corresponding PK row in the temp table'. this should stay a fast SEARCH lookup even on multiple column pks
         # example query:
@@ -325,7 +325,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM analyze_timestamps WHERE name = ?;', ( name, ) )
         
-        self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusTime.GetNow() ) )
+        self._Execute( 'INSERT OR IGNORE INTO analyze_timestamps ( name, num_rows, timestamp_ms ) VALUES ( ?, ?, ? );', ( name, num_rows, HydrusTime.GetNowMS() ) )
         
     
     def CheckDBIntegrity( self ):
@@ -612,7 +612,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             boundaries.append( ( 100000, False, 3 * 30 * 86400 ) )
             # anything bigger than 100k rows will now not be analyzed
             
-            existing_names_to_info = { name : ( num_rows, timestamp ) for ( name, num_rows, timestamp ) in self._Execute( 'SELECT name, num_rows, timestamp FROM analyze_timestamps;' ) }
+            existing_names_to_info = { name : ( num_rows, HydrusTime.SecondiseMS( timestamp_ms ) ) for ( name, num_rows, timestamp_ms ) in self._Execute( 'SELECT name, num_rows, timestamp_ms FROM analyze_timestamps;' ) }
             
             names_to_analyze = []
             
@@ -681,15 +681,15 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             ( page_count, ) = self._Execute( 'PRAGMA {}.page_count;'.format( name ) ).fetchone()
             ( freelist_count, ) = self._Execute( 'PRAGMA {}.freelist_count;'.format( name ) ).fetchone()
             
-            result = self._Execute( 'SELECT timestamp FROM vacuum_timestamps WHERE name = ?;', ( name, ) ).fetchone()
+            result = self._Execute( 'SELECT timestamp_ms FROM vacuum_timestamps WHERE name = ?;', ( name, ) ).fetchone()
             
             if result is None:
                 
-                last_vacuumed = None
+                last_vacuumed_ms = None
                 
             else:
                 
-                ( last_vacuumed, ) = result
+                ( last_vacuumed_ms, ) = result
                 
             
             this_vacuum_data = {}
@@ -698,7 +698,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             this_vacuum_data[ 'page_size' ] = page_size
             this_vacuum_data[ 'page_count' ] = page_count
             this_vacuum_data[ 'freelist_count' ] = freelist_count
-            this_vacuum_data[ 'last_vacuumed' ] = last_vacuumed
+            this_vacuum_data[ 'last_vacuumed_ms' ] = last_vacuumed_ms
             
             vacuum_data[ name ] = this_vacuum_data
             
@@ -717,7 +717,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM vacuum_timestamps WHERE name = ?;', ( name, ) )
         
-        self._Execute( 'INSERT OR IGNORE INTO vacuum_timestamps ( name, timestamp ) VALUES ( ?, ? );', ( name, HydrusTime.GetNow() ) )
+        self._Execute( 'INSERT OR IGNORE INTO vacuum_timestamps ( name, timestamp_ms ) VALUES ( ?, ? );', ( name, HydrusTime.GetNowMS() ) )
         
     
     def TouchAnalyzeNewTables( self ):

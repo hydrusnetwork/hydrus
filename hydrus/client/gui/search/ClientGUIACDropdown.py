@@ -1624,6 +1624,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def _SetLocationContext( self, location_context: ClientLocation.LocationContext ):
         
+        location_context = location_context.Duplicate()
+        
         location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
         
         if location_context == self._location_context_button.GetValue():

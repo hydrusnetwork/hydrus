@@ -325,7 +325,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._background_colour_generator = CanvasBackgroundColourGenerator()
         
-        self._current_media_start_time = HydrusTime.GetNow()
+        self._current_media_start_time_ms = HydrusTime.GetNowMS()
         
         self._new_options = HG.client_controller.new_options
         
@@ -692,13 +692,13 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def _SaveCurrentMediaViewTime( self ):
         
-        now = HydrusTime.GetNow()
+        now_ms = HydrusTime.GetNowMS()
         
-        view_timestamp = self._current_media_start_time
+        view_timestamp_ms = self._current_media_start_time_ms
         
-        viewtime_delta = now - self._current_media_start_time
+        viewtime_delta = ( now_ms - self._current_media_start_time_ms ) // 1000
         
-        self._current_media_start_time = now
+        self._current_media_start_time_ms = now_ms
         
         if self._current_media is None:
             
@@ -707,7 +707,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         hash = self._current_media.GetHash()
         
-        HG.client_controller.file_viewing_stats_manager.FinishViewing( self._current_media, self.CANVAS_TYPE, view_timestamp, viewtime_delta )
+        HG.client_controller.file_viewing_stats_manager.FinishViewing( self._current_media, self.CANVAS_TYPE, view_timestamp_ms, viewtime_delta )
         
     
     def _SeekDeltaCurrentMedia( self, direction, duration_ms ):

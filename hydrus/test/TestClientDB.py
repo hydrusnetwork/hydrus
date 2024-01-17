@@ -1626,12 +1626,12 @@ class TestClientDB( unittest.TestCase ):
         
         media_result = self._read( 'media_result', bytes.fromhex( swf_hash_hex ) )
         
-        earliest_import_time = media_result.GetLocationsManager().GetTimestampsManager().GetImportedTimestamp( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        earliest_import_timestamp = HydrusTime.SecondiseMS( media_result.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
         
         result = self._read( 'boned_stats' )
         
         expected_result = {
-            'earliest_import_time': earliest_import_time,
+            'earliest_import_time': earliest_import_timestamp,
             'num_archive': 0,
             'num_deleted': 0,
             'num_inbox': 2,
@@ -1656,7 +1656,7 @@ class TestClientDB( unittest.TestCase ):
         result = self._read( 'boned_stats', file_search_context = file_search_context )
         
         expected_result = {
-            'earliest_import_time': earliest_import_time,
+            'earliest_import_time': earliest_import_timestamp,
             'num_archive': 0,
             'num_deleted': 0,
             'num_inbox': 1,
@@ -1864,7 +1864,7 @@ class TestClientDB( unittest.TestCase ):
         
         media_results = self._read( 'media_results', hashes )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), 100 ) ) for mr in media_results ]
+        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), 100000 ) ) for mr in media_results ]
         
         service_keys_to_content_updates = { file_sk : content_updates }
         

@@ -87,13 +87,13 @@ There are three special external libraries. You just have to get them and put th
         
         1. If you are on Windows 8.1 or older, [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20210228-git-d1be8bb.7z) is known safe.
         2. If you are on Windows 10 or newer and want the simple answer, try [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20220501-git-9ffaa6b.7z).
-        3. Ideally, go for [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z), but you have to rename the dll to `mpv-2.dll`.
-        4. I have been testing [this newer version](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z) and things seem to be fine too, at least on updated Windows.
+        3. Ideally, go for [this](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z), but you have to rename `libmpv-2.dll` to `mpv-2.dll`.
+        4. I have been testing [this newer version](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230820-git-19384e0.7z) and [this very new version](https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20231231-git-abc2a74.7z) and things seem to be fine too, at least on updated Windows. If you use the '(t)est' python-mpv, 1.0.5, you do not have to rename `libmpv-2.dll` to `mpv-2.dll`.
         
         Then open that archive and place the 'mpv-1.dll' or 'mpv-2.dll' into `install_dir`.
         
         ??? info "mpv on older Windows"
-            I have word that that newer mpv, the API version 2.1 that you have to rename to mpv-2.dll, will work on Qt5 and Windows 7. If this applies to you, feel free to have a play around with different versions here. You'll need the newer mpv choice in the setup-venv script too, which, depending on your situation, may not be possible.
+            I have word that that newer mpv, the API version 2.1 that you have to rename to mpv-2.dll, will work on Qt5 and Windows 7. If this applies to you, have a play around with different versions here. You'll need the newer mpv choice in the setup-venv script however, which, depending on your situation, may not be possible.
         
     2. SQLite3  
         

@@ -281,7 +281,7 @@ class NetworkJob( object ):
         
     
     def _GenerateModifiedDate( self, response: requests.Response ):
-    
+        
         if 'Last-Modified' in response.headers:
             
             # Thu, 20 May 2010 07:00:23 GMT

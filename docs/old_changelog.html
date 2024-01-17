@@ -35,6 +35,63 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_559"><a href="#version_559">version 559</a></h2>
+                    <ul>
+                        <li><h3>millisecond timestamps</h3></li>
+                        <li>since the program started, the database and code has generally handled timestamps as an integer (i.e. whole number, no fractions) count of the number of seconds since 1970. this is a very common system, but one drawback is it cannot track any amount of time less than a second. when a very fast import in hydrus imports two files in the same second, they then get the exact same import time and thus when you sort by import time, the two files don't know which should be truly first and they may sort either way. this week I have moved the database to store all file timestamps (archived time, imported time, etc...) with millisecond resolution. you do not have to do anything, and very little actually changes frontend, but your update may take a minute or two</li>
+                        <li>whenever you sort by 'import time' now, we shouldn't get anymore switcheroos</li>
+                        <li>the 'manage times' dialog now has millisecond display and edit widgets to reflect this, but in most places across the client, you'll see the same time labels as before</li>
+                        <li>I changed a **ton** of code this week. all simple changes, but I'm sure a typo has slipped through somewhere. if you see a file with a 'last viewed time' of '54 years ago', let me know!</li>
+                        <li><h3>time details</h3></li>
+                        <li>this section is just a big list so I have somewhat of a record of what I did. you can broadly ignore it</li>
+                        <li>updated `vacuum_timestamps` to `timestamp_ms` and adjusted read/write and the dialog handling to ms</li>
+                        <li>updated `analyse_timestamps` to `timestamp_ms` and adjusted read/write to ms</li>
+                        <li>updated `json_dumps_named` to `timestamp_ms` and adjusted read/write and some UI-level gubbins around session loading and saving to ms</li>
+                        <li>updated `recent_tags` to `timestamp_ms` and adjusted the whole system to ms</li>
+                        <li>updated `file_viewing_stats` to `last_viewed_timestamp_ms` and adjusted read/write to ms</li>
+                        <li>updated `file_modified_timestamps` to `file_modified_timestamp_ms` and adjusted read/write to ms, including to and from the disk</li>
+                        <li>updated `file_domain_modified_timestamps` to `file_modified_timestamp_ms` and adjusted read/write to ms</li>
+                        <li>updated `archive_timestamps` to `archived_timestamp_ms` and adjusted read/write to ms</li>
+                        <li>updated all the current- and deleted-file tables for all file services to use ms (`timestamp_ms`, `timestamp_ms`, and `original_timestamp_ms`) and adjusted _all_ database file storage, search, and update to work in ms</li>
+                        <li>updated the `ClientDBFilesTimestamps` db module to use ms timestamps throughout</li>
+                        <li>updated the `ClientDBFilesViewingStats` db module to use ms timestamps throughout</li>
+                        <li>updated the `ClientDBFilesStorage` db module to use ms timestamps throughout</li>
+                        <li>updated the controller timestamp tracker and all callers to use ms timestamps throughout</li>
+                        <li>renamed `TimestampsManager` to `TimesManager` and `times_manager` across the program</li>
+                        <li>updated the `TimesManager` and all of its calls and callers in general to work in ms. too much stuff to list here</li>
+                        <li>the `TimestampData` object is now converted to ms, and since it does other jobs than a raw number, the various calls it is involved in are generally renamed from 'timestamp' to 'time'</li>
+                        <li>the file viewing stats manager now tracks 'last viewed time' as ms, and the update pipeline is also updated</li>
+                        <li>the locations manager now handles all file times in ms, and all the archive/add/delete pipelines are also updated</li>
+                        <li>wrote some MS-based variants of the core time functions for spamming around here, including for both Qt `QDateTime` and python `datetime`</li>
+                        <li>updated the main datetime edit panel, button, and widget to handle millisecond display and editing</li>
+                        <li>fleshed out a ton of ambiguous variable names to the new strict time/timestamp/timestamp_ms system</li>
+                        <li>wrote a clean transition method between ms<->s that accounts for various None situations and spammed it everywhere</li>
+                        <li>fixed up some ill-advised timestamp data juggling in the time edit UI</li>
+                        <li><h3>what still has second-resolution</h3></li>
+                        <li>the parsing system (and hence downloaded files' source times)</li>
+                        <li>the sidecar system's time stuff, both import and export</li>
+                        <li>the server and the hydrus network protocol in general</li>
+                        <li>Mr. Bones and the File History chart</li>
+                        <li>almost all the actual UI labels. I'm not going to spam milliseconds at you outside of the time edit UI</li>
+                        <li>almost all the general maintenance timers, sleepers, and grunt-work code across the program</li>
+                        <li><h3>client api</h3></li>
+                        <li>the `file_metadata` call has a new parameter, `include_milliseconds`, which turns the integer `1704419632` timestamps into floats with three sig figs `1704419632.154`, representing all the changes this week</li>
+                        <li>a new permission, `edit file times` is added, with value `11`</li>
+                        <li>a new command, `/edit_times/set_time` now lets you set any of the file times you see in the _manage times_ dialog. you can send it second- or millisecond-based timestamps</li>
+                        <li>the client api help is updated for all this, particularly the new section here https://hydrusnetwork.github.io/hydrus/developer_api.html#edit_times_set_time    </li>
+                        <li>added unit tests for this</li>
+                        <li>the client api version is now 59</li>
+                        <li><h3>misc</h3></li>
+                        <li>the sankaku parsers, GUGs, and custom header/bandwidth rules are removed from the defaults, so new users will not see them. none of this stuff works well/at all any more, especially in recent weeks. for sites that are so difficult to download from, if there isn't a nice solution on the shared downloader repo, https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts, I recommend going with a more robust solution like gallery-dl or just finding the content elsewhere</li>
+                        <li>when there are multiple 'system:known url' predicates in a search, I now ensure the faster types run first, reducing the search domain for the slower, later ones. if you have a 'regex' 'known url' predicate, try tossing in a matching 'domain' one--it should accelerate it hugely, every time</li>
+                        <li>fixed a bug in the autocomplete dropdown where it was not removing no-longer-valid file services from the location button after their deletion from _manage services_ until program restart (which was causing some harmless but unwelcome database errors). it should now remove them instantly, and may even end up on the rare 'nothing' domain</li>
+                        <li>the duplicate filter will no longer mention pixel-perfect pngs being a waste of space against static gifs--this isn't necessarily true</li>
+                        <li>the default height of the 'read' autocomplete result list is now 21 rows, so `system:time` and `system:urls` are no longer subtly obscured by default. for existing users, that's under _options->search_</li>
+                        <li>in the 'running from source' requirements.txts, I bumped the 'new' and 'test' versions for python-mpv to 1.0.4/1.0.5. the newest python-mpv does not need you to rename libmpv-2.dll to mpv-2.dll, which will be one less annoying thing to do in future. I've also been testing this extremely new dll this week and ran into no problems, if you are also a Windows source user and would like to try it too: https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20231231-git-abc2a74.7z . I also tried out Qt 6.6.1, but I just discovered a column-sizing bug I want to sort out before I roll it out to the wider community</li>
+                        <li>updated the sqlite dll that gets bundled into the windows release to 3.44.2. the sqlite3.exe is updated too</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_558"><a href="#version_558">version 558</a></h2>
                     <ul>
                         <li><h3>user contributions</h3></li>

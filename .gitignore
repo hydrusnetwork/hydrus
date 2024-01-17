@@ -56,8 +56,10 @@ crash.log
 
 # in case user adds their own
 /bin/ffmpeg.exe
+/bin/ffmpeg
 /mpv-1.dll
 /mpv-2.dll
+/libmpv-2.dll
 /sqlite3.dll
 
 # Environments

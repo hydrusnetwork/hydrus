@@ -255,7 +255,7 @@ class FileViewingStatsManager( object ):
         self._my_flush_job = self._controller.CallRepeating( 5, 60, self.REPEATINGFlush )
         
     
-    def _GenerateViewsRow( self, media: ClientMedia.Media, canvas_type: int, view_timestamp: int, viewtime_delta: int ):
+    def _GenerateViewsRow( self, media: ClientMedia.Media, canvas_type: int, view_timestamp_ms: int, viewtime_delta: int ):
         
         new_options = HG.client_controller.new_options
         
@@ -311,21 +311,21 @@ class FileViewingStatsManager( object ):
                 
             
         
-        return ( canvas_type, ( view_timestamp, result_views_delta, result_viewtime_delta ) )
+        return ( canvas_type, ( view_timestamp_ms, result_views_delta, result_viewtime_delta ) )
         
     
     def _RowMakesChanges( self, row ):
         
-        ( view_timestamp, views_delta, viewtime_delta ) = row
+        ( view_timestamp_ms, views_delta, viewtime_delta ) = row
         
         return views_delta != 0 or viewtime_delta != 0
         
     
     def _PubSubRow( self, hash, canvas_type, row ):
         
-        ( view_timestamp, views_delta, viewtime_delta ) = row
+        ( view_timestamp_ms, views_delta, viewtime_delta ) = row
         
-        pubsub_row = ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta )
+        pubsub_row = ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta )
         
         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, pubsub_row )
         
@@ -343,9 +343,9 @@ class FileViewingStatsManager( object ):
                 
                 content_updates = []
                 
-                for ( ( hash, canvas_type ), ( view_timestamp, views_delta, viewtime_delta ) ) in self._pending_updates.items():
+                for ( ( hash, canvas_type ), ( view_timestamp_ms, views_delta, viewtime_delta ) ) in self._pending_updates.items():
                     
-                    row = ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta )
+                    row = ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta )
                     
                     content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADD, row )
                     
@@ -362,7 +362,7 @@ class FileViewingStatsManager( object ):
             
         
     
-    def FinishViewing( self, media: ClientMedia.MediaSingleton, canvas_type, view_timestamp, viewtime_delta ):
+    def FinishViewing( self, media: ClientMedia.MediaSingleton, canvas_type, view_timestamp_ms, viewtime_delta ):
         
         if not HG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
             
@@ -373,7 +373,7 @@ class FileViewingStatsManager( object ):
         
         with self._lock:
             
-            ( canvas_type, row ) = self._GenerateViewsRow( media, canvas_type, view_timestamp, viewtime_delta )
+            ( canvas_type, row ) = self._GenerateViewsRow( media, canvas_type, view_timestamp_ms, viewtime_delta )
             
             if not self._RowMakesChanges( row ):
                 
@@ -388,11 +388,11 @@ class FileViewingStatsManager( object ):
                 
             else:
                 
-                ( view_timestamp, views_delta, viewtime_delta ) = row
+                ( view_timestamp_ms, views_delta, viewtime_delta ) = row
                 
-                ( existing_view_timestamp, existing_views_delta, existing_viewtime_delta ) = self._pending_updates[ key ]
+                ( existing_view_timestamp_ms, existing_views_delta, existing_viewtime_delta ) = self._pending_updates[ key ]
                 
-                self._pending_updates[ key ] = ( max( view_timestamp, existing_view_timestamp ), existing_views_delta + views_delta, existing_viewtime_delta + viewtime_delta )
+                self._pending_updates[ key ] = ( max( view_timestamp_ms, existing_view_timestamp_ms ), existing_views_delta + views_delta, existing_viewtime_delta + viewtime_delta )
                 
             
         

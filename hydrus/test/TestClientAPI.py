@@ -25,6 +25,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
+from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -1506,14 +1507,14 @@ class TestClientAPI( unittest.TestCase ):
         
         tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
-        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        times_manager = ClientMediaManagers.TimesManager()
         
-        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager )
+        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), times_manager )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( { 'abc' : '123' } )
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         from hydrus.client.importing.options import NoteImportOptions
         
@@ -1694,7 +1695,7 @@ class TestClientAPI( unittest.TestCase ):
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
         
     
-    def _test_add_ratings( self, connection, set_up_permissions ):
+    def _test_edit_ratings( self, connection, set_up_permissions ):
         
         hash = os.urandom( 32 )
         hash_hex = hash.hex()
@@ -1966,6 +1967,369 @@ class TestClientAPI( unittest.TestCase ):
         [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
         self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        
+    
+    def _test_edit_times( self, connection, set_up_permissions ):
+        
+        hash = os.urandom( 32 )
+        hash_hex = hash.hex()
+        
+        #
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        # set up jobs
+        
+        jobs = []
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED,
+            'timestamp' : 123456
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms = 123456000 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED,
+            'timestamp' : 123456.789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED,
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED,
+            'timestamp' : None
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_DELETE, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED,
+            'timestamp_ms' : None
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_DELETE, result_timestamp_data ) )
+        
+        # all timestamp params are now tested and good. let's now hit the different types
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_MODIFIED_FILE,
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN,
+            'domain' : 'local',
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN,
+            'domain' : 'site.com',
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = 'site.com', timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_LAST_VIEWED,
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER,
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_MEDIA_VIEWER, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_LAST_VIEWED,
+            'canvas_type' : CC.CANVAS_PREVIEW,
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_PREVIEW, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_LAST_VIEWED,
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_MEDIA_VIEWER, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_IMPORTED,
+            'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex(),
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_DELETED,
+            'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex(),
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_DELETED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED,
+            'file_service_key' : CC.COMBINED_LOCAL_FILE_SERVICE_KEY.hex(),
+            'timestamp_ms' : 123456789
+        }
+        
+        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
+        
+        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        
+        #
+        
+        for ( request_args, action, result_timestamp_data ) in jobs:
+            
+            HG.test_controller.ClearWrites( 'content_updates' )
+            
+            path = '/edit_times/set_time'
+            
+            body_dict = { 'hash' : hash_hex }
+            body_dict.update( request_args )
+            
+            body = json.dumps( body_dict )
+            
+            connection.request( 'POST', path, body = body, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            self.assertEqual( response.status, 200 )
+            
+            expected_service_keys_to_content_updates = collections.defaultdict( list )
+            
+            expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( hash, result_timestamp_data ) ) ]
+            
+            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            
+            self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+            
+        
+        #
+        
+        problem_jobs = []
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_ms' : 123456789
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE,
+            'timestamp_ms' : 123456789
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        # wrong service type * 3
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_IMPORTED,
+            'timestamp_ms' : 123456789,
+            'file_service_key' : CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_DELETED,
+            'timestamp_ms' : 123456789,
+            'file_service_key' : CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED,
+            'timestamp_ms' : 123456789,
+            'file_service_key' : CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        # missing service * 3
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_IMPORTED,
+            'timestamp_ms' : 123456789,
+            'file_service_key' : os.urandom( 32 ).hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_DELETED,
+            'timestamp_ms' : 123456789,
+            'file_service_key' : os.urandom( 32 ).hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED,
+            'timestamp_ms' : 123456789,
+            'file_service_key' : os.urandom( 32 ).hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        # trying to delete from file service * 3
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_IMPORTED,
+            'timestamp_ms' : None,
+            'file_service_key' : CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY.hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_DELETED,
+            'timestamp_ms' : None,
+            'file_service_key' : CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY.hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        #
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED,
+            'timestamp_ms' : None,
+            'file_service_key' : CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY.hex()
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        # no domain
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN,
+            'timestamp_ms' : 123456789
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+            
+        # wrong canvas type
+        
+        request_args = {
+            'timestamp_type' : HC.TIMESTAMP_TYPE_LAST_VIEWED,
+            'canvas_type' : CC.CANVAS_MEDIA_VIEWER_DUPLICATES,
+            'timestamp_ms' : 123456789
+        }
+        
+        problem_jobs.append( ( request_args, 400 ) )
+        
+        for ( request_args, expected_status ) in problem_jobs:
+            
+            HG.test_controller.ClearWrites( 'content_updates' )
+            
+            path = '/edit_times/set_time'
+            
+            body_dict = { 'hash' : hash_hex }
+            body_dict.update( request_args )
+            
+            body = json.dumps( body_dict )
+            
+            connection.request( 'POST', path, body = body, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            self.assertEqual( response.status, expected_status )
+            
         
     
     def _test_add_tags( self, connection, set_up_permissions ):
@@ -4795,11 +5159,11 @@ class TestClientAPI( unittest.TestCase ):
         random_file_service_hex_current = HG.test_controller.example_file_repo_service_key_1
         random_file_service_hex_deleted = HG.test_controller.example_file_repo_service_key_2
         
-        current_import_timestamp = 500
-        ipfs_import_timestamp = 123456
-        previously_imported_timestamp = 300
-        deleted_deleted_timestamp = 450
-        file_modified_timestamp = 20
+        current_import_timestamp_ms = 500127
+        ipfs_import_timestamp_ms = 123456126
+        previously_imported_timestamp_ms = 300125
+        deleted_deleted_timestamp_ms = 450124
+        file_modified_timestamp_ms = 20123
         
         done_a_multihash = False
         
@@ -4832,36 +5196,36 @@ class TestClientAPI( unittest.TestCase ):
             
             service_keys_to_filenames = {}
             
-            current_to_timestamps = { random_file_service_hex_current : current_import_timestamp }
+            current_to_timestamps_ms = { random_file_service_hex_current : current_import_timestamp_ms }
             
             if not done_a_multihash:
                 
                 done_a_multihash = True
                 
-                current_to_timestamps[ HG.test_controller.example_ipfs_service_key ] = ipfs_import_timestamp
+                current_to_timestamps_ms[ HG.test_controller.example_ipfs_service_key ] = ipfs_import_timestamp_ms
                 
                 service_keys_to_filenames[ HG.test_controller.example_ipfs_service_key ] = 'QmReHtaET3dsgh7ho5NVyHb5U13UgJoGipSWbZsnuuM8tb'
                 
             
             tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
             
-            timestamps_manager = ClientMediaManagers.TimestampsManager()
+            times_manager = ClientMediaManagers.TimesManager()
             
-            timestamps_manager.SetFileModifiedTimestamp( file_modified_timestamp )
-            timestamps_manager.SetImportedTimestamps( current_to_timestamps )
+            times_manager.SetFileModifiedTimestampMS( file_modified_timestamp_ms )
+            times_manager.SetImportedTimestampsMS( current_to_timestamps_ms )
             
-            deleted_to_timestamps = { random_file_service_hex_deleted : deleted_deleted_timestamp }
-            deleted_to_previously_imported_timestamps = { random_file_service_hex_deleted : previously_imported_timestamp }
+            deleted_to_timestamps_ms = { random_file_service_hex_deleted : deleted_deleted_timestamp_ms }
+            deleted_to_previously_imported_timestamp_ms = { random_file_service_hex_deleted : previously_imported_timestamp_ms }
             
-            timestamps_manager.SetDeletedTimestamps( deleted_to_timestamps )
-            timestamps_manager.SetPreviouslyImportedTimestamps( deleted_to_previously_imported_timestamps )
+            times_manager.SetDeletedTimestampsMS( deleted_to_timestamps_ms )
+            times_manager.SetPreviouslyImportedTimestampsMS( deleted_to_previously_imported_timestamp_ms )
             
             locations_manager = ClientMediaManagers.LocationsManager(
-                set( current_to_timestamps.keys() ),
-                set( deleted_to_timestamps.keys() ),
+                set( current_to_timestamps_ms.keys() ),
+                set( deleted_to_timestamps_ms.keys() ),
                 set(),
                 set(),
-                timestamps_manager,
+                times_manager,
                 inbox = False,
                 urls = urls,
                 service_keys_to_filenames = service_keys_to_filenames
@@ -4891,9 +5255,9 @@ class TestClientAPI( unittest.TestCase ):
             
             ratings_manager = ClientMediaManagers.RatingsManager( {} )
             notes_manager = ClientMediaManagers.NotesManager( { 'note' : 'hello', 'note2' : 'hello2' } )
-            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
             
-            media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+            media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
             
             media_results.append( media_result )
             
@@ -4957,7 +5321,7 @@ class TestClientAPI( unittest.TestCase ):
                 'file_services' : {
                     'current' : {
                         random_file_service_hex_current.hex() : {
-                            'time_imported' : current_import_timestamp,
+                            'time_imported' : HydrusTime.SecondiseMS( current_import_timestamp_ms ),
                             'name' : HG.test_controller.services_manager.GetName( random_file_service_hex_current ),
                             'type' : HG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ),
                             'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( random_file_service_hex_current ) ]
@@ -4965,8 +5329,8 @@ class TestClientAPI( unittest.TestCase ):
                     },
                     'deleted' : {
                         random_file_service_hex_deleted.hex() : {
-                            'time_deleted' : deleted_deleted_timestamp,
-                            'time_imported' : previously_imported_timestamp,
+                            'time_deleted' : HydrusTime.SecondiseMS( deleted_deleted_timestamp_ms ),
+                            'time_imported' : HydrusTime.SecondiseMS( previously_imported_timestamp_ms ),
                             'name' : HG.test_controller.services_manager.GetName( random_file_service_hex_deleted ),
                             'type' : HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ),
                             'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( random_file_service_hex_deleted ) ]
@@ -4974,9 +5338,9 @@ class TestClientAPI( unittest.TestCase ):
                     }
                 },
                 'ipfs_multihashes' : {},
-                'time_modified' : file_modified_timestamp,
+                'time_modified' : HydrusTime.SecondiseMS( file_modified_timestamp_ms ),
                 'time_modified_details' : {
-                    'local' : file_modified_timestamp
+                    'local' : HydrusTime.SecondiseMS( file_modified_timestamp_ms )
                 },
                 'is_inbox' : False,
                 'is_local' : False,
@@ -4997,7 +5361,7 @@ class TestClientAPI( unittest.TestCase ):
                 for ( i_s_k, multihash ) in locations_manager.GetServiceFilenames().items():
                     
                     metadata_row[ 'file_services' ][ 'current' ][ i_s_k.hex() ] = {
-                        'time_imported' : ipfs_import_timestamp,
+                        'time_imported' : HydrusTime.SecondiseMS( ipfs_import_timestamp_ms ),
                         'name' : HG.test_controller.services_manager.GetName( i_s_k ),
                         'type' : HG.test_controller.services_manager.GetServiceType( i_s_k ),
                         'type_pretty' : HC.service_string_lookup[ HG.test_controller.services_manager.GetServiceType( i_s_k ) ]
@@ -5307,6 +5671,29 @@ class TestClientAPI( unittest.TestCase ):
                 
             
         
+        # metadata from file_ids, with milliseconds
+        
+        HG.test_controller.SetRead( 'hash_ids_to_hashes', { k : v for ( k, v ) in file_ids_to_hashes.items() if k in [ 1, 2, 3 ] } )
+        
+        path = '/get_files/file_metadata?file_ids={}&include_milliseconds=true'.format( urllib.parse.quote( json.dumps( [ 1, 2, 3 ] ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        for file_row in d[ 'metadata' ]:
+            
+            self.assertEqual( file_row[ 'time_modified' ], float( file_modified_timestamp_ms / 1000 ) )
+            
+        
         # now from hashes
         
         api_permissions = set_up_permissions[ 'everything' ]
@@ -5580,14 +5967,14 @@ class TestClientAPI( unittest.TestCase ):
         
         tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
-        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        times_manager = ClientMediaManagers.TimesManager()
         
-        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager )
+        locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), times_manager )
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         notes_manager = ClientMediaManagers.NotesManager( {} )
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
@@ -5862,7 +6249,7 @@ class TestClientAPI( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 123456, hash_404, size = size, mime = mime, width = width, height = height, duration = duration )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         HG.test_controller.SetRead( 'media_result', media_result )
         HG.test_controller.SetRead( 'media_results_from_ids', ( media_result, ) )
@@ -5926,7 +6313,8 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_files_add_file( connection, set_up_permissions )
         self._test_add_files_other_actions( connection, set_up_permissions )
         self._test_add_notes( connection, set_up_permissions )
-        self._test_add_ratings( connection, set_up_permissions )
+        self._test_edit_ratings( connection, set_up_permissions )
+        self._test_edit_times( connection, set_up_permissions )
         self._test_add_tags( connection, set_up_permissions )
         self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_tags_get_tag_siblings_and_parents( connection, set_up_permissions )

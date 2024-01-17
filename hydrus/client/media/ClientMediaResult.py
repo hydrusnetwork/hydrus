@@ -12,7 +12,7 @@ class MediaResult( object ):
         self,
         file_info_manager: ClientMediaManagers.FileInfoManager,
         tags_manager: ClientMediaManagers.TagsManager,
-        timestamps_manager: ClientMediaManagers.TimestampsManager,
+        times_manager: ClientMediaManagers.TimesManager,
         locations_manager: ClientMediaManagers.LocationsManager,
         ratings_manager: ClientMediaManagers.RatingsManager,
         notes_manager: ClientMediaManagers.NotesManager,
@@ -21,7 +21,7 @@ class MediaResult( object ):
         
         self._file_info_manager = file_info_manager
         self._tags_manager = tags_manager
-        self._timestamps_manager = timestamps_manager
+        self._times_manager = times_manager
         self._locations_manager = locations_manager
         self._ratings_manager = ratings_manager
         self._notes_manager = notes_manager
@@ -45,7 +45,7 @@ class MediaResult( object ):
             
             self._tags_manager.DeletePending( service_key )
             
-        elif service_type in HC.FILE_SERVICES:
+        elif service_type in HC.REAL_FILE_SERVICES:
             
             self._locations_manager.DeletePending( service_key )
             
@@ -55,13 +55,13 @@ class MediaResult( object ):
         
         file_info_manager = self._file_info_manager.Duplicate()
         tags_manager = self._tags_manager.Duplicate()
-        timestamps_manager = self._timestamps_manager.Duplicate()
-        locations_manager = self._locations_manager.Duplicate( timestamps_manager )
+        times_manager = self._times_manager.Duplicate()
+        locations_manager = self._locations_manager.Duplicate( times_manager )
         ratings_manager = self._ratings_manager.Duplicate()
         notes_manager = self._notes_manager.Duplicate()
-        file_viewing_stats_manager = self._file_viewing_stats_manager.Duplicate( timestamps_manager )
+        file_viewing_stats_manager = self._file_viewing_stats_manager.Duplicate( times_manager )
         
-        return MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        return MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
     
     def GetDuration( self ):
@@ -144,9 +144,9 @@ class MediaResult( object ):
         return self._tags_manager
         
     
-    def GetTimestampsManager( self ) -> ClientMediaManagers.TimestampsManager:
+    def GetTimesManager( self ) -> ClientMediaManagers.TimesManager:
         
-        return self._timestamps_manager
+        return self._times_manager
         
     
     def HasAudio( self ):
@@ -207,7 +207,7 @@ class MediaResult( object ):
             
             self._tags_manager.ProcessContentUpdate( service_key, content_update )
             
-        elif service_type in HC.FILE_SERVICES:
+        elif service_type in HC.REAL_FILE_SERVICES:
             
             if content_update.GetDataType() == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
                 

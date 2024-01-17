@@ -312,17 +312,17 @@ class TestServer( unittest.TestCase ):
             
             file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, 500, HC.IMAGE_JPEG, 640, 480 )
             
-            timestamps_manager = ClientMediaManagers.TimestampsManager()
+            times_manager = ClientMediaManagers.TimesManager()
             
             notes_manager = ClientMediaManagers.NotesManager( {} )
             
-            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
             
             media_result = ClientMediaResult.MediaResult(
                 file_info_manager,
                 ClientMediaManagers.TagsManager( {}, {} ),
-                timestamps_manager,
-                ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager ),
+                times_manager,
+                ClientMediaManagers.LocationsManager( set(), set(), set(), set(), times_manager ),
                 ClientMediaManagers.RatingsManager( {} ),
                 notes_manager,
                 file_viewing_stats_manager

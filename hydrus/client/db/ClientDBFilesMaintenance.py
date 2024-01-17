@@ -77,7 +77,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                             self.modules_files_maintenance_queue.AddJobs( { hash_id }, ClientFiles.REGENERATE_FILE_DATA_JOB_OTHER_HASHES )
                             
                         
-                        result = self.modules_files_timestamps.GetTimestamp( hash_id, ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_MODIFIED_FILE ) )
+                        result = self.modules_files_timestamps.GetTimestampMS( hash_id, ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_MODIFIED_FILE ) )
                         
                         if result is None:
                             
@@ -175,9 +175,9 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                 elif job_type == ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP:
                     
-                    file_modified_timestamp = additional_data
+                    file_modified_timestamp_ms = additional_data
                     
-                    self.modules_files_timestamps.SetTimestamp( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp ) )
+                    self.modules_files_timestamps.SetTime( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
                     
                     new_file_info.add( ( hash_id, hash ) )
                     

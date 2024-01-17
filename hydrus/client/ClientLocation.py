@@ -181,10 +181,18 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def FixMissingServices( self, services_exist_func: typing.Callable ):
+    def FixMissingServices( self, services_exist_func: typing.Callable ) -> bool:
+        
+        prev_len = len( self.current_service_keys ) + len( self.deleted_service_keys )
         
         self.current_service_keys = frozenset( services_exist_func( self.current_service_keys ) )
         self.deleted_service_keys = frozenset( services_exist_func( self.deleted_service_keys ) )
+        
+        post_len = len( self.current_service_keys ) + len( self.deleted_service_keys )
+        
+        some_removed = prev_len != post_len
+        
+        return some_removed
         
     
     def GetCoveringCurrentFileServiceKeys( self ):

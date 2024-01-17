@@ -99,14 +99,14 @@ class ThumbnailWaitingToBeDrawnAnimated( ThumbnailWaitingToBeDrawn ):
         
         self.alpha_bmp = QP.AdjustOpacity( self.bitmap, opacity_factor )
         
-        self.animation_started = HydrusTime.GetNowPrecise()
+        self.animation_started_precise = HydrusTime.GetNowPrecise()
         
     
     def _GetNumFramesOutstanding( self ):
         
-        now = HydrusTime.GetNowPrecise()
+        now_precise = HydrusTime.GetNowPrecise()
         
-        num_frames_to_now = int( ( now - self.animation_started ) // FRAME_DURATION_60FPS )
+        num_frames_to_now = int( ( now_precise - self.animation_started_precise ) // FRAME_DURATION_60FPS )
         
         return min( num_frames_to_now, self.num_frames_to_draw - self.num_frames_drawn )
         
@@ -682,7 +682,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         total_duration = sum( ( media.GetDurationMS() for media in media_source ) )
         
-        return HydrusTime.MillisecondsToPrettyTime( total_duration )
+        return HydrusTime.MillisecondsDurationToPrettyTime( total_duration )
         
     
     def _GetPrettyTotalSize( self, only_selected = False ):

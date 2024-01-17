@@ -60,11 +60,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         self._timestamps_lock = threading.Lock()
         
-        self._timestamps = collections.defaultdict( lambda: 0 )
-        
-        self._timestamps[ 'boot' ] = HydrusTime.GetNow()
-        
-        self._timestamps[ 'last_sleep_check' ] = HydrusTime.GetNow()
+        self._timestamps_ms = collections.defaultdict( lambda: 0 )
         
         self._sleep_lock = threading.Lock()
         
@@ -73,6 +69,9 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         self._system_busy = False
         
         self._doing_fast_exit = False
+        
+        self.TouchTime( 'boot' )
+        self.TouchTime( 'last_sleep_check' )
         
     
     def _GetCallToThread( self ):
@@ -152,9 +151,9 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         return []
         
     
-    def _GetWakeDelayPeriod( self ):
+    def _GetWakeDelayPeriodMS( self ):
         
-        return 15
+        return 15 * 1000
         
     
     def _InitDB( self ):
@@ -450,9 +449,9 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         return self._doing_fast_exit
         
     
-    def GetBootTime( self ):
+    def GetBootTimestampMS( self ):
         
-        return self.GetTimestamp( 'boot' )
+        return self.GetTimestampMS( 'boot' )
         
     
     def GetDBDir( self ):
@@ -544,11 +543,11 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         return threads
         
     
-    def GetTimestamp( self, name: str ) -> int:
+    def GetTimestampMS( self, name: str ) -> int:
         
         with self._timestamps_lock:
             
-            return self._timestamps[ name ]
+            return self._timestamps_ms[ name ]
             
         
     
@@ -764,7 +763,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
     
     def ResetIdleTimer( self ) -> None:
         
-        self.TouchTimestamp( 'last_user_action' )
+        self.TouchTime( 'last_user_action' )
         
     
     def SetDoingFastExit( self, value: bool ) -> None:
@@ -772,11 +771,11 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         self._doing_fast_exit = value
         
     
-    def SetTimestamp( self, name: str, value: int ) -> None:
+    def SetTimestampMS( self, name: str, timestamp_ms: int ) -> None:
         
         with self._timestamps_lock:
             
-            self._timestamps[ name ] = value
+            self._timestamps_ms[ name ] = timestamp_ms
             
         
     
@@ -877,24 +876,24 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         with self._sleep_lock:
             
-            if HydrusTime.TimeHasPassed( self.GetTimestamp( 'last_sleep_check' ) + 60 ): # it has been way too long since this method last fired, so we've prob been asleep
+            if HydrusTime.TimeHasPassedMS( self.GetTimestampMS( 'last_sleep_check' ) + 60000 ): # it has been way too long since this method last fired, so we've prob been asleep
                 
                 self._just_woke_from_sleep = True
                 
                 self.ResetIdleTimer() # this will stop the background jobs from kicking in as soon as the grace period is over
                 
-                wake_delay_period = self._GetWakeDelayPeriod()
+                wake_delay_period_ms = self._GetWakeDelayPeriodMS()
                 
-                self.SetTimestamp( 'now_awake', HydrusTime.GetNow() + wake_delay_period ) # enough time for ethernet to get back online and all that
+                self.SetTimestampMS( 'now_awake', HydrusTime.GetNowMS() + wake_delay_period_ms ) # enough time for ethernet to get back online and all that
                 
                 self._ShowJustWokeToUser()
                 
-            elif self._just_woke_from_sleep and HydrusTime.TimeHasPassed( self.GetTimestamp( 'now_awake' ) ):
+            elif self._just_woke_from_sleep and HydrusTime.TimeHasPassedMS( self.GetTimestampMS( 'now_awake' ) ):
                 
                 self._just_woke_from_sleep = False
                 
             
-            self.TouchTimestamp( 'last_sleep_check' )
+            self.TouchTime( 'last_sleep_check' )
             
         
     
@@ -902,7 +901,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         with self._sleep_lock:
             
-            self.SetTimestamp( 'last_sleep_check', HydrusTime.GetNow() - 3600 )
+            self.SetTimestampMS( 'last_sleep_check', HydrusTime.GetNowMS() - ( 3600 * 1000 ) )
             
         
         self.SleepCheck()
@@ -913,11 +912,11 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         return self._system_busy
         
     
-    def TouchTimestamp( self, name: str ) -> None:
+    def TouchTime( self, name: str ) -> None:
         
         with self._timestamps_lock:
             
-            self._timestamps[ name ] = HydrusTime.GetNow()
+            self._timestamps_ms[ name ] = HydrusTime.GetNowMS()
             
         
     

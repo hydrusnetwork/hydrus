@@ -1812,7 +1812,7 @@ class ClientFilesManager( object ):
         self._Reinit()
         
     
-    def UpdateFileModifiedTimestamp( self, media, modified_timestamp: int ):
+    def UpdateFileModifiedTimestampMS( self, media, modified_timestamp_ms: int ):
         
         hash = media.GetHash()
         mime = media.GetMime()
@@ -1825,6 +1825,9 @@ class ClientFilesManager( object ):
                 
                 existing_access_time = os.path.getatime( path )
                 existing_modified_time = os.path.getmtime( path )
+                
+                # floats are ok here!
+                modified_timestamp = modified_timestamp_ms / 1000
                 
                 try:
                     
@@ -2086,7 +2089,7 @@ class FilesMaintenanceManager( object ):
             
             HydrusPaths.MakeSureDirectoryExists( error_dir )
             
-            pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( self._controller.GetBootTime() ) )
+            pretty_timestamp = time.strftime( '%Y-%m-%d %H-%M-%S', time.localtime( HydrusTime.SecondiseMS( self._controller.GetBootTimestampMS() ) ) )
             
             missing_hashes_filename = '{} missing hashes.txt'.format( pretty_timestamp )
             
@@ -2504,7 +2507,7 @@ class FilesMaintenanceManager( object ):
             
         
     
-    def _RegenFileModifiedTimestamp( self, media_result ):
+    def _RegenFileModifiedTimestampMS( self, media_result ):
         
         hash = media_result.GetHash()
         mime = media_result.GetMime()
@@ -2518,9 +2521,9 @@ class FilesMaintenanceManager( object ):
             
             path = self._controller.client_files_manager.GetFilePath( hash, mime )
             
-            file_modified_timestamp = HydrusFileHandling.GetFileModifiedTimestamp( path )
+            file_modified_timestamp_ms = HydrusFileHandling.GetFileModifiedTimestampMS( path )
             
-            additional_data = file_modified_timestamp
+            additional_data = file_modified_timestamp_ms
             
             return additional_data
             
@@ -2762,7 +2765,7 @@ class FilesMaintenanceManager( object ):
                             
                         elif job_type == REGENERATE_FILE_DATA_JOB_FILE_MODIFIED_TIMESTAMP:
                             
-                            additional_data = self._RegenFileModifiedTimestamp( media_result )
+                            additional_data = self._RegenFileModifiedTimestampMS( media_result )
                             
                         elif job_type == REGENERATE_FILE_DATA_JOB_OTHER_HASHES:
                             

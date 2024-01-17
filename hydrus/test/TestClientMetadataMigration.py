@@ -73,26 +73,26 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         has_audio = False
         num_words = None
         
-        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        times_manager = ClientMediaManagers.TimesManager()
         
-        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
-        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
+        times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox )
         
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
         
         #
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         #
         
@@ -212,26 +212,26 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         has_audio = False
         num_words = None
         
-        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        times_manager = ClientMediaManagers.TimesManager()
         
-        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
-        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
+        times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox )
         
         ratings_manager = ClientMediaManagers.RatingsManager( {} )
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
         
         #
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         # simple local
         
@@ -340,14 +340,14 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         has_audio = False
         num_words = None
         
-        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        times_manager = ClientMediaManagers.TimesManager()
         
-        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
-        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
+        times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox, urls )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox, urls )
         
         # duplicate to generate proper dicts
         
@@ -357,13 +357,13 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
         
         #
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         # simple
         
@@ -392,7 +392,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
     
     def test_media_timestamps( self ):
         
-        archived_timestamp = HydrusTime.GetNow() - 3600
+        archived_timestamp_ms = HydrusTime.GetNowMS() - 3600000
         timestamp_data_stub = ClientTime.TimestampData.STATICSimpleStub( HC.TIMESTAMP_TYPE_ARCHIVED )
         
         # simple
@@ -407,15 +407,15 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         has_audio = False
         num_words = None
         
-        timestamps_manager = ClientMediaManagers.TimestampsManager()
+        times_manager = ClientMediaManagers.TimesManager()
         
-        timestamps_manager.SetImportedTimestamp( CC.LOCAL_FILE_SERVICE_KEY, 123 )
-        timestamps_manager.SetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123 )
-        timestamps_manager.SetArchivedTimestamp( archived_timestamp )
+        times_manager.SetImportedTimestampMS( CC.LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, 123000 )
+        times_manager.SetArchivedTimestampMS( archived_timestamp_ms )
         
         inbox = True
         
-        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), timestamps_manager, inbox, set() )
+        local_locations_manager = ClientMediaManagers.LocationsManager( { CC.LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY }, set(), set(), set(), times_manager, inbox, set() )
         
         # duplicate to generate proper dicts
         
@@ -425,13 +425,13 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         notes_manager = ClientMediaManagers.NotesManager( {} )
         
-        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+        file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
         
         #
         
         file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, size, mime, width, height, duration, num_frames, has_audio, num_words )
         
-        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+        media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, local_locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
         
         # simple
         
@@ -440,7 +440,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         result = importer.Import( media_result )
         
-        self.assertEqual( set( result ), { str( archived_timestamp ) } )
+        self.assertEqual( set( result ), { str( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) } )
         
         # with string processor
         
@@ -456,8 +456,8 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         result = importer.Import( media_result )
         
         self.assertTrue( len( result ) > 0 )
-        self.assertNotEqual( set( result ), { str( archived_timestamp ) } )
-        self.assertEqual( set( result ), set( string_processor.ProcessStrings( { str( archived_timestamp ) } ) ) )
+        self.assertNotEqual( set( result ), { str( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) } )
+        self.assertEqual( set( result ), set( string_processor.ProcessStrings( { str( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) } ) ) )
         
     
     def test_media_txt( self ):
@@ -798,7 +798,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter.Export( hash, rows )
         
-        expected_timestamp_data_result = ClientTime.TimestampData.STATICArchivedTime( timestamp )
+        expected_timestamp_data_result = ClientTime.TimestampData.STATICArchivedTime( timestamp * 1000 ) # no precise milliseconds because we do not read millisecond precision from metadata migration yet!
         
         expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( hash, expected_timestamp_data_result ) ) ] }
         

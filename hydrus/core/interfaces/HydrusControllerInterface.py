@@ -78,7 +78,7 @@ class HydrusControllerInterface( object ):
         raise NotImplementedError()
         
     
-    def GetBootTime( self ) -> int:
+    def GetBootTimestampMS( self ) -> int:
         
         raise NotImplementedError()
         
@@ -103,7 +103,7 @@ class HydrusControllerInterface( object ):
         raise NotImplementedError()
         
     
-    def GetTimestamp( self, name: str ) -> int:
+    def GetTimestampMS( self, name: str ) -> int:
         
         raise NotImplementedError()
         
@@ -193,7 +193,7 @@ class HydrusControllerInterface( object ):
         raise NotImplementedError()
         
     
-    def SetTimestamp( self, name: str, value: int ) -> None:
+    def SetTimestampMS( self, name: str, timestamp_ms: int ) -> None:
         
         raise NotImplementedError()
         
@@ -218,7 +218,7 @@ class HydrusControllerInterface( object ):
         raise NotImplementedError()
         
     
-    def TouchTimestamp( self, name: str ) -> None:
+    def TouchTime( self, name: str ) -> None:
         
         raise NotImplementedError()
         

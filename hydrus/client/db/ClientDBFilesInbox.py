@@ -67,9 +67,9 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
             self.inbox_hash_ids.difference_update( archiveable_hash_ids )
             
-            now = HydrusTime.GetNow()
+            now_ms = HydrusTime.GetNowMS()
             
-            self.modules_files_metadata_timestamps.SetSimpleTimestamps( HC.TIMESTAMP_TYPE_ARCHIVED, [ ( hash_id, now ) for hash_id in archiveable_hash_ids ] )
+            self.modules_files_metadata_timestamps.SetSimpleTimestampsMS( HC.TIMESTAMP_TYPE_ARCHIVED, [ ( hash_id, now_ms ) for hash_id in archiveable_hash_ids ] )
             
             service_ids_to_counts = self.modules_files_storage.GetServiceIdCounts( archiveable_hash_ids )
             
@@ -110,7 +110,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
             
             self.inbox_hash_ids.update( inboxable_hash_ids )
             
-            self.modules_files_metadata_timestamps.ClearArchivedTimestamps( inboxable_hash_ids )
+            self.modules_files_metadata_timestamps.ClearArchivedTimes( inboxable_hash_ids )
             
             service_ids_to_counts = self.modules_files_storage.GetServiceIdCounts( inboxable_hash_ids )
             

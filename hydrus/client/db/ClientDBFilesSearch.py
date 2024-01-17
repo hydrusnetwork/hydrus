@@ -1163,7 +1163,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         location_context = file_search_context.GetLocationContext()
         not_all_known_files = not location_context.IsAllKnownFiles()
         
-        timestamp_ranges = system_predicates.GetTimestampRanges()
+        system_pred_type_to_timestamp_ranges_ms = system_predicates.GetTimestampRangesMS()
         
         cancelled_hook = None
         
@@ -1178,20 +1178,20 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
             # for now we'll check current domain
             # if domain is deleted, we search deletion time
             
-            if ClientSearch.PREDICATE_TYPE_SYSTEM_AGE in timestamp_ranges:
+            if ClientSearch.PREDICATE_TYPE_SYSTEM_AGE in system_pred_type_to_timestamp_ranges_ms:
                 
                 import_timestamp_predicates = []
                 
-                ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_AGE ]
+                timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_AGE ]
                 
-                if '>' in ranges:
+                if '>' in timestamp_ranges_ms:
                     
-                    import_timestamp_predicates.append( 'timestamp >= {}'.format( ranges[ '>' ] ) )
+                    import_timestamp_predicates.append( 'timestamp_ms >= {}'.format( timestamp_ranges_ms[ '>' ] ) )
                     
                 
-                if '<' in ranges:
+                if '<' in timestamp_ranges_ms:
                     
-                    import_timestamp_predicates.append( 'timestamp <= {}'.format( ranges[ '<' ] ) )
+                    import_timestamp_predicates.append( 'timestamp_ms <= {}'.format( timestamp_ranges_ms[ '<' ] ) )
                     
                 
                 if len( import_timestamp_predicates ) > 0:
@@ -1217,40 +1217,40 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             
         
-        if ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME in timestamp_ranges:
+        if ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME in system_pred_type_to_timestamp_ranges_ms:
             
-            ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ]
+            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME ]
             
-            if len( ranges ) > 0:
+            if len( timestamp_ranges_ms ) > 0:
                 
-                modified_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, ranges, job_status = job_status )
+                modified_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, timestamp_ranges_ms, job_status = job_status )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, modified_timestamp_hash_ids )
                 
             
         
-        if ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME in timestamp_ranges:
+        if ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME in system_pred_type_to_timestamp_ranges_ms:
             
-            ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ]
+            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVED_TIME ]
             
-            if len( ranges ) > 0:
+            if len( timestamp_ranges_ms ) > 0:
                 
-                archived_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_ARCHIVED, ranges, job_status = job_status )
+                archived_timestamp_hash_ids = self.modules_files_timestamps.GetHashIdsInRange( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ranges_ms, job_status = job_status )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, archived_timestamp_hash_ids )
                 
             
         
-        if ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME in timestamp_ranges:
+        if ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME in system_pred_type_to_timestamp_ranges_ms:
             
-            ranges = timestamp_ranges[ ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME ]
+            timestamp_ranges_ms = system_pred_type_to_timestamp_ranges_ms[ ClientSearch.PREDICATE_TYPE_SYSTEM_LAST_VIEWED_TIME ]
             
-            min_last_viewed_timestamp = ranges.get( '>', None )
-            max_last_viewed_timestamp = ranges.get( '<', None )
+            min_last_viewed_timestamp_ms = timestamp_ranges_ms.get( '>', None )
+            max_last_viewed_timestamp_ms = timestamp_ranges_ms.get( '<', None )
             
-            last_viewed_timestamp_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromLastViewed( min_last_viewed_timestamp = min_last_viewed_timestamp, max_last_viewed_timestamp = max_last_viewed_timestamp, job_status = job_status )
+            last_viewed_time_hash_ids = self.modules_files_viewing_stats.GetHashIdsFromLastViewed( min_last_viewed_timestamp_ms = min_last_viewed_timestamp_ms, max_last_viewed_timestamp_ms = max_last_viewed_timestamp_ms, job_status = job_status )
             
-            query_hash_ids = intersection_update_qhi( query_hash_ids, last_viewed_timestamp_hash_ids )
+            query_hash_ids = intersection_update_qhi( query_hash_ids, last_viewed_time_hash_ids )
             
         
         return ( query_hash_ids, have_cross_referenced_file_locations )
@@ -2188,7 +2188,33 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         if 'known_url_rules' in simple_preds:
             
-            for ( operator, rule_type, rule ) in simple_preds[ 'known_url_rules' ]:
+            known_url_rules = list( simple_preds[ 'known_url_rules' ] )
+            
+            magic_sort_list = [
+                'exact_match',
+                'domain',
+                'url_class',
+                'url_match',
+                'regex'
+            ]
+            
+            def url_rules_key( row ):
+                
+                rule_type = row[1]
+                
+                if rule_type in magic_sort_list:
+                    
+                    return magic_sort_list.index( rule_type )
+                    
+                else:
+                    
+                    return 10
+                    
+                
+            
+            known_url_rules.sort( key = url_rules_key )
+            
+            for ( operator, rule_type, rule ) in known_url_rules:
                 
                 if rule_type == 'exact_match' or ( is_inbox and len( query_hash_ids ) == len( self.modules_files_inbox.inbox_hash_ids ) ):
                     
@@ -2418,7 +2444,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( file_service_id, HC.CONTENT_STATUS_CURRENT )
                     
-                    query = 'SELECT hash_id, timestamp FROM {temp_table} CROSS JOIN {current_files_table} USING ( hash_id );'.format( temp_table = '{temp_table}', current_files_table = current_files_table_name )
+                    query = 'SELECT hash_id, timestamp_ms FROM {temp_table} CROSS JOIN {current_files_table} USING ( hash_id );'.format( temp_table = '{temp_table}', current_files_table = current_files_table_name )
                     
                 elif sort_data == CC.SORT_FILES_BY_FILESIZE:
                     
@@ -2466,18 +2492,18 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                 elif sort_data == CC.SORT_FILES_BY_FILE_MODIFIED_TIMESTAMP:
                     
-                    q1 = 'SELECT hash_id, file_modified_timestamp FROM {temp_table} CROSS JOIN file_modified_timestamps USING ( hash_id )'
-                    q2 = 'SELECT hash_id, file_modified_timestamp FROM {temp_table} CROSS JOIN file_domain_modified_timestamps USING ( hash_id )'
+                    q1 = 'SELECT hash_id, file_modified_timestamp_ms FROM {temp_table} CROSS JOIN file_modified_timestamps USING ( hash_id )'
+                    q2 = 'SELECT hash_id, file_modified_timestamp_ms FROM {temp_table} CROSS JOIN file_domain_modified_timestamps USING ( hash_id )'
                     
-                    query = 'SELECT hash_id, MIN( file_modified_timestamp ) FROM ( {} UNION {} ) GROUP BY hash_id;'.format( q1, q2 )
+                    query = 'SELECT hash_id, MIN( file_modified_timestamp_ms ) FROM ( {} UNION {} ) GROUP BY hash_id;'.format( q1, q2 )
                     
                 elif sort_data == CC.SORT_FILES_BY_LAST_VIEWED_TIME:
                     
-                    query = 'SELECT hash_id, last_viewed_timestamp FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
+                    query = 'SELECT hash_id, last_viewed_timestamp_ms FROM {temp_table} CROSS JOIN file_viewing_stats USING ( hash_id ) WHERE canvas_type = {canvas_type};'.format( temp_table = '{temp_table}', canvas_type = CC.CANVAS_MEDIA_VIEWER )
                     
                 elif sort_data == CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP:
                     
-                    query = 'SELECT hash_id, archived_timestamp FROM {temp_table} CROSS JOIN archive_timestamps USING ( hash_id );'
+                    query = 'SELECT hash_id, archived_timestamp_ms FROM {temp_table} CROSS JOIN archive_timestamps USING ( hash_id );'
                     
                 
                 if sort_data == CC.SORT_FILES_BY_IMPORT_TIME:

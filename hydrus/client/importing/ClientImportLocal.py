@@ -71,9 +71,9 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    file_modified_time = HydrusFileHandling.GetFileModifiedTimestamp( path )
+                    file_modified_time_ms = HydrusFileHandling.GetFileModifiedTimestampMS( path )
                     
-                    file_seed.source_time = file_modified_time
+                    file_seed.source_time = HydrusTime.SecondiseMS( file_modified_time_ms )
                     
                 except:
                     

@@ -639,7 +639,7 @@ def MakeSureDirectoryExists( path ):
         
     
 
-def FileModifiedTimeIsOk( mtime: int ):
+def FileModifiedTimeIsOk( mtime: typing.Union[ int, float ] ):
     
     if HC.PLATFORM_WINDOWS:
         

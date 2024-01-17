@@ -7,6 +7,70 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 559](https://github.com/hydrusnetwork/hydrus/releases/tag/v559)
+
+### millisecond timestamps
+
+* since the program started, the database and code has generally handled timestamps as an integer (i.e. whole number, no fractions) count of the number of seconds since 1970. this is a very common system, but one drawback is it cannot track any amount of time less than a second. when a very fast import in hydrus imports two files in the same second, they then get the exact same import time and thus when you sort by import time, the two files don't know which should be truly first and they may sort either way. this week I have moved the database to store all file timestamps (archived time, imported time, etc...) with millisecond resolution. you do not have to do anything, and very little actually changes frontend, but your update may take a minute or two
+* whenever you sort by 'import time' now, we shouldn't get anymore switcheroos
+* the 'manage times' dialog now has millisecond display and edit widgets to reflect this, but in most places across the client, you'll see the same time labels as before
+* I changed a **ton** of code this week. all simple changes, but I'm sure a typo has slipped through somewhere. if you see a file with a 'last viewed time' of '54 years ago', let me know!
+
+### time details
+
+* this section is just a big list so I have somewhat of a record of what I did. you can broadly ignore it
+* updated `vacuum_timestamps` to `timestamp_ms` and adjusted read/write and the dialog handling to ms
+* updated `analyse_timestamps` to `timestamp_ms` and adjusted read/write to ms
+* updated `json_dumps_named` to `timestamp_ms` and adjusted read/write and some UI-level gubbins around session loading and saving to ms
+* updated `recent_tags` to `timestamp_ms` and adjusted the whole system to ms
+* updated `file_viewing_stats` to `last_viewed_timestamp_ms` and adjusted read/write to ms
+* updated `file_modified_timestamps` to `file_modified_timestamp_ms` and adjusted read/write to ms, including to and from the disk
+* updated `file_domain_modified_timestamps` to `file_modified_timestamp_ms` and adjusted read/write to ms
+* updated `archive_timestamps` to `archived_timestamp_ms` and adjusted read/write to ms
+* updated all the current- and deleted-file tables for all file services to use ms (`timestamp_ms`, `timestamp_ms`, and `original_timestamp_ms`) and adjusted _all_ database file storage, search, and update to work in ms
+* updated the `ClientDBFilesTimestamps` db module to use ms timestamps throughout
+* updated the `ClientDBFilesViewingStats` db module to use ms timestamps throughout
+* updated the `ClientDBFilesStorage` db module to use ms timestamps throughout
+* updated the controller timestamp tracker and all callers to use ms timestamps throughout
+* renamed `TimestampsManager` to `TimesManager` and `times_manager` across the program
+* updated the `TimesManager` and all of its calls and callers in general to work in ms. too much stuff to list here
+* the `TimestampData` object is now converted to ms, and since it does other jobs than a raw number, the various calls it is involved in are generally renamed from 'timestamp' to 'time'
+* the file viewing stats manager now tracks 'last viewed time' as ms, and the update pipeline is also updated
+* the locations manager now handles all file times in ms, and all the archive/add/delete pipelines are also updated
+* wrote some MS-based variants of the core time functions for spamming around here, including for both Qt `QDateTime` and python `datetime`
+* updated the main datetime edit panel, button, and widget to handle millisecond display and editing
+* fleshed out a ton of ambiguous variable names to the new strict time/timestamp/timestamp_ms system
+* wrote a clean transition method between ms<->s that accounts for various None situations and spammed it everywhere
+* fixed up some ill-advised timestamp data juggling in the time edit UI
+
+### what still has second-resolution
+
+* the parsing system (and hence downloaded files' source times)
+* the sidecar system's time stuff, both import and export
+* the server and the hydrus network protocol in general
+* Mr. Bones and the File History chart
+* almost all the actual UI labels. I'm not going to spam milliseconds at you outside of the time edit UI
+* almost all the general maintenance timers, sleepers, and grunt-work code across the program
+
+### client api
+
+* the `file_metadata` call has a new parameter, `include_milliseconds`, which turns the integer `1704419632` timestamps into floats with three sig figs `1704419632.154`, representing all the changes this week
+* a new permission, `edit file times` is added, with value `11`
+* a new command, `/edit_times/set_time` now lets you set any of the file times you see in the _manage times_ dialog. you can send it second- or millisecond-based timestamps
+* the client api help is updated for all this, particularly the new section here https://hydrusnetwork.github.io/hydrus/developer_api.html#edit_times_set_time  
+* added unit tests for this
+* the client api version is now 59
+
+### misc
+
+* the sankaku parsers, GUGs, and custom header/bandwidth rules are removed from the defaults, so new users will not see them. none of this stuff works well/at all any more, especially in recent weeks. for sites that are so difficult to download from, if there isn't a nice solution on the shared downloader repo, https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts, I recommend going with a more robust solution like gallery-dl or just finding the content elsewhere
+* when there are multiple 'system:known url' predicates in a search, I now ensure the faster types run first, reducing the search domain for the slower, later ones. if you have a 'regex' 'known url' predicate, try tossing in a matching 'domain' one--it should accelerate it hugely, every time
+* fixed a bug in the autocomplete dropdown where it was not removing no-longer-valid file services from the location button after their deletion from _manage services_ until program restart (which was causing some harmless but unwelcome database errors). it should now remove them instantly, and may even end up on the rare 'nothing' domain
+* the duplicate filter will no longer mention pixel-perfect pngs being a waste of space against static gifs--this isn't necessarily true
+* the default height of the 'read' autocomplete result list is now 21 rows, so `system:time` and `system:urls` are no longer subtly obscured by default. for existing users, that's under _options->search_
+* in the 'running from source' requirements.txts, I bumped the 'new' and 'test' versions for python-mpv to 1.0.4/1.0.5. the newest python-mpv does not need you to rename libmpv-2.dll to mpv-2.dll, which will be one less annoying thing to do in future. I've also been testing this extremely new dll this week and ran into no problems, if you are also a Windows source user and would like to try it too: https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20231231-git-abc2a74.7z . I also tried out Qt 6.6.1, but I just discovered a column-sizing bug I want to sort out before I roll it out to the wider community
+* updated the sqlite dll that gets bundled into the windows release to 3.44.2. the sqlite3.exe is updated too
+
 ## [Version 558](https://github.com/hydrusnetwork/hydrus/releases/tag/v558)
 
 ### user contributions
@@ -416,44 +480,3 @@ title: Changelog
 * repository update files now have a 'delete from repository updates' entry in their right-click menu
 * this area of the code appears to be related to the PTR 404 issue some users have had (it seems to be repository update records not beeing added/deleted/updated correctly), so I am likely to revisit this
 * deleting a file from 'all local files' (which happens for repository update files) now correctly updates the UI-level media object to recognise that the file is fully deleted from all local file domains beneath the umbrella, removing the 'delete from x' commands from their menu, and in the right view contexts removing them from view completely
-
-## [Version 549](https://github.com/hydrusnetwork/hydrus/releases/tag/v549)
-
-### misc
-
-* optimised taglist sorting code, which is really groaning when it gets to 50k+ unique tags. the counting is more efficient now, but more work can be done
-* optimised taglist internal update recalc by updating existing items in place instead of remove/replace and skipping cleanup-sort when no new items are added and/or the sort is not count-based. it should also preserve selection and focus stuff a bit better now
-* thanks to a user, we have some new url classes to handle the recent change in sankaku URL format. your sank subscriptions are likely to go slightly crazy for a week as they figure out where they are caught up to, sorry!
-* if a file copy into your temp directory fails due to 'Errno 28 No space left on device', the client now pops up more information about this specific problem, which is often a symptom of trying to import a 4GB drive into a ramdisk-hosted tempdir and similar. many Linux flavours relatedly have special rules about the max filesize in the tempdir!
-
-### maintenance and processing
-
-* _advanced users only, don't worry about it too much_
-* the _options->maintenance and processing_ page has several advanced new settings. these are all separately hardcoded systems that I have merged into more of the same logic this week. the UI is a tower of spam, but it will serve us useful when we want to test and fine tune clients that are having various sorts of maintenance trouble
-* a new section for potential duplicate search now duplicates the 'do search in idle time' setting you see in the duplicates page and has new 'work packet time' and 'rest time percentage' settings
-* a new section for repository processing now exposes the similar 'work/rest' timings for 'normal', 'idle', and 'very idle' (after an hour of idle mode). **if I have been working with you on freezes or memory explosions during PTR processing, increase the rest percentages here to 50-2,000, let's see if that gives your client time to breathe and clean up old work**
-* a new section for sibling/parent sync does the same, for 'idle', 'normal', and 'work hard' modes **same deal here probably**
-* a new section for the deferred database table delete system does the same, for 'idle', 'normal', and 'work hard' modes
-* I duplicated the 'do sibling/parent sync in idle/normal time' _tags_ menu settings to this options page. they are synced, so altering one updates the other
-* if you change the 'run file maintenance jobs in idle/normal time' settings in the dialog, the _database_ menu now properly updates to reflect any changes
-* the way these various systems calculate their rest time now smoothes out extreme bumps. sibling/parent display, in particular, should wait for a good amount of time after a big bump, but won't allow itself to wait for a crazy amount of time
-
-### all deleted files
-
-* fixed the various 'clear deletion record' commands to also remove from the 'all deleted files' service cache, which stores all your deleted files for all known specific file services and is used for various search tech on deleted file domains
-* also wrote a command to completely regen this cache from original deletion records. it can be fired under _database->regenerate->all deleted files_. this will happen on update, to fix the above retroactively
-* removed the foolish 'deleted from all deleted files' typo-entry from the advanced multiple file domain selector list. the value and use of a deletion record from a virtual combined deletion record is a complicated idea, and the entities that lurk in the shadows of the inverse sphere would strongly prefer that we not consider the matter any more
-
-### running from source stuff
-
-* **the setup_venv script has slightly different Qt questions this week, so if you have your own custom script that types the letters in for you, double-check what it is going to do before updating this week!**
-* there's a new version of PySide6, 6.6.0. the `(t)est` Qt version in the 'setup_venv' now points to this. it seems fine to me on a fairly normal Win 11 machine, but if recent history is any guide, there's going to be a niggle somewhere. if you have been waiting for a fix on the menu position issue or anything else, give it a go! if things go well, I'll roll this into a larger 'future' test release and then we'll integrate it into main
-* also, since Qt is the most test-heavy library we have, the 'setup_venv' scripts for all platforms now have an option to `(w)rite` your own version in!
-* the program no longer needs `distutils`, and thus should now be compatible (or less incompatible, let's see, ha ha) with python 3.12. thanks for the user report and assistance here
-
-### boring stuff
-
-* rejiggered a couple of maintenance flows to spend less time aggressively chilling out doing nothing
-* the hydrus timedelta widget can now handle milliseconds
-* misc code cleaning
-* fixed a typo in the thumbnail 'select->local/not local' descriptions/tooltips

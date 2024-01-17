@@ -24,7 +24,7 @@ class ClientDBRecentTags( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.recent_tags' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, tag_id INTEGER, timestamp INTEGER, PRIMARY KEY ( service_id, tag_id ) );', 546 )
+            'main.recent_tags' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, tag_id INTEGER, timestamp_ms INTEGER, PRIMARY KEY ( service_id, tag_id ) );', 546 )
         }
         
     
@@ -39,16 +39,14 @@ class ClientDBRecentTags( ClientDBModule.ClientDBModule ):
         
         # we could be clever and do LIMIT and ORDER BY in the delete, but not all compilations of SQLite have that turned on, so let's KISS
         
-        tag_ids_to_timestamp = { tag_id : timestamp for ( tag_id, timestamp ) in self._Execute( 'SELECT tag_id, timestamp FROM recent_tags WHERE service_id = ?;', ( service_id, ) ) }
+        tag_ids_to_timestamps_ms = { tag_id : timestamp_ms for ( tag_id, timestamp_ms ) in self._Execute( 'SELECT tag_id, timestamp_ms FROM recent_tags WHERE service_id = ?;', ( service_id, ) ) }
         
         def sort_key( key ):
             
-            return tag_ids_to_timestamp[ key ]
+            return tag_ids_to_timestamps_ms[ key ]
             
         
-        newest_first = list(tag_ids_to_timestamp.keys())
-        
-        newest_first.sort( key = sort_key, reverse = True )
+        newest_first = sorted( tag_ids_to_timestamps_ms.keys(), key = sort_key, reverse = True )
         
         num_we_want = HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
         
@@ -95,11 +93,11 @@ class ClientDBRecentTags( ClientDBModule.ClientDBModule ):
             
         else:
             
-            now = HydrusTime.GetNow()
+            now_ms = HydrusTime.GetNowMS()
             
             tag_ids = [ self.modules_tags.GetTagId( tag ) for tag in tags ]
             
-            self._ExecuteMany( 'REPLACE INTO recent_tags ( service_id, tag_id, timestamp ) VALUES ( ?, ?, ? );', ( ( service_id, tag_id, now ) for tag_id in tag_ids ) )
+            self._ExecuteMany( 'REPLACE INTO recent_tags ( service_id, tag_id, timestamp_ms ) VALUES ( ?, ?, ? );', ( ( service_id, tag_id, now_ms ) for tag_id in tag_ids ) )
             
         
     

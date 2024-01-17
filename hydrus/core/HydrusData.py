@@ -1374,7 +1374,7 @@ class ContentUpdate( object ):
             
             if self._action == HC.CONTENT_UPDATE_ADD:
                 
-                ( file_info_manager, timestamp ) = self._row
+                ( file_info_manager, timestamp_ms ) = self._row
                 
                 hashes = { file_info_manager.hash }
                 
@@ -1443,7 +1443,7 @@ class ContentUpdate( object ):
             
             if self._action == HC.CONTENT_UPDATE_ADD:
                 
-                ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta ) = self._row
+                ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta ) = self._row
                 
                 hashes = { hash }
                 

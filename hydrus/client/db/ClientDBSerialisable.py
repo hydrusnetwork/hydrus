@@ -170,7 +170,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         return {
             'main.json_dict' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT PRIMARY KEY, dump BLOB_BYTES );', 400 ),
             'main.json_dumps' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );', 400 ),
-            'main.json_dumps_named' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp ) );', 400 ),
+            'main.json_dumps_named' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp_ms INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp_ms ) );', 400 ),
             'main.json_dumps_hashed' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );', 442 ),
             'main.yaml_dumps' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );', 400 )
         }
@@ -181,19 +181,19 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         self._Execute( 'DELETE FROM json_dumps WHERE dump_type = ?;', ( dump_type, ) )
         
     
-    def DeleteJSONDumpNamed( self, dump_type, dump_name = None, timestamp = None ):
+    def DeleteJSONDumpNamed( self, dump_type, dump_name = None, timestamp_ms = None ):
         
         if dump_name is None:
             
             self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) )
             
-        elif timestamp is None:
+        elif timestamp_ms is None:
             
             self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
             
         else:
             
-            self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) )
+            self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp_ms = ?;', ( dump_type, dump_name, timestamp_ms ) )
             
         
     
@@ -224,12 +224,12 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         
         all_expected_hashes = set()
         
-        # not the GetJSONDumpNamesToBackupTimestamps call, which excludes the latest save!
-        names_and_timestamps = self._Execute( 'SELECT dump_name, timestamp FROM json_dumps_named WHERE dump_type = ?;', ( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, ) ).fetchall()
+        # not the GetJSONDumpNamesToBackupTimestampsMS call, which excludes the latest save!
+        names_and_timestamps_ms = self._Execute( 'SELECT dump_name, timestamp_ms FROM json_dumps_named WHERE dump_type = ?;', ( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, ) ).fetchall()
         
-        for ( name, timestamp ) in names_and_timestamps:
+        for ( name, timestamp_ms ) in names_and_timestamps_ms:
             
-            session_container = self.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, dump_name = name, timestamp = timestamp )
+            session_container = self.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, dump_name = name, timestamp_ms = timestamp_ms )
             
             all_expected_hashes.update( session_container.GetPageDataHashes() )
             
@@ -315,9 +315,9 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         return hashes_to_objs
         
     
-    def GetGUISession( self, name, timestamp = None ):
+    def GetGUISession( self, name, timestamp_ms = None ):
         
-        session_container = self.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, dump_name = name, timestamp = timestamp )
+        session_container = self.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, dump_name = name, timestamp_ms = timestamp_ms )
         
         hashes = session_container.GetPageDataHashes()
         
@@ -382,15 +382,15 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
         
     
-    def GetJSONDumpNamed( self, dump_type, dump_name = None, timestamp = None ):
+    def GetJSONDumpNamed( self, dump_type, dump_name = None, timestamp_ms = None ):
         
         if dump_name is None:
             
-            results = self._Execute( 'SELECT dump_name, version, dump, timestamp FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ).fetchall()
+            results = self._Execute( 'SELECT dump_name, version, dump, timestamp_ms FROM json_dumps_named WHERE dump_type = ?;', ( dump_type, ) ).fetchall()
             
             objs = []
             
-            for ( dump_name, version, dump, object_timestamp ) in results:
+            for ( dump_name, version, dump, object_timestamp_ms ) in results:
                 
                 try:
                     
@@ -405,11 +405,11 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                     
                 except:
                     
-                    self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, object_timestamp ) )
+                    self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp_ms = ?;', ( dump_type, dump_name, object_timestamp_ms ) )
                     
                     self._cursor_transaction_wrapper.CommitAndBegin()
                     
-                    DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp ), 'dump_type {} dump_name {} version {} timestamp {}'.format( dump_type, dump_name[:10], version, object_timestamp ) )
+                    DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp_ms ), 'dump_type {} dump_name {} version {} timestamp_ms {}'.format( dump_type, dump_name[:10], version, object_timestamp_ms ) )
                     
                 
             
@@ -417,21 +417,21 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
         else:
             
-            if timestamp is None:
+            if timestamp_ms is None:
                 
-                result = self._Execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? ORDER BY timestamp DESC;', ( dump_type, dump_name ) ).fetchone()
+                result = self._Execute( 'SELECT version, dump, timestamp_ms FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? ORDER BY timestamp_ms DESC;', ( dump_type, dump_name ) ).fetchone()
                 
             else:
                 
-                result = self._Execute( 'SELECT version, dump, timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, timestamp ) ).fetchone()
+                result = self._Execute( 'SELECT version, dump, timestamp_ms FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp_ms = ?;', ( dump_type, dump_name, timestamp_ms ) ).fetchone()
                 
             
             if result is None:
                 
-                raise HydrusExceptions.DataMissing( 'Could not find the object of type "{}" and name "{}" and timestamp "{}".'.format( dump_type, dump_name, str( timestamp ) ) )
+                raise HydrusExceptions.DataMissing( 'Could not find the object of type "{}" and name "{}" and timestamp_ms "{}".'.format( dump_type, dump_name, str( timestamp_ms ) ) )
                 
             
-            ( version, dump, object_timestamp ) = result
+            ( version, dump, object_timestamp_ms ) = result
             
             try:
                 
@@ -444,11 +444,11 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 
             except:
                 
-                self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', ( dump_type, dump_name, object_timestamp ) )
+                self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp_ms = ?;', ( dump_type, dump_name, object_timestamp_ms ) )
                 
                 self._cursor_transaction_wrapper.CommitAndBegin()
                 
-                DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp ), 'dump_type {} dump_name {} version {} timestamp {}'.format( dump_type, dump_name[:10], version, object_timestamp ) )
+                DealWithBrokenJSONDump( self._db_dir, dump, ( dump_type, dump_name, version, object_timestamp_ms ), 'dump_type {} dump_name {} version {} timestamp_ms {}'.format( dump_type, dump_name[:10], version, object_timestamp_ms ) )
                 
             
             return HydrusSerialisable.CreateFromSerialisableTuple( ( dump_type, dump_name, version, serialisable_info ) )
@@ -462,21 +462,21 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         return names
         
     
-    def GetJSONDumpNamesToBackupTimestamps( self, dump_type ):
+    def GetJSONDumpNamesToBackupTimestampsMS( self, dump_type ):
         
-        names_to_backup_timestamps = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT dump_name, timestamp FROM json_dumps_named WHERE dump_type = ? ORDER BY timestamp ASC;', ( dump_type, ) ) )
+        names_to_backup_timestamps_ms = HydrusData.BuildKeyToListDict( self._Execute( 'SELECT dump_name, timestamp_ms FROM json_dumps_named WHERE dump_type = ? ORDER BY timestamp_ms ASC;', ( dump_type, ) ) )
         
-        for ( name, timestamp_list ) in list( names_to_backup_timestamps.items() ):
+        for ( name, timestamp_ms_list ) in list( names_to_backup_timestamps_ms.items() ):
             
-            timestamp_list.pop( -1 ) # remove the non backup timestamp
+            timestamp_ms_list.pop( -1 ) # remove the non backup timestamp
             
-            if len( timestamp_list ) == 0:
+            if len( timestamp_ms_list ) == 0:
                 
-                del names_to_backup_timestamps[ name ]
+                del names_to_backup_timestamps_ms[ name ]
                 
             
         
-        return names_to_backup_timestamps
+        return names_to_backup_timestamps_ms
         
     
     def GetJSONSimple( self, name ):
@@ -664,7 +664,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
         
     
-    def SetJSONDump( self, obj, force_timestamp = None ):
+    def SetJSONDump( self, obj, force_timestamp_ms = None ):
         
         if isinstance( obj, HydrusSerialisable.SerialisableBaseNamed ):
             
@@ -684,7 +684,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 
                 self.SetHashedJSONDumps( hashes_to_page_data )
                 
-                if force_timestamp is None:
+                if force_timestamp_ms is None:
                     
                     store_backups = True
                     backup_depth = HG.client_controller.new_options.GetInteger( 'number_of_gui_session_backups' )
@@ -704,31 +704,31 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 raise Exception( 'Trying to json dump the object ' + str( obj ) + ' with name ' + dump_name + ' caused an error. Its serialisable info has been dumped to the log.' )
                 
             
-            if force_timestamp is None:
+            if force_timestamp_ms is None:
                 
-                object_timestamp = HydrusTime.GetNow()
+                object_timestamp_ms = HydrusTime.GetNowMS()
                 
                 if store_backups:
                     
-                    existing_timestamps = sorted( self._STI( self._Execute( 'SELECT timestamp FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) ) )
+                    existing_timestamps_ms = sorted( self._STI( self._Execute( 'SELECT timestamp_ms FROM json_dumps_named WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ) ) )
                     
-                    if len( existing_timestamps ) > 0:
+                    if len( existing_timestamps_ms ) > 0:
                         
                         # the user has changed their system clock, so let's make sure the new timestamp is larger at least
                         
-                        largest_existing_timestamp = max( existing_timestamps )
+                        largest_existing_timestamp_ms = max( existing_timestamps_ms )
                         
-                        if largest_existing_timestamp > object_timestamp:
+                        if largest_existing_timestamp_ms > object_timestamp_ms:
                             
-                            object_timestamp = largest_existing_timestamp + 1
+                            object_timestamp_ms = largest_existing_timestamp_ms + 1
                             
                         
                     
-                    deletee_timestamps = existing_timestamps[ : - backup_depth ] # keep highest n values
+                    deletee_timestamps_ms = existing_timestamps_ms[ : - backup_depth ] # keep highest n values
                     
-                    deletee_timestamps.append( object_timestamp ) # if save gets spammed twice in one second, we'll overwrite
+                    deletee_timestamps_ms.append( object_timestamp_ms ) # if save gets spammed twice in one second, we'll overwrite
                     
-                    self._ExecuteMany( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp = ?;', [ ( dump_type, dump_name, timestamp ) for timestamp in deletee_timestamps ] )
+                    self._ExecuteMany( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp_ms = ?;', [ ( dump_type, dump_name, timestamp_ms ) for timestamp_ms in deletee_timestamps_ms ] )
                     
                 else:
                     
@@ -737,14 +737,14 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 
             else:
                 
-                object_timestamp = force_timestamp
+                object_timestamp_ms = force_timestamp_ms
                 
             
             dump_buffer = GenerateBigSQLiteDumpBuffer( dump )
             
             try:
                 
-                self._Execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, object_timestamp, dump_buffer ) )
+                self._Execute( 'INSERT INTO json_dumps_named ( dump_type, dump_name, version, timestamp_ms, dump ) VALUES ( ?, ?, ?, ?, ? );', ( dump_type, dump_name, version, object_timestamp_ms, dump_buffer ) )
                 
             except:
                 

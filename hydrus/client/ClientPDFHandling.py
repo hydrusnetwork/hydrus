@@ -204,7 +204,7 @@ def GetPDFInfo( path: str ):
     return ( num_words, ( width, height ) )
     
 
-def GetPDFModifiedDate( path ):
+def GetPDFModifiedTimestampMS( path ):
     
     # TODO: do something with this
     # I thought about replacing the disk modified time, but it seemed like a minefield
@@ -221,9 +221,9 @@ def GetPDFModifiedDate( path ):
     
     q_modified_date = document.metaData( QtPdf.QPdfDocument.MetaDataField.ModificationDate )
     
-    modified_date = q_modified_date.toSecsSinceEpoch()
+    modified_timestamp_ms = q_modified_date.toMSecsSinceEpoch()
     
-    return modified_date
+    return modified_timestamp_ms
     
 
 def GetPDFResolutionFromDocument( document ):

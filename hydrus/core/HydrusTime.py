@@ -1,11 +1,12 @@
 import calendar
 import datetime
 import time
+import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusConstants as HC
 
-def DateTimeToPrettyTime( dt: datetime.datetime, include_24h_time = True ):
+def DateTimeToPrettyTime( dt: datetime.datetime, include_24h_time = True, include_milliseconds = False ):
     
     if include_24h_time:
         
@@ -18,12 +19,19 @@ def DateTimeToPrettyTime( dt: datetime.datetime, include_24h_time = True ):
     
     try:
         
-        return dt.strftime( phrase )
+        result = dt.strftime( phrase )
         
     except:
         
         return f'unknown time {dt}'
         
+    
+    if include_milliseconds:
+        
+        result = f'{result}.{dt.microsecond // 1000:03}'
+        
+    
+    return result
     
 
 def DateTimeToTimestamp( dt: datetime.datetime ) -> int:
@@ -68,6 +76,11 @@ def DateTimeToTimestamp( dt: datetime.datetime ) -> int:
     return timestamp
     
 
+def DateTimeToTimestampMS( dt: datetime.datetime ) -> int:
+    
+    return MillisecondiseS( DateTimeToTimestamp( dt ) ) + ( dt.microsecond // 1000 )
+    
+
 def GetDateTime( year: int, month: int, day: int, hour: int, minute: int ) -> datetime.datetime:
     
     return datetime.datetime( year, month, day, hour, minute )
@@ -81,6 +94,11 @@ def GetNow():
 def GetNowFloat():
     
     return time.time()
+    
+
+def GetNowMS():
+    
+    return int( time.time() * 1000 )
     
 
 def GetNowPrecise():
@@ -118,6 +136,16 @@ def GetTimeDeltaUntilTimePrecise( t ):
     return max( time_remaining, 0.0 )
     
 
+def MillisecondiseS( timestamp: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ int ]:
+    
+    return None if timestamp is None else int( timestamp * 1000 )
+    
+
+def SecondiseMS( timestamp_ms: typing.Optional[ typing.Union[ int, float ] ] ) -> typing.Optional[ int ]:
+    
+    return None if timestamp_ms is None else int( timestamp_ms // 1000 )
+    
+
 def TimeHasPassed( timestamp ):
     
     if timestamp is None:
@@ -131,6 +159,16 @@ def TimeHasPassed( timestamp ):
 def TimeHasPassedFloat( timestamp ):
     
     return GetNowFloat() > timestamp
+    
+
+def TimeHasPassedMS( timestamp_ms ):
+    
+    if timestamp_ms is None:
+        
+        return False
+        
+    
+    return GetNowMS() > timestamp_ms
     
 
 def TimeHasPassedPrecise( precise_timestamp ):
@@ -314,6 +352,32 @@ def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True, no_bigger_than_day
     return result
     
 
+def TimestampMSToDateTime( timestamp_ms, timezone = None ) -> datetime.datetime:
+    
+    if timezone is None:
+        
+        timezone = HC.TIMEZONE_LOCAL
+        
+    
+    # ok we run into the <1970 problems again here. time.gmtime may just fail for -12345678
+    # therefore we'll meme it up by adding our timestamp as a delta, which works
+    # ALSO NOTE YOU CAN MESS UP IN TWENTY WAYS HERE. if you try to do dt.astimezone() on a certain date, you'll either get standard or daylight timezone lmao!
+    dt_epoch = datetime.datetime( 1970, 1, 1 )
+    
+    dt = dt_epoch + datetime.timedelta( milliseconds = timestamp_ms )
+    
+    if timezone == HC.TIMEZONE_LOCAL:
+        
+        my_current_timezone = datetime.datetime.now().astimezone().tzinfo
+        
+        my_offset_timedelta = my_current_timezone.utcoffset( None )
+        
+        dt += my_offset_timedelta
+        
+    
+    return dt
+    
+
 def TimestampToDateTime( timestamp, timezone = None ) -> datetime.datetime:
     
     if timezone is None:
@@ -370,48 +434,118 @@ def TimestampToPrettyExpires( timestamp ):
         
     
 
-def MillisecondsToPrettyTime( ms ):
+def MillisecondsDurationToPrettyTime( duration_ms: typing.Optional[ int ] ) -> str:
     
-    hours = ms // 3600000
+    if duration_ms is None or duration_ms == 0:
+        
+        return 'no duration'
+        
     
-    if hours == 1: hours_result = '1 hour'
-    else: hours_result = str( hours ) + ' hours'
+    hours = duration_ms // 3600000
     
-    ms = ms % 3600000
+    duration_ms = duration_ms % 3600000
     
-    minutes = ms // 60000
+    minutes = duration_ms // 60000
     
-    if minutes == 1: minutes_result = '1 minute'
-    else: minutes_result = str( minutes ) + ' minutes'
+    duration_ms = duration_ms % 60000
     
-    ms = ms % 60000
+    seconds = duration_ms // 1000
     
-    seconds = ms // 1000
+    duration_ms = duration_ms % 1000
     
-    if seconds == 1: seconds_result = '1 second'
-    else: seconds_result = str( seconds ) + ' seconds'
+    if minutes == 1:
+        
+        minutes_result = '1 minute'
+        
+    else:
+        
+        minutes_result = str( minutes ) + ' minutes'
+        
     
-    detailed_seconds = ms / 1000
+    if hours > 0:
+        
+        if hours == 1:
+            
+            hours_result = '1 hour'
+            
+        else:
+            
+            hours_result = str( hours ) + ' hours'
+            
+        
+        return hours_result + ' ' + minutes_result
+        
     
-    detailed_seconds_result = '{:.1f} seconds'.format( detailed_seconds )
+    if minutes > 0:
+        
+        if seconds == 1:
+            
+            seconds_result = '1 second'
+            
+        else:
+            
+            seconds_result = str( seconds ) + ' seconds'
+            
+        
+        return minutes_result + ' ' + seconds_result
+        
     
-    ms = ms % 1000
+    if seconds > 0:
+        
+        detailed_seconds = seconds + ( duration_ms / 1000 )
+        
+        detailed_seconds_result = '{:.1f} seconds'.format( detailed_seconds )
+        
+        return detailed_seconds_result
+        
     
-    if hours > 0: return hours_result + ' ' + minutes_result
+    duration_ms = int( duration_ms )
     
-    if minutes > 0: return minutes_result + ' ' + seconds_result
-    
-    if seconds > 0: return detailed_seconds_result
-    
-    ms = int( ms )
-    
-    if ms == 1: milliseconds_result = '1 millisecond'
-    else: milliseconds_result = '{} milliseconds'.format( ms )
+    if duration_ms == 1:
+        
+        milliseconds_result = '1 millisecond'
+        
+    else:
+        
+        milliseconds_result = '{} milliseconds'.format( duration_ms )
+        
     
     return milliseconds_result
     
 
-def TimestampToPrettyTime( timestamp, in_utc = False, include_24h_time = True ):
+def TimestampMSToPrettyTime( timestamp_ms: typing.Optional[ int ], in_utc = False, include_24h_time = True, include_milliseconds = True ) -> str:
+    
+    if timestamp_ms is None:
+        
+        return 'unknown time'
+        
+    
+    if in_utc:
+        
+        timezone = HC.TIMEZONE_UTC
+        
+    else:
+        
+        timezone = HC.TIMEZONE_LOCAL
+        
+    
+    # ok this timezone fails when the date of the timestamp we are actually talking about is in summer time and we are in standard time, or _vice versa_
+    # might be able to predict timezone better by recreating the dt using our year, month, day tuple and then pulling _that_ TZ, which I am pretty sure is corrected
+    # OR just don't convert back and forth so much when handling this garbage, which was the original fix to a system:date predicate shifting by an hour through two conversions
+    
+    try:
+        
+        dt = TimestampMSToDateTime( timestamp_ms, timezone = timezone )
+        
+    except:
+        
+        return 'unparseable ms time {}'.format( timestamp_ms )
+        
+    
+    return DateTimeToPrettyTime( dt, include_24h_time = include_24h_time, include_milliseconds = include_milliseconds )
+    
+
+def TimestampToPrettyTime( timestamp: typing.Optional[ int ], in_utc = False, include_24h_time = True ) -> str:
     
     if timestamp is None:
         

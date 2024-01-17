@@ -420,7 +420,7 @@ class FileSystemPredicates( object ):
         self._not_local = False
         
         self._common_info = {}
-        self._timestamp_ranges = collections.defaultdict( dict )
+        self._system_pred_types_to_timestamp_ranges_ms = collections.defaultdict( dict )
         
         self._limit = None
         self._similar_to_files = None
@@ -524,7 +524,7 @@ class FileSystemPredicates( object ):
                     
                     dt = HydrusTime.CalendarDeltaToDateTime( years, months, days, hours )
                     
-                    time_pivot = HydrusTime.DateTimeToTimestamp( dt )
+                    time_pivot_ms = HydrusTime.DateTimeToTimestampMS( dt )
                     
                     # this is backwards (less than means min timestamp) because we are talking about age, not timestamp
                     
@@ -534,11 +534,11 @@ class FileSystemPredicates( object ):
                     
                     if operator == '<':
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = time_pivot_ms
                         
                     elif operator == '>':
                         
-                        self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = time_pivot_ms
                         
                     elif operator == HC.UNICODE_APPROX_EQUAL:
                         
@@ -547,11 +547,11 @@ class FileSystemPredicates( object ):
                         earliest_dt = dt - rough_timedelta_gap
                         latest_dt = dt + rough_timedelta_gap
                         
-                        earliest_time_pivot = HydrusTime.DateTimeToTimestamp( earliest_dt )
-                        latest_time_pivot = HydrusTime.DateTimeToTimestamp( latest_dt )
+                        earliest_time_pivot_ms = HydrusTime.DateTimeToTimestampMS( earliest_dt )
+                        latest_time_pivot_ms = HydrusTime.DateTimeToTimestampMS( latest_dt )
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = earliest_time_pivot
-                        self._timestamp_ranges[ predicate_type ][ '<' ] = latest_time_pivot
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = earliest_time_pivot_ms
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = latest_time_pivot_ms
                         
                     
                 elif age_type == 'date':
@@ -560,12 +560,12 @@ class FileSystemPredicates( object ):
                     
                     dt = HydrusTime.GetDateTime( year, month, day, hour, minute )
                     
-                    time_pivot = HydrusTime.DateTimeToTimestamp( dt )
+                    time_pivot_ms = HydrusTime.DateTimeToTimestampMS( dt )
                     
                     dt_day_of_start = HydrusTime.GetDateTime( year, month, day, 0, 0 )
                     
-                    day_of_start = HydrusTime.DateTimeToTimestamp( dt_day_of_start )
-                    day_of_end = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt_day_of_start, day_delta = 1 ) )
+                    day_of_start_timestamp_ms = HydrusTime.DateTimeToTimestampMS( dt_day_of_start )
+                    day_of_end_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt_day_of_start, day_delta = 1 ) )
                     
                     # the before/since semantic logic is:
                     # '<' 2022-05-05 means 'before that date'
@@ -573,24 +573,24 @@ class FileSystemPredicates( object ):
                     
                     if operator == '<':
                         
-                        self._timestamp_ranges[ predicate_type ][ '<' ] = time_pivot
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = time_pivot_ms
                         
                     elif operator == '>':
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = time_pivot
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = time_pivot_ms
                         
                     elif operator == '=':
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = day_of_start
-                        self._timestamp_ranges[ predicate_type ][ '<' ] = day_of_end
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = day_of_start_timestamp_ms
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = day_of_end_timestamp_ms
                         
                     elif operator == HC.UNICODE_APPROX_EQUAL:
                         
-                        previous_month_timestamp = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
-                        next_month_timestamp = HydrusTime.DateTimeToTimestamp( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
+                        previous_month_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt, month_delta = -1 ) )
+                        next_month_timestamp_ms = HydrusTime.DateTimeToTimestampMS( ClientTime.CalendarDelta( dt, month_delta = 1 ) )
                         
-                        self._timestamp_ranges[ predicate_type ][ '>' ] = previous_month_timestamp
-                        self._timestamp_ranges[ predicate_type ][ '<' ] = next_month_timestamp
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '>' ] = previous_month_timestamp_ms
+                        self._system_pred_types_to_timestamp_ranges_ms[ predicate_type ][ '<' ] = next_month_timestamp_ms
                         
                     
                 
@@ -988,9 +988,9 @@ class FileSystemPredicates( object ):
         return self._common_info
         
     
-    def GetTimestampRanges( self ):
+    def GetTimestampRangesMS( self ):
         
-        return self._timestamp_ranges
+        return self._system_pred_types_to_timestamp_ranges_ms
         
     
     def HasSimilarToData( self ):
@@ -2529,7 +2529,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        base += ' {} {}'.format( operator, HydrusTime.MillisecondsToPrettyTime( value ) )
+                        base += ' {} {}'.format( operator, HydrusTime.MillisecondsDurationToPrettyTime( value ) )
                         
                     
                 

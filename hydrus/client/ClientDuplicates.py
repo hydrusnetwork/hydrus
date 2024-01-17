@@ -87,7 +87,6 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             # this is not appropriate for, say, PSD files
             other_file_is_pixel_png_appropriate_filetypes = {
                 HC.IMAGE_JPEG,
-                HC.IMAGE_GIF,
                 HC.IMAGE_WEBP
             }
             
@@ -390,14 +389,14 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
     # older
     
-    s_ts = shown_media.GetLocationsManager().GetTimestampsManager().GetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-    c_ts = comparison_media.GetLocationsManager().GetTimestampsManager().GetImportedTimestamp( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+    s_import_timestamp = HydrusTime.SecondiseMS( shown_media.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
+    c_import_timestamp = HydrusTime.SecondiseMS( comparison_media.GetLocationsManager().GetTimesManager().GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
     
     one_month = 86400 * 30
     
-    if s_ts is not None and c_ts is not None and abs( s_ts - c_ts ) > one_month:
+    if s_import_timestamp is not None and c_import_timestamp is not None and abs( s_import_timestamp - c_import_timestamp ) > one_month:
         
-        if s_ts < c_ts:
+        if s_import_timestamp < c_import_timestamp:
             
             operator = 'older than'
             score = duplicate_comparison_score_older
@@ -413,7 +412,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
             score = 0
             
         
-        statement = '{}, {} {}'.format( ClientTime.TimestampToPrettyTimeDelta( s_ts, history_suffix = ' old' ), operator, ClientTime.TimestampToPrettyTimeDelta( c_ts, history_suffix = ' old' ) )
+        statement = '{}, {} {}'.format( ClientTime.TimestampToPrettyTimeDelta( s_import_timestamp, history_suffix = ' old' ), operator, ClientTime.TimestampToPrettyTimeDelta( c_import_timestamp, history_suffix = ' old' ) )
         
         statements_and_scores[ 'time_imported' ] = ( statement, score )
         
@@ -795,20 +794,20 @@ def get_updated_domain_modified_timestamp_datas( destination_media: ClientMedia.
     domains = { ClientNetworkingFunctions.ConvertURLIntoDomain( url ) for url in urls }
     
     timestamp_datas = []
-    source_timestamp_manager = source_media.GetLocationsManager().GetTimestampsManager()
-    destination_timestamp_manager = destination_media.GetLocationsManager().GetTimestampsManager()
+    source_timestamp_manager = source_media.GetLocationsManager().GetTimesManager()
+    destination_timestamp_manager = destination_media.GetLocationsManager().GetTimesManager()
     
     for domain in domains:
         
-        source_timestamp = source_timestamp_manager.GetDomainModifiedTimestamp( domain )
+        source_timestamp_ms = source_timestamp_manager.GetDomainModifiedTimestampMS( domain )
         
-        if source_timestamp is not None:
+        if source_timestamp_ms is not None:
             
-            timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, source_timestamp )
+            timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, source_timestamp_ms )
             
-            destination_timestamp = destination_timestamp_manager.GetDomainModifiedTimestamp( domain )
+            destination_timestamp_ms = destination_timestamp_manager.GetDomainModifiedTimestampMS( domain )
             
-            if destination_timestamp is None or ClientTime.ShouldUpdateModifiedTime( destination_timestamp, source_timestamp ):
+            if destination_timestamp_ms is None or ClientTime.ShouldUpdateModifiedTime( destination_timestamp_ms, source_timestamp_ms ):
                 
                 timestamp_datas.append( timestamp_data )
                 
@@ -1344,25 +1343,25 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._sync_file_modified_date_action != HC.CONTENT_MERGE_ACTION_NONE:
             
-            first_timestamp = first_media.GetMediaResult().GetTimestampsManager().GetFileModifiedTimestamp()
-            second_timestamp = second_media.GetMediaResult().GetTimestampsManager().GetFileModifiedTimestamp()
+            first_timestamp_ms = first_media.GetMediaResult().GetTimesManager().GetFileModifiedTimestampMS()
+            second_timestamp_ms = second_media.GetMediaResult().GetTimesManager().GetFileModifiedTimestampMS()
             
             if self._sync_file_modified_date_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
-                if ClientTime.ShouldUpdateModifiedTime( first_timestamp, second_timestamp ):
+                if ClientTime.ShouldUpdateModifiedTime( first_timestamp_ms, second_timestamp_ms ):
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp ) ) ) )
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
                     
-                elif ClientTime.ShouldUpdateModifiedTime( second_timestamp, first_timestamp ):
+                elif ClientTime.ShouldUpdateModifiedTime( second_timestamp_ms, first_timestamp_ms ):
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( second_hash, ClientTime.TimestampData.STATICFileModifiedTime( first_timestamp ) ) ) )
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( second_hash, ClientTime.TimestampData.STATICFileModifiedTime( first_timestamp_ms ) ) ) )
                     
                 
             elif self._sync_file_modified_date_action == HC.CONTENT_MERGE_ACTION_COPY:
                 
-                if ClientTime.ShouldUpdateModifiedTime( first_timestamp, second_timestamp ):
+                if ClientTime.ShouldUpdateModifiedTime( first_timestamp_ms, second_timestamp_ms ):
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp ) ) ) )
+                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
                     
                 
             

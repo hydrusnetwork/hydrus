@@ -18,7 +18,7 @@ def Profile( summary, code, global_vars, local_vars, min_duration_ms = 20, show_
     finished = HydrusTime.GetNowPrecise()
     
     time_took = finished - started
-    time_took_ms = int( time_took * 1000.0 )
+    time_took_ms = HydrusTime.MillisecondiseS( time_took )
     
     if time_took_ms > min_duration_ms:
         

@@ -2108,15 +2108,15 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         self.InsertSession( forced_insertion_index, session )
         
     
-    def AppendGUISessionBackup( self, name, timestamp, load_in_a_page_of_pages = True ):
+    def AppendGUISessionBackup( self, name, timestamp_ms, load_in_a_page_of_pages = True ):
         
         try:
             
-            session = session = self._controller.Read( 'gui_session', name, timestamp )
+            session = session = self._controller.Read( 'gui_session', name, timestamp_ms )
             
         except Exception as e:
             
-            HydrusData.ShowText( 'While trying to load session "{}" (ts {}), this error happened:'.format( name, timestamp ) )
+            HydrusData.ShowText( 'While trying to load session "{}" (ts {}), this error happened:'.format( name, timestamp_ms ) )
             HydrusData.ShowException( e )
             
             return

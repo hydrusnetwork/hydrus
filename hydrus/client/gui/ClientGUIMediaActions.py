@@ -193,15 +193,15 @@ def EditFileTimestamps( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
             hash = media.GetHash()
             
             service_keys_to_content_updates = panel.GetServiceKeysToContentUpdates()
-            file_modified_timestamp = panel.GetFileModifiedUpdate()
+            file_modified_timestamp_ms = panel.GetFileModifiedUpdateMS()
             
             if len( service_keys_to_content_updates ) > 0:
                 
                 HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
                 
-                if file_modified_timestamp is not None:
+                if file_modified_timestamp_ms is not None:
                     
-                    HG.client_controller.client_files_manager.UpdateFileModifiedTimestamp( media, file_modified_timestamp )
+                    HG.client_controller.client_files_manager.UpdateFileModifiedTimestampMS( media, file_modified_timestamp_ms )
                     
                 
             

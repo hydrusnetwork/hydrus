@@ -1718,7 +1718,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if ClientTime.TimestampIsSensible( domain_modified_timestamp ):
                         
-                        timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, domain_modified_timestamp )
+                        timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, HydrusTime.MillisecondiseS( domain_modified_timestamp ) )
                         
                         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
                         
@@ -1727,7 +1727,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     if self._cloudflare_last_modified_time is not None and ClientTime.TimestampIsSensible( self._cloudflare_last_modified_time ):
                         
-                        timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( 'cloudflare.com', self._cloudflare_last_modified_time )
+                        timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( 'cloudflare.com', HydrusTime.MillisecondiseS( self._cloudflare_last_modified_time ) )
                         
                         content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
                         

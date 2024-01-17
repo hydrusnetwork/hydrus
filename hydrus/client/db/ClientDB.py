@@ -55,7 +55,6 @@ from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsCountsUpdate
 from hydrus.client.db import ClientDBMappingsStorage
 from hydrus.client.db import ClientDBMaster
-from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBNotesMap
 from hydrus.client.db import ClientDBRatings
 from hydrus.client.db import ClientDBRepositories
@@ -254,7 +253,7 @@ class DB( HydrusDB.HydrusDB ):
             
             service_type = service.GetServiceType()
             
-            valid_rows = [ ( hash_id, timestamp ) for ( hash_id, timestamp ) in rows if hash_id in new_hash_ids ]
+            valid_rows = [ ( hash_id, timestamp_ms ) for ( hash_id, timestamp_ms ) in rows if hash_id in new_hash_ids ]
             
             # if we are adding to a local file domain, either an import or an undelete, remove any from the trash and add to the umbrella services if needed
             
@@ -1127,7 +1126,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         for hash_id in those_that_exist_on_disk:
                             
-                            timestamps = []
+                            timestamps_ms = []
                             
                             for umbrella_components_service_id in umbrella_components_service_ids:
                                 
@@ -1135,23 +1134,23 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = service_key )
                                 
-                                timestamp = self.modules_files_storage.GetTimestamp( hash_id, timestamp_data )
+                                timestamp_ms = self.modules_files_storage.GetTimestampMS( hash_id, timestamp_data )
                                 
-                                if timestamp is not None:
+                                if timestamp_ms is not None:
                                     
-                                    timestamps.append( timestamp )
+                                    timestamps_ms.append( timestamp_ms )
                                     
                                 
                             
-                            if len( timestamps ) == 0:
+                            if len( timestamps_ms ) == 0:
                                 
                                 those_that_are_missing.add( hash_id )
                                 
                             else:
                                 
-                                timestamp = min( timestamps )
+                                timestamp_ms = min( timestamps_ms )
                                 
-                                import_rows.append( ( hash_id, timestamp ) )
+                                import_rows.append( ( hash_id, timestamp_ms ) )
                                 
                             
                         
@@ -1447,15 +1446,15 @@ class DB( HydrusDB.HydrusDB ):
         
         service_type = service.GetServiceType()
         
-        existing_hash_ids_to_timestamps = self.modules_files_storage.GetCurrentHashIdsToTimestamps( service_id, hash_ids )
+        existing_hash_ids_to_timestamps_ms = self.modules_files_storage.GetCurrentHashIdsToTimestampsMS( service_id, hash_ids )
         
-        existing_hash_ids = set( existing_hash_ids_to_timestamps.keys() )
+        existing_hash_ids = set( existing_hash_ids_to_timestamps_ms.keys() )
         
         service_info_updates = []
         
         # do delete outside, file repos and perhaps some other bananas situation can delete without ever having added
         
-        now = HydrusTime.GetNow()
+        now_ms = HydrusTime.GetNowMS()
         
         if service_type not in HC.FILE_SERVICES_WITH_NO_DELETE_RECORD:
             
@@ -1472,7 +1471,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if len( deletion_record_hash_ids ) > 0:
                 
-                insert_rows = [ ( hash_id, existing_hash_ids_to_timestamps[ hash_id ] if hash_id in existing_hash_ids_to_timestamps else None ) for hash_id in deletion_record_hash_ids ]
+                insert_rows = [ ( hash_id, existing_hash_ids_to_timestamps_ms[ hash_id ] if hash_id in existing_hash_ids_to_timestamps_ms else None ) for hash_id in deletion_record_hash_ids ]
                 
                 num_new_deleted_files = self.modules_files_storage.RecordDeleteFiles( service_id, insert_rows )
                 
@@ -1522,7 +1521,7 @@ class DB( HydrusDB.HydrusDB ):
             
             if service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE:
                 
-                rows = [ ( hash_id, now ) for hash_id in existing_hash_ids ]
+                rows = [ ( hash_id, now_ms ) for hash_id in existing_hash_ids ]
                 
                 self._AddFiles( self.modules_services.combined_deleted_file_service_id, rows )
                 
@@ -1542,9 +1541,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._DeleteFiles( self.modules_services.combined_local_media_service_id, trashed_hash_ids )
                     
-                    now = HydrusTime.GetNow()
-                    
-                    delete_rows = [ ( hash_id, now ) for hash_id in trashed_hash_ids ]
+                    delete_rows = [ ( hash_id, now_ms ) for hash_id in trashed_hash_ids ]
                     
                     self._AddFiles( self.modules_services.trash_service_id, delete_rows )
                     
@@ -2529,9 +2526,9 @@ class DB( HydrusDB.HydrusDB ):
             )
             
         
-        current_timestamps_table_name = None
+        current_timestamps_ms_table_name = None
         deleted_files_table_name = None
-        deleted_timestamps_table_name = None
+        deleted_timestamps_ms_table_name = None
         
         location_context = file_search_context.GetLocationContext()
         
@@ -2578,14 +2575,14 @@ class DB( HydrusDB.HydrusDB ):
                     db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
                     
                     # special IsOneDomain hack
-                    current_timestamps_table_name = db_location_context.GetSingleFilesTableName()
+                    current_timestamps_ms_table_name = db_location_context.GetSingleFilesTableName()
                     
                     deleted_location_context = location_context.GetDeletedInverse()
                     
                     deleted_db_location_context = self.modules_files_storage.GetDBLocationContext( deleted_location_context )
                     
                     # special IsOneDomain hack
-                    deleted_timestamps_table_name = deleted_db_location_context.GetSingleFilesTableName()
+                    deleted_timestamps_ms_table_name = deleted_db_location_context.GetSingleFilesTableName()
                     
                     if do_not_need_to_search:
                         
@@ -2615,9 +2612,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 return self._GetBonedStatsFromTable(
                     current_files_table_name,
-                    current_timestamps_table_name,
+                    current_timestamps_ms_table_name,
                     deleted_files_table_name,
-                    deleted_timestamps_table_name,
+                    deleted_timestamps_ms_table_name,
                     job_status = job_status
                 )
                 
@@ -2627,9 +2624,9 @@ class DB( HydrusDB.HydrusDB ):
     def _GetBonedStatsFromTable(
         self,
         current_files_table_name: str,
-        current_timestamps_table_name: typing.Optional[ str ],
+        current_timestamps_ms_table_name: typing.Optional[ str ],
         deleted_files_table_name: typing.Optional[ str ],
-        deleted_timestamps_table_name: typing.Optional[ str ],
+        deleted_timestamps_ms_table_name: typing.Optional[ str ],
         job_status = None
     ):
         
@@ -2685,24 +2682,24 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        earliest_import_time = 0
+        earliest_import_timestamp_ms = 0
         
-        if current_timestamps_table_name is not None:
+        if current_timestamps_ms_table_name is not None:
             
-            if current_files_table_name != current_timestamps_table_name:
+            if current_files_table_name != current_timestamps_ms_table_name:
                 
-                table_join = f'{current_files_table_name} CROSS JOIN {current_timestamps_table_name} USING ( hash_id )'
+                table_join = f'{current_files_table_name} CROSS JOIN {current_timestamps_ms_table_name} USING ( hash_id )'
                 
             else:
                 
                 table_join = current_files_table_name
                 
             
-            result = self._Execute( f'SELECT MIN( timestamp ) FROM {table_join};' ).fetchone()
+            result = self._Execute( f'SELECT MIN( timestamp_ms ) FROM {table_join};' ).fetchone()
             
             if result is not None and result[0] is not None:
                 
-                earliest_import_time = result[0]
+                earliest_import_timestamp_ms = result[0]
                 
             
         
@@ -2711,35 +2708,35 @@ class DB( HydrusDB.HydrusDB ):
             return boned_stats
             
         
-        if deleted_files_table_name is not None and deleted_timestamps_table_name is not None:
+        if deleted_files_table_name is not None and deleted_timestamps_ms_table_name is not None:
             
-            if deleted_files_table_name != deleted_timestamps_table_name:
+            if deleted_files_table_name != deleted_timestamps_ms_table_name:
                 
-                table_join = f'{deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id )'
+                table_join = f'{deleted_files_table_name} CROSS JOIN {deleted_timestamps_ms_table_name} USING ( hash_id )'
                 
             else:
                 
                 table_join = deleted_files_table_name
                 
             
-            result = self._Execute( f'SELECT MIN( original_timestamp ) FROM {table_join};' ).fetchone()
+            result = self._Execute( f'SELECT MIN( original_timestamp_ms ) FROM {table_join};' ).fetchone()
             
             if result is not None and result[0] is not None:
                 
-                if earliest_import_time == 0:
+                if earliest_import_timestamp_ms == 0:
                     
-                    earliest_import_time = result[0]
+                    earliest_import_timestamp_ms = result[0]
                     
                 else:
                     
-                    earliest_import_time = min( earliest_import_time, result[0] )
+                    earliest_import_timestamp_ms = min( earliest_import_timestamp_ms, result[0] )
                     
                 
             
         
-        if earliest_import_time > 0:
+        if earliest_import_timestamp_ms > 0:
             
-            boned_stats[ 'earliest_import_time' ] = earliest_import_time
+            boned_stats[ 'earliest_import_time' ] = HydrusTime.SecondiseMS( earliest_import_timestamp_ms )
             
         
         if job_status.IsCancelled():
@@ -2828,9 +2825,9 @@ class DB( HydrusDB.HydrusDB ):
             )
             
         
-        current_timestamps_table_name = None
+        current_timestamps_ms_table_name = None
         deleted_files_table_name = None
-        deleted_timestamps_table_name = None
+        deleted_timestamps_ms_table_name = None
         
         location_context = file_search_context.GetLocationContext()
         
@@ -2877,14 +2874,14 @@ class DB( HydrusDB.HydrusDB ):
                     db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
                     
                     # special IsOneDomain hack
-                    current_timestamps_table_name = db_location_context.GetSingleFilesTableName()
+                    current_timestamps_ms_table_name = db_location_context.GetSingleFilesTableName()
                     
                     deleted_location_context = location_context.GetDeletedInverse()
                     
                     deleted_db_location_context = self.modules_files_storage.GetDBLocationContext( deleted_location_context )
                     
                     # special IsOneDomain hack
-                    deleted_timestamps_table_name = deleted_db_location_context.GetSingleFilesTableName()
+                    deleted_timestamps_ms_table_name = deleted_db_location_context.GetSingleFilesTableName()
                     
                     if do_not_need_to_search:
                         
@@ -2912,7 +2909,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                if current_timestamps_table_name is None or deleted_files_table_name is None or deleted_timestamps_table_name is None:
+                if current_timestamps_ms_table_name is None or deleted_files_table_name is None or deleted_timestamps_ms_table_name is None:
                     
                     raise HydrusExceptions.TooComplicatedM8()
                     
@@ -2920,9 +2917,9 @@ class DB( HydrusDB.HydrusDB ):
                 return self._GetFileHistoryFromTable(
                     num_steps,
                     current_files_table_name,
-                    current_timestamps_table_name,
+                    current_timestamps_ms_table_name,
                     deleted_files_table_name,
-                    deleted_timestamps_table_name,
+                    deleted_timestamps_ms_table_name,
                     job_status
                 )
                 
@@ -2933,9 +2930,9 @@ class DB( HydrusDB.HydrusDB ):
         self,
         num_steps: int,
         current_files_table_name: str,
-        current_timestamps_table_name: str,
+        current_timestamps_ms_table_name: str,
         deleted_files_table_name: str,
-        deleted_timestamps_table_name: str,
+        deleted_timestamps_ms_table_name: str,
         job_status = None
     ):
         
@@ -2948,13 +2945,13 @@ class DB( HydrusDB.HydrusDB ):
         
         # first let's do current files. we increment when added, decrement when we know removed
         
-        if current_files_table_name == current_timestamps_table_name:
+        if current_files_table_name == current_timestamps_ms_table_name:
             
-            current_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {current_timestamps_table_name} WHERE timestamp IS NOT NULL;' ) )
+            current_timestamps = [ HydrusTime.SecondiseMS( timestamp_ms ) for ( timestamp_ms, ) in self._Execute( f'SELECT timestamp_ms FROM {current_timestamps_ms_table_name} WHERE timestamp_ms IS NOT NULL;' ) ]
             
         else:
             
-            current_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {current_files_table_name} CROSS JOIN {current_timestamps_table_name} USING ( hash_id ) WHERE timestamp IS NOT NULL;' ) )
+            current_timestamps = [ HydrusTime.SecondiseMS( timestamp_ms ) for ( timestamp_ms, ) in self._Execute( f'SELECT timestamp_ms FROM {current_files_table_name} CROSS JOIN {current_timestamps_ms_table_name} USING ( hash_id ) WHERE timestamp_ms IS NOT NULL;' ) ]
             
         
         if job_status.IsCancelled():
@@ -2962,13 +2959,13 @@ class DB( HydrusDB.HydrusDB ):
             return file_history
             
         
-        if deleted_files_table_name == deleted_timestamps_table_name:
+        if deleted_files_table_name == deleted_timestamps_ms_table_name:
             
-            since_deleted = self._STL( self._Execute( f'SELECT original_timestamp FROM {deleted_timestamps_table_name} WHERE original_timestamp IS NOT NULL;' ) )
+            since_deleted_import_timestamps = [ HydrusTime.SecondiseMS( timestamp_ms ) for ( timestamp_ms, ) in self._Execute( f'SELECT original_timestamp_ms FROM {deleted_timestamps_ms_table_name} WHERE original_timestamp_ms IS NOT NULL;' ) ]
             
         else:
             
-            since_deleted = self._STL( self._Execute( f'SELECT original_timestamp FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id ) WHERE original_timestamp IS NOT NULL;' ) )
+            since_deleted_import_timestamps = [ HydrusTime.SecondiseMS( timestamp_ms ) for ( timestamp_ms, ) in self._Execute( f'SELECT original_timestamp_ms FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_ms_table_name} USING ( hash_id ) WHERE original_timestamp_ms IS NOT NULL;' ) ]
             
         
         if job_status.IsCancelled():
@@ -2978,21 +2975,21 @@ class DB( HydrusDB.HydrusDB ):
         
         all_known_import_timestamps = list( current_timestamps )
         
-        all_known_import_timestamps.extend( since_deleted )
+        all_known_import_timestamps.extend( since_deleted_import_timestamps )
         
         all_known_import_timestamps.sort()
         
-        if deleted_files_table_name == deleted_timestamps_table_name:
+        if deleted_files_table_name == deleted_timestamps_ms_table_name:
             
-            deleted_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {deleted_timestamps_table_name} WHERE timestamp IS NOT NULL ORDER BY timestamp ASC;' ) )
+            deleted_timestamps = [ HydrusTime.SecondiseMS( timestamp_ms ) for ( timestamp_ms, ) in self._Execute( f'SELECT timestamp_ms FROM {deleted_timestamps_ms_table_name} WHERE timestamp_ms IS NOT NULL ORDER BY timestamp_ms ASC;' ) ]
             
-            ( total_deleted_files, ) = self._Execute( f'SELECT COUNT( * ) FROM {deleted_timestamps_table_name} WHERE timestamp IS NULL;' ).fetchone()
+            ( total_deleted_files, ) = self._Execute( f'SELECT COUNT( * ) FROM {deleted_timestamps_ms_table_name} WHERE timestamp_ms IS NULL;' ).fetchone()
             
         else:
             
-            deleted_timestamps = self._STL( self._Execute( f'SELECT timestamp FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id ) WHERE timestamp IS NOT NULL ORDER BY timestamp ASC;' ) )
+            deleted_timestamps = [ HydrusTime.SecondiseMS( timestamp_ms ) for ( timestamp_ms, ) in self._Execute( f'SELECT timestamp_ms FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_ms_table_name} USING ( hash_id ) WHERE timestamp_ms IS NOT NULL ORDER BY timestamp_ms ASC;' ) ]
             
-            ( total_deleted_files, ) = self._Execute( f'SELECT COUNT( * ) FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id ) WHERE timestamp IS NULL;' ).fetchone()
+            ( total_deleted_files, ) = self._Execute( f'SELECT COUNT( * ) FROM {deleted_files_table_name} CROSS JOIN {deleted_timestamps_ms_table_name} USING ( hash_id ) WHERE timestamp_ms IS NULL;' ).fetchone()
             
         
         if job_status.IsCancelled():
@@ -3095,7 +3092,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             # note also that we do not scrub archived time on a file delete, so this upcoming fetch is for all files ever. this is useful, so don't undo it m8
-            archive_timestamps = self._STL( self._Execute( 'SELECT archived_timestamp FROM archive_timestamps ORDER BY archived_timestamp ASC;' ) )
+            archive_timestamps = [ HydrusTime.SecondiseMS( archived_timestamp_ms ) for ( archived_timestamp_ms, ) in self._Execute( 'SELECT archived_timestamp_ms FROM archive_timestamps ORDER BY archived_timestamp_ms ASC;' ) ]
             
         else:
             
@@ -3106,20 +3103,20 @@ class DB( HydrusDB.HydrusDB ):
                 return file_history
                 
             
-            if deleted_files_table_name == deleted_timestamps_table_name:
+            if deleted_files_table_name == deleted_timestamps_ms_table_name:
                 
                 deleted_files_table_join = deleted_files_table_name
                 
             else:
                 
-                deleted_files_table_join = f'{deleted_files_table_name} CROSS JOIN {deleted_timestamps_table_name} USING ( hash_id )'
+                deleted_files_table_join = f'{deleted_files_table_name} CROSS JOIN {deleted_timestamps_ms_table_name} USING ( hash_id )'
                 
             
             # I do a load of gubbins here related to timestamp tables. deleted timestamps were added before archived, so I think we are fine to presume that deleted timestamps exist whenever an archived one does too
             
             # note also that we do not scrub archived time on a file delete, so this upcoming fetch is for all files ever. this is useful, so don't undo it m8
-            archive_timestamps_current = self._STL( self._Execute( f'SELECT archived_timestamp FROM {current_files_table_name} CROSS JOIN archive_timestamps USING ( hash_id );' ) )
-            archive_timestamps_deleted_both = self._Execute( f'SELECT archived_timestamp, {deleted_timestamps_table_name}.timestamp FROM {deleted_files_table_join} CROSS JOIN archive_timestamps USING ( hash_id );' ).fetchall()
+            archive_timestamps_current = [ HydrusTime.SecondiseMS( archived_timestamp_ms ) for ( archived_timestamp_ms, ) in self._Execute( f'SELECT archived_timestamp_ms FROM {current_files_table_name} CROSS JOIN archive_timestamps USING ( hash_id );' ) ]
+            archive_timestamps_deleted_both = [ ( HydrusTime.SecondiseMS( archived_timestamp_ms ), HydrusTime.SecondiseMS( deleted_timestamp_ms ) ) for ( archived_timestamp_ms, deleted_timestamp_ms ) in self._Execute( f'SELECT archived_timestamp_ms, {deleted_timestamps_ms_table_name}.timestamp_ms FROM {deleted_files_table_join} CROSS JOIN archive_timestamps USING ( hash_id );' ) ]
             
             archive_timestamps_deleted = []
             
@@ -3138,9 +3135,9 @@ class DB( HydrusDB.HydrusDB ):
                 
             
             # this represents the situation where a file is in trash or another file service, in inbox, but for our purposes has been de-inboxed
-            de_inboxed_from_deleted = [ timestamp for ( timestamp, hash_id ) in self._Execute( f'SELECT timestamp, hash_id as h1 FROM {deleted_files_table_join} WHERE {deleted_timestamps_table_name}.timestamp IS NOT NULL AND NOT EXISTS ( SELECT 1 FROM archive_timestamps WHERE hash_id = h1 );' ) ]
+            archived_timestamps_from_delete_implication = [ HydrusTime.SecondiseMS( timestamp_ms ) for ( timestamp_ms, hash_id ) in self._Execute( f'SELECT timestamp_ms, hash_id as h1 FROM {deleted_files_table_join} WHERE {deleted_timestamps_ms_table_name}.timestamp_ms IS NOT NULL AND NOT EXISTS ( SELECT 1 FROM archive_timestamps WHERE hash_id = h1 );' ) ]
             
-            archive_timestamps = sorted( archive_timestamps_current + archive_timestamps_deleted + de_inboxed_from_deleted )
+            archive_timestamps = sorted( archive_timestamps_current + archive_timestamps_deleted + archived_timestamps_from_delete_implication )
             
         
         if job_status.IsCancelled():
@@ -3337,7 +3334,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 service_type = self.modules_services.GetServiceType( service_id )
                 
-                if service_type not in HC.FILE_SERVICES:
+                if service_type not in HC.REAL_FILE_SERVICES:
                     
                     continue
                     
@@ -3672,21 +3669,21 @@ class DB( HydrusDB.HydrusDB ):
                 hash_ids_to_file_info_managers = { file_info_manager.hash_id : file_info_manager for file_info_manager in file_info_managers }
                 
                 (
-                    hash_ids_to_current_file_service_ids_to_timestamps,
-                    hash_ids_to_deleted_file_service_ids_to_timestamps,
-                    hash_ids_to_deleted_file_service_ids_to_previously_imported_timestamps,
+                    hash_ids_to_current_file_service_ids_to_timestamps_ms,
+                    hash_ids_to_deleted_file_service_ids_to_timestamps_ms,
+                    hash_ids_to_deleted_file_service_ids_to_previously_imported_timestamps_ms,
                     hash_ids_to_pending_file_service_ids,
                     hash_ids_to_petitioned_file_service_ids
                 ) = self.modules_files_storage.GetHashIdsToServiceInfoDicts( temp_table_name )
                 
-                hash_ids_to_current_file_service_ids = { hash_id : list( file_service_ids_to_timestamps.keys() ) for ( hash_id, file_service_ids_to_timestamps ) in hash_ids_to_current_file_service_ids_to_timestamps.items() }
+                hash_ids_to_current_file_service_ids = { hash_id : list( file_service_ids_to_timestamps_ms.keys() ) for ( hash_id, file_service_ids_to_timestamps_ms ) in hash_ids_to_current_file_service_ids_to_timestamps_ms.items() }
                 
                 hash_ids_to_tags_managers = self._GetForceRefreshTagsManagersWithTableHashIds( missing_hash_ids, temp_table_name, hash_ids_to_current_file_service_ids = hash_ids_to_current_file_service_ids )
                 
                 # TODO: it is a little tricky, but it would be nice to have 'gettimestampmanagers' and 'getlocationsmanagers' here
                 # don't forget that timestamp is held by both the media result and the locations manager, so either give it to location manager entirely for KISS or have another think
                 
-                hash_ids_to_half_initialised_timestamp_managers = self.modules_files_timestamps.GetHashIdsToHalfInitialisedTimestampsManagers( hash_ids, temp_table_name )
+                hash_ids_to_half_initialised_timestamp_managers = self.modules_files_timestamps.GetHashIdsToHalfInitialisedTimesManagers( hash_ids, temp_table_name )
                 
                 hash_ids_to_urls = self.modules_url_map.GetHashIdsToURLs( hash_ids_table_name = temp_table_name )
                 
@@ -3714,11 +3711,11 @@ class DB( HydrusDB.HydrusDB ):
                 
                 #
                 
-                current_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_current_file_service_ids_to_timestamps[ hash_id ].items() }
+                current_file_service_keys_to_timestamps_ms = { service_ids_to_service_keys[ service_id ] : timestamp_ms for ( service_id, timestamp_ms ) in hash_ids_to_current_file_service_ids_to_timestamps_ms[ hash_id ].items() }
                 
-                deleted_file_service_keys_to_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_deleted_file_service_ids_to_timestamps[ hash_id ].items() }
+                deleted_file_service_keys_to_timestamps_ms = { service_ids_to_service_keys[ service_id ] : timestamp_ms for ( service_id, timestamp_ms ) in hash_ids_to_deleted_file_service_ids_to_timestamps_ms[ hash_id ].items() }
                 
-                deleted_file_service_keys_to_previously_imported_timestamps = { service_ids_to_service_keys[ service_id ] : timestamp for ( service_id, timestamp ) in hash_ids_to_deleted_file_service_ids_to_previously_imported_timestamps[ hash_id ].items() }
+                deleted_file_service_keys_to_previously_imported_timestamps_ms = { service_ids_to_service_keys[ service_id ] : timestamp_ms for ( service_id, timestamp_ms ) in hash_ids_to_deleted_file_service_ids_to_previously_imported_timestamps_ms[ hash_id ].items() }
                 
                 pending_file_service_keys = { service_ids_to_service_keys[ service_id ] for service_id in hash_ids_to_pending_file_service_ids[ hash_id ] }
                 
@@ -3734,25 +3731,25 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if hash_id in hash_ids_to_half_initialised_timestamp_managers:
                     
-                    timestamps_manager = hash_ids_to_half_initialised_timestamp_managers[ hash_id ]
+                    times_manager = hash_ids_to_half_initialised_timestamp_managers[ hash_id ]
                     
                 else:
                     
-                    timestamps_manager = ClientMediaManagers.TimestampsManager()
+                    times_manager = ClientMediaManagers.TimesManager()
                     
                 
-                timestamps_manager.SetImportedTimestamps( current_file_service_keys_to_timestamps )
-                timestamps_manager.SetDeletedTimestamps( deleted_file_service_keys_to_timestamps )
-                timestamps_manager.SetPreviouslyImportedTimestamps( deleted_file_service_keys_to_previously_imported_timestamps )
+                times_manager.SetImportedTimestampsMS( current_file_service_keys_to_timestamps_ms )
+                times_manager.SetDeletedTimestampsMS( deleted_file_service_keys_to_timestamps_ms )
+                times_manager.SetPreviouslyImportedTimestampsMS( deleted_file_service_keys_to_previously_imported_timestamps_ms )
                 
                 local_file_deletion_reason = hash_ids_to_local_file_deletion_reasons.get( hash_id, None )
                 
                 locations_manager = ClientMediaManagers.LocationsManager(
-                    set( current_file_service_keys_to_timestamps.keys() ),
-                    set( deleted_file_service_keys_to_timestamps.keys() ),
+                    set( current_file_service_keys_to_timestamps_ms.keys() ),
+                    set( deleted_file_service_keys_to_timestamps_ms.keys() ),
                     pending_file_service_keys,
                     petitioned_file_service_keys,
-                    timestamps_manager,
+                    times_manager,
                     inbox = inbox,
                     urls = urls,
                     service_keys_to_filenames = service_keys_to_filenames,
@@ -3784,16 +3781,16 @@ class DB( HydrusDB.HydrusDB ):
                     
                     file_viewing_stats = hash_ids_to_file_viewing_stats[ hash_id ]
                     
-                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( timestamps_manager, file_viewing_stats )
+                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager( times_manager, file_viewing_stats )
                     
                 else:
                     
-                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+                    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
                     
                 
                 #
                 
-                missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
+                missing_media_results.append( ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager ) )
                 
             
             self._weakref_media_result_cache.AddMediaResults( missing_media_results )
@@ -4664,11 +4661,10 @@ class DB( HydrusDB.HydrusDB ):
             for info_type in info_types_missed:
                 
                 info = None
-                result = None
                 
                 save_it = True
                 
-                if service_type in HC.FILE_SERVICES:
+                if service_type in HC.REAL_FILE_SERVICES:
                     
                     if info_type in ( HC.SERVICE_INFO_NUM_PENDING_FILES, HC.SERVICE_INFO_NUM_PETITIONED_FILES ):
                         
@@ -4812,13 +4808,13 @@ class DB( HydrusDB.HydrusDB ):
         
         if minimum_age is None:
             
-            age_phrase = ' ORDER BY timestamp ASC' # when deleting until trash is small enough, let's delete oldest first
+            age_phrase = ' ORDER BY timestamp_ms ASC' # when deleting until trash is small enough, let's delete oldest first
             
         else:
             
             timestamp_cutoff = HydrusTime.GetNow() - minimum_age
             
-            age_phrase = ' WHERE timestamp < ' + str( timestamp_cutoff )
+            age_phrase = ' WHERE timestamp_ms < ' + str( timestamp_cutoff * 1000 )
             
         
         current_files_table_name = ClientDBFilesStorage.GenerateFilesTableName( self.modules_services.trash_service_id, HC.CONTENT_STATUS_CURRENT )
@@ -4942,23 +4938,23 @@ class DB( HydrusDB.HydrusDB ):
             
             #
             
-            file_modified_timestamp = file_import_job.GetFileModifiedTimestamp()
+            file_modified_timestamp_ms = file_import_job.GetFileModifiedTimestampMS()
             
-            self.modules_files_timestamps.SetTimestamp( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp ) )
+            self.modules_files_timestamps.SetTime( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
             
             #
             
             file_info_manager = self._GetFileInfoManagers( [ hash_id ] )[0]
             
-            now = HydrusTime.GetNow()
+            now_ms = HydrusTime.GetNowMS()
             
             for destination_file_service_key in destination_location_context.current_service_keys:
                 
                 destination_service_id = self.modules_services.GetServiceId( destination_file_service_key )
                 
-                self._AddFiles( destination_service_id, [ ( hash_id, now ) ] )
+                self._AddFiles( destination_service_id, [ ( hash_id, now_ms ) ] )
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now ) )
+                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) )
                 
                 self.pub_content_updates_after_commit( { destination_file_service_key : [ content_update ] } )
                 
@@ -5040,9 +5036,9 @@ class DB( HydrusDB.HydrusDB ):
         
         self.modules_files_metadata_basic.AddFilesInfo( [ ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) ], overwrite = True )
         
-        now = HydrusTime.GetNow()
+        now_ms = HydrusTime.GetNowMS()
         
-        self._AddFiles( self.modules_services.local_update_service_id, [ ( hash_id, now ) ] )
+        self._AddFiles( self.modules_services.local_update_service_id, [ ( hash_id, now_ms ) ] )
         
     
     def _InitExternalDatabases( self ):
@@ -5714,7 +5710,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 ( data_type, action, row ) = content_update.ToTuple()
                 
-                if service_type in HC.FILE_SERVICES:
+                if service_type in HC.REAL_FILE_SERVICES:
                     
                     if data_type == HC.CONTENT_TYPE_FILES:
                         
@@ -5743,7 +5739,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             if service_type in HC.LOCAL_FILE_SERVICES or service_type == HC.FILE_REPOSITORY:
                                 
-                                ( file_info_manager, timestamp ) = row
+                                ( file_info_manager, timestamp_ms ) = row
                                 
                                 ( hash_id, hash, size, mime, width, height, duration, num_frames, has_audio, num_words ) = file_info_manager.ToTuple()
                                 
@@ -5757,10 +5753,14 @@ class DB( HydrusDB.HydrusDB ):
                                 
                                 self.modules_service_paths.SetServiceFilename( service_id, hash_id, multihash )
                                 
-                                timestamp = HydrusTime.GetNow()
+                                timestamp_ms = HydrusTime.GetNowMS()
+                                
+                            else:
+                                
+                                raise NotImplementedError( f'Got a file-add call on the wrong type of service ({service_type})!' )
                                 
                             
-                            self._AddFiles( service_id, [ ( hash_id, timestamp ) ] )
+                            self._AddFiles( service_id, [ ( hash_id, timestamp_ms ) ] )
                             
                         else:
                             
@@ -5940,15 +5940,15 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if action == HC.CONTENT_UPDATE_ADD:
                             
-                            self.modules_files_timestamps.UpdateTimestamp( hash_id, timestamp_data )
+                            self.modules_files_timestamps.UpdateTime( hash_id, timestamp_data )
                             
                         elif action == HC.CONTENT_UPDATE_SET:
                             
-                            self.modules_files_timestamps.SetTimestamp( hash_id, timestamp_data )
+                            self.modules_files_timestamps.SetTime( hash_id, timestamp_data )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
                             
-                            self.modules_files_timestamps.ClearTimestamp( hash_id, timestamp_data )
+                            self.modules_files_timestamps.ClearTime( hash_id, timestamp_data )
                             
                         
                     elif data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
@@ -5964,11 +5964,11 @@ class DB( HydrusDB.HydrusDB ):
                             
                         elif action == HC.CONTENT_UPDATE_ADD:
                             
-                            ( hash, canvas_type, view_timestamp, views_delta, viewtime_delta ) = row
+                            ( hash, canvas_type, view_timestamp_ms, views_delta, viewtime_delta ) = row
                             
                             hash_id = self.modules_hashes_local_cache.GetHashId( hash )
                             
-                            self.modules_files_viewing_stats.AddViews( hash_id, canvas_type, view_timestamp, views_delta, viewtime_delta )
+                            self.modules_files_viewing_stats.AddViews( hash_id, canvas_type, view_timestamp_ms, views_delta, viewtime_delta )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
                             
@@ -6454,7 +6454,9 @@ class DB( HydrusDB.HydrusDB ):
                         
                         files_info_rows.append( ( hash_id, size, mime, width, height, duration, num_frames, has_audio, num_words ) )
                         
-                        files_rows.append( ( hash_id, timestamp ) )
+                        timestamp_ms = HydrusTime.MillisecondiseS( timestamp )
+                        
+                        files_rows.append( ( hash_id, timestamp_ms ) )
                         
                     
                     self.modules_files_metadata_basic.AddFilesInfo( files_info_rows )
@@ -6810,7 +6812,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'serialisable_simple': result = self.modules_serialisable.GetJSONSimple( *args, **kwargs )
         elif action == 'serialisable_named': result = self.modules_serialisable.GetJSONDumpNamed( *args, **kwargs )
         elif action == 'serialisable_names': result = self.modules_serialisable.GetJSONDumpNames( *args, **kwargs )
-        elif action == 'serialisable_names_to_backup_timestamps': result = self.modules_serialisable.GetJSONDumpNamesToBackupTimestamps( *args, **kwargs )
+        elif action == 'serialisable_names_to_backup_timestamps_ms': result = self.modules_serialisable.GetJSONDumpNamesToBackupTimestampsMS( *args, **kwargs )
         elif action == 'service_directory': result = self.modules_service_paths.GetServiceDirectoryHashes( *args, **kwargs )
         elif action == 'service_directories': result = self.modules_service_paths.GetServiceDirectoriesInfo( *args, **kwargs )
         elif action == 'service_info': result = self._GetServiceInfo( *args, **kwargs )
@@ -8434,34 +8436,34 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( hash_ids_to_add ) > 0:
             
-            hash_ids_to_earliest_timestamps = {}
+            hash_ids_to_earliest_timestamps_ms = {}
             
             for service_id in combined_files_stakeholder_service_ids:
                 
-                hash_ids_to_both_timestamps = self.modules_files_storage.GetDeletedHashIdsToTimestamps( service_id, hash_ids_to_add )
+                hash_ids_to_both_timestamps_ms = self.modules_files_storage.GetDeletedHashIdsToTimestampsMS( service_id, hash_ids_to_add )
                 
-                for ( hash_id, ( timestamp, original_timestamp ) ) in hash_ids_to_both_timestamps.items():
+                for ( hash_id, ( timestamp_ms, original_timestamp_ms ) ) in hash_ids_to_both_timestamps_ms.items():
                     
-                    if hash_id in hash_ids_to_earliest_timestamps:
+                    if hash_id in hash_ids_to_earliest_timestamps_ms:
                         
-                        if timestamp is not None:
+                        if timestamp_ms is not None:
                             
-                            existing_timestamp = hash_ids_to_earliest_timestamps[ hash_id ]
+                            existing_timestamp = hash_ids_to_earliest_timestamps_ms[ hash_id ]
                             
-                            if existing_timestamp is None or timestamp < existing_timestamp:
+                            if existing_timestamp is None or timestamp_ms < existing_timestamp:
                                 
-                                hash_ids_to_earliest_timestamps[ hash_id ] = timestamp
+                                hash_ids_to_earliest_timestamps_ms[ hash_id ] = timestamp_ms
                                 
                             
                         
                     else:
                         
-                        hash_ids_to_earliest_timestamps[ hash_id ] = timestamp
+                        hash_ids_to_earliest_timestamps_ms[ hash_id ] = timestamp_ms
                         
                     
                 
             
-            rows = list( hash_ids_to_earliest_timestamps.items() )
+            rows = list( hash_ids_to_earliest_timestamps_ms.items() )
             
             self._AddFiles( self.modules_services.combined_deleted_file_service_id, rows )
             
@@ -8557,7 +8559,7 @@ class DB( HydrusDB.HydrusDB ):
             
             try:
                 
-                file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES )
+                file_service_ids = self.modules_services.GetServiceIds( HC.REAL_FILE_SERVICES )
                 
                 # updating some borked enums that were overwriting tag enums
                 for service_id in file_service_ids:
@@ -10083,6 +10085,91 @@ class DB( HydrusDB.HydrusDB ):
                 message = 'Some database cleanup failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
                 
                 self.pub_initial_message( message )
+                
+            
+        
+        if version == 558:
+            
+            try:
+                
+                self._Execute( 'SELECT timestamp FROM vacuum_timestamps;' )
+                
+                do_it = True
+                
+            except:
+                
+                do_it = False
+                
+            
+            if do_it:
+                
+                self._controller.frame_splash_status.SetSubtext( f'updating the database to millisecond resolution' )
+                
+                # ok we are moving from second-resolution timestamps to millisecond-resolution
+                # there are instances where we'll want to keep a second-based timestamp, and I don't want to make a mess and confuse myself
+                # so, I'm moving to strictly say "all instances of integer millisecond timestamps will be called 'timestamp_ms'" etc...
+                # since I want to be good and not confuse myself in three years, I am going to:
+                #   A) change all the database timestamp recording to ms, even if it is a bit silly somewhere. we want universal MS at the db level
+                #   B) rename all the columns to timestamp_ms variants so we don't get confused 
+                
+                self._Execute( 'ALTER TABLE vacuum_timestamps RENAME COLUMN timestamp TO timestamp_ms;' )
+                self._Execute( 'UPDATE vacuum_timestamps SET timestamp_ms = timestamp_ms * 1000;' )
+                
+                self._Execute( 'ALTER TABLE analyze_timestamps RENAME COLUMN timestamp TO timestamp_ms;' )
+                self._Execute( 'UPDATE analyze_timestamps SET timestamp_ms = timestamp_ms * 1000;' )
+                
+                self._Execute( 'ALTER TABLE json_dumps_named RENAME COLUMN timestamp TO timestamp_ms;' )
+                self._Execute( 'UPDATE json_dumps_named SET timestamp_ms = timestamp_ms * 1000;' )
+                
+                self._Execute( 'ALTER TABLE recent_tags RENAME COLUMN timestamp TO timestamp_ms;' )
+                self._Execute( 'UPDATE recent_tags SET timestamp_ms = timestamp_ms * 1000;' )
+                
+                # we drop/recreate the indices here more to keep the index names clean. SQLite is fine moving the references, but since my index names are special and helpful for clean 'does this exist?' tests, we want to make this little edit
+                
+                self._Execute( 'DROP INDEX IF EXISTS file_viewing_stats_last_viewed_timestamp_index;' )
+                self._Execute( 'DROP INDEX IF EXISTS file_modified_timestamps_file_modified_timestamp_index;' )
+                self._Execute( 'DROP INDEX IF EXISTS file_domain_modified_timestamps_file_modified_timestamp_index;' )
+                self._Execute( 'DROP INDEX IF EXISTS archive_timestamps_archived_timestamp_index;' )
+                
+                self._Execute( 'ALTER TABLE file_viewing_stats RENAME COLUMN last_viewed_timestamp TO last_viewed_timestamp_ms;' )
+                self._Execute( 'UPDATE file_viewing_stats SET last_viewed_timestamp_ms = last_viewed_timestamp_ms * 1000;' )
+                
+                self._Execute( 'ALTER TABLE file_modified_timestamps RENAME COLUMN file_modified_timestamp TO file_modified_timestamp_ms;' )
+                self._Execute( 'UPDATE file_modified_timestamps SET file_modified_timestamp_ms = file_modified_timestamp_ms * 1000;' )
+                
+                self._Execute( 'ALTER TABLE file_domain_modified_timestamps RENAME COLUMN file_modified_timestamp TO file_modified_timestamp_ms;' )
+                self._Execute( 'UPDATE file_domain_modified_timestamps SET file_modified_timestamp_ms = file_modified_timestamp_ms * 1000;' )
+                
+                self._Execute( 'ALTER TABLE archive_timestamps RENAME COLUMN archived_timestamp TO archived_timestamp_ms;' )
+                self._Execute( 'UPDATE archive_timestamps SET archived_timestamp_ms = archived_timestamp_ms * 1000;' )
+                
+                self._CreateIndex( 'main.file_viewing_stats', [ 'last_viewed_timestamp_ms' ] )
+                self._CreateIndex( 'main.file_modified_timestamps', [ 'file_modified_timestamp_ms' ] )
+                self._CreateIndex( 'main.file_domain_modified_timestamps', [ 'file_modified_timestamp_ms' ] )
+                self._CreateIndex( 'main.archive_timestamps', [ 'archived_timestamp_ms' ] )
+                
+                # all file services
+                
+                for service_id in self.modules_services.GetServiceIds( HC.REAL_FILE_SERVICES ):
+                    
+                    ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = ClientDBFilesStorage.GenerateFilesTableNames( service_id )
+                    
+                    self._Execute( f'DROP INDEX IF EXISTS {current_files_table_name}_timestamp_index;' )
+                    self._Execute( f'DROP INDEX IF EXISTS {deleted_files_table_name}_timestamp_index;' )
+                    self._Execute( f'DROP INDEX IF EXISTS {deleted_files_table_name}_original_timestamp_index;' )
+                    
+                    self._Execute( f'ALTER TABLE {current_files_table_name} RENAME COLUMN timestamp TO timestamp_ms;' )
+                    self._Execute( f'UPDATE {current_files_table_name} SET timestamp_ms = timestamp_ms * 1000;' )
+                    
+                    self._Execute( f'ALTER TABLE {deleted_files_table_name} RENAME COLUMN timestamp TO timestamp_ms;' )
+                    self._Execute( f'ALTER TABLE {deleted_files_table_name} RENAME COLUMN original_timestamp TO original_timestamp_ms;' )
+                    self._Execute( f'UPDATE {deleted_files_table_name} SET timestamp_ms = timestamp_ms * 1000;' )
+                    self._Execute( f'UPDATE {deleted_files_table_name} SET original_timestamp_ms = original_timestamp_ms * 1000;' )
+                    
+                    self._CreateIndex( current_files_table_name, [ 'timestamp_ms' ] )
+                    self._CreateIndex( deleted_files_table_name, [ 'timestamp_ms' ] )
+                    self._CreateIndex( deleted_files_table_name, [ 'original_timestamp_ms' ] )
+                    
                 
             
         

@@ -381,14 +381,14 @@ def GetNotesMediaResult( hash, names_to_notes ):
     
     tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
     
-    timestamps_manager = ClientMediaManagers.TimestampsManager()
+    times_manager = ClientMediaManagers.TimesManager()
     
-    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager, inbox = True )
+    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), times_manager, inbox = True )
     ratings_manager = ClientMediaManagers.RatingsManager( {} )
     notes_manager = ClientMediaManagers.NotesManager( names_to_notes )
-    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
     
-    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
     
     return media_result
     
@@ -534,14 +534,14 @@ def GetTagsMediaResult( hash, in_inbox, service_key, deleted_tags ):
     
     tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
     
-    timestamps_manager = ClientMediaManagers.TimestampsManager()
+    times_manager = ClientMediaManagers.TimesManager()
     
-    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), timestamps_manager, inbox = in_inbox )
+    locations_manager = ClientMediaManagers.LocationsManager( set(), set(), set(), set(), times_manager, inbox = in_inbox )
     ratings_manager = ClientMediaManagers.RatingsManager( {} )
     notes_manager = ClientMediaManagers.NotesManager( {} )
-    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( timestamps_manager )
+    file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
     
-    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, timestamps_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
+    media_result = ClientMediaResult.MediaResult( file_info_manager, tags_manager, times_manager, locations_manager, ratings_manager, notes_manager, file_viewing_stats_manager )
     
     return media_result
     

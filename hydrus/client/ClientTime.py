@@ -148,15 +148,16 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_TIMESTAMP_DATA
     SERIALISABLE_NAME = 'Timestamp Data'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, timestamp_type = None, location = None, timestamp = None ):
+    def __init__( self, timestamp_type = None, location = None, timestamp_ms: typing.Optional[ typing.Union[ int, float ] ] = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
         self.timestamp_type = timestamp_type
         self.location = location
-        self.timestamp = timestamp
+        self.timestamp_ms = None if timestamp_ms is None else int( timestamp_ms )
+        self.timestamp = HydrusTime.SecondiseMS( self.timestamp_ms ) # TODO: pretty sure I can delete this variable now, but I am currently attempting to fold space using the spice melange and don't want to make a foolish mistake
         
     
     def __eq__( self, other ):
@@ -171,7 +172,7 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        return ( self.timestamp_type, self.location, self.timestamp ).__hash__()
+        return ( self.timestamp_type, self.location, self.timestamp_ms ).__hash__()
         
     
     def __repr__( self ):
@@ -190,12 +191,14 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
             serialisable_location = self.location # str, int, or None
             
         
-        return ( self.timestamp_type, serialisable_location, self.timestamp )
+        return ( self.timestamp_type, serialisable_location, self.timestamp_ms )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.timestamp_type, serialisable_location, self.timestamp ) = serialisable_info
+        ( self.timestamp_type, serialisable_location, self.timestamp_ms ) = serialisable_info
+        
+        self.timestamp = HydrusTime.SecondiseMS( self.timestamp_ms )
         
         if self.timestamp_type in FILE_SERVICE_TIMESTAMP_TYPES:
             
@@ -204,6 +207,20 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
         else:
             
             self.location = serialisable_location
+            
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( timestamp_type, serialisable_location, timestamp ) = old_serialisable_info
+            
+            timestamp_ms = HydrusTime.MillisecondiseS( timestamp )
+            
+            new_serialisable_info = ( timestamp_type, serialisable_location, timestamp_ms )
+            
+            return ( 2, new_serialisable_info )
             
         
     
@@ -242,64 +259,63 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        if self.timestamp is None:
+        if self.timestamp_ms is None:
             
             # we are a stub, type summary is appropriate
             return type_base
             
         else:
             
-            return '{}: {}'.format( type_base, HydrusTime.TimestampToPrettyTime( self.timestamp ) )
+            return '{}: {}'.format( type_base, HydrusTime.TimestampMSToPrettyTime( self.timestamp_ms ) )
             
         
     
-    
     @staticmethod
-    def STATICArchivedTime( timestamp: int ) -> "TimestampData":
+    def STATICArchivedTime( timestamp_ms: int ) -> "TimestampData":
         
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_ARCHIVED, timestamp = timestamp )
-        
-    
-    @staticmethod
-    def STATICAggregateModifiedTime( timestamp: int ) -> "TimestampData":
-        
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, timestamp = timestamp )
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms = timestamp_ms )
         
     
     @staticmethod
-    def STATICDeletedTime( service_key: bytes, timestamp: int ) -> "TimestampData":
+    def STATICAggregateModifiedTime( timestamp_ms: int ) -> "TimestampData":
         
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_DELETED, location = service_key, timestamp = timestamp )
-        
-    
-    @staticmethod
-    def STATICDomainModifiedTime( domain: str, timestamp: int ) -> "TimestampData":
-        
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp = timestamp )
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_AGGREGATE, timestamp_ms = timestamp_ms )
         
     
     @staticmethod
-    def STATICFileModifiedTime( timestamp: int ) -> "TimestampData":
+    def STATICDeletedTime( service_key: bytes, timestamp_ms: int ) -> "TimestampData":
         
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp = timestamp )
-        
-    
-    @staticmethod
-    def STATICImportedTime( service_key: bytes, timestamp: int ) -> "TimestampData":
-        
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_IMPORTED, location = service_key, timestamp = timestamp )
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_DELETED, location = service_key, timestamp_ms = timestamp_ms )
         
     
     @staticmethod
-    def STATICLastViewedTime( canvas_type: int, timestamp: int ) -> "TimestampData":
+    def STATICDomainModifiedTime( domain: str, timestamp_ms: int ) -> "TimestampData":
         
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_LAST_VIEWED, location = canvas_type, timestamp = timestamp )
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp_ms = timestamp_ms )
         
     
     @staticmethod
-    def STATICPreviouslyImportedTime( service_key: bytes, timestamp: int ) -> "TimestampData":
+    def STATICFileModifiedTime( timestamp_ms: int ) -> "TimestampData":
         
-        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, location = service_key, timestamp = timestamp )
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp_ms = timestamp_ms )
+        
+    
+    @staticmethod
+    def STATICImportedTime( service_key: bytes, timestamp_ms: int ) -> "TimestampData":
+        
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_IMPORTED, location = service_key, timestamp_ms = timestamp_ms )
+        
+    
+    @staticmethod
+    def STATICLastViewedTime( canvas_type: int, timestamp_ms: int ) -> "TimestampData":
+        
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_LAST_VIEWED, location = canvas_type, timestamp_ms = timestamp_ms )
+        
+    
+    @staticmethod
+    def STATICPreviouslyImportedTime( service_key: bytes, timestamp_ms: int ) -> "TimestampData":
+        
+        return TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, location = service_key, timestamp_ms = timestamp_ms )
         
     
     @staticmethod

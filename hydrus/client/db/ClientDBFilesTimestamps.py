@@ -3,7 +3,6 @@ import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusDB
 
 from hydrus.client import ClientTime
 from hydrus.client import ClientThreading
@@ -18,12 +17,12 @@ def GetSimpleTimestampTableNames( timestamp_type: int ):
     if timestamp_type == HC.TIMESTAMP_TYPE_ARCHIVED:
         
         table_name = 'archive_timestamps'
-        column_name = 'archived_timestamp'
+        column_name = 'archived_timestamp_ms'
         
     elif timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE:
         
         table_name = 'file_modified_timestamps'
-        column_name = 'file_modified_timestamp'
+        column_name = 'file_modified_timestamp_ms'
         
     else:
         
@@ -49,15 +48,15 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         index_generation_dict = {}
         
         index_generation_dict[ 'main.archive_timestamps' ] = [
-            ( [ 'archived_timestamp' ], False, 474 )
+            ( [ 'archived_timestamp_ms' ], False, 559 )
         ]
         
         index_generation_dict[ 'main.file_domain_modified_timestamps' ] = [
-            ( [ 'file_modified_timestamp' ], False, 476 )
+            ( [ 'file_modified_timestamp_ms' ], False, 559 )
         ]
         
         index_generation_dict[ 'main.file_modified_timestamps' ] = [
-            ( [ 'file_modified_timestamp' ], False, 400 )
+            ( [ 'file_modified_timestamp_ms' ], False, 559 )
         ]
         
         return index_generation_dict
@@ -66,25 +65,25 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.archive_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, archived_timestamp INTEGER );', 474 ),
-            'main.file_domain_modified_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, domain_id INTEGER, file_modified_timestamp INTEGER, PRIMARY KEY ( hash_id, domain_id ) );', 476 ),
-            'main.file_modified_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, file_modified_timestamp INTEGER );', 400 )
+            'main.archive_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, archived_timestamp_ms INTEGER );', 474 ),
+            'main.file_domain_modified_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER, domain_id INTEGER, file_modified_timestamp_ms INTEGER, PRIMARY KEY ( hash_id, domain_id ) );', 476 ),
+            'main.file_modified_timestamps' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash_id INTEGER PRIMARY KEY, file_modified_timestamp_ms INTEGER );', 400 )
         }
         
     
-    def _ClearSimpleTimestamps( self, timestamp_type: int, hash_ids: typing.Collection[ int ] ):
+    def _ClearSimpleTimes( self, timestamp_type: int, hash_ids: typing.Collection[ int ] ):
         
         ( table_name, column_name ) = GetSimpleTimestampTableNames( timestamp_type )
         
         self._ExecuteMany( f'DELETE FROM {table_name} WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
-    def ClearArchivedTimestamps( self, hash_ids: typing.Collection[ int ] ):
+    def ClearArchivedTimes( self, hash_ids: typing.Collection[ int ] ):
         
-        self._ClearSimpleTimestamps( HC.TIMESTAMP_TYPE_ARCHIVED, hash_ids )
+        self._ClearSimpleTimes( HC.TIMESTAMP_TYPE_ARCHIVED, hash_ids )
         
     
-    def ClearTimestamp( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def ClearTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
@@ -99,13 +98,13 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
         elif timestamp_data.timestamp_type in ClientTime.SIMPLE_TIMESTAMP_TYPES:
             
-            self._ClearSimpleTimestamps( timestamp_data.timestamp_type, [ hash_id ] )
+            self._ClearSimpleTimes( timestamp_data.timestamp_type, [ hash_id ] )
             
         
         # can't clear a file timestamp or file viewing timestamp from here, can't do it from UI either, so we good for now
         
     
-    def GetHashIdsInRange( self, timestamp_type: int, ranges, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsInRange( self, timestamp_type: int, timestamp_ranges_ms, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
         
         cancelled_hook = None
         
@@ -118,22 +117,22 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
             modified_timestamp_predicates = []
             
-            if '>' in ranges:
+            if '>' in timestamp_ranges_ms:
                 
-                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) >= {}'.format( ranges[ '>' ] ) )
+                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp_ms ) >= {}'.format( timestamp_ranges_ms[ '>' ] ) )
                 
             
-            if '<' in ranges:
+            if '<' in timestamp_ranges_ms:
                 
-                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp ) <= {}'.format( ranges[ '<' ] ) )
+                modified_timestamp_predicates.append( 'MIN( file_modified_timestamp_ms ) <= {}'.format( timestamp_ranges_ms[ '<' ] ) )
                 
             
             if len( modified_timestamp_predicates ) > 0:
                 
                 pred_string = ' AND '.join( modified_timestamp_predicates )
                 
-                q1 = 'SELECT hash_id, file_modified_timestamp FROM file_modified_timestamps'
-                q2 = 'SELECT hash_id, file_modified_timestamp FROM file_domain_modified_timestamps'
+                q1 = 'SELECT hash_id, file_modified_timestamp_ms FROM file_modified_timestamps'
+                q2 = 'SELECT hash_id, file_modified_timestamp_ms FROM file_domain_modified_timestamps'
                 
                 query = 'SELECT hash_id FROM ( {} UNION {} ) GROUP BY hash_id HAVING {};'.format( q1, q2, pred_string )
                 
@@ -148,16 +147,16 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
             predicates = []
             
-            if '>' in ranges:
+            if '>' in timestamp_ranges_ms:
                 
-                value = ranges[ '>' ]
+                value = timestamp_ranges_ms[ '>' ]
                 
                 predicates.append( f'{column_name} >= {value}' )
                 
             
-            if '<' in ranges:
+            if '<' in timestamp_ranges_ms:
                 
-                value = ranges[ '<' ]
+                value = timestamp_ranges_ms[ '<' ]
                 
                 predicates.append( f'{column_name} <= {value}' )
                 
@@ -177,47 +176,47 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return set()
         
     
-    def GetHashIdsToHalfInitialisedTimestampsManagers( self, hash_ids: typing.Collection[ int ], hash_ids_table_name: str ) -> typing.Dict[ int, ClientMediaManagers.TimestampsManager ]:
+    def GetHashIdsToHalfInitialisedTimesManagers( self, hash_ids: typing.Collection[ int ], hash_ids_table_name: str ) -> typing.Dict[ int, ClientMediaManagers.TimesManager ]:
         
         # note that this doesn't fetch everything, just the stuff this module handles directly and can fetch efficiently
         
-        hash_ids_to_archive_timestamps = self.GetSimpleTimestamps( HC.TIMESTAMP_TYPE_ARCHIVED, hash_ids_table_name )
+        hash_ids_to_archive_timestamps_ms = self.GetSimpleTimestampsMS( HC.TIMESTAMP_TYPE_ARCHIVED, hash_ids_table_name )
         
-        hash_ids_to_file_modified_timestamps = self.GetSimpleTimestamps( HC.TIMESTAMP_TYPE_MODIFIED_FILE, hash_ids_table_name )
+        hash_ids_to_file_modified_timestamps_ms = self.GetSimpleTimestampsMS( HC.TIMESTAMP_TYPE_MODIFIED_FILE, hash_ids_table_name )
         
-        hash_ids_to_domain_modified_timestamps = HydrusData.BuildKeyToListDict( ( ( hash_id, ( domain, timestamp ) ) for ( hash_id, domain, timestamp ) in self._Execute( 'SELECT hash_id, domain, file_modified_timestamp FROM {} CROSS JOIN file_domain_modified_timestamps USING ( hash_id ) CROSS JOIN url_domains USING ( domain_id );'.format( hash_ids_table_name ) ) ) )
+        hash_ids_to_domain_modified_timestamps_ms = HydrusData.BuildKeyToListDict( ( ( hash_id, ( domain, timestamp_ms ) ) for ( hash_id, domain, timestamp_ms ) in self._Execute( 'SELECT hash_id, domain, file_modified_timestamp_ms FROM {} CROSS JOIN file_domain_modified_timestamps USING ( hash_id ) CROSS JOIN url_domains USING ( domain_id );'.format( hash_ids_table_name ) ) ) )
         
         hash_ids_to_timestamp_managers = {}
         
         for hash_id in hash_ids:
             
-            timestamps_manager = ClientMediaManagers.TimestampsManager()
+            times_manager = ClientMediaManagers.TimesManager()
             
-            if hash_id in hash_ids_to_file_modified_timestamps:
+            if hash_id in hash_ids_to_file_modified_timestamps_ms:
                 
-                timestamps_manager.SetFileModifiedTimestamp( hash_ids_to_file_modified_timestamps[ hash_id ] )
+                times_manager.SetFileModifiedTimestampMS( hash_ids_to_file_modified_timestamps_ms[ hash_id ] )
                 
             
-            if hash_id in hash_ids_to_domain_modified_timestamps:
+            if hash_id in hash_ids_to_domain_modified_timestamps_ms:
                 
-                for ( domain, modified_timestamp ) in hash_ids_to_domain_modified_timestamps[ hash_id ]:
+                for ( domain, modified_timestamp_ms ) in hash_ids_to_domain_modified_timestamps_ms[ hash_id ]:
                     
-                    timestamps_manager.SetDomainModifiedTimestamp( domain, modified_timestamp )
+                    times_manager.SetDomainModifiedTimestampMS( domain, modified_timestamp_ms )
                     
                 
             
-            if hash_id in hash_ids_to_archive_timestamps:
+            if hash_id in hash_ids_to_archive_timestamps_ms:
                 
-                timestamps_manager.SetArchivedTimestamp( hash_ids_to_archive_timestamps[ hash_id ] )
+                times_manager.SetArchivedTimestampMS( hash_ids_to_archive_timestamps_ms[ hash_id ] )
                 
             
-            hash_ids_to_timestamp_managers[ hash_id ] = timestamps_manager
+            hash_ids_to_timestamp_managers[ hash_id ] = times_manager
             
         
         return hash_ids_to_timestamp_managers
         
     
-    def GetSimpleTimestamps( self, timestamp_type: int, hash_ids_table_name: str ) -> typing.Dict[ int, int ]:
+    def GetSimpleTimestampsMS( self, timestamp_type: int, hash_ids_table_name: str ) -> typing.Dict[ int, int ]:
         
         ( table_name, column_name ) = GetSimpleTimestampTableNames( timestamp_type )
         
@@ -240,7 +239,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def GetTimestamp( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> typing.Optional[ int ]:
+    def GetTimestampMS( self, hash_id: int, timestamp_data: ClientTime.TimestampData ) -> typing.Optional[ int ]:
         
         result = None
         
@@ -253,15 +252,15 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
             domain_id = self.modules_urls.GetURLDomainId( timestamp_data.location )
             
-            result = self._Execute( 'SELECT file_modified_timestamp FROM file_domain_modified_timestamps WHERE hash_id = ? AND domain_id = ?;', ( hash_id, domain_id ) ).fetchone()
+            result = self._Execute( 'SELECT file_modified_timestamp_ms FROM file_domain_modified_timestamps WHERE hash_id = ? AND domain_id = ?;', ( hash_id, domain_id ) ).fetchone()
             
         elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
             
-            return self.modules_files_viewing_stats.GetTimestamp( hash_id, timestamp_data )
+            return self.modules_files_viewing_stats.GetTimestampMS( hash_id, timestamp_data )
             
         elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
             
-            return self.modules_files_storage.GetTimestamp( hash_id, timestamp_data )
+            return self.modules_files_storage.GetTimestampMS( hash_id, timestamp_data )
             
         elif timestamp_data.timestamp_type in ClientTime.REAL_SIMPLE_TIMESTAMP_TYPES:
             
@@ -280,16 +279,16 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         return timestamp
         
     
-    def SetSimpleTimestamps( self, timestamp_type: int, rows ):
+    def SetSimpleTimestampsMS( self, timestamp_type: int, rows ):
         
         ( table_name, column_name ) = GetSimpleTimestampTableNames( timestamp_type )
         
         self._ExecuteMany( f'REPLACE INTO {table_name} ( hash_id, {column_name} ) VALUES ( ?, ? );', rows )
         
     
-    def SetTimestamp( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def SetTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
         
-        if timestamp_data.timestamp is None:
+        if timestamp_data.timestamp_ms is None:
             
             return
             
@@ -303,41 +302,41 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
             domain_id = self.modules_urls.GetURLDomainId( timestamp_data.location )
             
-            self._Execute( 'REPLACE INTO file_domain_modified_timestamps ( hash_id, domain_id, file_modified_timestamp ) VALUES ( ?, ?, ? );', ( hash_id, domain_id, timestamp_data.timestamp ) )
+            self._Execute( 'REPLACE INTO file_domain_modified_timestamps ( hash_id, domain_id, file_modified_timestamp_ms ) VALUES ( ?, ?, ? );', ( hash_id, domain_id, timestamp_data.timestamp_ms ) )
             
         elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
             
-            self.modules_files_viewing_stats.SetTimestamp( hash_id, timestamp_data)
+            self.modules_files_viewing_stats.SetTime( hash_id, timestamp_data )
             
         elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
             
-            self.modules_files_storage.SetTimestamp( hash_id, timestamp_data )
+            self.modules_files_storage.SetTime( hash_id, timestamp_data )
             
         elif timestamp_data.timestamp_type in ClientTime.REAL_SIMPLE_TIMESTAMP_TYPES:
             
-            self.SetSimpleTimestamps( timestamp_data.timestamp_type, [ ( hash_id, timestamp_data.timestamp ) ] )
+            self.SetSimpleTimestampsMS( timestamp_data.timestamp_type, [ ( hash_id, timestamp_data.timestamp_ms ) ] )
             
         
     
-    def UpdateTimestamp( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def UpdateTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
         
-        if timestamp_data.timestamp is None:
+        if timestamp_data.timestamp_ms is None:
             
             return
             
         
         should_update = True
         
-        existing_timestamp = self.GetTimestamp( hash_id, timestamp_data )
+        existing_timestamp_ms = self.GetTimestampMS( hash_id, timestamp_data )
         
-        if existing_timestamp is not None:
+        if existing_timestamp_ms is not None:
             
-            should_update = ClientTime.ShouldUpdateModifiedTime( existing_timestamp, timestamp_data.timestamp )
+            should_update = ClientTime.ShouldUpdateModifiedTime( existing_timestamp_ms, timestamp_data.timestamp_ms )
             
         
         if should_update:
             
-            self.SetTimestamp( hash_id, timestamp_data )
+            self.SetTime( hash_id, timestamp_data )
             
         
     

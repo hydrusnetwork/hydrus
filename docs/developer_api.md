@@ -357,6 +357,7 @@ Arguments:
         *   8 - Edit File Relationships
         *   9 - Edit File Ratings
         *   10 - Manage Popups
+        *   11 - Edit File Times
     
     ``` title="Example request"
     /request_new_permissions?name=my%20import%20script&basic_permissions=[0,1]
@@ -1204,6 +1205,89 @@ As with [GET /get\_files/file\_metadata](#get_files_file_metadata), check [The S
 Response: 
 :   200 and no content.
 
+## Editing File Times
+
+### **POST `/edit_times/set_time`** { id="edit_times_set_time" }
+
+_Add or remove timestamps associated with a file._
+
+Restricted access: 
+:   YES. Edit Times permission needed.
+    
+Required Headers:
+:       
+    *   `Content-Type`: `application/json`
+    
+Arguments (in percent-encoded JSON):
+:   
+*   [files](#parameters_files)
+*   `timestamp` : (selective, float or int of the time in seconds, or `null` for delete)
+*   `timestamp_ms` : (selective, int of the time in milliseconds, or `null` for delete)
+*   `timestamp_type` : (int, the type of timestamp you are editing)
+*   `file_service_key` : (dependant, hexadecimal, the file service you are editing in 'imported'/'deleted'/'previously imported')
+*   `canvas_type` : (dependant, int, the canvas type you are editing in 'last viewed')
+*   `domain` : (dependant, string, the domain you are editing in 'modified (web domain)')
+
+```json title="Example request body, simple"
+{
+  "timestamp" : "1641044491",
+  "timestamp_type" : 5
+}
+```
+
+```json title="Example request body, more complicated"
+{
+  "timestamp" : "1641044491.458",
+  "timestamp_type" : 0,
+  "domain" : "blahbooru.org"
+}
+```
+
+```json title="Example request body, deleting"
+{
+  "timestamp_ms" : null,
+  "timestamp_type" : 6,
+  "canvas_type" : 1
+}
+```
+
+This is a copy of the _manage times_ dialog in the program, so if you are uncertain about something, check that out. The client records timestamps up to millisecond accuracy.
+
+You have to select some files, obviously. I'd imagine most uses will be over one file at a time, but you can spam 100 or 10,000 if you need to.
+
+Then choose whether you want to work with `timestamp` or `timestamp_ms`. `timestamp` can be an integer or a float, and in the latter case, the API will suck up the three most significant digits to be the millisecond data. `timestamp_ms` is an integer of milliseconds, simply the `timestamp` value multiplied by 1,000. It doesn't matter which you use--whichever is easiest for you.
+
+If you send `null` timestamp time, then this will instruct to delete the existing value, if possible and reasonable.
+
+`timestamp_type` is an enum as follows:
+
+*   0 - File modified time (web domain)
+*   1 - File modified time (on the hard drive)
+*   3 - File import time
+*   4 - File delete time
+*   5 - Archived time
+*   6 - Last viewed (in the media viewer)
+*   7 - File originally imported time
+
+If you select 0, you have to include a `domain`, which will usually be a web domain, but you can put anything in there.
+
+If you select 1, the client will _not_ alter the modified time on your hard disk, only the database record. This is unlike the dialog. Let's let this system breathe a bit before we try to get too clever.
+
+If you select 3, 4, or 7, you have to include a `file_service_key`. The 'previously imported' time is for deleted files only; it records when the file was originally imported so if the user hits 'undo', the database knows what import time to give back to it. I have prohibited timestamp deletion for these file service timestamps, since the system that manages them doesn't work so simply.
+
+If you select 6, you have to include a `canvas_type`, which is:
+
+*   0 - Media viewer
+*   1 - Preview viewer
+
+!!! warning
+    This is a complicated system that normally has a bunch of safety rails in the program code, but I have given you free access here!
+    
+    In general, adding new times might work, but it may well break something or just make no change. If you want to be safe, then only edit times you already see in [/get\_files/file\_metadata](#get_files_file_metadata). Do **not** set nonsensicle times like an archived time for a file currently in the inbox or a deletion time for a file you actually have. Let me know if you run into any trouble!
+
+Response: 
+:   200 and no content.
+
 ## Editing File Notes
 
 ### **POST `/add_notes/set_notes`** { id="add_notes_set_notes" }
@@ -1531,6 +1615,7 @@ Arguments (in percent-encoded JSON):
     *   `only_return_basic_information`: true or false (optional, defaulting to false)
     *   `detailed_url_information`: true or false (optional, defaulting to false)
     *   `include_blurhash`: true or false (optional, defaulting to false. Only applies when `only_return_basic_information` is true)
+    *   `include_milliseconds`: true or false (optional, defaulting to false)
     *   `include_notes`: true or false (optional, defaulting to false)
     *   `include_services_object`: true or false (optional, defaulting to true)
     *   `hide_service_keys_tags`: **Deprecated, will be deleted soon!** true or false (optional, defaulting to true)
@@ -1779,6 +1864,10 @@ Size is in bytes. Duration is in milliseconds, and may be an int or a float.
 `ipfs_multihashes` stores the ipfs service key to any known multihash for the file. 
 
 The `thumbnail_width` and `thumbnail_height` are a generally reliable prediction but aren't a promise. The actual thumbnail you get from [/get\_files/thumbnail](#get_files_thumbnail) will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.
+
+`include_notes` will decide whether to show a file's notes, in a simple names->texts Object.
+
+`include_milliseconds` will determine if timestamps are integers (`1641044491`), which is the default, or floats with three significant figures (`1641044491.485`). As of v559, all file timestamps across the program are internally tracked with milliseconds.
 
 If the file has a thumbnail, `blurhash` gives a base 83 encoded string of its [blurhash](https://blurha.sh/). `pixel_hash` is an SHA256 of the image's pixel data and should exactly match for pixel-identical files (it is used in the duplicate system for 'must be pixel duplicates').
 
@@ -2587,7 +2676,7 @@ Response:
     `page_key` is a unique identifier for the page. It will stay the same for a particular page throughout the session, but new ones are generated on a session reload.
     
     `page_type` is as follows:
-
+    
     *   1 - Gallery downloader
     *   2 - Simple downloader
     *   3 - Hard drive import

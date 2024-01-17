@@ -3438,9 +3438,9 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 panel_vbox.addSpacing( ClientGUIFunctions.ConvertTextToPixelWidth( self, 2 ) )
                 
-                eit = boned_stats[ 'earliest_import_time' ]
+                eit_timestamp = boned_stats[ 'earliest_import_time' ]
                 
-                eit_label = 'Earliest file import: {} ({})'.format( HydrusTime.TimestampToPrettyTime( eit ), HydrusTime.TimestampToPrettyTimeDelta( eit ) )
+                eit_label = 'Earliest file import: {} ({})'.format( HydrusTime.TimestampToPrettyTime( eit_timestamp ), HydrusTime.TimestampToPrettyTimeDelta( eit_timestamp ) )
                 
                 eit_st = ClientGUICommon.BetterStaticText( self._files_content_panel, label = eit_label )
                 
@@ -4561,16 +4561,16 @@ Vacuuming is an expensive operation. It requires lots of free space on your driv
             pretty_free_size = '{} ({})'.format( pretty_free_size, HydrusData.ConvertFloatToPercentage( sort_free_size / sort_total_size ) )
             
         
-        sort_last_vacuumed = vacuum_dict[ 'last_vacuumed' ]
+        sort_last_vacuumed_ms = vacuum_dict[ 'last_vacuumed_ms' ]
         
-        if sort_last_vacuumed == 0 or sort_last_vacuumed is None:
+        if sort_last_vacuumed_ms == 0 or sort_last_vacuumed_ms is None:
             
-            sort_last_vacuumed = 0
-            pretty_last_vacuumed = 'never done'
+            sort_last_vacuumed_ms = 0
+            pretty_last_vacuumed_ms = 'never done'
             
         else:
             
-            pretty_last_vacuumed = HydrusTime.TimestampToPrettyTimeDelta( sort_last_vacuumed )
+            pretty_last_vacuumed_ms = HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( sort_last_vacuumed_ms ) )
             
         
         ( result, info ) = self._CanVacuumName( name )
@@ -4580,8 +4580,8 @@ Vacuuming is an expensive operation. It requires lots of free space on your driv
         
         ( sort_vacuum_time_estimate, pretty_vacuum_time_estimate ) = self._GetVacuumTimeEstimate( sort_total_size )
         
-        display_tuple = ( pretty_name, pretty_total_size, pretty_free_size, pretty_last_vacuumed, pretty_can_vacuum, pretty_vacuum_time_estimate )
-        sort_tuple = ( sort_name, sort_total_size, sort_free_size, sort_last_vacuumed, sort_can_vacuum, sort_vacuum_time_estimate )
+        display_tuple = ( pretty_name, pretty_total_size, pretty_free_size, pretty_last_vacuumed_ms, pretty_can_vacuum, pretty_vacuum_time_estimate )
+        sort_tuple = ( sort_name, sort_total_size, sort_free_size, sort_last_vacuumed_ms, sort_can_vacuum, sort_vacuum_time_estimate )
         
         return ( display_tuple, sort_tuple )
         

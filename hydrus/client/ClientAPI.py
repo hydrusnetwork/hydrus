@@ -21,6 +21,7 @@ CLIENT_API_PERMISSION_ADD_NOTES = 7
 CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS = 8
 CLIENT_API_PERMISSION_EDIT_RATINGS = 9
 CLIENT_API_PERMISSION_MANAGE_POPUPS = 10
+CLIENT_API_PERMISSION_EDIT_TIMES = 11
 
 ALLOWED_PERMISSIONS = (
     CLIENT_API_PERMISSION_ADD_FILES,
@@ -33,7 +34,8 @@ ALLOWED_PERMISSIONS = (
     CLIENT_API_PERMISSION_ADD_NOTES,
     CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS,
     CLIENT_API_PERMISSION_EDIT_RATINGS,
-    CLIENT_API_PERMISSION_MANAGE_POPUPS
+    CLIENT_API_PERMISSION_MANAGE_POPUPS,
+    CLIENT_API_PERMISSION_EDIT_TIMES
 )
 
 basic_permission_to_str_lookup = {}
@@ -41,7 +43,7 @@ basic_permission_to_str_lookup = {}
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_URLS ] = 'import and edit urls'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_FILES ] = 'import and delete files'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_TAGS ] = 'edit file tags'
-basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_SEARCH_FILES ] = 'search and fetch files'
+basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_SEARCH_FILES ] = 'search for and fetch files'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_PAGES ] = 'manage pages'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_HEADERS ] = 'manage cookies and headers'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_DATABASE ] = 'manage database'
@@ -49,6 +51,7 @@ basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_ADD_NOTES ] = 'edit file n
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_FILE_RELATIONSHIPS ] = 'edit file relationships'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_EDIT_RATINGS ] = 'edit file ratings'
 basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_MANAGE_POPUPS ] = 'manage popups'
+basic_permission_to_str_lookup[ CLIENT_API_PERMISSION_EDIT_TIMES ] = 'edit file times'
 
 SEARCH_RESULTS_CACHE_TIMEOUT = 4 * 3600
 

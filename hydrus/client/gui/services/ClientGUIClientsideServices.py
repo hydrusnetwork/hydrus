@@ -1648,7 +1648,7 @@ class ReviewServicePanel( QW.QWidget ):
             subpanels.append( ( ReviewServiceRestrictedSubPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             
         
-        if service_type in HC.FILE_SERVICES:
+        if service_type in HC.REAL_FILE_SERVICES:
             
             subpanels.append( ( ReviewServiceFileSubPanel( self, service ), CC.FLAGS_EXPAND_PERPENDICULAR ) )
             

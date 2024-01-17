@@ -2284,20 +2284,20 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._media = media
         
-        timestamps_manager = self._media.GetLocationsManager().GetTimestampsManager()
+        times_manager = self._media.GetLocationsManager().GetTimesManager()
         
         #
         
-        self._archive_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
-        self._file_modified_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
+        self._archived_time = ClientGUITime.DateTimeButton( self, seconds_allowed = True, milliseconds_allowed = True, only_past_dates = True )
+        self._file_modified_time = ClientGUITime.DateTimeButton( self, seconds_allowed = True, milliseconds_allowed = True, only_past_dates = True )
         
-        self._last_viewed_media_viewer_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
-        self._last_viewed_preview_viewer_timestamp = ClientGUITime.DateTimeButton( self, seconds_allowed = True, only_past_dates = True )
+        self._last_viewed_media_viewer_time = ClientGUITime.DateTimeButton( self, seconds_allowed = True, milliseconds_allowed = True, only_past_dates = True )
+        self._last_viewed_preview_viewer_time = ClientGUITime.DateTimeButton( self, seconds_allowed = True, milliseconds_allowed = True, only_past_dates = True )
         
-        self._file_modified_timestamp_warning_st = ClientGUICommon.BetterStaticText( self, label = 'initialising' )
-        self._file_modified_timestamp_warning_st.setObjectName( 'HydrusWarning' )
-        self._file_modified_timestamp_warning_st.setAlignment( QC.Qt.AlignCenter )
-        self._file_modified_timestamp_warning_st.setVisible( False )
+        self._file_modified_time_warning_st = ClientGUICommon.BetterStaticText( self, label = 'initialising' )
+        self._file_modified_time_warning_st.setObjectName( 'HydrusWarning' )
+        self._file_modified_time_warning_st.setAlignment( QC.Qt.AlignCenter )
+        self._file_modified_time_warning_st.setVisible( False )
         
         domain_box = ClientGUICommon.StaticBox( self, 'web domain times' )
         
@@ -2328,74 +2328,74 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         #
         
-        file_modified_timestamp = timestamps_manager.GetFileModifiedTimestamp()
+        file_modified_timestamp_ms = times_manager.GetFileModifiedTimestampMS()
         
-        if file_modified_timestamp is None:
+        if file_modified_timestamp_ms is None:
             
-            self._file_modified_timestamp.setEnabled( False )
-            self._file_modified_timestamp.setText( 'unknown -- run file maintenance to determine' )
+            self._file_modified_time.setEnabled( False )
+            self._file_modified_time.setText( 'unknown -- run file maintenance to determine' )
             
         else:
             
-            self._file_modified_timestamp.SetValueTimestamp( file_modified_timestamp )
+            self._file_modified_time.SetValueTimestampMS( file_modified_timestamp_ms )
             
         
-        rows.append( ( 'file modified time: ', self._file_modified_timestamp ) )
+        rows.append( ( 'file modified time: ', self._file_modified_time ) )
         
-        rows.append( self._file_modified_timestamp_warning_st )
+        rows.append( self._file_modified_time_warning_st )
         
         #
         
         if not self._media.HasInbox():
             
-            archived_timestamp = timestamps_manager.GetArchivedTimestamp()
+            archived_timestamp_ms = times_manager.GetArchivedTimestampMS()
             
-            if archived_timestamp is not None:
+            if archived_timestamp_ms is not None:
                 
-                self._archive_timestamp.SetValueTimestamp( archived_timestamp )
+                self._archived_time.SetValueTimestampMS( archived_timestamp_ms )
                 
             
-            rows.append( ( 'archived time: ', self._archive_timestamp ) )
+            rows.append( ( 'archived time: ', self._archived_time ) )
             
         else:
             
-            self._archive_timestamp.setVisible( False )
+            self._archived_time.setVisible( False )
             
         
         #
         
-        last_viewed_media_viewer_timestamp = timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_MEDIA_VIEWER )
+        last_viewed_media_viewer_timestamp_ms = times_manager.GetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER )
         
-        if last_viewed_media_viewer_timestamp is None:
+        if last_viewed_media_viewer_timestamp_ms is None:
             
-            self._last_viewed_media_viewer_timestamp.setVisible( False )
+            self._last_viewed_media_viewer_time.setVisible( False )
             
         else:
             
-            self._last_viewed_media_viewer_timestamp.SetValueTimestamp( last_viewed_media_viewer_timestamp )
+            self._last_viewed_media_viewer_time.SetValueTimestampMS( last_viewed_media_viewer_timestamp_ms )
             
-            rows.append( ( 'last viewed in media viewer: ', self._last_viewed_media_viewer_timestamp ) )
+            rows.append( ( 'last viewed in media viewer: ', self._last_viewed_media_viewer_time ) )
             
         
-        last_viewed_preview_viewer_timestamp = timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_PREVIEW )
+        last_viewed_preview_viewer_timestamp_ms = times_manager.GetLastViewedTimestampMS( CC.CANVAS_PREVIEW )
         
-        if last_viewed_preview_viewer_timestamp is None:
+        if last_viewed_preview_viewer_timestamp_ms is None:
             
-            self._last_viewed_preview_viewer_timestamp.setVisible( False )
+            self._last_viewed_preview_viewer_time.setVisible( False )
             
         else:
             
-            self._last_viewed_preview_viewer_timestamp.SetValueTimestamp( last_viewed_preview_viewer_timestamp )
+            self._last_viewed_preview_viewer_time.SetValueTimestampMS( last_viewed_preview_viewer_timestamp_ms )
             
-            rows.append( ( 'last viewed in preview viewer: ', self._last_viewed_preview_viewer_timestamp ) )
+            rows.append( ( 'last viewed in preview viewer: ', self._last_viewed_preview_viewer_time ) )
             
         
         #
         
-        self._domain_modified_list_ctrl.AddDatas( timestamps_manager.GetDomainModifiedTimestampDatas() )
+        self._domain_modified_list_ctrl.AddDatas( times_manager.GetDomainModifiedTimestampDatas() )
         self._domain_modified_list_ctrl.Sort()
         
-        self._file_services_list_ctrl.AddDatas( timestamps_manager.GetFileServiceTimestampDatas() )
+        self._file_services_list_ctrl.AddDatas( times_manager.GetFileServiceTimestampDatas() )
         self._file_services_list_ctrl.Sort()
         
         #
@@ -2408,7 +2408,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         menu_items.append( ( 'normal', 'all file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
         
-        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_DELETED ), adjust_delta = 1 )
+        c = HydrusData.Call( self._Copy, allowed_timestamp_types = ( HC.TIMESTAMP_TYPE_IMPORTED, HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, HC.TIMESTAMP_TYPE_DELETED ), adjust_delta_ms = 1000 )
         
         menu_items.append( ( 'normal', 'all file service times, plus one second', 'This is an experiment, feel free to play around with it to manually force a certain order on a handful of files. I expect to replace it will a full \'cascade\' dialog in future.', c ) )
         
@@ -2443,7 +2443,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media' ] )
         
-        self._file_modified_timestamp.dateTimeChanged.connect( self._ShowFileModifiedWarning )
+        self._file_modified_time.dateTimeChanged.connect( self._ShowFileModifiedWarning )
         
         ClientGUIFunctions.SetFocusLater( self )
         
@@ -2452,10 +2452,10 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         domain = timestamp_data.location
         
-        pretty_timestamp = HydrusTime.TimestampToPrettyTime( timestamp_data.timestamp )
+        pretty_timestamp = HydrusTime.TimestampMSToPrettyTime( timestamp_data.timestamp_ms )
         
         display_tuple = ( domain, pretty_timestamp )
-        sort_tuple = ( domain, timestamp_data.timestamp )
+        sort_tuple = ( domain, timestamp_data.timestamp_ms )
         
         return ( display_tuple, sort_tuple )
         
@@ -2476,44 +2476,48 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         pretty_timestamp_type = HC.timestamp_type_str_lookup[ timestamp_data.timestamp_type ]
         sort_timestamp_type = pretty_timestamp_type
         
-        pretty_timestamp = HydrusTime.TimestampToPrettyTime( timestamp_data.timestamp )
+        pretty_timestamp = HydrusTime.TimestampMSToPrettyTime( timestamp_data.timestamp_ms )
         
-        if timestamp_data.timestamp is None:
+        if timestamp_data.timestamp_ms is None:
             
-            sort_timestamp = 0
+            sort_timestamp_ms = 0
             
         else:
             
-            sort_timestamp = timestamp_data.timestamp
+            sort_timestamp_ms = timestamp_data.timestamp_ms
             
         
         display_tuple = ( pretty_name, pretty_timestamp_type, pretty_timestamp )
-        sort_tuple = ( sort_name, sort_timestamp_type, sort_timestamp )
+        sort_tuple = ( sort_name, sort_timestamp_type, sort_timestamp_ms )
         
         return ( display_tuple, sort_tuple )
         
     
-    def _Copy( self, allowed_timestamp_types = None, adjust_delta = 0 ):
+    def _Copy( self, allowed_timestamp_types = None, adjust_delta_ms = 0 ):
         
         list_of_timestamp_data = self._GetValidTimestampDatas()
         
         if allowed_timestamp_types is not None:
             
-            list_of_timestamp_data = [ timestamp_data for timestamp_data in list_of_timestamp_data if timestamp_data.timestamp_type in allowed_timestamp_types ]
+            list_of_timestamp_data = HydrusSerialisable.SerialisableList( [ timestamp_data for timestamp_data in list_of_timestamp_data if timestamp_data.timestamp_type in allowed_timestamp_types ] )
             
         
-        if adjust_delta != 0:
+        if adjust_delta_ms != 0:
+            
+            new_list_of_timestamp_data = HydrusSerialisable.SerialisableList()
             
             for timestamp_data in list_of_timestamp_data:
                 
-                if timestamp_data.timestamp is not None:
+                if timestamp_data.timestamp_ms is not None:
                     
-                    timestamp_data.timestamp += adjust_delta
+                    new_timestamp_data = ClientTime.TimestampData( timestamp_type = timestamp_data.timestamp_type, location = timestamp_data.location, timestamp_ms = timestamp_data.timestamp_ms + adjust_delta_ms )
+                    
+                    new_list_of_timestamp_data.append( new_timestamp_data )
                     
                 
             
-        
-        list_of_timestamp_data = HydrusSerialisable.SerialisableList( list_of_timestamp_data )
+            list_of_timestamp_data = new_list_of_timestamp_data
+            
         
         text = json.dumps( list_of_timestamp_data.GetSerialisableTuple() )
         
@@ -2534,7 +2538,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     
                     panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg_2 )
                     
-                    control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, none_allowed = False, only_past_dates = True )
+                    control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
                     
                     qt_datetime = QC.QDateTime.currentDateTime()
                     
@@ -2548,9 +2552,9 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                         
                         new_qt_datetime = control.GetValue()
                         
-                        timestamp = new_qt_datetime.toSecsSinceEpoch()
+                        timestamp_ms = new_qt_datetime.toMSecsSinceEpoch()
                         
-                        timestamp_data = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp = timestamp )
+                        timestamp_data = ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp_ms = timestamp_ms )
                         
                         self._domain_modified_list_ctrl.AddDatas( ( timestamp_data, ) )
                         
@@ -2571,9 +2575,9 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
                 
-                control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, none_allowed = False, only_past_dates = True )
+                control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
                 
-                qt_datetime = QC.QDateTime.fromSecsSinceEpoch( timestamp_data.timestamp )
+                qt_datetime = QC.QDateTime.fromMSecsSinceEpoch( timestamp_data.timestamp_ms )
                 
                 control.SetValue( qt_datetime )
                 
@@ -2585,13 +2589,11 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     
                     new_qt_datetime = control.GetValue()
                     
-                    new_timestamp = new_qt_datetime.toSecsSinceEpoch()
+                    new_timestamp_ms = new_qt_datetime.toMSecsSinceEpoch()
                     
-                    if new_timestamp != timestamp_data.timestamp:
+                    if new_timestamp_ms != timestamp_data.timestamp_ms:
                         
-                        new_timestamp_data = timestamp_data.Duplicate()
-                        
-                        new_timestamp_data.timestamp = new_timestamp
+                        new_timestamp_data = ClientTime.TimestampData( timestamp_type = timestamp_data.timestamp_type, location = timestamp_data.location, timestamp_ms = new_timestamp_ms )
                         
                         self._domain_modified_list_ctrl.DeleteDatas( ( timestamp_data, ) )
                         self._domain_modified_list_ctrl.AddDatas( ( new_timestamp_data, ) )
@@ -2613,9 +2615,9 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
                 
-                control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, none_allowed = False, only_past_dates = True )
+                control = ClientGUITime.DateTimeCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
                 
-                qt_datetime = QC.QDateTime.fromSecsSinceEpoch( timestamp_data.timestamp )
+                qt_datetime = QC.QDateTime.fromMSecsSinceEpoch( timestamp_data.timestamp_ms )
                 
                 control.SetValue( qt_datetime )
                 
@@ -2627,13 +2629,11 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     
                     new_qt_datetime = control.GetValue()
                     
-                    new_timestamp = new_qt_datetime.toSecsSinceEpoch()
+                    new_timestamp_ms = new_qt_datetime.toMSecsSinceEpoch()
                     
-                    if new_timestamp != timestamp_data.timestamp:
+                    if new_timestamp_ms != timestamp_data.timestamp_ms:
                         
-                        new_timestamp_data = timestamp_data.Duplicate()
-                        
-                        new_timestamp_data.timestamp = new_timestamp
+                        new_timestamp_data = ClientTime.TimestampData( timestamp_type = timestamp_data.timestamp_type, location = timestamp_data.location, timestamp_ms = new_timestamp_ms )
                         
                         self._file_services_list_ctrl.DeleteDatas( ( timestamp_data, ) )
                         self._file_services_list_ctrl.AddDatas( ( new_timestamp_data, ) )
@@ -2647,7 +2647,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
     
     def _GetValidTimestampDatas( self, only_changes = False ) -> typing.List[ ClientTime.TimestampData ]:
         
-        timestamps_manager = self._media.GetLocationsManager().GetTimestampsManager()
+        times_manager = self._media.GetLocationsManager().GetTimesManager()
         
         result = []
         
@@ -2655,52 +2655,52 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         if not self._media.HasInbox():
             
-            archive_timestamp = self._archive_timestamp.GetValueTimestamp()
+            archive_timestamp_ms = self._archived_time.GetValueTimestampMS()
             
-            we_want_it = archive_timestamp != timestamps_manager.GetArchivedTimestamp() or not only_changes
+            we_want_it = archive_timestamp_ms != times_manager.GetArchivedTimestampMS() or not only_changes
             
-            if archive_timestamp is not None and we_want_it:
+            if archive_timestamp_ms is not None and we_want_it:
                 
-                result.append( ClientTime.TimestampData.STATICArchivedTime( archive_timestamp ) )
+                result.append( ClientTime.TimestampData.STATICArchivedTime( archive_timestamp_ms ) )
                 
             
         
         #
         
-        file_modified_timestamp = self._file_modified_timestamp.GetValueTimestamp()
+        file_modified_timestamp_ms = self._file_modified_time.GetValueTimestampMS()
         
-        we_want_it = file_modified_timestamp != timestamps_manager.GetFileModifiedTimestamp() or not only_changes
+        we_want_it = file_modified_timestamp_ms != times_manager.GetFileModifiedTimestampMS() or not only_changes
         
-        if file_modified_timestamp is not None and we_want_it:
+        if file_modified_timestamp_ms is not None and we_want_it:
             
-            result.append( ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp ) )
+            result.append( ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
             
         
         #
         
-        last_viewed_media_viewer_timestamp = self._last_viewed_media_viewer_timestamp.GetValueTimestamp()
+        last_viewed_media_viewer_timestamp_ms = self._last_viewed_media_viewer_time.GetValueTimestampMS()
         
-        we_want_it = last_viewed_media_viewer_timestamp != timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_MEDIA_VIEWER ) or not only_changes
+        we_want_it = last_viewed_media_viewer_timestamp_ms != times_manager.GetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER ) or not only_changes
         
-        if last_viewed_media_viewer_timestamp is not None and we_want_it:
+        if last_viewed_media_viewer_timestamp_ms is not None and we_want_it:
             
-            result.append( ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_MEDIA_VIEWER, last_viewed_media_viewer_timestamp ) )
+            result.append( ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_MEDIA_VIEWER, last_viewed_media_viewer_timestamp_ms ) )
             
         
-        last_viewed_preview_viewer_timestamp = self._last_viewed_preview_viewer_timestamp.GetValueTimestamp()
+        last_viewed_preview_viewer_timestamp_ms = self._last_viewed_preview_viewer_time.GetValueTimestampMS()
         
-        we_want_it = last_viewed_preview_viewer_timestamp != timestamps_manager.GetLastViewedTimestamp( CC.CANVAS_PREVIEW ) or not only_changes
+        we_want_it = last_viewed_preview_viewer_timestamp_ms != times_manager.GetLastViewedTimestampMS( CC.CANVAS_PREVIEW ) or not only_changes
         
-        if last_viewed_preview_viewer_timestamp is not None and we_want_it:
+        if last_viewed_preview_viewer_timestamp_ms is not None and we_want_it:
             
-            result.append( ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_PREVIEW, last_viewed_preview_viewer_timestamp ) )
+            result.append( ClientTime.TimestampData.STATICLastViewedTime( CC.CANVAS_PREVIEW, last_viewed_preview_viewer_timestamp_ms ) )
             
         
         #
         
         new_domain_modified_timestamp_datas = self._domain_modified_list_ctrl.GetData()
         
-        original_domain_modified_timestamp_datas = timestamps_manager.GetDomainModifiedTimestampDatas()
+        original_domain_modified_timestamp_datas = times_manager.GetDomainModifiedTimestampDatas()
         
         if only_changes:
             
@@ -2714,20 +2714,20 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         original_domains = { timestamp_data.location for timestamp_data in original_domain_modified_timestamp_datas }
         new_domains = { timestamp_data.location for timestamp_data in new_domain_modified_timestamp_datas }
         
-        deletee_timestamp_datas = [ ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain, timestamp = None ) for domain in original_domains.difference( new_domains ) ]
+        deletee_timestamp_datas = [ ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain ) for domain in original_domains.difference( new_domains ) ]
         
         result.extend( deletee_timestamp_datas )
         
         #
         
         possibly_edited_file_service_timestamp_datas = self._file_services_list_ctrl.GetData()
-        original_file_service_timestamp_datas = timestamps_manager.GetFileServiceTimestampDatas()
+        original_file_service_timestamp_datas = times_manager.GetFileServiceTimestampDatas()
         
         for timestamp_data in possibly_edited_file_service_timestamp_datas:
             
             we_want_it = timestamp_data not in original_file_service_timestamp_datas or not only_changes
             
-            if timestamp_data.timestamp is not None and we_want_it:
+            if timestamp_data.timestamp_ms is not None and we_want_it:
                 
                 result.append( timestamp_data )
                 
@@ -2781,41 +2781,41 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
             if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_ARCHIVED:
                 
-                if self._media.HasInbox() or timestamp_data.timestamp is None:
+                if self._media.HasInbox() or timestamp_data.timestamp_ms is None:
                     
                     continue
                     
                 
-                self._archive_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                self._archived_time.SetValueTimestampMS( timestamp_data.timestamp_ms )
                 
             elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE:
                 
-                if timestamp_data.timestamp is None:
+                if timestamp_data.timestamp_ms is None:
                     
                     continue
                     
                 
-                self._file_modified_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                self._file_modified_time.SetValueTimestampMS( timestamp_data.timestamp_ms )
                 
             elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
                 
-                if timestamp_data.location is None or timestamp_data.timestamp is None:
+                if timestamp_data.location is None or timestamp_data.timestamp_ms is None:
                     
                     continue
                     
                 
                 if timestamp_data.location == CC.CANVAS_MEDIA_VIEWER:
                     
-                    if self._last_viewed_media_viewer_timestamp.isVisible():
+                    if self._last_viewed_media_viewer_time.isVisible():
                         
-                        self._last_viewed_media_viewer_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                        self._last_viewed_media_viewer_time.SetValueTimestampMS( timestamp_data.timestamp_ms )
                         
                     
                 elif timestamp_data.location == CC.CANVAS_PREVIEW:
                     
-                    if self._last_viewed_preview_viewer_timestamp.isVisible():
+                    if self._last_viewed_preview_viewer_time.isVisible():
                         
-                        self._last_viewed_preview_viewer_timestamp.SetValueTimestamp( timestamp_data.timestamp )
+                        self._last_viewed_preview_viewer_time.SetValueTimestampMS( timestamp_data.timestamp_ms )
                         
                     
                 
@@ -2833,14 +2833,14 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                         
                     
                 
-                if timestamp_data.timestamp is not None:
+                if timestamp_data.timestamp_ms is not None:
                     
                     self._domain_modified_list_ctrl.AddDatas( ( timestamp_data, ) )
                     
                 
             elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
                 
-                if timestamp_data.location is None or timestamp_data.timestamp is None:
+                if timestamp_data.location is None or timestamp_data.timestamp_ms is None:
                     
                     continue
                     
@@ -2851,7 +2851,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
                     
                     if existing_timestamp_data.timestamp_type == timestamp_data.timestamp_type and existing_timestamp_data.location == timestamp_data.location:
                         
-                        if existing_timestamp_data.timestamp != timestamp_data.timestamp:
+                        if existing_timestamp_data.timestamp_ms != timestamp_data.timestamp_ms:
                             
                             self._file_services_list_ctrl.DeleteDatas( ( existing_timestamp_data, ) )
                             self._file_services_list_ctrl.AddDatas( ( timestamp_data, ) )
@@ -2870,35 +2870,35 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         for timestamp_data in self._GetValidTimestampDatas( only_changes = True ):
             
-            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE and timestamp_data.timestamp is not None:
+            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE and timestamp_data.timestamp_ms is not None:
                 
-                self._file_modified_timestamp_warning_st.setVisible( True )
+                self._file_modified_time_warning_st.setVisible( True )
                 
-                if HydrusPaths.FileModifiedTimeIsOk( timestamp_data.timestamp ):
+                if HydrusPaths.FileModifiedTimeIsOk( timestamp_data.timestamp_ms / 1000 ):
                     
-                    self._file_modified_timestamp_warning_st.setText( 'This will also change the modified time of the file on disk!' )
+                    self._file_modified_time_warning_st.setText( 'This will also change the modified time of the file on disk!' )
                     
                 else:
                     
-                    self._file_modified_timestamp_warning_st.setText( 'File modified time on disk will not be changed--the timestamp is too early.' )
+                    self._file_modified_time_warning_st.setText( 'File modified time on disk will not be changed--the timestamp is too early.' )
                     
                 
                 return
                 
             
         
-        self._file_modified_timestamp_warning_st.setVisible( False )
+        self._file_modified_time_warning_st.setVisible( False )
         
     
-    def GetFileModifiedUpdate( self ) -> typing.Optional[ int ]:
+    def GetFileModifiedUpdateMS( self ) -> typing.Optional[ int ]:
         
         for timestamp_data in self._GetValidTimestampDatas( only_changes = True ):
             
-            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE and timestamp_data.timestamp is not None:
+            if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_FILE and timestamp_data.timestamp_ms is not None:
                 
-                if HydrusPaths.FileModifiedTimeIsOk( timestamp_data.timestamp ):
+                if HydrusPaths.FileModifiedTimeIsOk( timestamp_data.timestamp_ms / 1000 ):
                     
-                    return timestamp_data.timestamp
+                    return timestamp_data.timestamp_ms
                     
                 
             
@@ -2912,7 +2912,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         for timestamp_data in self._GetValidTimestampDatas( only_changes = True ):
             
-            if timestamp_data.timestamp is None:
+            if timestamp_data.timestamp_ms is None:
                 
                 content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_DELETE, ( self._media.GetHash(), timestamp_data ) )
                 

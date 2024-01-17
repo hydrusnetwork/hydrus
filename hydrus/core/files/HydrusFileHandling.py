@@ -9,6 +9,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
+from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAnimationHandling
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files import HydrusClipHandling
@@ -569,9 +570,9 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
     return ( size, mime, width, height, duration, num_frames, has_audio, num_words )
     
 
-def GetFileModifiedTimestamp( path ) -> int:
+def GetFileModifiedTimestampMS( path ) -> int:
     
-    return int( os.path.getmtime( path ) )
+    return HydrusTime.MillisecondiseS( os.path.getmtime( path ) )
     
 
 def GetHashFromPath( path ):

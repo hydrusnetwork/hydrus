@@ -36,6 +36,7 @@ def GenerateRepositoryMasterMapTableNames( service_id ):
     
     return ( hash_id_map_table_name, tag_id_map_table_name )
     
+
 def GenerateRepositoryFilesTableNames( service_id ):
     
     suffix = str( service_id )
@@ -48,6 +49,7 @@ def GenerateRepositoryFilesTableNames( service_id ):
     
     return ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name, ip_addresses_table_name )
     
+
 def GenerateRepositoryMappingsTableNames( service_id ):
     
     suffix = str( service_id )
@@ -59,6 +61,7 @@ def GenerateRepositoryMappingsTableNames( service_id ):
     
     return ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name )
     
+
 def GenerateRepositoryTagParentsTableNames( service_id ):
     
     suffix = str( service_id )
@@ -70,6 +73,7 @@ def GenerateRepositoryTagParentsTableNames( service_id ):
     
     return ( current_tag_parents_table_name, deleted_tag_parents_table_name, pending_tag_parents_table_name, petitioned_tag_parents_table_name )
     
+
 def GenerateRepositoryTagSiblingsTableNames( service_id ):
     
     suffix = str( service_id )
@@ -81,10 +85,12 @@ def GenerateRepositoryTagSiblingsTableNames( service_id ):
     
     return ( current_tag_siblings_table_name, deleted_tag_siblings_table_name, pending_tag_siblings_table_name, petitioned_tag_siblings_table_name )
     
+
 def GenerateRepositoryUpdateTableName( service_id ):
     
     return 'updates_' + str( service_id )
     
+
 class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'access_key', 'immediate_content_update', 'registration_keys' ]
@@ -294,7 +300,7 @@ class DB( HydrusDB.HydrusDB ):
         
         stale_time_delta = 30 * 86400
         
-        existing_names_to_timestamps = dict( self._Execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() )
+        existing_names_to_timestamps = { name : timestamp for ( name, timestamp ) in self._Execute( 'SELECT name, timestamp FROM analyze_timestamps;' ).fetchall() }
         
         db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
         
