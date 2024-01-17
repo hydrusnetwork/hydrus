@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.3">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.4">
     
     
       
@@ -2211,6 +2211,30 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#editing_file_times" class="md-nav__link">
+    <span class="md-ellipsis">
+      Editing File Times
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Editing File Times">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#edit_times_set_time" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /edit_times/set_time
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#editing_file_notes" class="md-nav__link">
     <span class="md-ellipsis">
       Editing File Notes
@@ -3331,6 +3355,30 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#editing_file_times" class="md-nav__link">
+    <span class="md-ellipsis">
+      Editing File Times
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Editing File Times">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#edit_times_set_time" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /edit_times/set_time
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#editing_file_notes" class="md-nav__link">
     <span class="md-ellipsis">
       Editing File Notes
@@ -4166,6 +4214,7 @@ Accept: application/json
 <li>8 - Edit File Relationships</li>
 <li>9 - Edit File Ratings</li>
 <li>10 - Manage Popups</li>
+<li>11 - Edit File Times</li>
 </ul>
 </li>
 </ul>
@@ -4948,6 +4997,79 @@ Accept: application/json
 <dt>Response:</dt>
 <dd>200 and no content.</dd>
 </dl>
+<h2 id="editing_file_times">Editing File Times<a class="headerlink" href="#editing_file_times" title="Permanent link">&para;</a></h2>
+<h3 id="edit_times_set_time"><strong>POST <code>/edit_times/set_time</code></strong><a class="headerlink" href="#edit_times_set_time" title="Permanent link">&para;</a></h3>
+<p><em>Add or remove timestamps associated with a file.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Edit Times permission needed.</dd>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: <code>application/json</code></li>
+</ul>
+</dd>
+<dt>Arguments (in percent-encoded JSON):</dt>
+<dd>
+<ul>
+<li><a href="#parameters_files">files</a></li>
+<li><code>timestamp</code> : (selective, float or int of the time in seconds, or <code>null</code> for delete)</li>
+<li><code>timestamp_ms</code> : (selective, int of the time in milliseconds, or <code>null</code> for delete)</li>
+<li><code>timestamp_type</code> : (int, the type of timestamp you are editing)</li>
+<li><code>file_service_key</code> : (dependant, hexadecimal, the file service you are editing in 'imported'/'deleted'/'previously imported')</li>
+<li><code>canvas_type</code> : (dependant, int, the canvas type you are editing in 'last viewed')</li>
+<li><code>domain</code> : (dependant, string, the domain you are editing in 'modified (web domain)')</li>
+</ul>
+</dd>
+</dl>
+<div class="highlight"><span class="filename">Example request body, simple</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1641044491&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">5</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request body, more complicated</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1641044491.458&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;domain&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;blahbooru.org&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<div class="highlight"><span class="filename">Example request body, deleting</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;timestamp_ms&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;timestamp_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;canvas_type&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="p">}</span>
+</code></pre></div>
+<p>This is a copy of the <em>manage times</em> dialog in the program, so if you are uncertain about something, check that out. The client records timestamps up to millisecond accuracy.</p>
+<p>You have to select some files, obviously. I'd imagine most uses will be over one file at a time, but you can spam 100 or 10,000 if you need to.</p>
+<p>Then choose whether you want to work with <code>timestamp</code> or <code>timestamp_ms</code>. <code>timestamp</code> can be an integer or a float, and in the latter case, the API will suck up the three most significant digits to be the millisecond data. <code>timestamp_ms</code> is an integer of milliseconds, simply the <code>timestamp</code> value multiplied by 1,000. It doesn't matter which you use--whichever is easiest for you.</p>
+<p>If you send <code>null</code> timestamp time, then this will instruct to delete the existing value, if possible and reasonable.</p>
+<p><code>timestamp_type</code> is an enum as follows:</p>
+<ul>
+<li>0 - File modified time (web domain)</li>
+<li>1 - File modified time (on the hard drive)</li>
+<li>3 - File import time</li>
+<li>4 - File delete time</li>
+<li>5 - Archived time</li>
+<li>6 - Last viewed (in the media viewer)</li>
+<li>7 - File originally imported time</li>
+</ul>
+<p>If you select 0, you have to include a <code>domain</code>, which will usually be a web domain, but you can put anything in there.</p>
+<p>If you select 1, the client will <em>not</em> alter the modified time on your hard disk, only the database record. This is unlike the dialog. Let's let this system breathe a bit before we try to get too clever.</p>
+<p>If you select 3, 4, or 7, you have to include a <code>file_service_key</code>. The 'previously imported' time is for deleted files only; it records when the file was originally imported so if the user hits 'undo', the database knows what import time to give back to it. I have prohibited timestamp deletion for these file service timestamps, since the system that manages them doesn't work so simply.</p>
+<p>If you select 6, you have to include a <code>canvas_type</code>, which is:</p>
+<ul>
+<li>0 - Media viewer</li>
+<li>1 - Preview viewer</li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>This is a complicated system that normally has a bunch of safety rails in the program code, but I have given you free access here!</p>
+<p>In general, adding new times might work, but it may well break something or just make no change. If you want to be safe, then only edit times you already see in <a href="#get_files_file_metadata">/get_files/file_metadata</a>. Do <strong>not</strong> set nonsensicle times like an archived time for a file currently in the inbox or a deletion time for a file you actually have. Let me know if you run into any trouble!</p>
+</div>
+<dl>
+<dt>Response:</dt>
+<dd>200 and no content.</dd>
+</dl>
 <h2 id="editing_file_notes">Editing File Notes<a class="headerlink" href="#editing_file_notes" title="Permanent link">&para;</a></h2>
 <h3 id="add_notes_set_notes"><strong>POST <code>/add_notes/set_notes</code></strong><a class="headerlink" href="#add_notes_set_notes" title="Permanent link">&para;</a></h3>
 <p><em>Add or update notes associated with a file.</em></p>
@@ -5266,6 +5388,7 @@ Accept: application/json
 <li><code>only_return_basic_information</code>: true or false (optional, defaulting to false)</li>
 <li><code>detailed_url_information</code>: true or false (optional, defaulting to false)</li>
 <li><code>include_blurhash</code>: true or false (optional, defaulting to false. Only applies when <code>only_return_basic_information</code> is true)</li>
+<li><code>include_milliseconds</code>: true or false (optional, defaulting to false)</li>
 <li><code>include_notes</code>: true or false (optional, defaulting to false)</li>
 <li><code>include_services_object</code>: true or false (optional, defaulting to true)</li>
 <li><code>hide_service_keys_tags</code>: <strong>Deprecated, will be deleted soon!</strong> true or false (optional, defaulting to true)</li>
@@ -5500,6 +5623,8 @@ Accept: application/json
 <p><code>file_services</code> stores which file services the file is <i>current</i>ly in and <em>deleted</em> from. The entries are by the service key, same as for tags later on. In rare cases, the timestamps may be <code>null</code>, if they are unknown (e.g. a <code>time_deleted</code> for the file deleted before this information was tracked). The <code>time_modified</code> can also be null. Time modified is just the filesystem modified time for now, but it will evolve into more complicated storage in future with multiple locations (website post times) that'll be aggregated to a sensible value in UI.</p>
 <p><code>ipfs_multihashes</code> stores the ipfs service key to any known multihash for the file. </p>
 <p>The <code>thumbnail_width</code> and <code>thumbnail_height</code> are a generally reliable prediction but aren't a promise. The actual thumbnail you get from <a href="#get_files_thumbnail">/get_files/thumbnail</a> will be different if the user hasn't looked at it since changing their thumbnail options. You only get these rows for files that hydrus actually generates an actual thumbnail for. Things like pdf won't have it. You can use your own thumb, or ask the api and it'll give you a fixed fallback; those are mostly 200x200, but you can and should size them to whatever you want.</p>
+<p><code>include_notes</code> will decide whether to show a file's notes, in a simple names-&gt;texts Object.</p>
+<p><code>include_milliseconds</code> will determine if timestamps are integers (<code>1641044491</code>), which is the default, or floats with three significant figures (<code>1641044491.485</code>). As of v559, all file timestamps across the program are internally tracked with milliseconds.</p>
 <p>If the file has a thumbnail, <code>blurhash</code> gives a base 83 encoded string of its <a href="https://blurha.sh/">blurhash</a>. <code>pixel_hash</code> is an SHA256 of the image's pixel data and should exactly match for pixel-identical files (it is used in the duplicate system for 'must be pixel duplicates').</p>
 <p>If the file's filetype is forced by the user, <code>filetype_forced</code> becomes <code>true</code> and a second mime string, <code>original_mime</code> is added.</p>
 <h4 id="tags">tags<a class="headerlink" href="#tags" title="Permanent link">&para;</a></h4>
@@ -6927,7 +7052,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 3, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">January 17, 2024</span>
   </span>
 
     
@@ -7051,10 +7176,10 @@ This request will also return any cookies for subdomains. The session system in 
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.f886a092.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.c011b7c0.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.d7c377c4.min.js"></script>
+      <script src="assets/javascripts/bundle.7389ff0e.min.js"></script>
       
     
   </body>
