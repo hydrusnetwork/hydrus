@@ -9,7 +9,6 @@ from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusTime
 
 from hydrus.test import TestController
 
@@ -21,6 +20,7 @@ from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMediaResultCache
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
 current_tag_pool = [ 'blonde hair', 'blue eyes', 'bodysuit', 'character:samus aran', 'series:metroid', 'studio:nintendo' ]
@@ -217,7 +217,7 @@ class TestMigration( unittest.TestCase ):
             
             for tag in tags:
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( hash, ) ) ) )
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( hash, ) ) ) )
                 
             
         
@@ -225,13 +225,13 @@ class TestMigration( unittest.TestCase ):
             
             for tag in tags:
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, ( hash, ) ) ) )
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, ( hash, ) ) ) )
                 
             
         
-        service_keys_to_content_updates = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
         
-        self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        self.WriteSynchronous( 'content_updates', content_update_package )
         
         content_updates = []
         
@@ -239,7 +239,7 @@ class TestMigration( unittest.TestCase ):
             
             for tag in tags:
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( hash, ) ) ) )
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( hash, ) ) ) )
                 
             
         
@@ -247,7 +247,7 @@ class TestMigration( unittest.TestCase ):
             
             for tag in tags:
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( hash, ) ) ) )
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( hash, ) ) ) )
                 
             
         
@@ -255,13 +255,18 @@ class TestMigration( unittest.TestCase ):
             
             for tag in tags:
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, ( hash, ) ) ) )
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, ( hash, ) ) ) )
                 
             
         
-        service_keys_to_content_updates = { service_key : content_updates for service_key in self._test_tag_repo_service_keys.values() }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        for service_key in self._test_tag_repo_service_keys.values():
+            
+            content_update_package.AddContentUpdates( service_key, content_updates )
+            
+        
+        self.WriteSynchronous( 'content_updates', content_update_package )
         
     
     def _test_mappings_list_to_list( self ):
@@ -707,38 +712,43 @@ class TestMigration( unittest.TestCase ):
         
         for pair in current:
             
-            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_ADD, pair ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( content_type, HC.CONTENT_UPDATE_ADD, pair ) )
             
         
         for pair in deleted:
             
-            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_DELETE, pair ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( content_type, HC.CONTENT_UPDATE_DELETE, pair ) )
             
         
-        service_keys_to_content_updates = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
         
-        self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        self.WriteSynchronous( 'content_updates', content_update_package )
         
         content_updates = []
         
         for pair in current:
             
-            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_ADD, pair ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( content_type, HC.CONTENT_UPDATE_ADD, pair ) )
             
         
         for pair in pending:
             
-            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_PEND, pair ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( content_type, HC.CONTENT_UPDATE_PEND, pair ) )
             
         
         for pair in deleted:
             
-            content_updates.append( HydrusData.ContentUpdate( content_type, HC.CONTENT_UPDATE_DELETE, pair ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( content_type, HC.CONTENT_UPDATE_DELETE, pair ) )
             
         
-        service_keys_to_content_updates = { service_key : content_updates for service_key in self._test_tag_repo_service_keys.values() }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        self.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        for service_key in self._test_tag_repo_service_keys.values():
+            
+            content_update_package.AddContentUpdates( service_key, content_updates )
+            
+        
+        self.WriteSynchronous( 'content_updates', content_update_package )
         
     
     def _test_pairs_list_to_list( self, content_type ):

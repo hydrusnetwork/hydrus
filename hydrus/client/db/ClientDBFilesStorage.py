@@ -1331,7 +1331,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'REPLACE INTO local_file_deletion_reasons ( hash_id, reason_id ) VALUES ( ?, ? );', ( ( hash_id, reason_id ) for hash_id in hash_ids ) )
         
     
-    def SetTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def SetTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.location is None:
             
@@ -1353,15 +1353,15 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         
         if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_IMPORTED:
             
-            self._Execute( 'UPDATE {} SET timestamp_ms = ? WHERE hash_id = ?;'.format( current_files_table_name ), ( timestamp_ms, hash_id ) )
+            self._ExecuteMany( f'UPDATE {current_files_table_name} SET timestamp_ms = ? WHERE hash_id = ?;', ( ( timestamp_ms, hash_id ) for hash_id in hash_ids ) )
             
         elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_DELETED:
             
-            self._Execute( 'UPDATE {} SET timestamp_ms = ? WHERE hash_id = ?;'.format( deleted_files_table_name ), ( timestamp_ms, hash_id ) )
+            self._ExecuteMany( f'UPDATE {deleted_files_table_name} SET timestamp_ms = ? WHERE hash_id = ?;', ( ( timestamp_ms, hash_id ) for hash_id in hash_ids ) )
             
         elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED:
             
-            self._Execute( 'UPDATE {} SET original_timestamp_ms = ? WHERE hash_id = ?;'.format( deleted_files_table_name ), ( timestamp_ms, hash_id ) )
+            self._ExecuteMany( f'UPDATE {deleted_files_table_name} SET original_timestamp_ms = ? WHERE hash_id = ?;', ( ( timestamp_ms, hash_id ) for hash_id in hash_ids ) )
             
         
     

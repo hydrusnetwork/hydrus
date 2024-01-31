@@ -7,7 +7,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -15,6 +14,7 @@ from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
@@ -671,17 +671,17 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_2 = []
         content_updates_3 = []
         
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'bodysuit' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'samus aran' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'clothing:bodysuit' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'bodysuit' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus bodysuit', 'samus aran' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'clothing:bodysuit' ) ) )
         
         # this last one should trigger a full on chain regen and rebuild the bodysuit pairs, despite not caring directly about them--does it?
-        content_updates_3.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'nintendo' ) ) )
+        content_updates_3.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'nintendo' ) ) )
         
-        self._write( 'content_updates', { self._my_service_key : content_updates_1 } )
-        self._write( 'content_updates', { self._my_service_key : content_updates_2 } )
-        self._write( 'content_updates', { self._my_service_key : content_updates_3 } )
+        self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_1 ) )
+        self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_2 ) )
+        self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_3 ) )
         
         self._sync_display()
         
@@ -710,18 +710,18 @@ class TestClientDBTags( unittest.TestCase ):
         content_updates_2 = []
         content_updates_3 = []
         
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', 'studio:nintendo' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran armour', 'character:samus aran' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'series:metroid' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'character:samus aran' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'metroid' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', 'studio:nintendo' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran armour', 'character:samus aran' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'metroid', 'series:metroid' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'character:samus aran' ) ) )
         
         # this last one should trigger a full on chain regen including the difficult to find link--do we find that link on regenning?
-        content_updates_3.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'studio:nintendo', 'game studio' ) ) )
+        content_updates_3.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'studio:nintendo', 'game studio' ) ) )
         
-        self._write( 'content_updates', { self._my_service_key : content_updates_1 } )
-        self._write( 'content_updates', { self._my_service_key : content_updates_2 } )
-        self._write( 'content_updates', { self._my_service_key : content_updates_3 } )
+        self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_1 ) )
+        self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_2 ) )
+        self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates_3 ) )
         
         self._sync_display()
         
@@ -797,7 +797,7 @@ class TestClientDBTags( unittest.TestCase ):
             
             for tag in child_tags[ 1 : ]:
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( tag, child_tags[ 0 ] ) ) )
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( tag, child_tags[ 0 ] ) ) )
                 
             
             parent_tags = [ parent_1, parent_2 ]
@@ -806,13 +806,13 @@ class TestClientDBTags( unittest.TestCase ):
             
             random.shuffle( child_tags )
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( child_tags[0], parent_tags[0] ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( child_tags[0], parent_tags[0] ) ) )
             
             child_tags.append( parent_tags[0] )
             
             random.shuffle( child_tags )
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( child_tags[0], parent_tags[1] ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( child_tags[0], parent_tags[1] ) ) )
             
             return content_updates
             
@@ -839,7 +839,7 @@ class TestClientDBTags( unittest.TestCase ):
                 ( child_tag_3, ( post_specific_file_3, ) )
             ]
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
+            content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
             
             return content_updates
             
@@ -855,7 +855,7 @@ class TestClientDBTags( unittest.TestCase ):
                 ( child_tag_3, ( pre_specific_file_3, ) )
             ]
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
+            content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, row ) for row in rows ]
             
             return content_updates
             
@@ -875,7 +875,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         for other_service_key in other_service_keys:
             
-            self._write( 'content_updates', { other_service_key : get_pre_mapping_content_updates() } )
+            self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, get_pre_mapping_content_updates() ) )
             
             content_updates = get_display_content_updates_in_random_order()
             
@@ -884,7 +884,7 @@ class TestClientDBTags( unittest.TestCase ):
             
             for block_of_content_updates in HydrusLists.SplitListIntoChunks( content_updates, block_size ):
                 
-                self._write( 'content_updates', { other_service_key : block_of_content_updates } )
+                self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, block_of_content_updates ) )
                 
                 still_work_to_do = True
                 
@@ -894,7 +894,7 @@ class TestClientDBTags( unittest.TestCase ):
                     
                 
             
-            self._write( 'content_updates', { other_service_key : get_post_mapping_content_updates() } )
+            self._write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( other_service_key, get_post_mapping_content_updates() ) )
             
             ( siblings, ideal_sibling, descendants, ancestors ) = self._read( 'tag_siblings_and_parents_lookup', ( child_tag_1, ) )[ child_tag_1 ][ other_service_key ]
             # get ideal from here too
@@ -954,7 +954,7 @@ class TestClientDBTags( unittest.TestCase ):
         
         for pair in IRL_PARENT_PAIRS:
             
-            content_updates_list[ random.randint( 1, 3 ) ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+            content_updates_list[ random.randint( 1, 3 ) ].append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
             
         
         for pair in IRL_SIBLING_PAIRS:
@@ -966,14 +966,14 @@ class TestClientDBTags( unittest.TestCase ):
                 i = random.randint( 0, 4 )
                 
             
-            content_updates_list[ i ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
+            content_updates_list[ i ].append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
             
         
         for content_updates in content_updates_list:
             
-            service_keys_to_content_updates_1 = { self._my_service_key : content_updates }
+            content_update_package_1 = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._my_service_key, content_updates )
             
-            self._write( 'content_updates', service_keys_to_content_updates_1 )
+            self._write( 'content_updates', content_update_package_1 )
             
         
         self._sync_display()
@@ -1042,16 +1042,16 @@ class TestClientDBTags( unittest.TestCase ):
         bad_samus_tag_2 = 'samus aran'
         good_samus_tag = 'character:samus aran'
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -1076,15 +1076,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # pend samus to it in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # let's check those tags on the file's media result, which uses specific domain to populate tag data
         
@@ -1103,15 +1103,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now we'll currentify the tags in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, bad_samus_tag_2 ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # and magically our tags should now be both current, no ghost pending
         
@@ -1143,16 +1143,16 @@ class TestClientDBTags( unittest.TestCase ):
         bad_samus_tag_2 = 'samus aran'
         good_samus_tag = 'character:samus aran'
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -1177,15 +1177,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # pend samus to it in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # let's check those tags on the file's media result, which uses specific domain to populate tag data
         
@@ -1204,15 +1204,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now we'll currentify the tags in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( muh_jpg_hash, ) ) ) for tag in ( bad_samus_tag_1, good_samus_tag ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # and magically our tags should now be both current, no ghost pending
         
@@ -1245,16 +1245,16 @@ class TestClientDBTags( unittest.TestCase ):
         bad_samus_tag_2 = 'samus aran'
         good_samus_tag = 'character:samus aran'
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -1279,16 +1279,16 @@ class TestClientDBTags( unittest.TestCase ):
         
         # pend samus to it in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # let's check those tags on the file's media result, which uses specific domain to populate tag data
         
@@ -1309,15 +1309,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now we'll currentify the tags in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # and magically our tags should now be both current, no ghost pending
         
@@ -1349,16 +1349,16 @@ class TestClientDBTags( unittest.TestCase ):
         bad_samus_tag_2 = 'samus aran'
         good_samus_tag = 'character:samus aran'
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -1383,16 +1383,16 @@ class TestClientDBTags( unittest.TestCase ):
         
         # pend samus to it in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( good_samus_tag, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( good_samus_tag, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # let's check those tags on the file's media result, which uses specific domain to populate tag data
         
@@ -1413,15 +1413,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now we'll currentify the tags in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # and magically our tags should now be both current, no ghost pending
         
@@ -1452,16 +1452,16 @@ class TestClientDBTags( unittest.TestCase ):
         bad_samus_tag_2 = 'samus aran'
         good_samus_tag = 'character:samus aran'
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_1, good_samus_tag ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( bad_samus_tag_2, good_samus_tag ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -1486,17 +1486,17 @@ class TestClientDBTags( unittest.TestCase ):
         
         # pend samus to it in one action
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( lara_tag, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( lara_tag, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_1, ( muh_jpg_hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( bad_samus_tag_2, ( muh_jpg_hash, ) ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # let's check those tags on the file's media result, which uses specific domain to populate tag data
         
@@ -1554,43 +1554,43 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now add some structures, a mixture of add and pend in two parts
         
-        service_keys_to_content_updates_1 = {}
-        service_keys_to_content_updates_2 = {}
+        content_update_package_1 = ClientContentUpdates.ContentUpdatePackage()
+        content_update_package_2 = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates_1 = []
         content_updates_2 = []
         
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'cute blonde' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'elf princess', 'cute blonde' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'cute blonde', 'cute' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'cute blonde', 'blonde' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'cute blonde' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'elf princess', 'cute blonde' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'cute blonde', 'cute' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'cute blonde', 'blonde' ) ) )
         
-        service_keys_to_content_updates_1[ self._my_service_key ] = content_updates_1
-        service_keys_to_content_updates_2[ self._my_service_key ] = content_updates_2
+        content_update_package_1.AddContentUpdates( self._my_service_key, content_updates_1 )
+        content_update_package_2.AddContentUpdates( self._my_service_key, content_updates_2 )
         
         content_updates_1 = []
         content_updates_2 = []
         
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'nice clothing' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'bikini', 'nice clothing' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'nice clothing', 'nice' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'nice clothing', 'clothing' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'nice clothing' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'bikini', 'nice clothing' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'nice clothing', 'nice' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'nice clothing', 'clothing' ) ) )
         
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'metroid', 'sci-fi' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'star trek', 'sci-fi' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'sci-fi', 'sci' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'sci-fi', 'fi' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'metroid', 'sci-fi' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'star trek', 'sci-fi' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'sci-fi', 'sci' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'sci-fi', 'fi' ) ) )
         
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'splashbrush', 'an artist' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'incase', 'an artist' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'an artist', 'an' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'an artist', 'artist' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'splashbrush', 'an artist' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'incase', 'an artist' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'an artist', 'an' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'an artist', 'artist' ) ) )
         
-        service_keys_to_content_updates_1[ self._public_service_key ] = content_updates_1
-        service_keys_to_content_updates_2[ self._public_service_key ] = content_updates_2
+        content_update_package_1.AddContentUpdates( self._public_service_key, content_updates_1 )
+        content_update_package_2.AddContentUpdates( self._public_service_key, content_updates_2 )
         
-        self._write( 'content_updates', service_keys_to_content_updates_1 )
-        self._write( 'content_updates', service_keys_to_content_updates_2 )
+        self._write( 'content_updates', content_update_package_1 )
+        self._write( 'content_updates', content_update_package_2 )
         
         self._sync_display()
         
@@ -1783,25 +1783,25 @@ class TestClientDBTags( unittest.TestCase ):
         
         # add some bad parents
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'lara croft', 'cute blonde' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'lara croft', 'cute blonde' ) ) )
         
-        service_keys_to_content_updates[ self._my_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'dirty rags', 'nice clothing' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, ( 'dirty rags', 'nice clothing' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'lotr', 'sci-fi' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'lotr', 'sci-fi' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'myself', 'an artist' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, ( 'myself', 'an artist' ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -1867,25 +1867,25 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now remove them
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, ( 'lara croft', 'cute blonde' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, ( 'lara croft', 'cute blonde' ) ) )
         
-        service_keys_to_content_updates[ self._my_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, ( 'dirty rags', 'nice clothing' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, ( 'dirty rags', 'nice clothing' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'lotr', 'sci-fi' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'lotr', 'sci-fi' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'myself', 'an artist' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'myself', 'an artist' ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -2081,39 +2081,39 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now add some structures, a mixture of add and pend in two parts
         
-        service_keys_to_content_updates_1 = {}
-        service_keys_to_content_updates_2 = {}
+        content_update_package_1 = ClientContentUpdates.ContentUpdatePackage()
+        content_update_package_2 = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates_1 = []
         content_updates_2 = []
         
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'samus aran' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus_aran_(character)', 'character:samus aran' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'character:samus aran' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'samus aran' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus_aran_(character)', 'character:samus aran' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus aran', 'character:samus aran' ) ) )
         
-        service_keys_to_content_updates_1[ self._my_service_key ] = content_updates_1
-        service_keys_to_content_updates_2[ self._my_service_key ] = content_updates_2
+        content_update_package_1.AddContentUpdates( self._my_service_key, content_updates_1 )
+        content_update_package_2.AddContentUpdates( self._my_service_key, content_updates_2 )
         
         content_updates_1 = []
         content_updates_2 = []
         
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysut', 'bodysuit' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit_(clothing)', 'clothing:bodysuit' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'clothing:bodysuit' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysut', 'bodysuit' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit_(clothing)', 'clothing:bodysuit' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'bodysuit', 'clothing:bodysuit' ) ) )
         
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metrod', 'metroid' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metroid_(series)', 'series:metroid' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metroid', 'series:metroid' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metrod', 'metroid' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metroid_(series)', 'series:metroid' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'metroid', 'series:metroid' ) ) )
         
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'splashbush', 'splashbrush' ) ) )
-        content_updates_2.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'splashbrush_(artist)', 'creator:splashbrush' ) ) )
-        content_updates_1.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'splashbrush', 'creator:splashbrush' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'splashbush', 'splashbrush' ) ) )
+        content_updates_2.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'splashbrush_(artist)', 'creator:splashbrush' ) ) )
+        content_updates_1.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'splashbrush', 'creator:splashbrush' ) ) )
         
-        service_keys_to_content_updates_1[ self._public_service_key ] = content_updates_1
-        service_keys_to_content_updates_2[ self._public_service_key ] = content_updates_2
+        content_update_package_1.AddContentUpdates( self._public_service_key, content_updates_1 )
+        content_update_package_2.AddContentUpdates( self._public_service_key, content_updates_2 )
         
-        self._write( 'content_updates', service_keys_to_content_updates_1 )
-        self._write( 'content_updates', service_keys_to_content_updates_2 )
+        self._write( 'content_updates', content_update_package_1 )
+        self._write( 'content_updates', content_update_package_2 )
         
         self._sync_display()
         
@@ -2278,25 +2278,25 @@ class TestClientDBTags( unittest.TestCase ):
         
         # add some bad siblings
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'lara croft', 'character:samus aran' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'lara croft', 'character:samus aran' ) ) )
         
-        service_keys_to_content_updates[ self._my_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'shorts', 'clothing:bodysuit' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'shorts', 'clothing:bodysuit' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'tomb raider', 'series:metroid' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'tomb raider', 'series:metroid' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'incase', 'creator:splashbrush' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, ( 'incase', 'creator:splashbrush' ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -2318,25 +2318,25 @@ class TestClientDBTags( unittest.TestCase ):
         
         # now remove them
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'lara croft', 'character:samus aran' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'lara croft', 'character:samus aran' ) ) )
         
-        service_keys_to_content_updates[ self._my_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._my_service_key, content_updates )
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'shorts', 'clothing:bodysuit' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'shorts', 'clothing:bodysuit' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'tomb raider', 'series:metroid' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'tomb raider', 'series:metroid' ) ) )
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'incase', 'creator:splashbrush' ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, ( 'incase', 'creator:splashbrush' ) ) )
         
-        service_keys_to_content_updates[ self._public_service_key ] = content_updates
+        content_update_package.AddContentUpdates( self._public_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         self._sync_display()
         
@@ -2541,35 +2541,35 @@ class TestClientDBTags( unittest.TestCase ):
             
             self._clear_db()
             
-            service_keys_to_content_updates = {}
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
             content_updates = []
             
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'mc bad', 'sameus aran' ) ) )
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_both, ) ) ) for tag in ( 'mc bad', 'mc good', ) ) )
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_good, ) ) ) for tag in ( 'mc good', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'mc bad', 'sameus aran' ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_both, ) ) ) for tag in ( 'mc bad', 'mc good', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_good, ) ) ) for tag in ( 'mc good', ) ) )
             
-            service_keys_to_content_updates[ self._my_service_key ] = content_updates
-            
-            content_updates = []
-            
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, self._samus_both, self._samus_good ) ) ) for tag in ( 'process these', ) ) )
-            
-            service_keys_to_content_updates[ self._processing_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'pc bad', ) ) )
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_both, ) ) ) for tag in ( 'pc bad', 'pc good', 'samus metroid' ) ) )
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_good, ) ) ) for tag in ( 'pc good', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, self._samus_both, self._samus_good ) ) ) for tag in ( 'process these', ) ) )
             
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'pp bad', ) ) )
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_both, ) ) ) for tag in ( 'pp bad', 'pp good' ) ) )
-            content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_good, ) ) ) for tag in ( 'pp good', 'character:samus aran' ) ) )
+            content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
-            service_keys_to_content_updates[ self._public_service_key ] = content_updates
+            content_updates = []
             
-            self._write( 'content_updates', service_keys_to_content_updates )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'pc bad', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_both, ) ) ) for tag in ( 'pc bad', 'pc good', 'samus metroid' ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, ( self._samus_good, ) ) ) for tag in ( 'pc good', ) ) )
+            
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_bad, ) ) ) for tag in ( 'pp bad', ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_both, ) ) ) for tag in ( 'pp bad', 'pp good' ) ) )
+            content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, ( self._samus_good, ) ) ) for tag in ( 'pp good', 'character:samus aran' ) ) )
+            
+            content_update_package.AddContentUpdates( self._public_service_key, content_updates )
+            
+            self._write( 'content_updates', content_update_package )
             
             self._sync_display()
             
@@ -2610,21 +2610,21 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'process these', 'nope' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'process these', 'nope' ) ) )
             
-            service_keys_to_content_updates[ self._my_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'mc bad', 'mc wrong' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pc bad', 'pc wrong' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pp bad', 'pp wrong' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'link' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'link', 'zelda' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'mc bad', 'mc wrong' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pc bad', 'pc wrong' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pp bad', 'pp wrong' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'link' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'link', 'zelda' ) ) )
             
-            service_keys_to_content_updates[ self._processing_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
-            self._write( 'content_updates', service_keys_to_content_updates )
+            self._write( 'content_updates', content_update_package )
             
             self._sync_display()
             
@@ -2638,21 +2638,21 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'process these', 'nope' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'process these', 'nope' ) ) )
             
-            service_keys_to_content_updates[ self._my_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'mc bad', 'mc wrong' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'pc bad', 'pc wrong' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'pp bad', 'pp wrong' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'sameus aran', 'link' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'link', 'zelda' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'mc bad', 'mc wrong' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'pc bad', 'pc wrong' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'pp bad', 'pp wrong' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'sameus aran', 'link' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'link', 'zelda' ) ) )
             
-            service_keys_to_content_updates[ self._processing_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
-            self._write( 'content_updates', service_keys_to_content_updates )
+            self._write( 'content_updates', content_update_package )
             
             self._sync_display()
             
@@ -2666,20 +2666,20 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'mc bad', 'mc good' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'samus metroid' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'mc bad', 'mc good' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'sameus aran', 'samus metroid' ) ) )
             
-            service_keys_to_content_updates[ self._my_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pc bad', 'pc good' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pp bad', 'pp good' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus metroid', 'character:samus aran' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pc bad', 'pc good' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'pp bad', 'pp good' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'samus metroid', 'character:samus aran' ) ) )
             
-            service_keys_to_content_updates[ self._public_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._public_service_key, content_updates )
             
-            self._write( 'content_updates', service_keys_to_content_updates )
+            self._write( 'content_updates', content_update_package )
             
             self._sync_display()
             
@@ -2895,20 +2895,20 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'mc bad', 'mc good' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'sameus aran', 'samus metroid' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'mc bad', 'mc good' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, ( 'sameus aran', 'samus metroid' ) ) )
             
-            service_keys_to_content_updates[ self._my_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'pc bad', 'pc good' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'pp bad', 'pp good' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'samus metroid', 'character:samus aran' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'pc bad', 'pc good' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'pp bad', 'pp good' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'samus metroid', 'character:samus aran' ) ) )
             
-            service_keys_to_content_updates[ self._public_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._public_service_key, content_updates )
             
-            self._write( 'content_updates', service_keys_to_content_updates )
+            self._write( 'content_updates', content_update_package )
             
             self._sync_display()
             
@@ -2922,24 +2922,24 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'good answer', 'process these' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'good answer', 'process these' ) ) )
             
-            service_keys_to_content_updates[ self._my_service_key ] = content_updates
-            
-            content_updates = []
-            
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'process these', 'lmao' ) ) )
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'lmao', 'good answer' ) ) )
-            
-            service_keys_to_content_updates[ self._processing_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._my_service_key, content_updates )
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'lmao', 'process these' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'process these', 'lmao' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'lmao', 'good answer' ) ) )
             
-            service_keys_to_content_updates[ self._public_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
-            self._write( 'content_updates', service_keys_to_content_updates )
+            content_updates = []
+            
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, ( 'lmao', 'process these' ) ) )
+            
+            content_update_package.AddContentUpdates( self._public_service_key, content_updates )
+            
+            self._write( 'content_updates', content_update_package )
             
             self._sync_display()
             
@@ -2975,13 +2975,13 @@ class TestClientDBTags( unittest.TestCase ):
             
             content_updates = []
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'good answer', 'process these' ) ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, ( 'good answer', 'process these' ) ) )
             
-            service_keys_to_content_updates[ self._processing_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._processing_service_key, content_updates )
             
-            service_keys_to_content_updates[ self._public_service_key ] = content_updates
+            content_update_package.AddContentUpdates( self._public_service_key, content_updates )
             
-            self._write( 'content_updates', service_keys_to_content_updates )
+            self._write( 'content_updates', content_update_package )
             
             self._sync_display()
             

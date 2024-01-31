@@ -592,6 +592,14 @@ class FileRWLock( object ):
             
         
     
+
+# TODO: a FileSystemRWLock, which will offer locks on a prefix basis. I had a think and some playing around, and I think best answer is to copy the FileRWLock here and just make it more complicated
+# The RLock and WLock will be asked for either global or prefix based lock
+# if grabbing global lock, work as normal
+# if grabbing a prefix lock, they first get the global read lock, to block global writes
+# only track the 'largest' (i.e. shortest) prefix we have in the file system. access to 'f333' will need '33' lock, if we are in transition and 'f33' (or, say, 'f27') still exists
+# think and plan more, write some good unit tests, make sure we aren't deadlocking by being stupid somehow
+
 class QtAwareJob( HydrusThreading.SingleJob ):
     
     PRETTY_CLASS_NAME = 'single UI job'

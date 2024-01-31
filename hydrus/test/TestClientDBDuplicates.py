@@ -12,6 +12,7 @@ from hydrus.client import ClientLocation
 from hydrus.client.db import ClientDB
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.search import ClientSearch
 
 from hydrus.test import TestController
@@ -162,13 +163,13 @@ class TestClientDBDuplicates( unittest.TestCase ):
     
     def _test_initial_better_worse( self ):
         
-        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], {} )
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[1] )
         
-        row = ( HC.DUPLICATE_BETTER, self._dupe_hashes[1], self._dupe_hashes[2], {} )
+        row = ( HC.DUPLICATE_BETTER, self._dupe_hashes[1], self._dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
@@ -317,13 +318,13 @@ class TestClientDBDuplicates( unittest.TestCase ):
     
     def _test_initial_same_quality( self ):
         
-        row = ( HC.DUPLICATE_SAME_QUALITY, self._king_hash, self._dupe_hashes[4], {} )
+        row = ( HC.DUPLICATE_SAME_QUALITY, self._king_hash, self._dupe_hashes[4], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[4] )
         
-        row = ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._dupe_hashes[5], {} )
+        row = ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._dupe_hashes[5], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
@@ -426,9 +427,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._second_group_king_hash, self._second_group_dupe_hashes[1], {} ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._second_group_king_hash, self._second_group_dupe_hashes[2], {} ) )
-        rows.append( ( HC.DUPLICATE_BETTER, self._second_group_king_hash, self._second_group_dupe_hashes[3], {} ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._second_group_king_hash, self._second_group_dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._second_group_king_hash, self._second_group_dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._second_group_king_hash, self._second_group_dupe_hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -441,7 +442,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         # better than not the king
         
-        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._second_group_dupe_hashes[1], {} )
+        row = ( HC.DUPLICATE_BETTER, self._king_hash, self._second_group_dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
@@ -503,7 +504,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         # not the king is the same as not the king
         
-        row = ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._second_group_dupe_hashes[2], {} )
+        row = ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._second_group_dupe_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] )
         
         self._write( 'duplicate_pair_status', [ row ] )
         
@@ -575,19 +576,19 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[6], self._dupe_hashes[7], {} ) )
-        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[8], self._dupe_hashes[9], {} ) )
-        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[10], self._dupe_hashes[11], {} ) )
-        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[12], self._dupe_hashes[13], {} ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[6], self._dupe_hashes[7], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[8], self._dupe_hashes[9], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[10], self._dupe_hashes[11], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._dupe_hashes[12], self._dupe_hashes[13], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._dupe_hashes[6], {} ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._king_hash, self._dupe_hashes[8], {} ) )
-        rows.append( ( HC.DUPLICATE_BETTER, self._old_king_hash, self._dupe_hashes[10], {} ) )
-        rows.append( ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[12], {} ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._old_king_hash, self._dupe_hashes[6], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._king_hash, self._dupe_hashes[8], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._old_king_hash, self._dupe_hashes[10], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[12], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -630,8 +631,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[1], {} ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[2], {} ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -706,8 +707,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._alternate_king_hash, self._similar_looking_alternate_hashes[1], {} ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._alternate_king_hash, self._similar_looking_alternate_hashes[2], {} ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._alternate_king_hash, self._similar_looking_alternate_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._alternate_king_hash, self._similar_looking_alternate_hashes[2], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -788,8 +789,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[3], {} ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[4], {} ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._false_positive_king_hash, self._similar_looking_false_positive_hashes[4], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -851,8 +852,8 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._alternate_king_hash, self._similar_looking_alternate_hashes[3], {} ) )
-        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._alternate_king_hash, self._similar_looking_alternate_hashes[4], {} ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._alternate_king_hash, self._similar_looking_alternate_hashes[3], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
+        rows.append( ( HC.DUPLICATE_SAME_QUALITY, self._alternate_king_hash, self._similar_looking_alternate_hashes[4], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -976,7 +977,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, {} ) )
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -1006,7 +1007,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, {} ) )
+        rows.append( ( HC.DUPLICATE_ALTERNATE, self._king_hash, self._false_positive_king_hash, [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         
@@ -1022,7 +1023,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         rows = []
         
-        rows.append( ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], {} ) )
+        rows.append( ( HC.DUPLICATE_BETTER, self._king_hash, self._dupe_hashes[1], [ ClientContentUpdates.ContentUpdatePackage() ] ) )
         
         self._write( 'duplicate_pair_status', rows )
         

@@ -94,6 +94,7 @@ from hydrus.client.gui.services import ClientGUIClientsideServices
 from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
@@ -316,7 +317,7 @@ def THREADUploadPending( service_key ):
                         
                         content_update_row = ( file_info_manager, timestamp_ms )
                         
-                        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+                        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
                         
                     else:
                         
@@ -324,10 +325,13 @@ def THREADUploadPending( service_key ):
                         
                         service.Request( HC.POST, 'update', { 'client_to_server_update' : client_to_server_update } )
                         
-                        content_updates = client_to_server_update.GetClientsideContentUpdates()
+                        content_updates = ClientContentUpdates.ConvertClientToServerUpdateToContentUpdates( client_to_server_update )
                         
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', { service_key : content_updates } )
+                    if len( content_updates ) > 0:
+                        
+                        HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, content_updates ) )
+                        
                     
                 elif service_type == HC.IPFS:
                     
@@ -1155,11 +1159,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         if result == QW.QDialog.Accepted:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADVANCED, 'clear' )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_ADVANCED, 'clear' )
             
-            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
             
-            self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            self._controller.WriteSynchronous( 'content_updates', content_update_package )
             
             ClientGUIDialogsMessage.ShowInformation( self, 'Delete done! Please restart the client to see the changes in the UI.' )
             
@@ -3089,6 +3093,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
+        ClientGUIMenus.AppendMenuItem( menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
+        ClientGUIMenus.AppendMenuItem( menu, 'view file history', 'See a chart of your file import history.', self._ShowFileHistory )
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
         #
         
         file_maintenance_menu = ClientGUIMenus.GenerateMenu( menu )
@@ -3310,11 +3319,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'add the public tag repository', 'This will add the public tag repository to your client.', self._AutoRepoSetup )
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        ClientGUIMenus.AppendMenuItem( menu, 'how boned am I?', 'Check for a summary of your ride so far.', self._HowBonedAmI )
-        ClientGUIMenus.AppendMenuItem( menu, 'view file history', 'See a chart of your file import history.', self._ShowFileHistory )
         
         ClientGUIMenus.AppendSeparator( menu )
         

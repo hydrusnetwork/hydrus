@@ -237,7 +237,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             
         
     
-    def SetTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def SetTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.location is None:
             
@@ -249,6 +249,6 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
             return
             
         
-        self._Execute( 'UPDATE file_viewing_stats SET last_viewed_timestamp_ms = ? WHERE canvas_type = ? and hash_id = ?;', ( timestamp_data.timestamp_ms, timestamp_data.location, hash_id ) )
+        self._ExecuteMany( 'UPDATE file_viewing_stats SET last_viewed_timestamp_ms = ? WHERE canvas_type = ? and hash_id = ?;', ( ( timestamp_data.timestamp_ms, timestamp_data.location, hash_id ) for hash_id in hash_ids ) )
         
     

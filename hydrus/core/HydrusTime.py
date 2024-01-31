@@ -232,7 +232,7 @@ def CalendarDeltaToRoughDateTimeTimeDelta( years : int, months : int, days : int
     return datetime.timedelta( days = days + ( months * ( 365.25 / 12 ) ) + ( years * 365.25 ), hours = hours )
     
 
-def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True, no_bigger_than_days = False ):
+def TimeDeltaToPrettyTimeDelta( seconds: float, show_seconds = True, no_bigger_than_days = False ):
     
     if seconds is None:
         
@@ -246,7 +246,12 @@ def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True, no_bigger_than_day
     
     if seconds < 0:
         
+        negative = True
         seconds = abs( seconds )
+        
+    else:
+        
+        negative = False
         
     
     if seconds >= 60:
@@ -332,21 +337,31 @@ def TimeDeltaToPrettyTimeDelta( seconds, show_seconds = True, no_bigger_than_day
         
         result = '1 second'
         
-    elif seconds > 0.1:
-        
-        result = '{} milliseconds'.format( int( seconds * 1000 ) )
-        
-    elif seconds > 0.01:
-        
-        result = '{:.1f} milliseconds'.format( int( seconds * 1000 ) )
-        
-    elif seconds > 0.001:
-        
-        result = '{:.2f} milliseconds'.format( int( seconds * 1000 ) )
-        
     else:
         
-        result = '{} microseconds'.format( int( seconds * 1000000 ) )
+        ms = seconds * 1000
+        
+        if ms > 100 or ms % 1 == 0:
+            
+            result = f'{int( ms )} milliseconds'
+            
+        elif ms > 10:
+            
+            result = f'{ms:.1f} milliseconds'
+            
+        elif ms >= 1:
+            
+            result = f'{ms:.2f} milliseconds'
+            
+        else:
+            
+            result = f'{int( ms * 1000 )} microseconds'
+            
+        
+    
+    if negative:
+        
+        result = '-' + result
         
     
     return result

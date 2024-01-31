@@ -14,6 +14,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
 from hydrus.client import ClientImageHandling
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.metadata import ClientContentUpdates
 
 class FileImportStatus( object ):
     
@@ -221,14 +222,14 @@ class FileImportJob( object ):
                     file_info_manager = media_result.GetFileInfoManager()
                     now_ms = HydrusTime.GetNowMS()
                     
-                    service_keys_to_content_updates = {}
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage()
                     
                     for service_key in file_service_keys_to_add_to:
                         
-                        service_keys_to_content_updates[ service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) ]
+                        content_update_package.AddContentUpdate( service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) )
                         
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                 
             
@@ -551,9 +552,9 @@ class FileImportJob( object ):
             
             hashes = { self.GetHash() }
             
-            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
             
-            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.Write( 'content_updates', content_update_package )
             
         
     

@@ -14,6 +14,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
 
@@ -478,7 +479,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetServiceKeysToContentUpdates( self, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: typing.Iterable[ str ], external_filterable_tags = None, external_additional_service_keys_to_tags = None ):
+    def GetContentUpdatePackage( self, status: int, media_result: ClientMediaResult.MediaResult, filterable_tags: typing.Iterable[ str ], external_filterable_tags = None, external_additional_service_keys_to_tags = None ) -> ClientContentUpdates.ContentUpdatePackage:
         
         if external_filterable_tags is None:
             
@@ -526,9 +527,9 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
         
         hash = media_result.GetHash()
         
-        service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromServiceKeysToTags( { hash }, service_keys_to_tags )
         
-        return service_keys_to_content_updates
+        return content_update_package
         
     
     def GetServiceTagImportOptions( self, service_key ):

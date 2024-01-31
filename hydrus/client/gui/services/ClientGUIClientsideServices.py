@@ -42,6 +42,7 @@ from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
@@ -1801,7 +1802,7 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 precise_timestamp = HydrusTime.GetNowPrecise()
                 
-                self._controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+                self._controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
                 
                 it_took = HydrusTime.GetNowPrecise() - precise_timestamp
                 
@@ -2204,11 +2205,11 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
                 
                 hashes = None
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, hashes )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, hashes )
                 
-                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                 
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.Write( 'content_updates', content_update_package )
                 
                 HG.client_controller.pub( 'service_updated', self._service )
                 
@@ -3548,10 +3549,10 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
                         
                         content_update_row = ( hashes, multihash, note )
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) )
                         
                     
-                    HG.client_controller.Write( 'content_updates', { self._service.GetServiceKey() : content_updates } )
+                    HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service.GetServiceKey(), content_updates ) )
                     
                     self._my_updater.Update()
                     
@@ -3976,11 +3977,11 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         if result == QW.QDialog.Accepted:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADVANCED, advanced_action )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADVANCED, advanced_action )
             
-            service_keys_to_content_updates = { self._service.GetServiceKey() : [ content_update ] }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service.GetServiceKey(), content_update )
             
-            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates, publish_content_updates = False )
+            HG.client_controller.Write( 'content_updates', content_update_package, publish_content_updates = False )
             
             HG.client_controller.pub( 'service_updated', self._service )
             
@@ -4154,11 +4155,11 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
                 
                 for group_of_hashes in HydrusData.SplitIteratorIntoChunks( hashes, 16 ):
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
                     
-                    service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                     time.sleep( 0.01 )
                     

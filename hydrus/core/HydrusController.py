@@ -668,7 +668,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         with open( profile_log_path, 'a', encoding = 'utf-8' ) as f:
             
-            prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
+            prefix = time.strftime( '%Y-%m-%d %H:%M:%S: ' )
             
             f.write( prefix + summary )
             
@@ -697,7 +697,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         with open( query_planner_log_path, 'a', encoding = 'utf-8' ) as f:
             
-            prefix = time.strftime( '%Y/%m/%d %H:%M:%S: ' )
+            prefix = time.strftime( '%Y-%m-%d %H:%M:%S: ' )
             
             if ' ' in query:
                 

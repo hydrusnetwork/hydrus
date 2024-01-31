@@ -72,12 +72,12 @@ try:
     
     class FileHistory( QCh.QtCharts.QChartView ):
         
-        def __init__( self, parent, file_history: dict ):
+        def __init__( self, parent, file_history: dict, show_deleted: bool ):
             
             QCh.QtCharts.QChartView.__init__( self, parent )
             
             self._file_history = file_history
-            self._show_deleted = True
+            self._show_deleted = show_deleted
             
             # this lad takes ms timestamp, not s, so * 1000
             # note you have to give this floats for the ms or it throws a type problem of big number to C long
@@ -157,7 +157,11 @@ try:
             self._chart.addSeries( self._current_files_series )
             self._chart.addSeries( self._inbox_files_series )
             self._chart.addSeries( self._archive_files_series )
-            self._chart.addSeries( self._deleted_files_series )
+            
+            if self._show_deleted:
+                
+                self._chart.addSeries( self._deleted_files_series )
+                
             
             self._chart.addAxis( self._x_datetime_axis, QC.Qt.AlignBottom )
             self._chart.addAxis( self._y_value_axis, QC.Qt.AlignLeft )
@@ -165,14 +169,17 @@ try:
             self._current_files_series.attachAxis( self._x_datetime_axis )
             self._current_files_series.attachAxis( self._y_value_axis )
             
-            self._deleted_files_series.attachAxis( self._x_datetime_axis )
-            self._deleted_files_series.attachAxis( self._y_value_axis )
-            
             self._inbox_files_series.attachAxis( self._x_datetime_axis )
             self._inbox_files_series.attachAxis( self._y_value_axis )
             
             self._archive_files_series.attachAxis( self._x_datetime_axis )
             self._archive_files_series.attachAxis( self._y_value_axis )
+            
+            if self._show_deleted:
+                
+                self._deleted_files_series.attachAxis( self._x_datetime_axis )
+                self._deleted_files_series.attachAxis( self._y_value_axis )
+                
             
             self._CalculateYRange()
             

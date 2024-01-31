@@ -28,6 +28,7 @@ from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.importing import ClientImporting
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingJobs
@@ -3316,9 +3317,9 @@ class ServiceIPFS( ServiceRemote ):
             
             content_update_row = ( hashes, directory_multihash, note )
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+            content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
             
-            HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+            HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
             
             job_status.SetStatusText( 'done!' )
             
@@ -3445,9 +3446,9 @@ class ServiceIPFS( ServiceRemote ):
         
         content_update_row = ( file_info_manager, multihash )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, content_update_row ) ]
         
-        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
         
         return multihash
         
@@ -3470,9 +3471,9 @@ class ServiceIPFS( ServiceRemote ):
             network_job.WaitUntilDone()
             
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_DELETE, multihash ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_DIRECTORIES, HC.CONTENT_UPDATE_DELETE, multihash ) ]
         
-        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
         
     
     def UnpinFile( self, hash, multihash ):
@@ -3493,9 +3494,9 @@ class ServiceIPFS( ServiceRemote ):
             network_job.WaitUntilDone()
             
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash } ) ]
         
-        HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
         
     
 class ServicesManager( object ):

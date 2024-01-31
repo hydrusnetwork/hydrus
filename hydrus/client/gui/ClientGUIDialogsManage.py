@@ -24,6 +24,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 
 # Option Enums
@@ -163,18 +164,16 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         
         try:
             
-            service_keys_to_content_updates = {}
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
             for panel in self._panels:
                 
-                sub_service_keys_to_content_updates = panel.GetContentUpdates()
-                
-                service_keys_to_content_updates.update( sub_service_keys_to_content_updates )
+                content_update_package.AddContentUpdatePackage( panel.GetContentUpdatePackage() )
                 
             
-            if len( service_keys_to_content_updates ) > 0:
+            if content_update_package.HasContent():
                 
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.Write( 'content_updates', content_update_package )
                 
             
         finally:
@@ -253,9 +252,9 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             self.setLayout( gridbox )
             
         
-        def GetContentUpdates( self ):
+        def GetContentUpdatePackage( self ):
             
-            service_keys_to_content_updates = {}
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
             hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
             
@@ -276,13 +275,13 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 if rating != original_rating:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
                     
-                    service_keys_to_content_updates[ service_key ] = ( content_update, )
+                    content_update_package.AddContentUpdate( service_key, content_update )
                     
                 
             
-            return service_keys_to_content_updates
+            return content_update_package
             
         
         def GetRatingClipboardPairs( self ):
@@ -363,9 +362,9 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             self.setLayout( gridbox )
             
         
-        def GetContentUpdates( self ):
+        def GetContentUpdatePackage( self ):
             
-            service_keys_to_content_updates = {}
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
             hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
             
@@ -394,13 +393,13 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                         rating = None
                         
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
                     
-                    service_keys_to_content_updates[ service_key ] = ( content_update, )
+                    content_update_package.AddContentUpdate( service_key, content_update )
                     
                 
             
-            return service_keys_to_content_updates
+            return content_update_package
             
         
         def GetRatingClipboardPairs( self ):
@@ -510,9 +509,9 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             self.setLayout( gridbox )
             
         
-        def GetContentUpdates( self ):
+        def GetContentUpdatePackage( self ):
             
-            service_keys_to_content_updates = {}
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
             hashes = { hash for hash in itertools.chain.from_iterable( ( media.GetHashes() for media in self._media ) ) }
             
@@ -537,13 +536,13 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
                 
                 if rating != original_rating:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) )
                     
-                    service_keys_to_content_updates[ service_key ] = ( content_update, )
+                    content_update_package.AddContentUpdate( service_key, content_update )
                     
                 
             
-            return service_keys_to_content_updates
+            return content_update_package
             
         
         def GetRatingClipboardPairs( self ):

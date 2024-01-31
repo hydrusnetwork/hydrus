@@ -16,6 +16,7 @@ from hydrus.client import ClientStrings
 from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
@@ -654,7 +655,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         with self.assertRaises( Exception ):
             
-            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple local
@@ -669,11 +670,11 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         hashes = { hash }
         
-        expected_service_keys_to_content_updates = { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, hashes ) ) for tag in rows ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, hashes ) ) for tag in rows ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        HF.compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # simple repo
         
@@ -687,11 +688,11 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         hashes = { hash }
         
-        expected_service_keys_to_content_updates = { service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in rows ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in rows ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        HF.compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def test_media_notes( self ):
@@ -709,7 +710,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         with self.assertRaises( Exception ):
             
-            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple
@@ -722,13 +723,13 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter.Export( hash, notes )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in [ n.split( ': ', 1 ) for n in notes ] ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in [ n.split( ': ', 1 ) for n in notes ] ]
         
-        expected_service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        HF.compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def test_media_urls( self ):
@@ -746,7 +747,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         with self.assertRaises( Exception ):
             
-            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple
@@ -757,11 +758,11 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         exporter.Export( hash, urls )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, { hash } ) ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        HF.compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def test_media_timestamps( self ):
@@ -785,7 +786,7 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         with self.assertRaises( Exception ):
             
-            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
             
         
         # simple
@@ -800,11 +801,11 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         expected_timestamp_data_result = ClientTime.TimestampData.STATICArchivedTime( timestamp * 1000 ) # no precise milliseconds because we do not read millisecond precision from metadata migration yet!
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( hash, expected_timestamp_data_result ) ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash, ), expected_timestamp_data_result ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        HF.compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def test_media_txt( self ):

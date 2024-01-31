@@ -83,7 +83,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         self._ClearSimpleTimes( HC.TIMESTAMP_TYPE_ARCHIVED, hash_ids )
         
     
-    def ClearTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def ClearTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
@@ -94,11 +94,11 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
             domain_id = self.modules_urls.GetURLDomainId( timestamp_data.location )
             
-            self._Execute( 'DELETE FROM file_domain_modified_timestamps WHERE hash_id = ? AND domain_id = ?;', ( hash_id, domain_id ) )
+            self._ExecuteMany( 'DELETE FROM file_domain_modified_timestamps WHERE hash_id = ? AND domain_id = ?;', ( ( hash_id, domain_id ) for hash_id in hash_ids ) )
             
         elif timestamp_data.timestamp_type in ClientTime.SIMPLE_TIMESTAMP_TYPES:
             
-            self._ClearSimpleTimes( timestamp_data.timestamp_type, [ hash_id ] )
+            self._ClearSimpleTimes( timestamp_data.timestamp_type, hash_ids )
             
         
         # can't clear a file timestamp or file viewing timestamp from here, can't do it from UI either, so we good for now
@@ -286,12 +286,14 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( f'REPLACE INTO {table_name} ( hash_id, {column_name} ) VALUES ( ?, ? );', rows )
         
     
-    def SetTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def SetTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_ms is None:
             
             return
             
+        
+        # TODO: wangle all these calls from hash_id to hash_ids
         
         if timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
             
@@ -302,41 +304,51 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
             
             domain_id = self.modules_urls.GetURLDomainId( timestamp_data.location )
             
-            self._Execute( 'REPLACE INTO file_domain_modified_timestamps ( hash_id, domain_id, file_modified_timestamp_ms ) VALUES ( ?, ?, ? );', ( hash_id, domain_id, timestamp_data.timestamp_ms ) )
+            self._ExecuteMany( 'REPLACE INTO file_domain_modified_timestamps ( hash_id, domain_id, file_modified_timestamp_ms ) VALUES ( ?, ?, ? );', ( ( hash_id, domain_id, timestamp_data.timestamp_ms ) for hash_id in hash_ids ) )
             
         elif timestamp_data.timestamp_type == HC.TIMESTAMP_TYPE_LAST_VIEWED:
             
-            self.modules_files_viewing_stats.SetTime( hash_id, timestamp_data )
+            self.modules_files_viewing_stats.SetTime( hash_ids, timestamp_data )
             
         elif timestamp_data.timestamp_type in ClientTime.FILE_SERVICE_TIMESTAMP_TYPES:
             
-            self.modules_files_storage.SetTime( hash_id, timestamp_data )
+            self.modules_files_storage.SetTime( hash_ids, timestamp_data )
             
         elif timestamp_data.timestamp_type in ClientTime.REAL_SIMPLE_TIMESTAMP_TYPES:
             
-            self.SetSimpleTimestampsMS( timestamp_data.timestamp_type, [ ( hash_id, timestamp_data.timestamp_ms ) ] )
+            self.SetSimpleTimestampsMS( timestamp_data.timestamp_type, [ ( hash_id, timestamp_data.timestamp_ms ) for hash_id in hash_ids ] )
             
         
     
-    def UpdateTime( self, hash_id: int, timestamp_data: ClientTime.TimestampData ):
+    def UpdateTime( self, hash_ids: typing.Collection[ int ], timestamp_data: ClientTime.TimestampData ):
         
         if timestamp_data.timestamp_ms is None:
             
             return
             
         
-        should_update = True
+        updatable_hash_ids = []
         
-        existing_timestamp_ms = self.GetTimestampMS( hash_id, timestamp_data )
+        for hash_id in hash_ids:
+            
+            should_update = True
+            
+            existing_timestamp_ms = self.GetTimestampMS( hash_id, timestamp_data )
+            
+            if existing_timestamp_ms is not None:
+                
+                should_update = ClientTime.ShouldUpdateModifiedTime( existing_timestamp_ms, timestamp_data.timestamp_ms )
+                
+            
+            if should_update:
+                
+                updatable_hash_ids.append( hash_id )
+                
+            
         
-        if existing_timestamp_ms is not None:
+        if len( updatable_hash_ids ) > 0:
             
-            should_update = ClientTime.ShouldUpdateModifiedTime( existing_timestamp_ms, timestamp_data.timestamp_ms )
-            
-        
-        if should_update:
-            
-            self.SetTime( hash_id, timestamp_data )
+            self.SetTime( updatable_hash_ids, timestamp_data )
             
         
     

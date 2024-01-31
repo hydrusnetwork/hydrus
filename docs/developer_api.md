@@ -1221,8 +1221,8 @@ Required Headers:
 Arguments (in percent-encoded JSON):
 :   
 *   [files](#parameters_files)
-*   `timestamp` : (selective, float or int of the time in seconds, or `null` for delete)
-*   `timestamp_ms` : (selective, int of the time in milliseconds, or `null` for delete)
+*   `timestamp` : (selective, float or int of the time in seconds, or `null` for deleting web domain times)
+*   `timestamp_ms` : (selective, int of the time in milliseconds, or `null` for deleting web domain times)
 *   `timestamp_type` : (int, the type of timestamp you are editing)
 *   `file_service_key` : (dependant, hexadecimal, the file service you are editing in 'imported'/'deleted'/'previously imported')
 *   `canvas_type` : (dependant, int, the canvas type you are editing in 'last viewed')
@@ -1238,16 +1238,16 @@ Arguments (in percent-encoded JSON):
 ```json title="Example request body, more complicated"
 {
   "timestamp" : "1641044491.458",
-  "timestamp_type" : 0,
-  "domain" : "blahbooru.org"
+  "timestamp_type" : 6,
+  "canvas_type" : 1
 }
 ```
 
 ```json title="Example request body, deleting"
 {
   "timestamp_ms" : null,
-  "timestamp_type" : 6,
-  "canvas_type" : 1
+  "timestamp_type" : 0,
+  "domain" : "blahbooru.org"
 }
 ```
 
@@ -1269,21 +1269,19 @@ If you send `null` timestamp time, then this will instruct to delete the existin
 *   6 - Last viewed (in the media viewer)
 *   7 - File originally imported time
 
+!!! warning "Adding or Deleting"
+    You can add or delete type 0 (web domain) timestamps, but you can only edit existing instances of all the others. This is broadly how the _manage times_ dialog works, also. Stuff like 'last viewed' is tied up with other numbers like viewtime and num_views, so if that isn't already in the database, then we can't just add the timestamp on its own. Same with 'deleted time' for a file that isn't deleted! So, in general, other than web domain stuff, you can only edit times you already see in [/get\_files/file\_metadata](#get_files_file_metadata).
+
 If you select 0, you have to include a `domain`, which will usually be a web domain, but you can put anything in there.
 
 If you select 1, the client will _not_ alter the modified time on your hard disk, only the database record. This is unlike the dialog. Let's let this system breathe a bit before we try to get too clever.
 
-If you select 3, 4, or 7, you have to include a `file_service_key`. The 'previously imported' time is for deleted files only; it records when the file was originally imported so if the user hits 'undo', the database knows what import time to give back to it. I have prohibited timestamp deletion for these file service timestamps, since the system that manages them doesn't work so simply.
+If you select 3, 4, or 7, you have to include a `file_service_key`. The 'previously imported' time is for deleted files only; it records when the file was originally imported so if the user hits 'undo', the database knows what import time to give back to it.
 
 If you select 6, you have to include a `canvas_type`, which is:
 
 *   0 - Media viewer
 *   1 - Preview viewer
-
-!!! warning
-    This is a complicated system that normally has a bunch of safety rails in the program code, but I have given you free access here!
-    
-    In general, adding new times might work, but it may well break something or just make no change. If you want to be safe, then only edit times you already see in [/get\_files/file\_metadata](#get_files_file_metadata). Do **not** set nonsensicle times like an archived time for a file currently in the inbox or a deletion time for a file you actually have. Let me know if you run into any trouble!
 
 Response: 
 :   200 and no content.

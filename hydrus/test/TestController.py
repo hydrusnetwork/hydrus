@@ -34,7 +34,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui.lists import ClientGUIListManager
 from hydrus.client.importing import ClientImportFiles
-from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -61,7 +61,6 @@ from hydrus.test import TestClientParsing
 from hydrus.test import TestClientTags
 from hydrus.test import TestClientThreading
 from hydrus.test import TestDialogs
-from hydrus.test import TestFunctions
 from hydrus.test import TestHydrusData
 from hydrus.test import TestHydrusNATPunch
 from hydrus.test import TestHydrusNetworking
@@ -81,17 +80,6 @@ LOCAL_RATING_LIKE_SERVICE_KEY = HydrusData.GenerateKey()
 LOCAL_RATING_NUMERICAL_SERVICE_KEY = HydrusData.GenerateKey()
 LOCAL_RATING_INCDEC_SERVICE_KEY = HydrusData.GenerateKey()
 
-def ConvertServiceKeysToContentUpdatesToComparable( service_keys_to_content_updates ):
-    
-    comparable_dict = {}
-    
-    for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
-        
-        comparable_dict[ service_key ] = set( content_updates )
-        
-    
-    return comparable_dict
-    
 class MockController( object ):
     
     def __init__( self ):
@@ -793,7 +781,6 @@ class Controller( object ):
             TestClientParsing,
             TestClientTags,
             TestClientThreading,
-            TestFunctions,
             TestHydrusSerialisable,
             TestHydrusSessions,
             TestClientDB,
@@ -835,7 +822,6 @@ class Controller( object ):
             TestClientParsing,
             TestClientTags,
             TestClientThreading,
-            TestFunctions,
             TestHydrusData,
             TestHydrusPaths,
             TestHydrusTags,

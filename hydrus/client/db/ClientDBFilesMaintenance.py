@@ -177,7 +177,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
                     
                     file_modified_timestamp_ms = additional_data
                     
-                    self.modules_files_timestamps.SetTime( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
+                    self.modules_files_timestamps.SetTime( [ hash_id ], ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
                     
                     new_file_info.add( ( hash_id, hash ) )
                     

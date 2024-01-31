@@ -489,7 +489,7 @@ class ThumbnailCache( object ):
                 
             
         
-        return self._special_thumbs[ 'hydrus' ]
+        return self._special_thumbs[ HC.APPLICATION_UNKNOWN ]
         
     
     def _GetThumbnailHydrusBitmap( self, display_media ):
@@ -790,19 +790,13 @@ class ThumbnailCache( object ):
             
             self._special_thumbs = {}
             
-            names = [ 'hydrus', 'pdf', 'psd', 'clip', 'sai', 'krita', 'xcf', 'svg', 'audio', 'video', 'zip', 'epub', 'djvu', 'rtf' ]
-            
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
             thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
-            # it would be ideal to replace this with mimes_to_default_thumbnail_paths at a convenient point
-            
-            for name in names:
+            for ( mime, thumbnail_path ) in HydrusFileHandling.mimes_to_default_thumbnail_paths.items():
                 
-                path = os.path.join( HC.STATIC_DIR, '{}.png'.format( name ) )
-                
-                numpy_image = ClientImageHandling.GenerateNumPyImage( path, HC.IMAGE_PNG )
+                numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, HC.IMAGE_PNG )
                 
                 numpy_image_resolution = HydrusImageHandling.GetResolutionNumPy( numpy_image )
                 
@@ -812,7 +806,7 @@ class ThumbnailCache( object ):
                 
                 hydrus_bitmap = ClientRendering.GenerateHydrusBitmapFromNumPyImage( numpy_image )
                 
-                self._special_thumbs[ name ] = hydrus_bitmap
+                self._special_thumbs[ mime ] = hydrus_bitmap
                 
             
             self._controller.pub( 'notify_complete_thumbnail_reset' )
@@ -862,14 +856,23 @@ class ThumbnailCache( object ):
             # sometimes media can get switched around during a collect event, and if this happens during waterfall, we have a problem here
             # just return for now, we'll see how it goes
             
-            return self._special_thumbs[ 'hydrus' ]
+            return self._special_thumbs[ HC.APPLICATION_UNKNOWN ]
             
         
         can_provide = self._ShouldBeAbleToProvideThumb( display_media )
         
-        if can_provide:
+        mime = display_media.GetMime()
+        
+        if mime in self._special_thumbs:
             
-            mime = display_media.GetMime()
+            default_thumb_hydrus_bitmap = self._special_thumbs[ mime ]
+            
+        else:
+            
+            default_thumb_hydrus_bitmap = self._special_thumbs[ HC.APPLICATION_UNKNOWN ]
+            
+        
+        if can_provide:
             
             if mime in HC.MIMES_WITH_THUMBNAILS:
                 
@@ -885,7 +888,7 @@ class ThumbnailCache( object ):
                         
                     except:
                         
-                        hydrus_bitmap = self._special_thumbs[ 'hydrus' ]
+                        return default_thumb_hydrus_bitmap
                         
                     
                     self._data_cache.AddData( hash, hydrus_bitmap )
@@ -897,24 +900,9 @@ class ThumbnailCache( object ):
                 
                 return hydrus_bitmap
                 
-            elif mime in HC.AUDIO: return self._special_thumbs[ 'audio' ]
-            elif mime in HC.VIDEO: return self._special_thumbs[ 'video' ]
-            elif mime == HC.APPLICATION_PDF: return self._special_thumbs[ 'pdf' ]
-            elif mime == HC.APPLICATION_EPUB: return self._special_thumbs[ 'epub' ]
-            elif mime == HC.APPLICATION_DJVU: return self._special_thumbs[ 'djvu' ]
-            elif mime == HC.APPLICATION_RTF: return self._special_thumbs[ 'rtf' ]
-            elif mime == HC.APPLICATION_PSD: return self._special_thumbs[ 'psd' ]
-            elif mime == HC.APPLICATION_SAI2: return self._special_thumbs[ 'sai' ]
-            elif mime == HC.APPLICATION_KRITA: return self._special_thumbs[ 'krita' ]
-            elif mime == HC.APPLICATION_XCF: return self._special_thumbs[ 'xcf' ]
-            elif mime == HC.IMAGE_SVG: return self._special_thumbs[ 'svg' ]
-            elif mime in HC.ARCHIVES: return self._special_thumbs[ 'zip' ]
-            else: return self._special_thumbs[ 'hydrus' ]
             
-        else:
-            
-            return self._special_thumbs[ 'hydrus' ]
-            
+        
+        return default_thumb_hydrus_bitmap
         
     
     def HasThumbnailCached( self, media ):

@@ -72,6 +72,7 @@ from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultCache
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 from hydrus.client.networking import ClientNetworkingBandwidth
@@ -232,7 +233,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self._weakref_media_result_cache = ClientMediaResultCache.MediaResultCache()
         
-        self._after_job_content_update_jobs = []
+        self._after_job_content_update_packages = []
         self._regen_tags_managers_hash_ids = set()
         self._regen_tags_managers_tag_ids = set()
         
@@ -1038,7 +1039,7 @@ class DB( HydrusDB.HydrusDB ):
     
     def _CleanAfterJobWork( self ):
         
-        self._after_job_content_update_jobs = []
+        self._after_job_content_update_packages = []
         self._regen_tags_managers_hash_ids = set()
         self._regen_tags_managers_tag_ids = set()
         
@@ -1765,11 +1766,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DoAfterJobWork( self ):
         
-        for service_keys_to_content_updates in self._after_job_content_update_jobs:
+        for content_update_package in self._after_job_content_update_packages:
             
-            self._weakref_media_result_cache.ProcessContentUpdates( service_keys_to_content_updates )
+            self._weakref_media_result_cache.ProcessContentUpdatePackage( content_update_package )
             
-            self._cursor_transaction_wrapper.pub_after_job( 'content_updates_gui', service_keys_to_content_updates )
+            self._cursor_transaction_wrapper.pub_after_job( 'content_updates_gui', content_update_package )
             
         
         if len( self._regen_tags_managers_hash_ids ) > 0:
@@ -2191,16 +2192,11 @@ class DB( HydrusDB.HydrusDB ):
     
     def _DuplicatesSetDuplicatePairStatus( self, pair_info ):
         
-        for ( duplicate_type, hash_a, hash_b, list_of_service_keys_to_content_updates ) in pair_info:
+        for ( duplicate_type, hash_a, hash_b, content_update_packages ) in pair_info:
             
-            if isinstance( list_of_service_keys_to_content_updates, dict ):
+            for content_update_package in content_update_packages:
                 
-                list_of_service_keys_to_content_updates = [ list_of_service_keys_to_content_updates ]
-                
-            
-            for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
-                
-                self._ProcessContentUpdates( service_keys_to_content_updates )
+                self._ProcessContentUpdatePackage( content_update_package )
                 
             
             hash_id_a = self.modules_hashes_local_cache.GetHashId( hash_a )
@@ -4135,11 +4131,11 @@ class DB( HydrusDB.HydrusDB ):
                         # so lets just process that now and continue
                         # in future we'll have ipfs service sync to repopulate missing filenames
                         
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ) )
                         
-                        service_keys_to_content_updates = { service_key : [ content_update ] }
+                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
                         
-                        self._ProcessContentUpdates( service_keys_to_content_updates )
+                        self._ProcessContentUpdatePackage( content_update_package )
                         
                         continue
                         
@@ -4940,7 +4936,7 @@ class DB( HydrusDB.HydrusDB ):
             
             file_modified_timestamp_ms = file_import_job.GetFileModifiedTimestampMS()
             
-            self.modules_files_timestamps.SetTime( hash_id, ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
+            self.modules_files_timestamps.SetTime( [ hash_id ], ClientTime.TimestampData.STATICFileModifiedTime( file_modified_timestamp_ms ) )
             
             #
             
@@ -4954,9 +4950,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._AddFiles( destination_service_id, [ ( hash_id, now_ms ) ] )
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) )
                 
-                self.pub_content_updates_after_commit( { destination_file_service_key : [ content_update ] } )
+                self.pub_content_update_package_after_commit( ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( destination_file_service_key, content_update ) )
                 
             
             #
@@ -4970,9 +4966,9 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self.modules_files_inbox.ArchiveFiles( ( hash_id, ) )
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) )
                 
-                self.pub_content_updates_after_commit( { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] } )
+                self.pub_content_update_package_after_commit( ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) )
                 
             else:
                 
@@ -5668,16 +5664,16 @@ class DB( HydrusDB.HydrusDB ):
         return ( still_work_to_do, num_done )
         
     
-    def _ProcessContentUpdates( self, service_keys_to_content_updates, publish_content_updates = True ):
+    def _ProcessContentUpdatePackage( self, content_update_package, publish_content_updates = True ):
         
         notify_new_downloads = False
         notify_new_pending = False
         notify_new_parents = False
         notify_new_siblings = False
         
-        valid_service_keys_to_content_updates = {}
+        valid_content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
             
             try:
                 
@@ -5688,7 +5684,7 @@ class DB( HydrusDB.HydrusDB ):
                 continue
                 
             
-            valid_service_keys_to_content_updates[ service_key ] = content_updates
+            valid_content_update_package.AddContentUpdates( service_key, content_updates )
             
             service = self.modules_services.GetService( service_id )
             
@@ -5934,21 +5930,21 @@ class DB( HydrusDB.HydrusDB ):
                         
                     elif data_type == HC.CONTENT_TYPE_TIMESTAMP:
                         
-                        ( hash, timestamp_data ) = row
+                        ( hashes, timestamp_data ) = row
                         
-                        hash_id = self.modules_hashes_local_cache.GetHashId( hash )
+                        hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
                         
                         if action == HC.CONTENT_UPDATE_ADD:
                             
-                            self.modules_files_timestamps.UpdateTime( hash_id, timestamp_data )
+                            self.modules_files_timestamps.UpdateTime( hash_ids, timestamp_data )
                             
                         elif action == HC.CONTENT_UPDATE_SET:
                             
-                            self.modules_files_timestamps.SetTime( hash_id, timestamp_data )
+                            self.modules_files_timestamps.SetTime( hash_ids, timestamp_data )
                             
                         elif action == HC.CONTENT_UPDATE_DELETE:
                             
-                            self.modules_files_timestamps.ClearTime( hash_id, timestamp_data )
+                            self.modules_files_timestamps.ClearTime( hash_ids, timestamp_data )
                             
                         
                     elif data_type == HC.CONTENT_TYPE_FILE_VIEWING_STATS:
@@ -6419,7 +6415,7 @@ class DB( HydrusDB.HydrusDB ):
                 self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
                 
             
-            self.pub_content_updates_after_commit( valid_service_keys_to_content_updates )
+            self.pub_content_update_package_after_commit( valid_content_update_package )
             
         
     
@@ -8495,171 +8491,6 @@ class DB( HydrusDB.HydrusDB ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
         
-        if version == 490:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( '4chan-style thread api parser', ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 496:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( ( 'hentai foundry file page parser', ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 497:
-            
-            try:
-                
-                file_service_ids = self.modules_services.GetServiceIds( HC.REAL_FILE_SERVICES )
-                
-                # updating some borked enums that were overwriting tag enums
-                for service_id in file_service_ids:
-                    
-                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_PENDING_FILES, service_id, 15 ) )
-                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_PETITIONED_FILES, service_id, 16 ) )
-                    
-                
-                tag_service_ids = self.modules_services.GetServiceIds( HC.ALL_TAG_SERVICES )
-                
-                # moving 'file count' to 'file hash count'
-                for service_id in tag_service_ids:
-                    
-                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_FILE_HASHES, service_id, HC.SERVICE_INFO_NUM_FILES ) )
-                    
-                
-                rating_service_ids = self.modules_services.GetServiceIds( HC.RATINGS_SERVICES )
-                
-                # moving 'file count' to 'file hash count'
-                for service_id in rating_service_ids:
-                    
-                    self._Execute( 'UPDATE service_info SET info_type = ? WHERE service_id = ? AND info_type = ?', ( HC.SERVICE_INFO_NUM_FILE_HASHES, service_id, HC.SERVICE_INFO_NUM_FILES ) )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some cached numbers failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 498:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.RenameGUG( 'twitter syndication profile lookup (limited)', 'twitter syndication profile lookup' )
-                domain_manager.RenameGUG( 'twitter syndication profile lookup (limited) (with replies)', 'twitter syndication profile lookup (with replies)' )
-                
-                domain_manager.OverwriteDefaultGUGs( ( 'twitter syndication list lookup', 'twitter syndication likes lookup', 'twitter syndication collection lookup' ) )
-                
-                domain_manager.OverwriteDefaultParsers( ( 'twitter syndication api profile parser', 'twitter syndication api tweet parser' ) )
-                
-                domain_manager.OverwriteDefaultURLClasses( (
-                    'twitter list',
-                    'twitter syndication api collection',
-                    'twitter syndication api likes (user_id)',
-                    'twitter syndication api likes',
-                    'twitter syndication api list (list_id)',
-                    'twitter syndication api list (screen_name and slug)',
-                    'twitter syndication api list (user_id and slug)',
-                    'twitter syndication api profile (user_id)',
-                    'twitter syndication api profile',
-                    'twitter syndication api tweet',
-                    'twitter tweet'
-                ) )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                new_options.SetInteger( 'video_buffer_size', new_options.GetInteger( 'video_buffer_size_mb' ) * 1024 * 1024 )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update the video buffer option value failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
         if version == 500:
             
             try:
@@ -10173,6 +10004,58 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 559:
+            
+            try:
+                
+                for service_id in self.modules_services.GetServiceIds( HC.REAL_FILE_SERVICES ):
+                    
+                    ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name ) = ClientDBFilesStorage.GenerateFilesTableNames( service_id )
+                    
+                    # messed up the millisecond transition last week when sending files to a new local file domain. just need to detect and convert them to ms and we should be good
+                    self._Execute( f'UPDATE {current_files_table_name} SET timestamp_ms = timestamp_ms * 1000 WHERE timestamp_ms > 86400000 and timestamp_ms < ?;', ( HydrusTime.GetNow(), ) )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to fix some bad timestamps failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'derpibooru.org file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10653,7 +10536,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'clear_false_positive_relations_between_groups': self.modules_files_duplicates.ClearFalsePositiveRelationsBetweenGroupsFromHashes( *args, **kwargs )
         elif action == 'clear_orphan_file_records': self._ClearOrphanFileRecords( *args, **kwargs )
         elif action == 'clear_orphan_tables': self.modules_db_maintenance.ClearOrphanTables( *args, **kwargs )
-        elif action == 'content_updates': self._ProcessContentUpdates( *args, **kwargs )
+        elif action == 'content_updates': self._ProcessContentUpdatePackage( *args, **kwargs )
         elif action == 'cull_file_viewing_statistics': self.modules_files_viewing_stats.CullFileViewingStatistics( *args, **kwargs )
         elif action == 'db_integrity': self.modules_db_maintenance.CheckDBIntegrity( *args, **kwargs )
         elif action == 'delete_local_booru_share': self.modules_serialisable.DeleteYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
@@ -10731,9 +10614,9 @@ class DB( HydrusDB.HydrusDB ):
         return result
         
     
-    def pub_content_updates_after_commit( self, service_keys_to_content_updates ):
+    def pub_content_update_package_after_commit( self, content_update_package ):
         
-        self._after_job_content_update_jobs.append( service_keys_to_content_updates )
+        self._after_job_content_update_packages.append( content_update_package )
         
     
     def pub_initial_message( self, message ):

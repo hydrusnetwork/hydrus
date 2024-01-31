@@ -24,6 +24,7 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
@@ -819,11 +820,11 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             downloaded_tags = []
                             
-                            service_keys_to_content_updates = self._tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, media_result, downloaded_tags ) # additional tags
+                            content_update_package = self._tag_import_options.GetContentUpdatePackage( file_seed.status, media_result, downloaded_tags ) # additional tags
                             
-                            if len( service_keys_to_content_updates ) > 0:
+                            if content_update_package.HasContent():
                                 
-                                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                                 
                             
                         
@@ -870,9 +871,9 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     if len( service_keys_to_tags ) > 0:
                         
-                        service_keys_to_content_updates = ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( { hash }, service_keys_to_tags )
+                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromServiceKeysToTags( { hash }, service_keys_to_tags )
                         
-                        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                         
                     
                 

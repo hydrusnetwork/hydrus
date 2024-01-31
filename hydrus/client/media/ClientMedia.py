@@ -15,6 +15,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
@@ -54,29 +55,6 @@ def CanDisplayMedia( media: "MediaSingleton" ) -> bool:
         
     
     return True
-    
-
-
-def FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, hashes ):
-    
-    filtered_service_keys_to_content_updates = {}
-    
-    if not isinstance( hashes, set ):
-        
-        hashes = set( hashes )
-        
-    
-    for ( service_key, full_content_updates ) in full_service_keys_to_content_updates.items():
-        
-        filtered_content_updates = [ content_update for content_update in full_content_updates if not hashes.isdisjoint( content_update.GetHashes() ) ]
-        
-        if len( filtered_content_updates ) > 0:
-            
-            filtered_service_keys_to_content_updates[ service_key ] = filtered_content_updates
-            
-        
-    
-    return filtered_service_keys_to_content_updates
     
 
 def FlattenMedia( media_list ) -> typing.List[ "MediaSingleton" ]:
@@ -668,7 +646,7 @@ class MediaList( object ):
         return False
         
     
-    def _RecalcAfterContentUpdates( self, service_keys_to_content_updates ):
+    def _RecalcAfterContentUpdates( self, content_update_package ):
         
         pass
         
@@ -1113,26 +1091,28 @@ class MediaList( object ):
         return len( self._sorted_media ) == 0
         
     
-    def ProcessContentUpdates( self, full_service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, full_content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
-        if len( full_service_keys_to_content_updates ) == 0:
+        if not full_content_update_package.HasContent():
             
             return
             
         
-        service_keys_to_content_updates = FilterServiceKeysToContentUpdates( full_service_keys_to_content_updates, self._hashes )
+        content_update_package = full_content_update_package.FilterToHashes( self._hashes )
         
-        if len( service_keys_to_content_updates ) == 0:
+        if not content_update_package.HasContent():
             
             return
             
         
         for m in self._collected_media:
             
-            m.ProcessContentUpdates( service_keys_to_content_updates )
+            m.ProcessContentUpdatePackage( content_update_package )
             
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        check_for_empty_collections = False
+        
+        for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
             
             for content_update in content_updates:
                 
@@ -1162,9 +1142,13 @@ class MediaList( object ):
                         # case two, disappeared from repo hard drive while we are looking at it
                         deleted_from_repo_and_repo_view = service_key not in all_local_file_services and deleted_from_our_domain
                         
+                        moved_from_this_domain_to_another = action == HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE and service_key in self._location_context.current_service_keys
+                        
                         user_says_remove_and_possibly_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and possibly_trashed and not we_are_looking_at_trash
                         
-                        if physically_deleted_and_local_view or user_says_remove_and_possibly_trashed_from_non_trash_local_view or deleted_from_repo_and_repo_view:
+                        user_says_remove_and_moved_from_this_local_file_domain = HG.client_controller.new_options.GetBoolean( 'remove_local_domain_moved_files' ) and moved_from_this_domain_to_another
+                        
+                        if physically_deleted_and_local_view or user_says_remove_and_possibly_trashed_from_non_trash_local_view or deleted_from_repo_and_repo_view or user_says_remove_and_moved_from_this_local_file_domain:
                             
                             if user_says_remove_and_possibly_trashed_from_non_trash_local_view:
                                 
@@ -1177,13 +1161,28 @@ class MediaList( object ):
                                 
                                 self._RemoveMediaByHashes( hashes )
                                 
+                            else:
+                                
+                                check_for_empty_collections = True
+                                
                             
                         
                     
                 
             
         
-        self._RecalcAfterContentUpdates( service_keys_to_content_updates )
+        if check_for_empty_collections:
+            
+            # there are some situations with nested collected media that they have already emptied and the above actual trash hashes test no longer works and we have empty 'bubble' collections hanging around, so let's clear them now
+            now_empty_collected_media = [ media for media in self._collected_media if media.HasNoMedia() ]
+            
+            if len( now_empty_collected_media ) > 0:
+                
+                self._RemoveMediaDirectly( set(), now_empty_collected_media )
+                
+            
+        
+        self._RecalcAfterContentUpdates( content_update_package )
         
     
     def ProcessServiceUpdates( self, service_keys_to_service_updates ):
@@ -1250,7 +1249,7 @@ class ListeningMediaList( MediaList ):
         
         MediaList.__init__( self, location_context, media_results )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
@@ -1306,13 +1305,13 @@ class MediaCollection( MediaList, Media ):
         self._RecalcInternals()
         
     
-    def _RecalcAfterContentUpdates( self, service_keys_to_content_updates ):
+    def _RecalcAfterContentUpdates( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         archive_or_inbox = False
         
         data_types = set()
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
             
             for content_update in content_updates:
                 
@@ -2100,6 +2099,11 @@ class MediaSingleton( Media ):
         return self._media_result.GetTagsManager()
         
     
+    def GetTimesManager( self ):
+        
+        return self._media_result.GetTimesManager()
+        
+    
     def GetTitleString( self ):
         
         new_options = HG.client_controller.new_options
@@ -2425,6 +2429,8 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             else: return x
             
         
+        reverse = self.sort_order == CC.SORT_DESC
+        
         if sort_metadata == 'system':
             
             if sort_data == CC.SORT_FILES_BY_RANDOM:
@@ -2439,6 +2445,22 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 def sort_key( x ):
                     
                     return x.GetHash().hex()
+                    
+                
+            elif sort_data == CC.SORT_FILES_BY_PIXEL_HASH:
+                
+                def sort_key( x ):
+                    
+                    pixel_hash = x.GetDisplayMedia().GetMediaResult().GetFileInfoManager().pixel_hash
+                    
+                    if pixel_hash is None:
+                        
+                        return b'\xff' * 32
+                        
+                    else:
+                        
+                        return pixel_hash
+                        
                     
                 
             elif sort_data == CC.SORT_FILES_BY_APPROX_BITRATE:
@@ -2712,8 +2734,6 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        reverse = self.sort_order == CC.SORT_DESC
-        
         return ( sort_key, reverse )
         
     
@@ -2738,6 +2758,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_ARCHIVED_TIMESTAMP ] = ( 'oldest first', 'newest first', CC.SORT_DESC )
             sort_string_lookup[ CC.SORT_FILES_BY_MIME ] = ( 'filetype', 'filetype', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_PIXEL_HASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )

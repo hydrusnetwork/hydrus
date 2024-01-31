@@ -19,39 +19,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
-mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: os.path.join( HC.STATIC_DIR, 'hydrus.png' ) )
-
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = os.path.join( HC.STATIC_DIR, 'pdf.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_EPUB ] = os.path.join( HC.STATIC_DIR, 'epub.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_DJVU ] = os.path.join( HC.STATIC_DIR, 'djvu.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC_DIR, 'psd.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_CLIP ] = os.path.join( HC.STATIC_DIR, 'clip.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_SAI2 ] = os.path.join( HC.STATIC_DIR, 'sai.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_KRITA ] = os.path.join( HC.STATIC_DIR, 'krita.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_PROCREATE ] = os.path.join( HC.STATIC_DIR, 'procreate.png' )
-mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = os.path.join( HC.STATIC_DIR, 'svg.png' )
-
-for mime in HC.AUDIO:
-    
-    png_path = os.path.join( HC.STATIC_DIR, 'audio.png' )
-    
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( png_path )
-    
-
-for mime in HC.VIDEO:
-    
-    png_path = os.path.join( HC.STATIC_DIR, 'video.png' )
-    
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( png_path )
-    
-
-for mime in HC.ARCHIVES:
-    
-    png_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
-    
-    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( png_path )
-    
-
 def AppendPathUntilNoConflicts( path ):
     
     ( path_absent_ext, ext ) = os.path.splitext( path )

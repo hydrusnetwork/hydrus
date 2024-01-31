@@ -47,6 +47,7 @@ from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingSessions
 
@@ -1028,6 +1029,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._remove_filtered_files = QW.QCheckBox( self )
             self._remove_trashed_files = QW.QCheckBox( self )
+            self._remove_local_domain_moved_files = QW.QCheckBox( self )
             
             self._trash_max_age = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no age limit', min = 0, max = 8640 )
             self._trash_max_size = ClientGUICommon.NoneableSpinCtrl( self, '', none_phrase = 'no size limit', min = 0, max = 20480 )
@@ -1078,6 +1080,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._remove_filtered_files.setChecked( HC.options[ 'remove_filtered_files' ] )
             self._remove_trashed_files.setChecked( HC.options[ 'remove_trashed_files' ] )
+            self._remove_local_domain_moved_files.setChecked( self._new_options.GetBoolean( 'remove_local_domain_moved_files' ) )
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
             self._trash_max_size.SetValue( HC.options[ 'trash_max_size' ] )
             
@@ -1113,6 +1116,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'When maintenance physically deletes files, wait this many ms between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
             rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
+            rows.append( ( 'Remove files from view when they are moved to another local file domain: ', self._remove_local_domain_moved_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
             rows.append( ( 'Maximum size of trash (MB): ', self._trash_max_size ) )
             rows.append( ( 'Default export directory: ', self._export_location ) )
@@ -1197,6 +1201,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'confirm_archive' ] = self._confirm_archive.isChecked()
             HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.isChecked()
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.isChecked()
+            self._new_options.SetBoolean( 'remove_local_domain_moved_files', self._remove_local_domain_moved_files.isChecked() )
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
             
@@ -5072,14 +5077,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
 class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, media ):
+    def __init__( self, parent, medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         CAC.ApplicationCommandProcessorMixin.__init__( self )
         
-        media = ClientMedia.FlattenMedia( media )
-        
-        self._current_media = [ m.Duplicate() for m in media ]
+        self._current_media = [ m.Duplicate() for m in medias ]
         
         self._multiple_files_warning = ClientGUICommon.BetterStaticText( self, label = 'Warning: you are editing urls for multiple files!\nBe very careful about adding URLs here, as they will apply to everything.\nAdding the same URL to multiple files is only appropriate for gallery-type URLs!' )
         self._multiple_files_warning.setObjectName( 'HydrusWarning' )
@@ -5205,7 +5208,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 addee_hashes = { m.GetHash() for m in addee_media }
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( normalised_url, ), addee_hashes ) )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( normalised_url, ), addee_hashes ) )
                 
                 for m in addee_media:
                     
@@ -5264,7 +5267,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             removee_hashes = { m.GetHash() for m in removee_media }
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( ( url, ), removee_hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( ( url, ), removee_hashes ) )
             
             for m in removee_media:
                 
@@ -5380,9 +5383,9 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         if len( self._pending_content_updates ) > 0:
             
-            service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : self._pending_content_updates }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, self._pending_content_updates )
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     

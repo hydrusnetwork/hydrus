@@ -1,3 +1,4 @@
+import collections
 import hashlib
 import os
 import typing
@@ -44,6 +45,47 @@ except Exception as e:
     SPEEDCOPY_OK = False
     
 
+mimes_to_default_thumbnail_paths = collections.defaultdict( lambda: os.path.join( HC.STATIC_DIR, 'hydrus.png' ) )
+
+for mime in HC.AUDIO:
+    
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( os.path.join( HC.STATIC_DIR, 'audio.png' ) )
+    
+
+for mime in HC.VIDEO:
+    
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( os.path.join( HC.STATIC_DIR, 'video.png' ) )
+    
+
+for mime in HC.ANIMATIONS:
+    
+    mimes_to_default_thumbnail_paths[ mime ] = os.path.join( os.path.join( HC.STATIC_DIR, 'video.png' ) )
+    
+
+for mime in HC.ARCHIVES:
+    
+    mimes_to_default_thumbnail_paths[ mime ] = png_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
+    
+
+for mime in HC.IMAGES:
+    
+    mimes_to_default_thumbnail_paths[ mime ] = png_path = os.path.join( HC.STATIC_DIR, 'image.png' )
+    
+
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_UNKNOWN ] = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = os.path.join( HC.STATIC_DIR, 'pdf.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_EPUB ] = os.path.join( HC.STATIC_DIR, 'epub.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_DJVU ] = os.path.join( HC.STATIC_DIR, 'djvu.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC_DIR, 'psd.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_CLIP ] = os.path.join( HC.STATIC_DIR, 'clip.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_SAI2 ] = os.path.join( HC.STATIC_DIR, 'sai.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_KRITA ] = os.path.join( HC.STATIC_DIR, 'krita.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_FLASH ] = os.path.join( HC.STATIC_DIR, 'flash.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_XCF ] = os.path.join( HC.STATIC_DIR, 'xcf.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PROCREATE ] = os.path.join( HC.STATIC_DIR, 'procreate.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_RTF ] = os.path.join( HC.STATIC_DIR, 'rtf.png' )
+mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = os.path.join( HC.STATIC_DIR, 'svg.png' )
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
     
