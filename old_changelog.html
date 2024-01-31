@@ -35,6 +35,51 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_560"><a href="#version_560">version 560</a></h2>
+                    <ul>
+                        <li><h3>editing times for multiple files</h3></li>
+                        <li>the 'edit times' dialog is now available when you select multiple files. it will show and apply time data for all of those files at once. when the files have different times, the various widgets and panels will show ranges and a count of how many files do and don't have that particular time type</li>
+                        <li>when you open the edit times dialog on more than one file, every time control now has a 'cascade step' section, where you can set a time delta, e.g. 100 milliseconds, and then, on dialog ok, each file in the selection that launched the dialog will be set that much successively later than the previous, obviously in the order they are currently in. this is a way of forcing/normalising file sorts based on time. negative values are allowed!</li>
+                        <li>when the edit times dialog is set to change more than 100 total times, it now verifies with the user that this is correct on dialog ok</li>
+                        <li>when the edit times dialog sets a lot of modified dates to files (i.e. actually writing them to your file system), this now happens in a non-gui thread and now makes a cancellable progress popup after a few seconds</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed the 'imported to' timestamp for files migrated to other local file domains, which were one of the ones incorrectly set, as expected, to 54 years ago. in the database update, I also fix all the wrongly saved ones from v559</li>
+                        <li>mr bones and the file history chart are now under the 'database' menu</li>
+                        <li>fixed an issue with the file history chart not maintaining the `show_deleted = False` state through search refreshes</li>
+                        <li>there's a new checkbox under `files and trash`, `Remove files from view when they are moved to another local file domain`. this re-introduces the unintended behaviour that I fixed recently when 'remove when trashed' was set, but now targeted specifically for that situation. if you use multiple local file domans a bunch and want files to disappear when you shoot them to a place you aren't looking at, give it a go and let me know how it works for you</li>
+                        <li>fixed a regression from my 'remove when trashed' fix where deleting collections with this option on would leave crazy ghost thumbnails behind. collections that are completely emptied should now properly remove themselves in all content update situations</li>
+                        <li>the gallery downloader page 'cog' icon now has a 'do not allow new duplicates' option, which will discard any (query_text,source) pairs you try to enter if they already exist in the list. this option is remembered through restarts</li>
+                        <li>added 'sort by pixel hash' to the file sort menu. it isn't super helpful, but it'll show pairs of exact-matching files next to each other amongst a sea of noise. I may expose perceptual hashes in a similar way in future, which would be more useful, but thumbnails don't have their phashes quickly available atm, so maybe only when there are other reasons to add that overhead</li>
+                        <li>fixed the `setup_venv.sh` and `setup_venv.command` files' custom qtpy and PySide6 (Qt stuff) version installer! there was a dumb typo, sorry for the trouble</li>
+                        <li>thanks to a user, the derpibooru parser now grabs `fanfic`, `spoiler`, and `error` tags</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>neatened up how non-thumbnail-generatable files (e.g. rtf) present their default thumbs and refactored the code a little</li>
+                        <li>when a file's thumbnail is unavailable but the filetype is known (e.g. you are looking at records of deleted files that have no blurhash), hydrus should now deliver that file's default thumb instead</li>
+                        <li>unified this thumbnail-defaulting code a little more, fixing fetching for some weirder files and deduplicating some messy areas. the client thumbnail cache should be better about delivering the right unusual thumbnail now and as future filetypes are added</li>
+                        <li>added an 'image.png' to serve as a nicer fallback for various thumbnail-undeliverable but known-image files</li>
+                        <li>fixed rtf files not providing their rtf thumbnail in the Client API</li>
+                        <li>fixed up some ancient local booru thumbnail fetching code</li>
+                        <li>cleaned up some messy dialog launches that were having to navigate single/collected media in an awkward way</li>
+                        <li>removed the TestFunctions unit test stub, which was of diminishing use</li>
+                        <li><h3>boring cleanup, time code</h3></li>
+                        <li>updated the DateTime control and button to handle multiple times at once, and updated the edit timestamps dialog itself similarly throughout (this took a day and a half lol)</li>
+                        <li>rejiggered the DateTime widgets to handle a nice new object to hold the multiple times' range, since it was all getting messy</li>
+                        <li>rejiggered the time content update pipeline from top to bottom to take multiple hashes per content update, so applying the same timestamp to a thousand files should still be pretty quick</li>
+                        <li>fixed up various timestamp_ms->QtDateTime conversions so they all include local timezone info. also fixed the datetime widget so it returns properly local-timezone'd datetimes. I can no longer easily reproduce a particular time that jumps an hour every time you open it (due to retroactive summer-time fun)</li>
+                        <li>harmonised some older datestring conversions to come out 2023-06-30 instead of 2023/06/30</li>
+                        <li>fixed some time string calculations to handle our new sub-second times better</li>
+                        <li>updated the time delta widget to handle negative numbers</li>
+                        <li><h3>boring cleanup, content updates</h3></li>
+                        <li>moved all `ContentUpdate` gubbins out of the hydrus module scope; it is now client only</li>
+                        <li>made a new `ClientContentUpdates.py` to collect all content update code and refactored stuff there</li>
+                        <li>wrote a new `ContentUpdatePackage` to replace the ancient `service_keys_to_content_updates` structure. various hacky or ad-hoc processing and presentation is now gathered under this new object, and I refactor-spammed it across the program, with too many individual changes to talk about in detail</li>
+                        <li><h3>client api</h3></li>
+                        <li>the new `set_time` call has some additional safety rails. you can add (or delete) 'web domain' timestamps any time, but you now cannot add or delete any of the others, only edit when they already exist</li>
+                        <li>updated the client api unit tests and help to account for this</li>
+                        <li>the client api is now version 60</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_559"><a href="#version_559">version 559</a></h2>
                     <ul>
                         <li><h3>millisecond timestamps</h3></li>
@@ -70,6 +115,7 @@
                         <li><h3>what still has second-resolution</h3></li>
                         <li>the parsing system (and hence downloaded files' source times)</li>
                         <li>the sidecar system's time stuff, both import and export</li>
+                        <li>file viewtime durations</li>
                         <li>the server and the hydrus network protocol in general</li>
                         <li>Mr. Bones and the File History chart</li>
                         <li>almost all the actual UI labels. I'm not going to spam milliseconds at you outside of the time edit UI</li>
