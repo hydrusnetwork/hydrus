@@ -47,6 +47,7 @@ from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
@@ -1227,23 +1228,29 @@ class HydrusResourceBooruThumbnail( HydrusResourceBooru ):
         
         if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            client_files_manager = HG.client_controller.client_files_manager
-            
-            path = client_files_manager.GetThumbnailPath( media_result )
-            
-            response_context_mime = HC.APPLICATION_UNKNOWN
-            
-            if not os.path.exists( path ):
+            try:
                 
-                path = HydrusPaths.mimes_to_default_thumbnail_paths[ mime ]
+                path = HG.client_controller.client_files_manager.GetThumbnailPath( media_result )
+                
+                if not os.path.exists( path ):
+                    
+                    # not _supposed_ to happen, but it seems in odd situations it can
+                    raise HydrusExceptions.FileMissingException()
+                    
+                
+            except HydrusExceptions.FileMissingException:
+                
+                path = HydrusFileHandling.mimes_to_default_thumbnail_paths[ mime ]
                 
             
         else:
             
-            path = HydrusPaths.mimes_to_default_thumbnail_paths[ mime ]
+            path = HydrusFileHandling.mimes_to_default_thumbnail_paths[ mime ]
             
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = response_context_mime, path = path )
+        response_mime = HydrusFileHandling.GetThumbnailMime( path )
+        
+        response_context = HydrusServerResources.ResponseContext( 200, mime = response_mime, path = path )
         
         return response_context
         
@@ -1762,14 +1769,11 @@ class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClien
         
         hashes = set( ParseHashes( request ) )
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes )
         
-        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
         
-        if len( service_keys_to_content_updates ) > 0:
-            
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
-            
+        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -1811,13 +1815,13 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
                 
             
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason )
         
         for service_key in location_context.current_service_keys:
             
-            service_keys_to_content_updates = { service_key : [ content_update ] }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
@@ -1825,17 +1829,18 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
         hashes = set( ParseHashes( request ) )
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes )
         
-        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
         
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -1852,13 +1857,13 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
         
         location_context.LimitToServiceTypes( HG.client_controller.services_manager.GetServiceType, ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA ) )
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes )
         
         for service_key in location_context.current_service_keys:
             
-            service_keys_to_content_updates = { service_key : [ content_update ] }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
@@ -1987,13 +1992,13 @@ class HydrusResourceClientAPIRestrictedAddNotesSetNotes( HydrusResourceClientAPI
             new_names_to_notes = note_import_options.GetUpdateeNamesToNotes( existing_names_to_notes, names_and_notes )
             
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_names_to_notes.items() ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_names_to_notes.items() ]
         
         if len( content_updates ) > 0:
             
-            service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
         body_dict = {}
@@ -2031,11 +2036,11 @@ class HydrusResourceClientAPIRestrictedAddNotesDeleteNotes( HydrusResourceClient
         
         note_names = request.parsed_request_args.GetValue( 'note_names', list, expected_list_type = str )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in note_names ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in note_names ]
         
-        service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
         
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -2158,7 +2163,7 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
             raise HydrusExceptions.BadRequestException( 'Need a service_keys_to_tags or service_keys_to_actions_to_tags parameter!' )
             
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         for ( service_key, actions_to_tags ) in service_keys_to_actions_to_tags.items():
             
@@ -2214,20 +2219,20 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                 
                 if content_action == HC.CONTENT_UPDATE_PETITION:
                     
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ), reason = tags_to_reasons[ tag ] ) for tag in content_update_tags ]
+                    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ), reason = tags_to_reasons[ tag ] ) for tag in content_update_tags ]
                     
                 else:
                     
-                    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in content_update_tags ]
+                    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in content_update_tags ]
                     
                 
-                service_keys_to_content_updates[ service_key ].extend( content_updates )
+                content_update_package.AddContentUpdates( service_key, content_updates )
                 
             
         
-        if len( service_keys_to_content_updates ) > 0:
+        if content_update_package.HasContent():
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
@@ -2458,23 +2463,26 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
             raise HydrusExceptions.BadRequestException( 'Did not find any hashes to apply the urls to!' )
             
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         if len( urls_to_add ) > 0:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls_to_add, applicable_hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls_to_add, applicable_hashes ) )
             
-            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+            content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
             
         
         if len( urls_to_delete ) > 0:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( urls_to_delete, applicable_hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( urls_to_delete, applicable_hashes ) )
             
-            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+            content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
             
         
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        if content_update_package.HasContent():
+            
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -2759,13 +2767,11 @@ class HydrusResourceClientAPIRestrictedEditRatingsSetRating( HydrusResourceClien
                 
             
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating_for_content_update, applicable_hashes ) )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating_for_content_update, applicable_hashes ) )
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( rating_service_key, content_update )
         
-        service_keys_to_content_updates[ rating_service_key ].append( content_update )
-        
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -2791,6 +2797,8 @@ class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPI
             
             raise HydrusExceptions.BadRequestException( 'Did not find any hashes to apply the times to!' )
             
+        
+        media_results = HG.client_controller.Read( 'media_results', hashes )
         
         if 'timestamp' in request.parsed_request_args:
             
@@ -2861,11 +2869,6 @@ class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPI
             
             location = file_service_key
             
-            if timestamp_ms is None:
-                
-                raise HydrusExceptions.BadRequestException( 'You set no timestamp, but I am sorry, for now, I am not going to allow the deletion of file service timestamps!' )
-                
-            
         elif timestamp_type in ( HC.TIMESTAMP_TYPE_MODIFIED_FILE, HC.TIMESTAMP_TYPE_ARCHIVED ):
             
             pass # simple; no additional location data
@@ -2873,6 +2876,28 @@ class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPI
         else:
             
             raise HydrusExceptions.BadRequestException( f'Sorry, do not understand that timestamp type "{timestamp_type}"!' )
+            
+        
+        if timestamp_type != HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN:
+            
+            if timestamp_ms is None:
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, you can only delete web domain timestamps (type 0) for now!' )
+                
+            else:
+                
+                timestamp_data_stub = ClientTime.TimestampData( timestamp_type = timestamp_type, location = location )
+                
+                for media_result in media_results:
+                    
+                    result = media_result.GetTimesManager().GetTimestampMSFromStub( timestamp_data_stub )
+                    
+                    if result is None:
+                        
+                        raise HydrusExceptions.BadRequestException( f'Sorry, if the timestamp type is other than 0 (web domain), then you cannot add new timestamps, only edit existing ones. I did not see the given timestamp type on one of the files you sent, specifically: {media_result.GetHash().hex()}' )
+                        
+                    
+                
             
         
         timestamp_data = ClientTime.TimestampData( timestamp_type = timestamp_type, location = location, timestamp_ms = timestamp_ms )
@@ -2886,13 +2911,11 @@ class HydrusResourceClientAPIRestrictedEditTimesSetTime( HydrusResourceClientAPI
             action = HC.CONTENT_UPDATE_SET
             
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( hash, timestamp_data ) ) for hash in hashes ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( hashes, timestamp_data ) ) ]
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates )
         
-        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( content_updates )
-        
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
         response_context = HydrusServerResources.ResponseContext( 200 )
         
@@ -3603,24 +3626,33 @@ class HydrusResourceClientAPIRestrictedGetFilesGetThumbnail( HydrusResourceClien
             raise HydrusExceptions.NotFoundException( 'One or more of those file identifiers was missing!' )
             
         
-        try:
+        mime = media_result.GetMime()
+        
+        if mime in HC.MIMES_WITH_THUMBNAILS:
             
-            path = HG.client_controller.client_files_manager.GetThumbnailPath( media_result )
-            
-            if not os.path.exists( path ):
+            try:
                 
-                # not _supposed_ to happen, but it seems in odd situations it can
-                raise HydrusExceptions.FileMissingException()
+                path = HG.client_controller.client_files_manager.GetThumbnailPath( media_result )
+                
+                if not os.path.exists( path ):
+                    
+                    # not _supposed_ to happen, but it seems in odd situations it can
+                    raise HydrusExceptions.FileMissingException()
+                    
+                
+            except HydrusExceptions.FileMissingException:
+                
+                path = HydrusFileHandling.mimes_to_default_thumbnail_paths[ mime ]
                 
             
-        except HydrusExceptions.FileMissingException:
+        else:
             
-            path = HydrusPaths.mimes_to_default_thumbnail_paths[ media_result.GetMime() ]
+            path = HydrusFileHandling.mimes_to_default_thumbnail_paths[ mime ]
             
         
-        mime = HydrusFileHandling.GetThumbnailMime( path )
+        response_mime = HydrusFileHandling.GetThumbnailMime( path )
         
-        response_context = HydrusServerResources.ResponseContext( 200, mime = mime, path = path )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = response_mime, path = path )
         
         return response_context
         
@@ -4342,7 +4374,7 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
             hash_a = bytes.fromhex( hash_a_hex )
             hash_b = bytes.fromhex( hash_b_hex )
             
-            list_of_service_keys_to_content_updates = []
+            content_update_packages = []
             
             first_media = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_a ] )
             second_media = ClientMedia.MediaSingleton( hashes_to_media_results[ hash_b ] )
@@ -4353,11 +4385,11 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                 
                 duplicate_content_merge_options = HG.client_controller.new_options.GetDuplicateContentMergeOptions( duplicate_type )
                 
-                list_of_service_keys_to_content_updates.append( duplicate_content_merge_options.ProcessPairIntoContentUpdates( first_media, second_media, file_deletion_reason = file_deletion_reason, delete_first = delete_first, delete_second = delete_second ) )
+                content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_media, second_media, file_deletion_reason = file_deletion_reason, delete_first = delete_first, delete_second = delete_second ) )
                 
             elif delete_first or delete_second:
                 
-                service_keys_to_content_updates = collections.defaultdict( list )
+                content_update_package = ClientContentUpdates.ContentUpdatePackage()
                 
                 deletee_media = set()
                 
@@ -4393,16 +4425,16 @@ class HydrusResourceClientAPIRestrictedManageFileRelationshipsSetRelationships( 
                     
                     for deletee_service_key in deletee_service_keys:
                         
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
                         
-                        service_keys_to_content_updates[ deletee_service_key ].append( content_update )
+                        content_update_package.AddContentUpdate( deletee_service_key, content_update )
                         
                     
                 
-                list_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
+                content_update_packages.append( content_update_package )
                 
             
-            database_write_rows.append( ( duplicate_type, hash_a, hash_b, list_of_service_keys_to_content_updates ) )
+            database_write_rows.append( ( duplicate_type, hash_a, hash_b, content_update_packages ) )
             
         
         if len( database_write_rows ) > 0:

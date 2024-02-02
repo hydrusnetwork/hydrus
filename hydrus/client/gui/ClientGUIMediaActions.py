@@ -26,6 +26,7 @@ from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
 def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.ApplicationCommand, media: typing.Collection[ ClientMedia.MediaSingleton ] ):
@@ -115,7 +116,7 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
         
         if len( content_updates ) > 0:
             
-            HG.client_controller.Write( 'content_updates', { service_key : content_updates } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, content_updates ) )
             
         
     
@@ -137,15 +138,13 @@ def ClearDeleteRecord( win, media ):
         
         for chunk_of_media in HydrusData.SplitIteratorIntoChunks( clearable_media, 64 ):
             
-            service_keys_to_content_updates = collections.defaultdict( list )
-            
             clearee_hashes = [ m.GetHash() for m in chunk_of_media ]
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, clearee_hashes )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, clearee_hashes )
             
-            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ content_update ]
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
             
-            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
@@ -168,40 +167,81 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_s
             
             ( names_to_notes, deletee_names ) = panel.GetValue()
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in names_to_notes.items() ]
-            content_updates.extend( [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in deletee_names ] )
+            content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in names_to_notes.items() ]
+            content_updates.extend( [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in deletee_names ] )
             
-            service_keys_to_content_updates = { CC.LOCAL_NOTES_SERVICE_KEY : content_updates }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
             
-            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
 
-def EditFileTimestamps( win: QW.QWidget, media: ClientMedia.MediaSingleton ):
+def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedia.MediaSingleton ] ):
     
     title = 'manage times'
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditFileTimestampsPanel( dlg, media )
+        panel = ClientGUIScrolledPanelsEdit.EditFileTimestampsPanel( dlg, ordered_medias )
         
         dlg.SetPanel( panel )
         
         if dlg.exec() == QW.QDialog.Accepted:
             
-            hash = media.GetHash()
+            content_update_package = panel.GetContentUpdatePackage()
             
-            service_keys_to_content_updates = panel.GetServiceKeysToContentUpdates()
-            file_modified_timestamp_ms = panel.GetFileModifiedUpdateMS()
-            
-            if len( service_keys_to_content_updates ) > 0:
+            if content_update_package.HasContent():
                 
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.Write( 'content_updates', content_update_package )
                 
-                if file_modified_timestamp_ms is not None:
+                result = panel.GetFileModifiedUpdateData()
+                
+                if result is not None:
                     
-                    HG.client_controller.client_files_manager.UpdateFileModifiedTimestampMS( media, file_modified_timestamp_ms )
+                    ( hashes_to_alter_modified_dates, file_modified_timestamp_ms, step_ms ) = result
+                    
+                    hashes_to_alter_modified_dates = set( hashes_to_alter_modified_dates )
+                    
+                    medias_to_alter_modified_dates = [ m for m in ordered_medias if m.GetHash() in hashes_to_alter_modified_dates ]
+                    
+                    def do_it():
+                        
+                        job_status = ClientThreading.JobStatus( cancellable = True )
+                        
+                        job_status.SetStatusTitle( 'setting file modified dates' )
+                        
+                        time_started = HydrusTime.GetNow()
+                        showed_popup = False
+                        
+                        num_to_do = len( medias_to_alter_modified_dates )
+                        
+                        for ( i, m ) in enumerate( medias_to_alter_modified_dates ):
+                            
+                            job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
+                            job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
+                            
+                            if not showed_popup and HydrusTime.TimeHasPassed( time_started + 3 ):
+                                
+                                HG.client_controller.pub( 'message', job_status )
+                                
+                                showed_popup = True
+                                
+                            
+                            if job_status.IsCancelled():
+                                
+                                break
+                                
+                            
+                            final_time_ms = file_modified_timestamp_ms + ( i * step_ms )
+                            
+                            HG.client_controller.client_files_manager.UpdateFileModifiedTimestampMS( m, final_time_ms )
+                            
+                        
+                        job_status.FinishAndDismiss()
+                        
+                    
+                    HG.client_controller.CallToThread( do_it )
                     
                 
             
@@ -249,7 +289,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsSetFlip( service_
         return []
         
     
-    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
+    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, row ) ]
     
     return content_updates
     
@@ -282,7 +322,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsIncDec( service_k
         ratings_to_hashes[ new_rating ].add( m.GetHash() )
         
     
-    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
+    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
     
     return content_updates
     
@@ -329,7 +369,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandRatingsNumericalIncDec( 
             
         
     
-    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
+    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, hashes ) ) for ( rating, hashes ) in ratings_to_hashes.items() ]
     
     return content_updates
     
@@ -448,7 +488,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( parent: QW.QWidget
             
         
     
-    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_update_action, row, reason = reason ) for row in rows ]
+    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_update_action, row, reason = reason ) for row in rows ]
     
     return content_updates
     
@@ -607,7 +647,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
             HG.client_controller.pub( 'message', job_status )
             
         
-        now = HydrusTime.GetNow()
+        now_ms = HydrusTime.GetNowMS()
         
         for ( i, block_of_media ) in enumerate( HydrusLists.SplitListIntoChunks( applicable_media, BLOCK_SIZE ) ):
             
@@ -630,24 +670,24 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                     
                 else:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( m.GetMediaResult().GetFileInfoManager(), now ) ) )
+                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( m.GetMediaResult().GetFileInfoManager(), now_ms ) ) )
                     
                 
             
             if len( undelete_hashes ) > 0:
                 
-                content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undelete_hashes ) )
+                content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undelete_hashes ) )
                 
             
-            HG.client_controller.WriteSynchronous( 'content_updates', { dest_service_key : content_updates } )
+            HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( dest_service_key, content_updates ) )
             
             if action == HC.CONTENT_UPDATE_MOVE:
                 
                 block_of_hashes = [ m.GetHash() for m in block_of_media ]
                 
-                content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE, block_of_hashes, reason = 'Moved to {}'.format( dest_service_name ) ) ]
+                content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE, block_of_hashes, reason = 'Moved to {}'.format( dest_service_name ) ) ]
                 
-                HG.client_controller.WriteSynchronous( 'content_updates', { source_service_key : content_updates } )
+                HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( source_service_key, content_updates ) )
                 
             
             pauser.Pause()
@@ -859,11 +899,11 @@ def UndeleteFiles( hashes ):
         
         for ( service_key, service_hashes ) in service_keys_to_hashes.items():
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, service_hashes )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, service_hashes )
             
-            service_keys_to_content_updates = { service_key : [ content_update ] }
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     
@@ -937,15 +977,15 @@ def UndeleteMedia( win, media ):
             
             for chunk_of_media in HydrusData.SplitIteratorIntoChunks( undeletable_media, 64 ):
                 
-                service_keys_to_content_updates = collections.defaultdict( list )
-                
                 service_key = undelete_service.GetServiceKey()
                 
                 undeletee_hashes = [ m.GetHash() for m in chunk_of_media if service_key in m.GetLocationsManager().GetDeleted() ]
                 
-                service_keys_to_content_updates[ service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undeletee_hashes ) ]
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undeletee_hashes )
                 
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
+                
+                HG.client_controller.Write( 'content_updates', content_update_package )
                 
             
         

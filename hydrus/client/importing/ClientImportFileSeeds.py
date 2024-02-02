@@ -30,7 +30,7 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.importing.options import TagImportOptions
-from hydrus.client.media import ClientMediaManagers
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingFunctions
 
@@ -1691,7 +1691,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         # changed this to say that urls alone are not 'did work' since all url results are doing this, and when they have no tags, they are usually superfast db hits anyway
         # better to scream through an 'already in db' import list that flicker
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         potentially_associable_urls = set()
         
@@ -1720,18 +1720,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( domain, HydrusTime.MillisecondiseS( domain_modified_timestamp ) )
                         
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( ( hash, ), timestamp_data ) )
                         
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                     
                     if self._cloudflare_last_modified_time is not None and ClientTime.TimestampIsSensible( self._cloudflare_last_modified_time ):
                         
                         timestamp_data = ClientTime.TimestampData.STATICDomainModifiedTime( 'cloudflare.com', HydrusTime.MillisecondiseS( self._cloudflare_last_modified_time ) )
                         
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( hash, timestamp_data ) )
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_ADD, ( ( hash, ), timestamp_data ) )
                         
-                        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+                        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                         
                     
                 
@@ -1751,18 +1751,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if len( associable_urls ) > 0:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( associable_urls, ( hash, ) ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( associable_urls, ( hash, ) ) )
             
-            service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update )
+            content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
             
         
         media_result = None
         
         if tag_import_options is None:
             
-            for ( service_key, content_updates ) in ClientData.ConvertServiceKeysToTagsToServiceKeysToContentUpdates( ( hash, ), self._external_additional_service_keys_to_tags ).items():
+            if len( self._external_additional_service_keys_to_tags ) > 0:
                 
-                service_keys_to_content_updates[ service_key ].extend( content_updates )
+                content_update_package.AddServiceKeysToTags( ( hash, ), self._external_additional_service_keys_to_tags )
                 
                 did_work = True
                 
@@ -1774,9 +1774,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 media_result = HG.client_controller.Read( 'media_result', hash )
                 
             
-            for ( service_key, content_updates ) in tag_import_options.GetServiceKeysToContentUpdates( self.status, media_result, set( self._tags ), external_filterable_tags = self._external_filterable_tags, external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags ).items():
+            for ( service_key, content_updates ) in tag_import_options.GetContentUpdatePackage( self.status, media_result, set( self._tags ), external_filterable_tags = self._external_filterable_tags, external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags ).IterateContentUpdates():
                 
-                service_keys_to_content_updates[ service_key ].extend( content_updates )
+                content_update_package.AddContentUpdates( service_key, content_updates )
                 
                 did_work = True
                 
@@ -1791,22 +1791,23 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             names_and_notes = sorted( self._names_and_notes_dict.items() )
             
-            for ( service_key, content_updates ) in note_import_options.GetServiceKeysToContentUpdates( media_result, names_and_notes ).items():
+            for ( service_key, content_updates ) in note_import_options.GetContentUpdatePackage( media_result, names_and_notes ).IterateContentUpdates():
                 
-                service_keys_to_content_updates[ service_key ].extend( content_updates )
+                content_update_package.AddContentUpdates( service_key, content_updates )
                 
                 did_work = True
                 
             
         
-        if len( service_keys_to_content_updates ) > 0:
+        if content_update_package.HasContent():
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
         return did_work
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_FILE_SEED ] = FileSeed
 
 class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):

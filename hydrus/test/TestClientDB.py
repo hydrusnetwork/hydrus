@@ -23,6 +23,7 @@ from hydrus.client.gui.pages import ClientGUISession
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
@@ -118,17 +119,17 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
 
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = content_updates
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         # cars
         
@@ -539,12 +540,12 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ), )
-        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ), )
+        content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( hash, ) ) )
+        content_update_package.AddContentUpdate( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'car', ( hash, ) ) ) )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         time.sleep( 0.5 )
         
@@ -604,16 +605,16 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:cars', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'maker:ford', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = content_updates
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -705,35 +706,35 @@ class TestClientDB( unittest.TestCase ):
         
         self._write( 'update_services', services )
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ TestController.LOCAL_RATING_LIKE_SERVICE_KEY ] = content_updates
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TestController.LOCAL_RATING_LIKE_SERVICE_KEY, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
-        service_keys_to_content_updates = {}
-        
-        content_updates = []
-        
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.6, ( hash, ) ) ) )
-        
-        service_keys_to_content_updates[ TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY ] = content_updates
-        
-        self._write( 'content_updates', service_keys_to_content_updates )
-        
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 3, ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.6, ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ TestController.LOCAL_RATING_INCDEC_SERVICE_KEY ] = content_updates
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TestController.LOCAL_RATING_NUMERICAL_SERVICE_KEY, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
+        
+        content_updates = []
+        
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 3, ( hash, ) ) ) )
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( TestController.LOCAL_RATING_INCDEC_SERVICE_KEY, content_updates )
+        
+        self._write( 'content_updates', content_update_package )
         
         tests = []
         
@@ -762,11 +763,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -877,11 +878,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         ( media_result, ) = self._read( 'media_results', ( hash, ) )
         
@@ -899,11 +900,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         ( media_result, ) = self._read( 'media_results', ( hash, ) )
         
@@ -921,11 +922,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         ( media_result, ) = self._read( 'media_results', ( hash, ) )
         
@@ -972,17 +973,17 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         ( media_result, ) = self._read( 'media_results', ( hash, ) )
         
@@ -1021,22 +1022,22 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'character:samus aran', ( hash, ) ) ) )
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'character:samus aran', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'series:metroid', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = content_updates
+        content_update_package.AddContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, content_updates )
         
         content_updates = []
         
-        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'clothing:bodysuit', ( hash, ) ) ) )
+        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'clothing:bodysuit', ( hash, ) ) ) )
         
-        service_keys_to_content_updates[ new_service_key ] = content_updates
+        content_update_package.AddContentUpdates( new_service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         result = self._read( 'filter_existing_tags', CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, { 'character:samus aran', 'series:metroid', 'clothing:bodysuit' } )
         
@@ -1442,11 +1443,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1511,11 +1512,11 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'test delete' )
         
-        service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : ( content_update, ) }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1724,11 +1725,11 @@ class TestClientDB( unittest.TestCase ):
         
         tags = [ 'this', 'is', 'a:test' ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in tags ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in tags ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1736,17 +1737,17 @@ class TestClientDB( unittest.TestCase ):
         
         tags = [ 'bad tag', 'bad' ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, hashes ) ) for tag in tags ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( tag, hashes ) ) for tag in tags ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( tag, hashes ), reason = 'yo' ) for tag in tags ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( tag, hashes ), reason = 'yo' ) for tag in tags ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1757,11 +1758,11 @@ class TestClientDB( unittest.TestCase ):
             ( 'sib tag 4a', 'sib tag 4b' )
         ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = 'good sibling m8' ) for pair in pairs ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = 'good sibling m8' ) for pair in pairs ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1770,17 +1771,17 @@ class TestClientDB( unittest.TestCase ):
             ( 'lara croft', 'princess peach' )
         ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, pair, reason = 'mistake' ) for pair in pairs ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, pair, reason = 'mistake' ) for pair in pairs ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1790,11 +1791,11 @@ class TestClientDB( unittest.TestCase ):
             ( 'par tag 3a', 'par tag 3b' )
         ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = 'good parent m8' ) for pair in pairs ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = 'good parent m8' ) for pair in pairs ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1802,37 +1803,37 @@ class TestClientDB( unittest.TestCase ):
             ( 'ayanami rei', 'zelda' )
         ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) for pair in pairs ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, pair, reason = 'mistake' ) for pair in pairs ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, pair, reason = 'mistake' ) for pair in pairs ]
         
-        service_keys_to_content_updates = { tag_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( tag_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
         hashes = [ os.urandom( 32 ) for i in range( 15 ) ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ]
         
-        service_keys_to_content_updates = { file_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( file_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
         hashes = [ os.urandom( 32 ) for i in range( 20 ) ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ]
         
-        service_keys_to_content_updates = { ipfs_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( ipfs_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1864,33 +1865,33 @@ class TestClientDB( unittest.TestCase ):
         
         media_results = self._read( 'media_results', hashes )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), 100000 ) ) for mr in media_results ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), 100000 ) ) for mr in media_results ]
         
-        service_keys_to_content_updates = { file_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( file_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), os.urandom( 16 ).hex() ) ) for mr in media_results ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( mr.GetFileInfoManager(), os.urandom( 16 ).hex() ) ) for mr in media_results ]
         
-        service_keys_to_content_updates = { ipfs_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( ipfs_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
-        
-        #
-        
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'nope' ) ]
-        
-        service_keys_to_content_updates = { file_sk : content_updates }
-        
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         #
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'nope' ) ]
         
-        service_keys_to_content_updates = { ipfs_sk : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( file_sk, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
+        
+        #
+        
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes ) ]
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( ipfs_sk, content_updates )
+        
+        self._write( 'content_updates', content_update_package )
         
         #
         
@@ -1942,11 +1943,11 @@ class TestClientDB( unittest.TestCase ):
         
         tags = [ 'this', 'is', 'a:test' ]
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in tags ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( tag, hashes ) ) for tag in tags ]
         
-        service_keys_to_content_updates = { service_key : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, content_updates )
         
-        self._write( 'content_updates', service_keys_to_content_updates )
+        self._write( 'content_updates', content_update_package )
         
         result = self._read( 'pending', service_key, ( HC.CONTENT_TYPE_MAPPINGS, ) )
         

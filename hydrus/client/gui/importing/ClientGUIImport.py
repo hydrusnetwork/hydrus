@@ -39,7 +39,6 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.metadata import ClientTags
-from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 

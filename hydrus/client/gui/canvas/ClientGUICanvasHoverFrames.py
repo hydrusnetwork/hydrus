@@ -30,6 +30,7 @@ from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 
 class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
@@ -45,7 +46,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         self._hashes = set()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
@@ -69,17 +70,17 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         if self._current_media is not None and rating is not None:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 for content_update in content_updates:
                     
@@ -136,7 +137,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         self._canvas_key = canvas_key
         self._current_media = None
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
@@ -159,9 +160,9 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             if self._rating_state == ClientRatings.LIKE: rating = None
             else: rating = 1
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
@@ -172,17 +173,17 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             if self._rating_state == ClientRatings.DISLIKE: rating = None
             else: rating = 0
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 for content_update in content_updates:
                     
@@ -254,7 +255,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         
         self._hashes = set()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
@@ -266,9 +267,9 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             
             rating = None
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
@@ -292,17 +293,17 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         
         if self._current_media is not None and rating is not None:
             
-            content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
+            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', { self._service_key : ( content_update, ) } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 for content_update in content_updates:
                     
@@ -686,7 +687,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
         
     
@@ -1034,7 +1035,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         event.ignore()
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
@@ -1042,7 +1043,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
@@ -1286,7 +1287,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._ResetData()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
     def _Archive( self ):
@@ -1427,7 +1428,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         self._SizeAndPosition()
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
@@ -1435,7 +1436,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 # ratings updates do not change the shape of this hover but file changes of several kinds do
                 
@@ -1608,7 +1609,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         self._ResetNotes()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
     def _EditNotes( self, name ):
@@ -1739,7 +1740,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         return note_panel_width
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
@@ -1747,7 +1748,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 # ratings updates do not change the shape of this hover but file changes of several kinds do
                 
@@ -2120,7 +2121,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -2157,7 +2158,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
             
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
@@ -2165,7 +2166,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     

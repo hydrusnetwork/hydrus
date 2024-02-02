@@ -165,6 +165,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'page_drag_change_tab_with_shift' ] = True
         self._dictionary[ 'booleans' ][ 'wheel_scrolls_tab_bar' ] = False
         
+        self._dictionary[ 'booleans' ][ 'remove_local_domain_moved_files' ] = False
+        
         self._dictionary[ 'booleans' ][ 'anchor_and_hide_canvas_drags' ] = HC.PLATFORM_WINDOWS
         self._dictionary[ 'booleans' ][ 'touchscreen_canvas_drags_unanchor' ] = False
         

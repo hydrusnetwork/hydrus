@@ -43,6 +43,7 @@ from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagSorting
@@ -375,7 +376,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_media is not None:
             
-            HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ] } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, ( self._current_media.GetHash(), ) ) ) )
             
         
     
@@ -430,7 +431,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
         
     
-    def _Delete( self, media = None, default_reason = None, file_service_key = None, just_get_jobs = False ):
+    def _Delete( self, media = None, default_reason = None, file_service_key = None, just_get_content_update_packages = False ) -> typing.Union[ bool, typing.Collection[ ClientContentUpdates.ContentUpdatePackage ] ]:
         
         if media is None:
             
@@ -462,28 +463,28 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         try:
             
-            ( hashes_physically_deleted, jobs ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, media, default_reason, suggested_file_service_key = file_service_key )
+            ( hashes_physically_deleted, content_update_packages ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, media, default_reason, suggested_file_service_key = file_service_key )
             
         except HydrusExceptions.CancelledException:
             
             return False
             
         
-        def do_it( jobs ):
+        def do_it( content_update_packages ):
             
-            for service_keys_to_content_updates in jobs:
+            for content_update_package in content_update_packages:
                 
-                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                 
             
         
-        if just_get_jobs:
+        if just_get_content_update_packages:
             
-            return jobs
+            return content_update_packages
             
         else:
             
-            HG.client_controller.CallToThread( do_it, jobs )
+            HG.client_controller.CallToThread( do_it, content_update_packages )
             
             return True
             
@@ -517,7 +518,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ] } )
+        HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, ( self._current_media.GetHash(), ) ) ) )
         
     
     def _ManageNotes( self, name_to_start_on = None ):
@@ -592,7 +593,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        ClientGUIMediaActions.EditFileTimestamps( self, self._current_media )
+        ClientGUIMediaActions.EditFileTimestamps( self, [ self._current_media ] )
         
     
     def _ManageURLs( self ):
@@ -1371,7 +1372,7 @@ class CanvasPanel( Canvas ):
         
         self._media_container.launchMediaViewer.connect( self.LaunchMediaViewer )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
     def mouseReleaseEvent( self, event ):
@@ -1618,7 +1619,7 @@ class CanvasPanel( Canvas ):
             
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is not None:
             
@@ -1626,7 +1627,7 @@ class CanvasPanel( Canvas ):
             
             do_redraw = False
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 if True in ( my_hash in content_update.GetHashes() for content_update in content_updates ):
                     
@@ -2427,7 +2428,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         self._my_shortcuts_handler.AddShortcuts( 'media_viewer_browser' )
         self._my_shortcuts_handler.AddShortcuts( 'duplicate_filter' )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         HG.client_controller.sub( self, 'Delete', 'canvas_delete' )
         HG.client_controller.sub( self, 'Undelete', 'canvas_undelete' )
         HG.client_controller.sub( self, 'SwitchMedia', 'canvas_show_next' )
@@ -2440,21 +2441,21 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         
         pair_info = []
         
-        for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
+        for ( duplicate_type, first_media, second_media, content_update_packages, was_auto_skipped ) in self._processed_pairs:
             
             if duplicate_type is None:
                 
-                if len( list_of_service_keys_to_content_updates ) > 0:
+                if len( content_update_packages ) > 0:
                     
-                    for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+                    for content_update_package in content_update_packages:
                         
                         if blocking:
                             
-                            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                             
                         else:
                             
-                            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                            HG.client_controller.Write( 'content_updates', content_update_package )
                             
                         
                     
@@ -2470,7 +2471,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_hash = first_media.GetHash()
             second_hash = second_media.GetHash()
             
-            pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+            pair_info.append( ( duplicate_type, first_hash, second_hash, content_update_packages ) )
             
         
         if len( pair_info ) > 0:
@@ -2534,9 +2535,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             default_reason = 'Deleted manually in Duplicate Filter, along with its potential duplicate.'
             
         
-        jobs = CanvasWithHovers._Delete( self, media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_jobs = True )
+        content_update_packages = CanvasWithHovers._Delete( self, media = media, default_reason = default_reason, file_service_key = file_service_key, just_get_content_update_packages = True )
         
-        deleted = isinstance( jobs, list ) and len( jobs ) > 0
+        deleted = isinstance( content_update_packages, list ) and len( content_update_packages ) > 0
         
         if deleted:
             
@@ -2552,7 +2553,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             first_media = ClientMedia.MediaSingleton( first_media_result )
             second_media = ClientMedia.MediaSingleton( second_media_result )
             
-            process_tuple = ( None, first_media, second_media, jobs, was_auto_skipped )
+            process_tuple = ( None, first_media, second_media, content_update_packages, was_auto_skipped )
             
             self._ShowNextPair( process_tuple )
             
@@ -2721,12 +2722,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _GetNumCommittableDecisions( self ):
         
-        return len( [ 1 for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None ] )
+        return len( [ 1 for ( duplicate_type, first_media, second_media, content_update_packages, was_auto_skipped ) in self._processed_pairs if duplicate_type is not None ] )
         
     
     def _GetNumCommittableDeletes( self ):
         
-        return len( [ 1 for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs if duplicate_type is None and len( list_of_service_keys_to_content_updates ) > 0 ] )
+        return len( [ 1 for ( duplicate_type, first_media, second_media, content_update_packages, was_auto_skipped ) in self._processed_pairs if duplicate_type is None and len( content_update_packages ) > 0 ] )
         
     
     def _GetNumRemainingDecisions( self ):
@@ -2888,9 +2889,9 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             file_deletion_reason = None
             
         
-        list_of_service_keys_to_content_updates = [ duplicate_content_merge_options.ProcessPairIntoContentUpdates( first_media, second_media, delete_first = delete_first, delete_second = delete_second, file_deletion_reason = file_deletion_reason ) ]
+        content_update_packages = [ duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_media, second_media, delete_first = delete_first, delete_second = delete_second, file_deletion_reason = file_deletion_reason ) ]
         
-        process_tuple = ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped )
+        process_tuple = ( duplicate_type, first_media, second_media, content_update_packages, was_auto_skipped )
         
         self._ShowNextPair( process_tuple )
         
@@ -2924,7 +2925,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     return False
                     
                 
-                ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) = self._processed_pairs.pop()
+                ( duplicate_type, first_media, second_media, content_update_packages, was_auto_skipped ) = self._processed_pairs.pop()
                 
                 self._current_pair_index -= 1
                 
@@ -3095,7 +3096,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     we_saw_a_non_auto_skip = False
                     
-                    for ( duplicate_type, first_media, second_media, list_of_service_keys_to_content_updates, was_auto_skipped ) in self._processed_pairs:
+                    for ( duplicate_type, first_media, second_media, content_update_packages, was_auto_skipped ) in self._processed_pairs:
                         
                         if not was_auto_skipped:
                             
@@ -3134,7 +3135,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 was_auto_skipped = True
                 
-                self._processed_pairs.append( ( None, None, None, [], was_auto_skipped ) )
+                self._processed_pairs.append( ( None, None, None, ClientContentUpdates.ContentUpdatePackage(), was_auto_skipped ) )
                 
                 self._current_pair_index += 1
                 
@@ -3297,7 +3298,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
         return command_processed
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         def catch_up():
             
@@ -3630,7 +3631,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         self.parentWidget().FullscreenSwitch()
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         if self._current_media is None:
             
@@ -3653,7 +3654,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
             next_media = None
             
         
-        ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
+        ClientMedia.ListeningMediaList.ProcessContentUpdatePackage( self, content_update_package )
         
         if self.HasNoMedia():
             
@@ -3709,7 +3710,7 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
     
     for block_of_deleted in HydrusLists.SplitListIntoChunks( deleted, 64 ):
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         reason = 'Deleted in Archive/Delete filter.'
         
@@ -3717,10 +3718,10 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
             
             block_of_deleted_hashes = [ m.GetHash() for m in block_of_deleted if deletee_file_service_key in m.GetLocationsManager().GetCurrent() ]
             
-            service_keys_to_content_updates[ deletee_file_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_hashes, reason = reason ) ]
+            content_update_package.AddContentUpdate( deletee_file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, block_of_deleted_hashes, reason = reason ) )
             
         
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
         # we do a second set of removes to deal with late processing and a quick F5ing user
         
@@ -3736,11 +3737,9 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
     
     for block_of_kept_hashes in HydrusLists.SplitListIntoChunks( kept_hashes, 64 ):
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, block_of_kept_hashes ) )
         
-        service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, block_of_kept_hashes ) ]
-        
-        HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
         
         if HC.options[ 'remove_filtered_files' ]:
             
@@ -3750,6 +3749,7 @@ def CommitArchiveDelete( page_key: bytes, location_context: ClientLocation.Locat
         HG.client_controller.WaitUntilViewFree()
         
     
+
 class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_ARCHIVE_DELETE

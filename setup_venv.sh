@@ -186,7 +186,7 @@ elif [ "$install_type" = "a" ]; then
 
     if [ "$qt" = "w" ]; then
 
-        python -m pip install qtpy="$qt_custom_qtpy"
+        python -m pip install qtpy=="$qt_custom_qtpy"
 
         if [ $? -ne 0 ]; then
             echo "It looks like we could not find that qtpy version!"
@@ -194,7 +194,7 @@ elif [ "$install_type" = "a" ]; then
             exit 1
         fi
 
-        python -m pip install PySide6="$qt_custom_pyside6"
+        python -m pip install PySide6=="$qt_custom_pyside6"
 
         if [ $? -ne 0 ]; then
             echo "It looks like we could not find that PySide6 version!"

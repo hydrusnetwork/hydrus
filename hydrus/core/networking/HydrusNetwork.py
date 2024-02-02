@@ -1233,26 +1233,6 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetClientsideContentUpdates( self ):
-        
-        content_updates = []
-        
-        for ( action, clientside_action ) in ( ( HC.CONTENT_UPDATE_PEND, HC.CONTENT_UPDATE_ADD ), ( HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_DELETE ) ):
-            
-            for ( content, reason ) in self._actions_to_contents_and_reasons[ action ]:
-                
-                content_type = content.GetContentType()
-                content_data = content.GetContentData()
-                
-                content_update = HydrusData.ContentUpdate( content_type, clientside_action, content_data )
-                
-                content_updates.append( content_update )
-                
-            
-        
-        return content_updates
-        
-    
     def GetContentDataIterator( self, content_type, action ):
         
         contents_and_reasons = self._actions_to_contents_and_reasons[ action ]
@@ -1286,6 +1266,18 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
         return len( self._actions_to_contents_and_reasons ) > 0
         
     
+    def IterateAllActionsAndContentsAndReasons( self ):
+        
+        for ( action, contents_and_reasons ) in self._actions_to_contents_and_reasons.items():
+            
+            for ( content, reason ) in contents_and_reasons:
+                
+                yield ( action, content, reason )
+                
+            
+        
+    
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_TO_SERVER_UPDATE ] = ClientToServerUpdate
 
 class Content( HydrusSerialisable.SerialisableBase ):
@@ -2452,7 +2444,7 @@ class Petition( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetAllCompletedUpdates( self ):
+    def GetCompletedUploadableClientToServerUpdates( self ):
         
         def break_contents_into_chunks( some_contents ):
             
@@ -2488,7 +2480,7 @@ class Petition( HydrusSerialisable.SerialisableBase ):
             return chunks_of_some_contents
             
         
-        updates_and_content_updates = []
+        updates = []
         
         # make sure you delete before you add
         for action in ( HC.CONTENT_UPDATE_DENY_PETITION, HC.CONTENT_UPDATE_DENY_PEND, HC.CONTENT_UPDATE_PETITION, HC.CONTENT_UPDATE_PEND ):
@@ -2500,47 +2492,22 @@ class Petition( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            if action == HC.CONTENT_UPDATE_PEND:
-                
-                content_update_action = HC.CONTENT_UPDATE_ADD
-                
-            elif action == HC.CONTENT_UPDATE_PETITION:
-                
-                content_update_action = HC.CONTENT_UPDATE_DELETE
-                
-            else:
-                
-                content_update_action = None
-                
-            
             chunks_of_contents = break_contents_into_chunks( contents )
             
             for chunk_of_contents in chunks_of_contents:
                 
                 update = ClientToServerUpdate()
-                content_updates = []
                 
                 for content in chunk_of_contents:
                     
                     update.AddContent( action, content, self._petition_header.reason )
                     
-                    if content_update_action is not None:
-                        
-                        content_type = content.GetContentType()
-                        
-                        row = content.GetContentData()
-                        
-                        content_update = HydrusData.ContentUpdate( content_type, content_update_action, row )
-                        
-                        content_updates.append( content_update )
-                        
-                    
                 
-                updates_and_content_updates.append( ( update, content_updates ) )
+                updates.append( update )
                 
             
         
-        return updates_and_content_updates
+        return updates
         
     
     def GetContents( self, action ):

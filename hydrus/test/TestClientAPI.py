@@ -29,13 +29,14 @@ from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientLocalServer
 from hydrus.client.networking import ClientLocalServerResources
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.search import ClientSearch
 
-from hydrus.test import HelperFunctions
+from hydrus.test import HelperFunctions as HF
 
 CBOR_AVAILABLE = False
 try:
@@ -157,21 +158,6 @@ class TestClientAPI( unittest.TestCase ):
         reactor.callFromThread( TWISTEDSetup )
         
         time.sleep( 1 )
-        
-    
-    def _compare_content_updates( self, service_keys_to_content_updates, expected_service_keys_to_content_updates ):
-        
-        self.assertEqual( len( service_keys_to_content_updates ), len( expected_service_keys_to_content_updates ) )
-        
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
-            
-            expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
-            
-            c_u_tuples = sorted( ( ( c_u.ToTuple(), c_u.GetReason() ) for c_u in content_updates ) )
-            e_c_u_tuples = sorted( ( ( e_c_u.ToTuple(), e_c_u.GetReason() ) for e_c_u in expected_content_updates ) )
-            
-            self.assertEqual( c_u_tuples, e_c_u_tuples )
-            
         
     
     def _test_basics( self, connection ):
@@ -629,10 +615,9 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self.assertIn( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, service_keys_to_content_updates )
-        self.assertTrue( len( service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] ) > 0 )
+        self.assertTrue( content_update_package.HasContentForServiceKey( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ) )
         
         #
         
@@ -650,10 +635,9 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self.assertIn( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, service_keys_to_content_updates )
-        self.assertTrue( len( service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] ) > 0 )
+        self.assertTrue( content_update_package.HasContentForServiceKey( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ) )
         
         #
         
@@ -671,10 +655,9 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self.assertIn( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, service_keys_to_content_updates )
-        self.assertTrue( len( service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] ) > 0 )
+        self.assertTrue( content_update_package.HasContentForServiceKey( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ) )
         
         #
         
@@ -1072,11 +1055,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # with file_id
         
@@ -1098,11 +1081,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { hash }, reason = 'Deleted via Client API.' ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         HG.test_controller.ClearReads( 'hash_ids_to_hashes' )
         
@@ -1124,11 +1107,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # with file_ids
         
@@ -1150,11 +1133,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = 'Deleted via Client API.' ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         HG.test_controller.ClearReads( 'hash_ids_to_hashes' )
         
@@ -1178,11 +1161,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, hashes, reason = reason ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # now test it not working
         
@@ -1212,7 +1195,7 @@ class TestClientAPI( unittest.TestCase ):
         
         locked_hash = list( hashes )[0]
         
-        media_result = HelperFunctions.GetFakeMediaResult( locked_hash )
+        media_result = HF.GetFakeMediaResult( locked_hash )
         
         media_result.GetLocationsManager().inbox = False
         
@@ -1262,11 +1245,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, { hash } ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, { hash } ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -1286,11 +1269,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -1332,11 +1315,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash } ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash } ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -1356,11 +1339,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -1380,11 +1363,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash } ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash } ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -1404,11 +1387,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] }
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def _test_add_notes( self, connection, set_up_permissions ):
@@ -1450,13 +1433,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'notes' ], new_notes_dict )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_notes_dict.items() ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in new_notes_dict.items() ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # delete notes
         
@@ -1478,13 +1461,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in delete_note_names ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( hash, name ) ) for name in delete_note_names ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set notes with merge
         
@@ -1502,8 +1485,8 @@ class TestClientAPI( unittest.TestCase ):
         
         file_info_manager = ClientMediaManagers.FileInfoManager( file_id, hash, size = size, mime = mime, width = width, height = height, duration = duration )
         
-        service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue_eyes', 'blonde_hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit' ] } }
-        service_keys_to_statuses_to_display_tags =  { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : [ 'blue eyes', 'blonde hair' ], HC.CONTENT_STATUS_PENDING : [ 'bodysuit', 'clothing' ] } }
+        service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'blue_eyes', 'blonde_hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit' } } }
+        service_keys_to_statuses_to_display_tags =  { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'blue eyes', 'blonde hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit', 'clothing' } } }
         
         tags_manager = ClientMediaManagers.TagsManager( service_keys_to_statuses_to_tags, service_keys_to_statuses_to_display_tags )
         
@@ -1546,13 +1529,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'notes' ], new_notes_dict )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '1234' ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '1234' ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # no extend (rename)
         
@@ -1582,13 +1565,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'notes' ], { 'abc (1)' : '1234' } )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc (1)', '1234' ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc (1)', '1234' ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # ignore
         
@@ -1650,13 +1633,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'notes' ], { 'abc' : '123\n\n789' } )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '123\n\n789' ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '123\n\n789' ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # replace
         
@@ -1686,13 +1669,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( d[ 'notes' ], { 'abc' : '789' } )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '789' ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, 'abc', '789' ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def _test_edit_ratings( self, connection, set_up_permissions ):
@@ -1726,13 +1709,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_like_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set like dislike
         
@@ -1752,13 +1735,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_like_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set like None
         
@@ -1778,13 +1761,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_like_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_like_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical 0
         
@@ -1804,13 +1787,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.0, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical 2 (0.4)
         
@@ -1830,13 +1813,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.4, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0.4, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical 5 (1.0)
         
@@ -1856,13 +1839,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 1.0, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set numerical None
         
@@ -1882,13 +1865,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_numerical_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_numerical_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set incdec 0
         
@@ -1908,13 +1891,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_incdec_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set incdec 5
         
@@ -1934,13 +1917,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_incdec_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 5, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 5, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # set incdec -3
         
@@ -1960,13 +1943,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_incdec_rating_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_incdec_rating_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def _test_edit_times( self, connection, set_up_permissions ):
@@ -1991,9 +1974,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp' : 123456
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetArchivedTimestampMS( HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms = 123456000 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2002,9 +1989,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp' : 123456.789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetArchivedTimestampMS( HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2013,31 +2004,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetArchivedTimestampMS( HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
-        
-        #
-        
-        request_args = {
-            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED,
-            'timestamp' : None
-        }
-        
-        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED )
-        
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_DELETE, result_timestamp_data ) )
-        
-        #
-        
-        request_args = {
-            'timestamp_type' : HC.TIMESTAMP_TYPE_ARCHIVED,
-            'timestamp_ms' : None
-        }
-        
-        result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_ARCHIVED )
-        
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_DELETE, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         # all timestamp params are now tested and good. let's now hit the different types
         
@@ -2046,9 +2019,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetFileModifiedTimestampMS( HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2058,9 +2035,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetFileModifiedTimestampMS( HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_MODIFIED_FILE, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2070,9 +2051,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetDomainModifiedTimestampMS( 'site.com', HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = 'site.com', timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2082,9 +2067,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER, HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_MEDIA_VIEWER, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2094,9 +2083,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetLastViewedTimestampMS( CC.CANVAS_PREVIEW, HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_PREVIEW, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2105,9 +2098,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetLastViewedTimestampMS( CC.CANVAS_MEDIA_VIEWER, HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_LAST_VIEWED, location = CC.CANVAS_MEDIA_VIEWER, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2117,9 +2114,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2129,9 +2130,13 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetDeletedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_DELETED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
@@ -2141,13 +2146,19 @@ class TestClientAPI( unittest.TestCase ):
             'timestamp_ms' : 123456789
         }
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        media_result.GetTimesManager().SetPreviouslyImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, HydrusTime.GetNowMS() )
+        
         result_timestamp_data = ClientTime.TimestampData( HC.TIMESTAMP_TYPE_PREVIOUSLY_IMPORTED, location = CC.COMBINED_LOCAL_FILE_SERVICE_KEY, timestamp_ms = 123456789 )
         
-        jobs.append( ( request_args, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
+        jobs.append( ( request_args, media_result, HC.CONTENT_UPDATE_SET, result_timestamp_data ) )
         
         #
         
-        for ( request_args, action, result_timestamp_data ) in jobs:
+        for ( request_args, media_result, action, result_timestamp_data ) in jobs:
+            
+            HG.test_controller.SetRead( 'media_results', [ media_result ] )
             
             HG.test_controller.ClearWrites( 'content_updates' )
             
@@ -2166,13 +2177,13 @@ class TestClientAPI( unittest.TestCase ):
             
             self.assertEqual( response.status, 200 )
             
-            expected_service_keys_to_content_updates = collections.defaultdict( list )
+            content_update_package = ClientContentUpdates.ContentUpdatePackage()
             
-            expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( hash, result_timestamp_data ) ) ]
+            expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, action, ( [ media_result.GetHash() ], result_timestamp_data ) ) ] )
             
-            [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
             
-            self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+            HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
             
         
         #
@@ -2438,13 +2449,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', set( [ hash ] ) ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', { hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # add tags to local complex
         
@@ -2464,18 +2475,18 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test_add', set( [ hash ] ) ) ),
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test_add2', set( [ hash ] ) ) ),
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete', set( [ hash ] ) ) ),
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete2', set( [ hash ] ) ) )
-        ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test_add', { hash } ) ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test_add2', { hash } ) ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete', { hash } ) ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete2', { hash } ) )
+        ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # pend tags to repo
         
@@ -2495,13 +2506,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_tag_repo_service_key ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test', set( [ hash ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test2', set( [ hash ] ) ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_tag_repo_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test', { hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test2', { hash } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # pend tags to repo complex
         
@@ -2521,18 +2532,18 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ HG.test_controller.example_tag_repo_service_key ] = [
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test_add', set( [ hash ] ) ) ),
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test_add2', set( [ hash ] ) ) ),
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'test_delete', set( [ hash ] ) ), reason = 'muh reason' ),
-            HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'test_delete2', set( [ hash ] ) ), reason = 'Petitioned from API' )
-        ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_tag_repo_service_key, [
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test_add', { hash } ) ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test_add2', { hash } ) ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'test_delete', { hash } ), reason = 'muh reason' ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PETITION, ( 'test_delete2', { hash } ), reason = 'Petitioned from API' )
+        ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         # add to multiple files
         
@@ -2552,13 +2563,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', set( [ hash, hash2 ] ) ) ), HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', set( [ hash, hash2 ] ) ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', { hash, hash2 } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', { hash, hash2 } ) ) ] )
         
-        [ ( ( service_keys_to_content_updates, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        self._compare_content_updates( service_keys_to_content_updates, expected_service_keys_to_content_updates )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def _test_add_tags_get_tag_siblings_and_parents( self, connection, set_up_permissions ):
@@ -3208,15 +3219,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ]
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
-        
-        result = HG.test_controller.GetWrite( 'content_updates' )
-        
-        self.assertEqual( result, expected_result )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -3237,15 +3244,13 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ]
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ url ], { hash } ) ) ] )
         
-        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        result = HG.test_controller.GetWrite( 'content_updates' )
-        
-        self.assertEqual( result, expected_result )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -3266,15 +3271,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ]
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
-        
-        result = HG.test_controller.GetWrite( 'content_updates' )
-        
-        self.assertEqual( result, expected_result )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -3295,15 +3296,11 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        expected_service_keys_to_content_updates = collections.defaultdict( list )
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
         
-        expected_service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ]
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
-        expected_result = [ ( ( expected_service_keys_to_content_updates, ), {} ) ]
-        
-        result = HG.test_controller.GetWrite( 'content_updates' )
-        
-        self.assertEqual( result, expected_result )
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
     
     def _test_manage_cookies( self, connection, set_up_permissions ):
@@ -4103,7 +4100,7 @@ class TestClientAPI( unittest.TestCase ):
         test_max_num_pairs = 20
         
         test_hash_pairs = [ ( os.urandom( 32 ), os.urandom( 32 ) ) for i in range( 10 ) ]
-        test_media_result_pairs = [ ( HelperFunctions.GetFakeMediaResult( h1 ), HelperFunctions.GetFakeMediaResult( h2 ) ) for ( h1, h2 ) in test_hash_pairs ]
+        test_media_result_pairs = [ ( HF.GetFakeMediaResult( h1 ), HF.GetFakeMediaResult( h2 ) ) for ( h1, h2 ) in test_hash_pairs ]
         test_hash_pairs_hex = [ [ h1.hex(), h2.hex() ] for ( h1, h2 ) in test_hash_pairs ]
         
         HG.test_controller.SetRead( 'duplicate_pairs_for_filtering', test_media_result_pairs )
@@ -4270,7 +4267,7 @@ class TestClientAPI( unittest.TestCase ):
         # TODO: populate the fakes here with real tags and test actual content merge
         # to test the content merge, we'd want to set some content merge options and populate these fakes with real tags
         # don't need to be too clever, just test one thing and we know it'll all be hooked up right
-        HG.test_controller.SetRead( 'media_results', [ HelperFunctions.GetFakeMediaResult( bytes.fromhex( hash_hex ) ) for hash_hex in hashes ] )
+        HG.test_controller.SetRead( 'media_results', [ HF.GetFakeMediaResult( bytes.fromhex( hash_hex ) ) for hash_hex in hashes ] )
         
         headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
         
@@ -4315,25 +4312,33 @@ class TestClientAPI( unittest.TestCase ):
 
         ( written_rows, ) = args
         
-        def delete_thing( h, do_it ):
+        self.assertTrue( len( written_rows ) == 3 )
+        
+        for ( i, row ) in enumerate( written_rows ):
             
-            if do_it:
+            r_dict = request_dict[ 'relationships' ][i]
+            
+            self.assertEqual( row[0], r_dict[ 'relationship' ] )
+            self.assertEqual( row[1], bytes.fromhex( r_dict[ 'hash_a' ] ) )
+            self.assertEqual( row[2], bytes.fromhex( r_dict[ 'hash_b' ] ) )
+            
+            do_delete = 'delete_b' in r_dict and r_dict[ 'delete_b' ]
+            
+            content_update_packages = row[3]
+            
+            if do_delete:
                 
-                c = collections.defaultdict( list )
+                self.assertTrue( len( content_update_packages ) == 1 )
                 
-                c[ b'local files' ] = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { bytes.fromhex( h ) }, reason = 'From Client API (duplicates processing).' ) ]
+                expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, { bytes.fromhex( r_dict[ 'hash_b' ] ) }, reason = 'From Client API (duplicates processing).' ) )
                 
-                return [ c ]
+                HF.compare_content_update_packages( self, content_update_packages[0], expected_content_update_package )
                 
             else:
                 
-                return []
+                self.assertTrue( len( content_update_packages ) == 0 )
                 
             
-        
-        expected_written_rows = [ ( r_dict[ 'relationship' ], bytes.fromhex( r_dict[ 'hash_a' ] ), bytes.fromhex( r_dict[ 'hash_b' ] ), delete_thing( r_dict[ 'hash_b' ], 'delete_b' in r_dict and r_dict[ 'delete_b' ] ) ) for r_dict in request_dict[ 'relationships' ] ]
-        
-        self.assertEqual( written_rows, expected_written_rows )
         
         # set kings
         
@@ -6276,7 +6281,7 @@ class TestClientAPI( unittest.TestCase ):
         
         data = response.read()
         
-        with open( os.path.join( HC.STATIC_DIR, 'hydrus.png' ), 'rb' ) as f:
+        with open( os.path.join( HC.STATIC_DIR, 'image.png' ), 'rb' ) as f:
             
             expected_data = f.read()
             

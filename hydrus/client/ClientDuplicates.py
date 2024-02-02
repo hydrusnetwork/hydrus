@@ -19,6 +19,7 @@ from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
 hashes_to_jpeg_quality = {}
@@ -821,7 +822,7 @@ def get_domain_modified_content_updates( destination_media: ClientMedia.MediaSin
     
     timestamp_datas = get_updated_domain_modified_timestamp_datas( destination_media, source_media, urls )
     
-    content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( destination_media.GetHash(), timestamp_data ) ) for timestamp_data in timestamp_datas ]
+    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( destination_media.GetHash(), ), timestamp_data ) ) for timestamp_data in timestamp_datas ]
     
     return content_updates
     
@@ -1075,14 +1076,14 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         self._sync_urls_action = sync_urls_action
         
     
-    def ProcessPairIntoContentUpdates( self, first_media: ClientMedia.MediaSingleton, second_media: ClientMedia.MediaSingleton, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ):
+    def ProcessPairIntoContentUpdatePackage( self, first_media: ClientMedia.MediaSingleton, second_media: ClientMedia.MediaSingleton, delete_first = False, delete_second = False, file_deletion_reason = None, do_not_do_deletes = False ) -> ClientContentUpdates.ContentUpdatePackage:
         
         if file_deletion_reason is None:
             
             file_deletion_reason = 'unknown reason'
             
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         first_hash = first_media.GetHash()
         second_hash = second_media.GetHash()
@@ -1135,27 +1136,24 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 first_needs = second_tags.difference( first_tags )
                 second_needs = first_tags.difference( second_tags )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, second_hashes ) ) for tag in second_needs ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, second_hashes ) ) for tag in second_needs ) )
                 
             elif action == HC.CONTENT_MERGE_ACTION_COPY:
                 
                 first_needs = second_tags.difference( first_tags )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
                 
             elif service_type == HC.LOCAL_TAG and action == HC.CONTENT_MERGE_ACTION_MOVE:
                 
                 first_needs = second_tags.difference( first_tags )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, second_hashes ) ) for tag in second_tags ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, first_hashes ) ) for tag in first_needs ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( tag, second_hashes ) ) for tag in second_tags ) )
                 
             
-            if len( content_updates ) > 0:
-                
-                service_keys_to_content_updates[ service_key ].extend( content_updates )
-                
+            content_update_package.AddContentUpdates( service_key, content_updates )
             
         
         def worth_updating_rating( source_rating, dest_rating ):
@@ -1195,18 +1193,18 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                     
                     if worth_updating_rating( first_current_value, second_current_value ):
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( first_current_value, second_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( first_current_value, second_hashes ) ) )
                         
                     elif worth_updating_rating( second_current_value, first_current_value ):
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
                         
                     
                 elif action == HC.CONTENT_MERGE_ACTION_COPY:
                     
                     if worth_updating_rating( second_current_value, first_current_value ):
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
                         
                     
                 elif action == HC.CONTENT_MERGE_ACTION_MOVE:
@@ -1215,10 +1213,10 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                         
                         if worth_updating_rating( second_current_value, first_current_value ):
                             
-                            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
+                            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( second_current_value, first_hashes ) ) )
                             
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, second_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( None, second_hashes ) ) )
                         
                     
                 
@@ -1230,27 +1228,27 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                     
                     if second_current_value > 0:
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
                         
                     
                     if first_current_value > 0:
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, second_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, second_hashes ) ) )
                         
                     
                 elif action == HC.CONTENT_MERGE_ACTION_COPY:
                     
                     if second_current_value > 0:
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
                         
                     
                 elif action == HC.CONTENT_MERGE_ACTION_MOVE:
                     
                     if second_current_value > 0:
                         
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
-                        content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, second_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( sum_value, first_hashes ) ) )
+                        content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( 0, second_hashes ) ) )
                         
                     
                 
@@ -1259,10 +1257,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            if len( content_updates ) > 0:
-                
-                service_keys_to_content_updates[ service_key ].extend( content_updates )
-                
+            content_update_package.AddContentUpdates( service_key, content_updates )
             
         
         #
@@ -1272,70 +1267,63 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             first_names_and_notes = list( first_media.GetNotesManager().GetNamesToNotes().items() )
             second_names_and_notes = list( second_media.GetNotesManager().GetNamesToNotes().items() )
             
-            content_updates = []
-            
             # TODO: rework this to UpdateeNamesToNotes
             
             if self._sync_notes_action == HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE:
                 
-                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media_result, second_names_and_notes )
-                second_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( second_media_result, first_names_and_notes )
+                first_content_update_package = self._sync_note_import_options.GetContentUpdatePackage( first_media_result, second_names_and_notes )
+                second_content_update_package = self._sync_note_import_options.GetContentUpdatePackage( second_media_result, first_names_and_notes )
                 
-                content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
-                content_updates.extend( second_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                content_update_package.AddContentUpdatePackage( first_content_update_package )
+                content_update_package.AddContentUpdatePackage( second_content_update_package )
                 
             elif self._sync_notes_action == HC.CONTENT_MERGE_ACTION_COPY:
                 
-                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media_result, second_names_and_notes )
+                first_content_update_package = self._sync_note_import_options.GetContentUpdatePackage( first_media_result, second_names_and_notes )
                 
-                content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                content_update_package.AddContentUpdatePackage( first_content_update_package )
                 
             elif self._sync_notes_action == HC.CONTENT_MERGE_ACTION_MOVE:
                 
-                first_service_keys_to_content_updates = self._sync_note_import_options.GetServiceKeysToContentUpdates( first_media_result, second_names_and_notes )
+                first_content_update_package = self._sync_note_import_options.GetContentUpdatePackage( first_media_result, second_names_and_notes )
                 
-                content_updates.extend( first_service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] )
+                content_update_package.AddContentUpdatePackage( first_content_update_package )
                 
-                content_updates.extend(
-                    [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( second_hash, name ) ) for ( name, note ) in second_names_and_notes ]
-                )
+                content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_DELETE, ( second_hash, name ) ) for ( name, note ) in second_names_and_notes ]
                 
-            
-            if len( content_updates ) > 0:
-                
-                service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ].extend( content_updates )
+                content_update_package.AddContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
                 
             
         
         #
         
-        content_update_archive_first = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, first_hashes )
-        content_update_archive_second = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, second_hashes )
+        content_update_archive_first = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, first_hashes )
+        content_update_archive_second = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, second_hashes )
         
         # and not delete_first gubbins here to help out the delete lock lmao. don't want to archive and then try to delete
-        # TODO: this is obviously a bad solution, so better to refactor this function to return a list of service_keys_to_content_updates and stick the delete command right up top, tested for locks on current info
+        # TODO: this is obviously a bad solution, so better to refactor this function to return a list of content_update_packages and stick the delete command right up top, tested for locks on current info
         
         if self._sync_archive_action == SYNC_ARCHIVE_IF_ONE_DO_BOTH:
             
             if first_media.HasInbox() and second_media.HasArchive() and not delete_first:
                 
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_first )
+                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_first )
                 
             elif first_media.HasArchive() and second_media.HasInbox() and not delete_second:
                 
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_second )
+                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_second )
                 
             
         elif self._sync_archive_action == SYNC_ARCHIVE_DO_BOTH_REGARDLESS:
             
             if first_media.HasInbox() and not delete_first:
                 
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_first )
+                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_first )
                 
             
             if second_media.HasInbox() and not delete_second:
                 
-                service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( content_update_archive_second )
+                content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update_archive_second )
                 
             
         
@@ -1350,18 +1338,18 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if ClientTime.ShouldUpdateModifiedTime( first_timestamp_ms, second_timestamp_ms ):
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
+                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( first_hash, ), ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
                     
                 elif ClientTime.ShouldUpdateModifiedTime( second_timestamp_ms, first_timestamp_ms ):
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( second_hash, ClientTime.TimestampData.STATICFileModifiedTime( first_timestamp_ms ) ) ) )
+                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( second_hash, ), ClientTime.TimestampData.STATICFileModifiedTime( first_timestamp_ms ) ) ) )
                     
                 
             elif self._sync_file_modified_date_action == HC.CONTENT_MERGE_ACTION_COPY:
                 
                 if ClientTime.ShouldUpdateModifiedTime( first_timestamp_ms, second_timestamp_ms ):
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( first_hash, ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
+                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( first_hash, ), ClientTime.TimestampData.STATICFileModifiedTime( second_timestamp_ms ) ) ) )
                     
                 
             
@@ -1380,16 +1368,16 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if len( first_needs ) > 0:
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( get_domain_modified_content_updates( first_media, second_media, first_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( first_media, second_media, first_needs ) )
                     
                 
                 if len( second_needs ) > 0:
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
+                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( second_needs, second_hashes ) ) )
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( get_domain_modified_content_updates( second_media, first_media, second_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( second_media, first_media, second_needs ) )
                     
                 
             elif self._sync_urls_action == HC.CONTENT_MERGE_ACTION_COPY:
@@ -1398,9 +1386,9 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if len( first_needs ) > 0:
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
+                    content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( first_needs, first_hashes ) ) )
                     
-                    service_keys_to_content_updates[ CC.COMBINED_LOCAL_FILE_SERVICE_KEY ].extend( get_domain_modified_content_updates( first_media, second_media, first_needs ) )
+                    content_update_package.AddContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, get_domain_modified_content_updates( first_media, second_media, first_needs ) )
                     
                 
             
@@ -1446,15 +1434,15 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
             
             for deletee_service_key in deletee_service_keys:
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, media.GetHashes(), reason = file_deletion_reason )
                 
-                service_keys_to_content_updates[ deletee_service_key ].append( content_update )
+                content_update_package.AddContentUpdate( deletee_service_key, content_update )
                 
             
         
         #
         
-        return service_keys_to_content_updates
+        return content_update_package
         
     
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_DUPLICATE_CONTENT_MERGE_OPTIONS ] = DuplicateContentMergeOptions

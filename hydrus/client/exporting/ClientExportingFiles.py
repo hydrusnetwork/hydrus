@@ -17,6 +17,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
@@ -749,9 +750,9 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     job_status.SetStatusText( 'deleting: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * CHUNK_SIZE, len( deletee_hashes ) ) ) )
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason )
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason )
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', { service_key : [ content_update ] } )
+                    HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update ) )
                     
                 
             

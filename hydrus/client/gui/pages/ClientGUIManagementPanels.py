@@ -63,6 +63,7 @@ from hydrus.client.importing import ClientImportSimpleURLs
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
@@ -1987,12 +1988,16 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ( start_file_queues_paused, start_gallery_queues_paused, merge_simultaneous_pends_to_one_importer ) = self._multiple_gallery_import.GetQueueStartSettings()
-
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'start new importers\' files paused', 'Start any new importers in a file import-paused state.', start_file_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, not start_file_queues_paused, start_gallery_queues_paused, merge_simultaneous_pends_to_one_importer )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'start new importers\' search paused', 'Start any new importers in a gallery search-paused state.', start_gallery_queues_paused, self._multiple_gallery_import.SetQueueStartSettings, start_file_queues_paused, not start_gallery_queues_paused, merge_simultaneous_pends_to_one_importer )
+        start_file_queues_paused = self._multiple_gallery_import.GetStartFileQueuesPaused()
+        start_gallery_queues_paused = self._multiple_gallery_import.GetStartGalleryQueuesPaused()
+        do_not_allow_new_dupes = self._multiple_gallery_import.GetDoNotAllowNewDupes()
+        merge_simultaneous_pends_to_one_importer = self._multiple_gallery_import.GetMergeSimultaneousPendsToOneImporter()
+        
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'start new importers\' files paused', 'Start any new importers in a file import-paused state.', start_file_queues_paused, self._multiple_gallery_import.SetStartFileQueuesPaused, not start_file_queues_paused )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'start new importers\' search paused', 'Start any new importers in a gallery search-paused state.', start_gallery_queues_paused, self._multiple_gallery_import.SetStartGalleryQueuesPaused, not start_gallery_queues_paused )
         ClientGUIMenus.AppendSeparator( menu )
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'bundle multiple pasted queries into one importer (advanced)', 'If you are pasting many small queries at once (such as md5 lookups), check this to smooth out the workflow.', merge_simultaneous_pends_to_one_importer, self._multiple_gallery_import.SetQueueStartSettings, start_file_queues_paused, start_gallery_queues_paused, not merge_simultaneous_pends_to_one_importer )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'do not allow new duplicates', 'This will discard any query/source pair you try to add that is already in the list.', do_not_allow_new_dupes, self._multiple_gallery_import.SetDoNotAllowNewDupes, not do_not_allow_new_dupes )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'bundle multiple pasted queries into one importer (advanced)', 'If you are pasting many small queries at once (such as md5 lookups), check this to smooth out the workflow.', merge_simultaneous_pends_to_one_importer, self._multiple_gallery_import.SetMergeSimultaneousPendsToOneImporter, not merge_simultaneous_pends_to_one_importer )
         
         CGC.core().PopupMenu( self._cog_button, menu )
         
@@ -5363,8 +5368,8 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             while True:
                 
-                fetch_petition_header = None
-                outgoing_petition = None
+                fetch_petition_header: typing.Optional[ HydrusNetwork.PetitionHeader ] = None
+                outgoing_petition: typing.Optional[ HydrusNetwork.Petition ] = None
                 
                 ( fetch_petition_header, outgoing_petition ) = HG.client_controller.CallBlockingToQt( self, qt_get_work )
                 
@@ -5415,11 +5420,11 @@ class ManagementPanelPetitions( ManagementPanel ):
                         
                         try:
                             
-                            updates_and_content_updates = outgoing_petition.GetAllCompletedUpdates()
+                            updates = outgoing_petition.GetCompletedUploadableClientToServerUpdates()
                             
-                            num_to_do = len( updates_and_content_updates )
+                            num_to_do = len( updates )
                             
-                            for ( num_done, ( update, content_updates ) ) in enumerate( updates_and_content_updates ):
+                            for ( num_done, update ) in enumerate( updates ):
                                 
                                 if HydrusTime.TimeHasPassed( time_started + 3 ):
                                     
@@ -5435,9 +5440,11 @@ class ManagementPanelPetitions( ManagementPanel ):
                                 
                                 service.Request( HC.POST, 'update', { 'client_to_server_update' : update } )
                                 
+                                content_updates = ClientContentUpdates.ConvertClientToServerUpdateToContentUpdates( update )
+                                
                                 if len( content_updates ) > 0:
                                     
-                                    HG.client_controller.WriteSynchronous( 'content_updates', { service.GetServiceKey() : content_updates } )
+                                    HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service.GetServiceKey(), content_updates ) )
                                     
                                 
                                 job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )

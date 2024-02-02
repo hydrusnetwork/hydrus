@@ -1088,11 +1088,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             
                             downloaded_tags = []
                             
-                            service_keys_to_content_updates = query_tag_import_options.GetServiceKeysToContentUpdates( file_seed.status, media_result, downloaded_tags ) # additional tags
+                            content_update_package = query_tag_import_options.GetContentUpdatePackage( file_seed.status, media_result, downloaded_tags ) # additional tags
                             
-                            if len( service_keys_to_content_updates ) > 0:
+                            if content_update_package.HasContent():
                                 
-                                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                                HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                                 
                             
                         

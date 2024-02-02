@@ -14,6 +14,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientStrings
 from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationCore
 
 class SingleFileMetadataExporter( ClientMetadataMigrationCore.ImporterExporterNode ):
@@ -119,11 +120,11 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
         note_import_options.SetExtendExistingNoteIfPossible( True )
         note_import_options.SetConflictResolution( NoteImportOptions.NOTE_IMPORT_CONFLICT_RENAME )
         
-        service_keys_to_content_updates = note_import_options.GetServiceKeysToContentUpdates( media_result, names_and_notes )
+        content_update_package = note_import_options.GetContentUpdatePackage( media_result, names_and_notes )
         
-        if len( service_keys_to_content_updates ) > 0:
+        if content_update_package.HasContent():
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     
@@ -217,9 +218,9 @@ class SingleFileMetadataExporterMediaTags( SingleFileMetadataExporterMedia, Hydr
         
         if len( tags ) > 0:
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, hashes ) ) for tag in tags ]
+            content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, add_content_action, ( tag, hashes ) ) for tag in tags ]
             
-            HG.client_controller.WriteSynchronous( 'content_updates', { self._service_key : content_updates } )
+            HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
             
         
     
@@ -303,9 +304,9 @@ class SingleFileMetadataExporterMediaTimestamps( SingleFileMetadataExporterMedia
         
         new_timestamp_data = ClientTime.TimestampData( timestamp_type = timestamp_data.timestamp_type, location = timestamp_data.location, timestamp_ms = HydrusTime.MillisecondiseS( timestamp ) )
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( hash, new_timestamp_data ) ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TIMESTAMP, HC.CONTENT_UPDATE_SET, ( ( hash, ), new_timestamp_data ) ) ]
         
-        HG.client_controller.WriteSynchronous( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates ) )
         
     
     def GetExampleStrings( self ):
@@ -386,9 +387,9 @@ class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, Hydr
         
         hashes = { hash }
         
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, hashes ) ) ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( urls, hashes ) ) ]
         
-        HG.client_controller.WriteSynchronous( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : content_updates } )
+        HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_updates ) )
         
     
     def GetExampleStrings( self ):

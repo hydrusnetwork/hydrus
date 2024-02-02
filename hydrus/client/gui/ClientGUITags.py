@@ -47,6 +47,7 @@ from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.media import ClientMedia
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.metadata import ClientTagsHandling
 
@@ -1923,7 +1924,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, location_context: ClientLocation.LocationContext, media, immediate_commit = False, canvas_key = None ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, medias: typing.Collection[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         CAC.ApplicationCommandProcessorMixin.__init__( self )
@@ -1933,9 +1934,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         self._immediate_commit = immediate_commit
         self._canvas_key = canvas_key
         
-        media = ClientMedia.FlattenMedia( media )
-        
-        self._current_media = [ m.Duplicate() for m in media ]
+        self._current_media = [ m.Duplicate() for m in medias ]
         
         self._hashes = set()
         
@@ -2012,26 +2011,16 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         QP.CallAfter( self._SetSearchFocus )
         
     
-    def _GetGroupsOfServiceKeysToContentUpdates( self ):
+    def _GetContentUpdatePackages( self ):
         
-        groups_of_service_keys_to_content_updates = []
+        content_update_packages = []
         
         for page in self._tag_services.GetPages():
             
-            ( service_key, groups_of_content_updates ) = page.GetGroupsOfContentUpdates()
-            
-            for content_updates in groups_of_content_updates:
-                
-                if len( content_updates ) > 0:
-                    
-                    service_keys_to_content_updates = { service_key : content_updates }
-                    
-                    groups_of_service_keys_to_content_updates.append( service_keys_to_content_updates )
-                    
-                
+            content_update_packages.extend( page.GetContentUpdatePackages() )
             
         
-        return groups_of_service_keys_to_content_updates
+        return content_update_packages
         
     
     def _SetSearchFocus( self ):
@@ -2072,11 +2061,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
     
     def CommitChanges( self ):
         
-        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
+        content_update_packages = self._GetContentUpdatePackages()
         
-        for service_keys_to_content_updates in groups_of_service_keys_to_content_updates:
+        for content_update_package in content_update_packages:
             
-            HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     
@@ -2188,9 +2177,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
     
     def UserIsOKToCancel( self ):
         
-        groups_of_service_keys_to_content_updates = self._GetGroupsOfServiceKeysToContentUpdates()
+        content_update_packages = self._GetContentUpdatePackages()
         
-        if len( groups_of_service_keys_to_content_updates ) > 0:
+        if len( content_update_packages ) > 0:
             
             message = 'Are you sure you want to cancel? You have uncommitted changes that will be lost.'
             
@@ -2335,7 +2324,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             if self._immediate_commit:
                 
-                HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_gui' )
+                HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
                 
             
             self._suggested_tags.mouseActivationOccurred.connect( self.SetTagBoxFocus )
@@ -2597,7 +2586,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             medias_and_tags_managers = [ ( m, m.GetTagsManager() ) for m in self._media ]
             medias_and_sets_of_tags = [ ( m, tm.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ), tm.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ), tm.GetPetitioned( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) ) for ( m, tm ) in medias_and_tags_managers ]
             
-            # there is a big CPU hit here as every time you processcontentupdates, the tagsmanagers need to regen caches lmao
+            # there is a big CPU hit here as every time you ProcessContentUpdatePackage, the tagsmanagers need to regen caches lmao
             # so if I refetch current tags etc... for every tag loop, we end up getting 16 million tagok calls etc...
             # however, as tags is a set, thus with unique members, let's say for now this is ok, don't need to regen just to consult current
             
@@ -2621,7 +2610,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         recent_tags.add( tag )
                         
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ), reason = reason ) )
+                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, choice_action, ( tag, hashes ), reason = reason ) )
                     
                     if len( content_updates ) > 0:
                         
@@ -2661,9 +2650,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 if self._immediate_commit:
                     
-                    service_keys_to_content_updates = { self._tag_service_key : content_updates_group }
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates_group )
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                 else:
                     
@@ -2849,9 +2838,21 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             
         
-        def GetGroupsOfContentUpdates( self ):
+        def GetContentUpdatePackages( self ):
             
-            return ( self._tag_service_key, self._groups_of_content_updates )
+            content_update_packages = []
+            
+            for content_updates in self._groups_of_content_updates:
+                
+                if len( content_updates ) > 0:
+                    
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates )
+                    
+                    content_update_packages.append( content_update_package )
+                    
+                
+            
+            return content_update_packages
             
         
         def GetServiceKey( self ):
@@ -2902,9 +2903,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             return command_processed
             
         
-        def ProcessContentUpdates( self, service_keys_to_content_updates ):
+        def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 for content_update in content_updates:
                     
@@ -3037,21 +3038,18 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         for page in self._tag_services.GetPages():
             
             ( service_key, content_updates ) = page.GetContentUpdates()
             
-            if len( content_updates ) > 0:
-                
-                service_keys_to_content_updates[ service_key ] = content_updates
-                
+            content_update_package.AddContentUpdates( service_key, content_updates )
             
         
-        if len( service_keys_to_content_updates ) > 0:
+        if content_update_package.HasContent():
             
-            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
@@ -3911,12 +3909,12 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
                     
                 
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
+                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
                     
                 
             else:
@@ -3933,10 +3931,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 new_petitions = current_petitioned.difference( original_petitioned )
                 rescinded_petitions = original_petitioned.difference( current_petitioned )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
                 
             
             return ( self._service_key, content_updates )
@@ -4189,21 +4187,18 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def CommitChanges( self ):
         
-        service_keys_to_content_updates = {}
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         for page in self._tag_services.GetPages():
             
             ( service_key, content_updates ) = page.GetContentUpdates()
             
-            if len( content_updates ) > 0:
-                
-                service_keys_to_content_updates[ service_key ] = content_updates
-                
+            content_update_package.AddContentUpdates( service_key, content_updates )
             
         
-        if len( service_keys_to_content_updates ) > 0:
+        if content_update_package.HasContent():
             
-            HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+            HG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
@@ -5273,12 +5268,12 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
+                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
                     
                 
                 for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
-                    content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
+                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
                     
                 
             else:
@@ -5295,10 +5290,10 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 new_petitions = current_petitioned.difference( original_petitioned )
                 rescinded_petitions = original_petitioned.difference( current_petitioned )
                 
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
-                content_updates.extend( ( HydrusData.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
+                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
                 
             
             return ( self._service_key, content_updates )

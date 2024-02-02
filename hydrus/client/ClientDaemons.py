@@ -5,7 +5,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
-from hydrus.core import HydrusTime
+
+from hydrus.client.metadata import ClientContentUpdates
 
 from hydrus.client import ClientConstants as CC
 
@@ -98,11 +99,11 @@ def DAEMONMaintainTrash():
                     return
                     
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
                 
-                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                 
-                controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                controller.WriteSynchronous( 'content_updates', content_update_package )
                 
                 time.sleep( 0.01 )
                 
@@ -133,11 +134,11 @@ def DAEMONMaintainTrash():
                     return
                     
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, group_of_hashes )
                 
-                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                 
-                controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                controller.WriteSynchronous( 'content_updates', content_update_package )
                 
                 time.sleep( 0.01 )
                 

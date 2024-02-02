@@ -8,6 +8,9 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
+from hydrus.client.metadata import ClientContentUpdates
+
+from hydrus.test import HelperFunctions as HF
 
 class TestManagers( unittest.TestCase ):
     
@@ -74,12 +77,12 @@ class TestManagers( unittest.TestCase ):
         hash_2 = HydrusData.GenerateKey()
         hash_3 = HydrusData.GenerateKey()
         
-        command_1 = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) ] }
-        command_2 = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) ] }
-        command_3 = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) ] }
+        command_1 = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1 } ) )
+        command_2 = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_2 } ) )
+        command_3 = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_1, hash_3 } ) )
         
-        command_1_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) ] }
-        command_2_inverted = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) ] }
+        command_1_inverted = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) )
+        command_2_inverted = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) )
         
         undo_manager = ClientManagers.UndoManager( HG.client_controller )
         
@@ -99,21 +102,29 @@ class TestManagers( unittest.TestCase ):
         
         self.assertEqual( ( 'undo archive 1 files', 'redo inbox 1 files' ), undo_manager.GetUndoRedoStrings() )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, command_2_inverted )
         
         undo_manager.Redo()
         
-        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2, ), {} ) ] )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, command_2 )
         
         self.assertEqual( ( 'undo inbox 1 files', None ), undo_manager.GetUndoRedoStrings() )
         
         undo_manager.Undo()
         
-        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_2_inverted, ), {} ) ] )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, command_2_inverted )
         
         undo_manager.Undo()
         
-        self.assertEqual( HG.test_controller.GetWrite( 'content_updates' ), [ ( ( command_1_inverted, ), {} ) ] )
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, command_1_inverted )
         
         self.assertEqual( ( None, 'redo archive 1 files' ), undo_manager.GetUndoRedoStrings() )
         

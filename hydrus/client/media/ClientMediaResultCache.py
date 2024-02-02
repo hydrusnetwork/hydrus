@@ -10,6 +10,7 @@ from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.caches import ClientCachesBase
 
@@ -41,7 +42,7 @@ class MediaResultCache( object ):
         # then that won't be a chance for the weakvaluedict to step in. we'll keep this scratchpad of stuff
         self._fifo_timeout_cache = ClientCachesBase.DataCache( HG.client_controller, 'media result cache', 2048, 120 )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdates', 'content_updates_data' )
+        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_data' )
         HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
         HG.client_controller.sub( self, 'NewForceRefreshTags', 'notify_new_force_refresh_tags_data' )
         HG.client_controller.sub( self, 'NewTagDisplayRules', 'notify_new_tag_display_rules' )
@@ -190,11 +191,11 @@ class MediaResultCache( object ):
         HG.client_controller.pub( 'refresh_all_tag_presentation_gui' )
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
         with self._lock:
             
-            for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+            for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                 
                 for content_update in content_updates:
                     

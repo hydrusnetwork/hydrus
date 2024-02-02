@@ -8,6 +8,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 
 NOTE_IMPORT_CONFLICT_REPLACE = 0
 NOTE_IMPORT_CONFLICT_IGNORE = 1
@@ -86,9 +87,9 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
         return set( self._name_whitelist )
         
     
-    def GetServiceKeysToContentUpdates( self, media_result: ClientMediaResult.MediaResult, names_and_notes: typing.Collection[ typing.Tuple[ str, str ] ] ):
+    def GetContentUpdatePackage( self, media_result: ClientMediaResult.MediaResult, names_and_notes: typing.Collection[ typing.Tuple[ str, str ] ] ) -> ClientContentUpdates.ContentUpdatePackage:
         
-        service_keys_to_content_updates = collections.defaultdict( list )
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         if self._get_notes:
             
@@ -100,15 +101,15 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
             
             updatee_names_to_notes = self.GetUpdateeNamesToNotes( existing_names_to_notes, names_and_notes )
             
-            content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in updatee_names_to_notes.items() ]
+            content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, name, note ) ) for ( name, note ) in updatee_names_to_notes.items() ]
             
             if len( content_updates ) > 0:
                 
-                service_keys_to_content_updates[ CC.LOCAL_NOTES_SERVICE_KEY ] = content_updates
+                content_update_package.AddContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
                 
             
         
-        return service_keys_to_content_updates
+        return content_update_package
         
     
     def GetSummary( self ):

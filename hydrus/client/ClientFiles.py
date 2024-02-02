@@ -31,6 +31,7 @@ from hydrus.client import ClientSVGHandling # important to keep this in, despite
 from hydrus.client import ClientPDFHandling # important to keep this in, despite not being used, since there's initialisation stuff in here
 from hydrus.client import ClientThreading
 from hydrus.client import ClientVideoHandling
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
 REGENERATE_FILE_DATA_JOB_FILE_METADATA = 0
@@ -354,7 +355,7 @@ class ClientFilesManager( object ):
         
         self._controller = controller
         
-        self._rwlock = ClientThreading.FileRWLock()
+        self._file_storage_rwlock = ClientThreading.FileRWLock()
         
         self._prefixes_to_client_files_subfolders = collections.defaultdict( list )
         self._smallest_prefix = 2
@@ -1195,7 +1196,7 @@ class ClientFilesManager( object ):
     
     def AllLocationsAreDefault( self ):
         
-        with self._rwlock.read:
+        with self._file_storage_rwlock.read:
             
             db_dir = self._controller.GetDBDir()
             
@@ -1226,7 +1227,7 @@ class ClientFilesManager( object ):
     
     def AddFile( self, hash, mime, source_path, thumbnail_bytes = None ):
         
-        with self._rwlock.write:
+        with self._file_storage_rwlock.write:
             
             self._AddFile( hash, mime, source_path )
             
@@ -1239,7 +1240,7 @@ class ClientFilesManager( object ):
     
     def AddThumbnailFromBytes( self, hash, thumbnail_bytes, silent = False ):
         
-        with self._rwlock.write:
+        with self._file_storage_rwlock.write:
             
             self._AddThumbnailFromBytes( hash, thumbnail_bytes, silent = silent )
             
@@ -1252,7 +1253,7 @@ class ClientFilesManager( object ):
             return False
             
         
-        with self._rwlock.write:
+        with self._file_storage_rwlock.write:
             
             return self._ChangeFileExt( hash, old_mime, mime )
             
@@ -1260,7 +1261,7 @@ class ClientFilesManager( object ):
     
     def ClearOrphans( self, move_location = None ):
         
-        with self._rwlock.write:
+        with self._file_storage_rwlock.write:
             
             job_status = ClientThreading.JobStatus( cancellable = True )
             
@@ -1451,7 +1452,7 @@ class ClientFilesManager( object ):
     
     def DeleteNeighbourDupes( self, hash, true_mime ):
         
-        with self._rwlock.write:
+        with self._file_storage_rwlock.write:
             
             correct_path = self._GenerateExpectedFilePath( hash, true_mime )
             
@@ -1498,7 +1499,7 @@ class ClientFilesManager( object ):
         
         while not HG.started_shutdown:
             
-            with self._rwlock.write:
+            with self._file_storage_rwlock.write:
                 
                 ( file_hash, thumbnail_hash ) = self._controller.Read( 'deferred_physical_delete' )
                 
@@ -1567,7 +1568,7 @@ class ClientFilesManager( object ):
     
     def GetCurrentFileBaseLocations( self ):
         
-        with self._rwlock.read:
+        with self._file_storage_rwlock.read:
             
             return self._GetCurrentSubfolderBaseLocations( only_files = True )
             
@@ -1575,7 +1576,7 @@ class ClientFilesManager( object ):
     
     def GetFilePath( self, hash, mime = None, check_file_exists = True ):
         
-        with self._rwlock.read:
+        with self._file_storage_rwlock.read:
             
             if HG.file_report_mode:
                 
@@ -1628,7 +1629,7 @@ class ClientFilesManager( object ):
             HydrusData.ShowText( 'Thumbnail path request: ' + str( ( hash, mime ) ) )
             
         
-        with self._rwlock.read:
+        with self._file_storage_rwlock.read:
             
             path = self._GenerateExpectedThumbnailPath( hash )
             
@@ -1678,7 +1679,7 @@ class ClientFilesManager( object ):
                 return
                 
             
-            with self._rwlock.write:
+            with self._file_storage_rwlock.write:
                 
                 rebalance_tuple = self._GetRebalanceTuple()
                 
@@ -1718,7 +1719,7 @@ class ClientFilesManager( object ):
     
     def RebalanceWorkToDo( self ):
         
-        with self._rwlock.read:
+        with self._file_storage_rwlock.read:
             
             return self._GetRebalanceTuple() is not None
             
@@ -1734,7 +1735,7 @@ class ClientFilesManager( object ):
             return
             
         
-        with self._rwlock.read:
+        with self._file_storage_rwlock.read:
             
             file_path = self._GenerateExpectedFilePath( hash, mime )
             
@@ -1746,7 +1747,7 @@ class ClientFilesManager( object ):
             thumbnail_bytes = self._GenerateThumbnailBytes( file_path, media )
             
         
-        with self._rwlock.write:
+        with self._file_storage_rwlock.write:
             
             self._AddThumbnailFromBytes( hash, thumbnail_bytes )
             
@@ -1817,9 +1818,9 @@ class ClientFilesManager( object ):
         hash = media.GetHash()
         mime = media.GetMime()
         
-        with self._rwlock.write:
-            
-            path = self._GenerateExpectedFilePath( hash, mime )
+        path = self._GenerateExpectedFilePath( hash, mime )
+        
+        with self._file_storage_rwlock.write:
             
             if os.path.exists( path ):
                 
@@ -2248,19 +2249,19 @@ class FilesMaintenanceManager( object ):
                 
                 leave_deletion_record = job_type == REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_PRESENCE_DELETE_RECORD
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'Record deleted during File Integrity check.' )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, ( hash, ), reason = 'Record deleted during File Integrity check.' )
                 
-                service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                 
-                self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                self._controller.WriteSynchronous( 'content_updates', content_update_package )
                 
                 if not leave_deletion_record:
                     
-                    content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, ( hash, ) )
+                    content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, ( hash, ) )
                     
-                    service_keys_to_content_updates = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ content_update ] }
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                     
-                    self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                    self._controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                 
                 if not self._pubbed_message_about_bad_file_record_delete:

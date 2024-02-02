@@ -11,6 +11,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientThreading
+from hydrus.client.metadata import ClientContentUpdates
 
 def AddPaddingToDimensions( dimensions, padding ):
     
@@ -78,90 +79,7 @@ def CatchExceptionClient( etype, value, tb ):
     
     time.sleep( 1 )
     
-def ConvertServiceKeysToContentUpdatesToPrettyString( service_keys_to_content_updates ):
-    
-    num_files = 0
-    actions = set()
-    locations = set()
-    
-    extra_words = ''
-    
-    for ( service_key, content_updates ) in list(service_keys_to_content_updates.items()):
-        
-        if len( content_updates ) > 0:
-            
-            name = HG.client_controller.services_manager.GetName( service_key )
-            
-            locations.add( name )
-            
-        
-        for content_update in content_updates:
-            
-            ( data_type, action, row ) = content_update.ToTuple()
-            
-            if data_type == HC.CONTENT_TYPE_MAPPINGS:
-                
-                extra_words = ' tags for'
-                
-            
-            actions.add( HC.content_update_string_lookup[ action ] )
-            
-            if action in ( HC.CONTENT_UPDATE_ARCHIVE, HC.CONTENT_UPDATE_INBOX ):
-                
-                locations = set()
-                
-            
-            num_files += len( content_update.GetHashes() )
-            
-        
-    
-    s = ''
-    
-    if len( locations ) > 0:
-        
-        s += ', '.join( locations ) + '->'
-        
-    
-    s += ', '.join( actions ) + extra_words + ' ' + HydrusData.ToHumanInt( num_files ) + ' files'
-    
-    return s
-    
-def ConvertServiceKeysToTagsToServiceKeysToContentUpdates( hashes, service_keys_to_tags ):
-    
-    service_keys_to_content_updates = {}
-    
-    for ( service_key, tags ) in service_keys_to_tags.items():
-        
-        if len( tags ) == 0:
-            
-            continue
-            
-        
-        try:
-            
-            service = HG.client_controller.services_manager.GetService( service_key )
-            
-        except HydrusExceptions.DataMissing:
-            
-            continue
-            
-        
-        if service.GetServiceType() == HC.LOCAL_TAG:
-            
-            action = HC.CONTENT_UPDATE_ADD
-            
-        else:
-            
-            action = HC.CONTENT_UPDATE_PEND
-            
-        
-        content_updates = [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, action, ( tag, hashes ) ) for tag in tags ]
-        
-        service_keys_to_content_updates[ service_key ] = content_updates
-        
-    
-    return service_keys_to_content_updates
-    
+
 def ConvertZoomToPercentage( zoom ):
     
     zoom_percent = zoom * 100

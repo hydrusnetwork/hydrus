@@ -6,9 +6,9 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusTime
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientThreading
 from hydrus.client import ClientLocation
+from hydrus.client.metadata import ClientContentUpdates
 
 pair_types_to_content_types = {}
 
@@ -291,12 +291,12 @@ class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
         
         for ( tag, hashes ) in tags_to_hashes.items():
             
-            content_updates.append( HydrusData.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, self._content_action, ( tag, hashes ), reason = reason ) )
+            content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, self._content_action, ( tag, hashes ), reason = reason ) )
             
         
-        service_keys_to_content_updates = { self._tag_service_key : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates )
         
-        self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        self._controller.WriteSynchronous( 'content_updates', content_update_package )
         
         return GetBasicSpeedStatement( num_done, time_started_precise )
         
@@ -327,11 +327,11 @@ class MigrationDestinationTagServicePairs( MigrationDestinationTagService ):
             reason = None
             
         
-        content_updates = [ HydrusData.ContentUpdate( self._content_type, self._content_action, tag_pair, reason = reason ) for tag_pair in data ]
+        content_updates = [ ClientContentUpdates.ContentUpdate( self._content_type, self._content_action, tag_pair, reason = reason ) for tag_pair in data ]
         
-        service_keys_to_content_updates = { self._tag_service_key : content_updates }
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates )
         
-        self._controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+        self._controller.WriteSynchronous( 'content_updates', content_update_package )
         
         num_done = len( data )
         

@@ -2533,8 +2533,10 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._file_history_vbox.removeWidget( self._file_history_chart )
                 
+                show_deleted = self._flip_deleted.isChecked()
+                
                 # TODO: presumably the thing here is to have SetValue on this widget so we can simply clear/set it rather than the mickey-mouse replace
-                self._file_history_chart = ClientGUICharts.FileHistory( self._file_history_chart_panel, file_history )
+                self._file_history_chart = ClientGUICharts.FileHistory( self._file_history_chart_panel, file_history, show_deleted )
                 
                 self._file_history_chart.setMinimumSize( 720, 480 )
                 

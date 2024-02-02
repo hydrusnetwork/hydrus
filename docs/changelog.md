@@ -7,6 +7,60 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 560](https://github.com/hydrusnetwork/hydrus/releases/tag/v560)
+
+### editing times for multiple files
+
+* the 'edit times' dialog is now available when you select multiple files. it will show and apply time data for all of those files at once. when the files have different times, the various widgets and panels will show ranges and a count of how many files do and don't have that particular time type
+* when you open the edit times dialog on more than one file, every time control now has a 'cascade step' section, where you can set a time delta, e.g. 100 milliseconds, and then, on dialog ok, each file in the selection that launched the dialog will be set that much successively later than the previous, obviously in the order they are currently in. this is a way of forcing/normalising file sorts based on time. negative values are allowed!
+* when the edit times dialog is set to change more than 100 total times, it now verifies with the user that this is correct on dialog ok
+* when the edit times dialog sets a lot of modified dates to files (i.e. actually writing them to your file system), this now happens in a non-gui thread and now makes a cancellable progress popup after a few seconds
+
+### misc
+
+* fixed the 'imported to' timestamp for files migrated to other local file domains, which were one of the ones incorrectly set, as expected, to 54 years ago. in the database update, I also fix all the wrongly saved ones from v559
+* mr bones and the file history chart are now under the 'database' menu
+* fixed an issue with the file history chart not maintaining the `show_deleted = False` state through search refreshes
+* there's a new checkbox under `files and trash`, `Remove files from view when they are moved to another local file domain`. this re-introduces the unintended behaviour that I fixed recently when 'remove when trashed' was set, but now targeted specifically for that situation. if you use multiple local file domans a bunch and want files to disappear when you shoot them to a place you aren't looking at, give it a go and let me know how it works for you
+* fixed a regression from my 'remove when trashed' fix where deleting collections with this option on would leave crazy ghost thumbnails behind. collections that are completely emptied should now properly remove themselves in all content update situations
+* the gallery downloader page 'cog' icon now has a 'do not allow new duplicates' option, which will discard any (query_text,source) pairs you try to enter if they already exist in the list. this option is remembered through restarts
+* added 'sort by pixel hash' to the file sort menu. it isn't super helpful, but it'll show pairs of exact-matching files next to each other amongst a sea of noise. I may expose perceptual hashes in a similar way in future, which would be more useful, but thumbnails don't have their phashes quickly available atm, so maybe only when there are other reasons to add that overhead
+* fixed the `setup_venv.sh` and `setup_venv.command` files' custom qtpy and PySide6 (Qt stuff) version installer! there was a dumb typo, sorry for the trouble
+* thanks to a user, the derpibooru parser now grabs `fanfic`, `spoiler`, and `error` tags
+
+### boring cleanup
+
+* neatened up how non-thumbnail-generatable files (e.g. rtf) present their default thumbs and refactored the code a little
+* when a file's thumbnail is unavailable but the filetype is known (e.g. you are looking at records of deleted files that have no blurhash), hydrus should now deliver that file's default thumb instead
+* unified this thumbnail-defaulting code a little more, fixing fetching for some weirder files and deduplicating some messy areas. the client thumbnail cache should be better about delivering the right unusual thumbnail now and as future filetypes are added
+* added an 'image.png' to serve as a nicer fallback for various thumbnail-undeliverable but known-image files
+* fixed rtf files not providing their rtf thumbnail in the Client API
+* fixed up some ancient local booru thumbnail fetching code
+* cleaned up some messy dialog launches that were having to navigate single/collected media in an awkward way
+* removed the TestFunctions unit test stub, which was of diminishing use
+
+### boring cleanup, time code
+
+* updated the DateTime control and button to handle multiple times at once, and updated the edit timestamps dialog itself similarly throughout (this took a day and a half lol)
+* rejiggered the DateTime widgets to handle a nice new object to hold the multiple times' range, since it was all getting messy
+* rejiggered the time content update pipeline from top to bottom to take multiple hashes per content update, so applying the same timestamp to a thousand files should still be pretty quick
+* fixed up various timestamp_ms->QtDateTime conversions so they all include local timezone info. also fixed the datetime widget so it returns properly local-timezone'd datetimes. I can no longer easily reproduce a particular time that jumps an hour every time you open it (due to retroactive summer-time fun)
+* harmonised some older datestring conversions to come out 2023-06-30 instead of 2023/06/30
+* fixed some time string calculations to handle our new sub-second times better
+* updated the time delta widget to handle negative numbers
+
+### boring cleanup, content updates
+
+* moved all `ContentUpdate` gubbins out of the hydrus module scope; it is now client only
+* made a new `ClientContentUpdates.py` to collect all content update code and refactored stuff there
+* wrote a new `ContentUpdatePackage` to replace the ancient `service_keys_to_content_updates` structure. various hacky or ad-hoc processing and presentation is now gathered under this new object, and I refactor-spammed it across the program, with too many individual changes to talk about in detail
+
+### client api
+
+* the new `set_time` call has some additional safety rails. you can add (or delete) 'web domain' timestamps any time, but you now cannot add or delete any of the others, only edit when they already exist
+* updated the client api unit tests and help to account for this
+* the client api is now version 60
+
 ## [Version 559](https://github.com/hydrusnetwork/hydrus/releases/tag/v559)
 
 ### millisecond timestamps
@@ -446,37 +500,3 @@ title: Changelog
 
 * thanks to a user, the Client API now has a 'generate_hashes' endpoint that returns the sha256 hash (and pixel hash and perceptual hashes of any appropriate image file) of any file you give it
 * the client api version is now 55
-
-## [Version 550](https://github.com/hydrusnetwork/hydrus/releases/tag/v550)
-
-### misc
-
-* if you enter invalid URLs (i.e. non-parsing) into 'manage URLs', the dialog now lets you know they were not apparently good and asks if you want to enter them anyway. previously, it errored-out and disallowed anything that wasn't parsing ok (issue #1444)
-* when physically deleting files (i.e. deleting from trash or picking 'permanently delete' from the advanced delete dialog), the relevant files are now immediately removed from view. there were some situations where, when physically deleting a lot of files (causing the job to clear in batches), you could subsequently click on a soon-to-be-deleted file, loading it in mpv, and then, if you started a big UI-lag job like loading 'manage siblings', it could cause a crash if the file was deleted during the UI hang (issue #1447)
-* the client now explicitly closes and clears its network connections after five minutes of inactivity. it turns out that the behind the scenes tools were not doing this exactly as I had thought, clogging up connection slots (issue #1458)
-* thanks to a user, the rendering of palettized PNGs with ICC profiles is fixed!
-* fixed the github build script to include the new-as-of-a-couple-of-weeks-ago 'auto_update_installer.bat' file in the Windows builds. sorry for the confusion here, I forgot I had to do this!
-* optimised deselection of a large number of files when you already have a lot of thumbnails selected (a tricky example of this is clicking on an unselected file when you have a lot of files selected, thus deselecting all that old stuff). should be a little faster to work on big lists now
-* further optimised reduction recalculation of the taglist in general
-
-### thumbnail fill
-
-* after vacillating and talking about it for months, I finally reworked how ''scale to fill' thumbnails work. as sometimes happens, I only had to change about six critical lines of code to get the core functionality changed and nothing seems to have exploded
-* the main change here is KISS--'fill' thumbnail image files on disk are no longer clipped to just the viewable area, but the whole image scaled to fill the thumbnail space (with exceptions for extreme cases). this change gives us some simplicity and flexibility behind the scenes, saves some regeneration work when the user only changes one thumbnail dimension setting, improves maintenance tasks based off the thumbnail (like blurhash), and means that the Client API can fetch your thumbs and still have something useful to display
-* if you have 'scale to fill' set, hydrus will regenerate your thumbnails naturally as you browse the client. fingers crossed, you won't notice any visual difference through the transition
-* 'open externally' button panels now display their thumbnails with more reasonable maximum dimensions, and when things are gonk for whatever reason, they should nonetheless be centered correctly
-* as a side thing, this change allowed me to finally purge all the clipping tech from the thumbnail pipeline, where it had obtusely sunk in to every possible filetype thumbgen
-
-### eager login system
-
-* I fixed a problem where some sorts of login script could allow a network job supposedly waiting on them to start before they had completed. it was due to a complicated 'am I logged in?' cookie testing issue while the login process was still working. all network jobs that hypothetically need a login now test if there is a login process currently working on their domain and will properly wait for that process to finish before they move on
-* fixed a 'cannot log in' reporting bug in the login system
-* some misc login code cleanup
-
-### smarter orphan file record and repository update handling
-
-* _this is advanced stuff, most users can ignore_
-* _database->db maintenance->clear orphan file records_ is now able to recover file records where A) the file is in a service component but not the master, B) the file exists on disk. it copies the import timestamp from the specific to the umbrella domain and spams all the repaired files to a new page for user review. this maintenance routine isn't used all that much, but when you have a damaged database, it is nice to recover as much as possible rather than having to export (with clear orphan file records+clear orphan files) and then reimport and lose archive/inbox status and import timestamps
-* repository update files now have a 'delete from repository updates' entry in their right-click menu
-* this area of the code appears to be related to the PTR 404 issue some users have had (it seems to be repository update records not beeing added/deleted/updated correctly), so I am likely to revisit this
-* deleting a file from 'all local files' (which happens for repository update files) now correctly updates the UI-level media object to recognise that the file is fully deleted from all local file domains beneath the umbrella, removing the 'delete from x' commands from their menu, and in the right view contexts removing them from view completely

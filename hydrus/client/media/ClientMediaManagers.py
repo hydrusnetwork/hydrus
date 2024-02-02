@@ -13,6 +13,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client import ClientTime
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
@@ -1251,7 +1252,7 @@ class LocationsManager( object ):
             
         elif data_type == HC.CONTENT_TYPE_TIMESTAMP:
             
-            ( hash, timestamp_data ) = row
+            ( hashes, timestamp_data ) = row
             
             if action == HC.CONTENT_UPDATE_ADD:
                 
@@ -1954,7 +1955,7 @@ class TagsManager( object ):
             
         
     
-    def ProcessContentUpdate( self, service_key, content_update: HydrusData.ContentUpdate ):
+    def ProcessContentUpdate( self, service_key, content_update: ClientContentUpdates.ContentUpdate ):
         
         with self._lock:
             

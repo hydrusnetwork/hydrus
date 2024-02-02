@@ -49,6 +49,7 @@ from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
@@ -221,7 +222,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                 
             
-            HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ) )
             
         
     
@@ -454,7 +455,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         try:
             
-            ( hashes_physically_deleted, jobs ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, media_to_delete, default_reason, suggested_file_service_key = file_service_key )
+            ( hashes_physically_deleted, content_update_packages ) = ClientGUIDialogsQuick.GetDeleteFilesJobs( self, media_to_delete, default_reason, suggested_file_service_key = file_service_key )
             
         except HydrusExceptions.CancelledException:
             
@@ -466,15 +467,15 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             self._RemoveMediaByHashes( hashes_physically_deleted )
             
         
-        def do_it( jobs ):
+        def do_it( content_update_packages ):
             
-            for service_keys_to_content_updates in jobs:
+            for content_update_package in content_update_packages:
                 
-                HG.client_controller.WriteSynchronous( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                 
             
         
-        HG.client_controller.CallToThread( do_it, jobs )
+        HG.client_controller.CallToThread( do_it, content_update_packages )
         
     
     def _DeselectSelect( self, media_to_deselect, media_to_select ):
@@ -1055,7 +1056,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                 
             
-            HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY: [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ) )
             
         
     
@@ -1146,11 +1147,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _ManageRatings( self ):
         
-        if len( self._selected_media ) > 0:
+        flat_media = ClientMedia.FlattenMedia( self._selected_media )
+        
+        if len( flat_media ) > 0:
             
             if len( HG.client_controller.services_manager.GetServices( HC.RATINGS_SERVICES ) ) > 0:
-                
-                flat_media = self._GetSelectedFlatMedia()
                 
                 with ClientGUIDialogsManage.DialogManageRatings( self, flat_media ) as dlg:
                     
@@ -1164,7 +1165,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _ManageTags( self ):
         
-        if len( self._selected_media ) > 0:
+        flat_media = ClientMedia.FlattenMedia( self._selected_media )
+        
+        if len( flat_media ) > 0:
             
             num_files = self._GetNumSelected()
             
@@ -1173,7 +1176,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUITags.ManageTagsPanel( dlg, self._location_context, self._selected_media )
+                panel = ClientGUITags.ManageTagsPanel( dlg, self._location_context, flat_media )
                 
                 dlg.SetPanel( panel )
                 
@@ -1186,11 +1189,13 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _ManageTimestamps( self ):
         
-        if self._HasFocusSingleton():
+        ordered_selected_media = self._GetSelectedMediaOrdered()
+        
+        ordered_selected_flat_media = ClientMedia.FlattenMedia( ordered_selected_media )
+        
+        if len( ordered_selected_flat_media ) > 0:
             
-            media = self._GetFocusSingleton()
-            
-            ClientGUIMediaActions.EditFileTimestamps( self, media )
+            ClientGUIMediaActions.EditFileTimestamps( self, ordered_selected_flat_media )
             
             self.setFocus( QC.Qt.OtherFocusReason )
             
@@ -1198,7 +1203,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _ManageURLs( self ):
         
-        if len( self._selected_media ) > 0:
+        flat_media = ClientMedia.FlattenMedia( self._selected_media )
+        
+        if len( flat_media ) > 0:
             
             num_files = self._GetNumSelected()
             
@@ -1206,7 +1213,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, self._selected_media )
+                panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, flat_media )
                 
                 dlg.SetPanel( panel )
                 
@@ -1347,11 +1354,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                         
                         reason = dlg.GetValue()
                         
-                        content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = reason )
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = reason )
                         
-                        service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
+                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( remote_service_key, content_update )
                         
-                        HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                        HG.client_controller.Write( 'content_updates', content_update_package )
                         
                     
                 
@@ -1359,11 +1366,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
             elif service_type == HC.IPFS:
                 
-                content_update = HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'ipfs' )
+                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = 'ipfs' )
                 
-                service_keys_to_content_updates = { remote_service_key : ( content_update, ) }
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( remote_service_key, content_update )
                 
-                HG.client_controller.Write( 'content_updates', service_keys_to_content_updates )
+                HG.client_controller.Write( 'content_updates', content_update_package )
                 
             
         
@@ -1517,7 +1524,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL )
         
-        HG.client_controller.Write( 'content_updates', { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ] } )
+        HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ) )
         
     
     def _RescindPetitionFiles( self, file_service_key ):
@@ -1526,7 +1533,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HG.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ) )
             
         
     
@@ -1536,7 +1543,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HG.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ) )
             
         
     
@@ -1734,7 +1741,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         # some service_key_to_content_updates preservation gubbins is needed as a result
         
         hashes_to_duplicated_media = {}
-        hash_pairs_to_list_of_service_keys_to_content_updates = collections.defaultdict( list )
+        hash_pairs_to_content_update_packages = collections.defaultdict( list )
         
         for is_first_run in ( True, False ):
             
@@ -1757,7 +1764,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 second_duplicated_media = hashes_to_duplicated_media[ second_hash ]
                 
-                list_of_service_keys_to_content_updates = hash_pairs_to_list_of_service_keys_to_content_updates[ ( first_hash, second_hash ) ]
+                content_update_packages = hash_pairs_to_content_update_packages[ ( first_hash, second_hash ) ]
                 
                 if duplicate_content_merge_options is not None:
                     
@@ -1765,12 +1772,12 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                     # so the important part of this mess is here. we send the duplicated media, which is keeping up with content updates, to the method here
                     # original 'first_media' is not changed, and won't be until the database Write clears and publishes everything
-                    list_of_service_keys_to_content_updates.append( duplicate_content_merge_options.ProcessPairIntoContentUpdates( first_duplicated_media, second_duplicated_media, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
+                    content_update_packages.append( duplicate_content_merge_options.ProcessPairIntoContentUpdatePackage( first_duplicated_media, second_duplicated_media, file_deletion_reason = file_deletion_reason, do_not_do_deletes = do_not_do_deletes ) )
                     
                 
-                for service_keys_to_content_updates in list_of_service_keys_to_content_updates:
+                for content_update_package in content_update_packages:
                     
-                    for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+                    for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
                         
                         for content_update in content_updates:
                             
@@ -1794,7 +1801,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     continue
                     
                 
-                pair_info.append( ( duplicate_type, first_hash, second_hash, list_of_service_keys_to_content_updates ) )
+                pair_info.append( ( duplicate_type, first_hash, second_hash, content_update_packages ) )
                 
             
         
@@ -2113,7 +2120,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HG.client_controller.Write( 'content_updates', { file_service_key : [ HydrusData.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ] } )
+            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ) )
             
         
     
@@ -2510,13 +2517,13 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         return command_processed
         
     
-    def ProcessContentUpdates( self, service_keys_to_content_updates ):
+    def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
         
-        ClientMedia.ListeningMediaList.ProcessContentUpdates( self, service_keys_to_content_updates )
+        ClientMedia.ListeningMediaList.ProcessContentUpdatePackage( self, content_update_package )
         
         we_were_file_or_tag_affected = False
         
-        for ( service_key, content_updates ) in service_keys_to_content_updates.items():
+        for ( service_key, content_updates ) in content_update_package.IterateContentUpdates():
             
             for content_update in content_updates:
                 

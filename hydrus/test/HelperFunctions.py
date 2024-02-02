@@ -9,8 +9,12 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 
-def compare_content_updates( ut: unittest.TestCase, service_keys_to_content_updates, expected_service_keys_to_content_updates ):
+def compare_content_update_packages( ut: unittest.TestCase, content_update_package: ClientContentUpdates.ContentUpdatePackage, expected_content_update_package: ClientContentUpdates.ContentUpdatePackage ):
+    
+    service_keys_to_content_updates = dict( content_update_package.IterateContentUpdates() )
+    expected_service_keys_to_content_updates = dict( expected_content_update_package.IterateContentUpdates() )
     
     ut.assertEqual( len( service_keys_to_content_updates ), len( expected_service_keys_to_content_updates ) )
     
@@ -18,8 +22,15 @@ def compare_content_updates( ut: unittest.TestCase, service_keys_to_content_upda
         
         expected_content_updates = expected_service_keys_to_content_updates[ service_key ]
         
-        c_u_tuples = sorted( ( ( c_u.ToTuple(), c_u.GetReason() ) for c_u in content_updates ) )
-        e_c_u_tuples = sorted( ( ( e_c_u.ToTuple(), e_c_u.GetReason() ) for e_c_u in expected_content_updates ) )
+        content_updates = sorted( content_updates, key = lambda c_u: str( c_u ) )
+        expected_content_updates = sorted( expected_content_updates, key = lambda c_u: str( c_u ) )
+        
+        # TODO: go back to this when this works right, with ContentUpdateAction rewrite
+        # content_update.__hash__ isn't always reliable :(
+        #ut.assertEqual( content_updates, expected_content_updates )
+        
+        c_u_tuples = [ ( c_u.ToTuple(), c_u.GetReason() ) for c_u in content_updates ]
+        e_c_u_tuples = [ ( e_c_u.ToTuple(), e_c_u.GetReason() ) for e_c_u in expected_content_updates ]
         
         ut.assertEqual( c_u_tuples, e_c_u_tuples )
         
