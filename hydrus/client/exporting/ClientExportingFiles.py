@@ -566,7 +566,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 
             except HydrusExceptions.FileMissingException:
                 
-                raise Exception( 'A file to be exported, hash "{}", was missing! You should run file maintenance (under database->maintenance->files) to check the files for the export folder\'s search, and possibly all your files.' )
+                raise Exception( 'A file to be exported, hash "{}", was missing! You should run file maintenance (under database->maintenance->files) to check the files for the export folder\'s search, and possibly all your files.'.format(hash.hex()) )
                 
             
             try:
