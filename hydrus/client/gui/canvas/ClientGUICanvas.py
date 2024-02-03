@@ -3135,7 +3135,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                 
                 was_auto_skipped = True
                 
-                self._processed_pairs.append( ( None, None, None, ClientContentUpdates.ContentUpdatePackage(), was_auto_skipped ) )
+                self._processed_pairs.append( ( None, None, None, [], was_auto_skipped ) )
                 
                 self._current_pair_index += 1
                 
