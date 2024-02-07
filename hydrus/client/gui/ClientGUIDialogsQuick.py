@@ -1,10 +1,12 @@
 import os
+import time
 
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
@@ -81,6 +83,41 @@ def GetInterstitialFilteringAnswer( win, label ):
         return result
         
     
+
+def run_auto_yes_no_gubbins( dlg: QW.QDialog, time_to_fire, original_title, action_description, end_state ):
+    
+    def qt_set_title():
+        
+        time_string = HydrusTime.TimestampToPrettyTimeDelta( time_to_fire, just_now_threshold = 0, just_now_string = 'imminently' )
+        
+        title = f'{original_title} (will {action_description} {time_string})'
+        
+        dlg.setWindowTitle( title )
+        
+    
+    def qt_fire_button():
+        
+        if dlg.isModal():
+            
+            dlg.done( end_state )
+            
+        
+    
+    while not HydrusTime.TimeHasPassed( time_to_fire ):
+        
+        job = HG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no title set', qt_set_title )
+        
+        if job.IsDead(): # window closed
+            
+            return
+            
+        
+        time.sleep( 1 )
+        
+    
+    job = HG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no fire', qt_fire_button )
+    
+
 def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:
@@ -89,32 +126,22 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
         
         dlg.SetPanel( panel )
         
-        if auto_yes_time is None and auto_no_time is None:
-            
-            return dlg.exec() if not check_for_cancelled else ( dlg.exec(), dlg.WasCancelled() )
-            
-        else:
+        if auto_yes_time is not None or auto_no_time is not None:
             
             if auto_yes_time is not None:
                 
-                job = HG.client_controller.CallLaterQtSafe( dlg, auto_yes_time, 'dialog auto-yes', dlg.done, QW.QDialog.Accepted )
+                HG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_yes_time, dlg.windowTitle(), 'auto-yes', QW.QDialog.Accepted )
                 
             elif auto_no_time is not None:
                 
-                job = HG.client_controller.CallLaterQtSafe( dlg, auto_no_time, 'dialog auto-no', dlg.done, QW.QDialog.Rejected )
-                
-            
-            try:
-                
-                return dlg.exec() if not check_for_cancelled else ( dlg.exec(), dlg.WasCancelled() )
-                
-            finally:
-                
-                job.Cancel()
+                HG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_no_time, dlg.windowTitle(), 'auto-no', QW.QDialog.Rejected )
                 
             
         
+        return dlg.exec() if not check_for_cancelled else ( dlg.exec(), dlg.WasCancelled() )
+        
     
+
 def GetYesYesNo( win, message, title = 'Are you sure?', yes_tuples = None, no_label = 'no' ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, title ) as dlg:

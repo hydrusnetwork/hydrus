@@ -47,6 +47,7 @@ class DBException( HydrusException ):
     
 class DBAccessException( HydrusException ): pass
 class DBCredentialsException( HydrusException ): pass
+class DBVersionException( HydrusException ): pass
 class FileMissingException( HydrusException ): pass
 class DirectoryMissingException( HydrusException ): pass
 class SerialisationException( HydrusException ): pass

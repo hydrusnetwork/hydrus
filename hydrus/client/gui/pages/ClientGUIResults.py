@@ -588,9 +588,8 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         num_selected = self._GetNumSelected()
         
-        ( num_files_descriptor, selected_files_descriptor ) = self._GetSortedSelectedMimeDescriptors()
-        
-        num_files_string = '{} {}'.format( HydrusData.ToHumanInt( num_files ), num_files_descriptor )
+        num_files_string = ClientMedia.GetMediasFiletypeSummaryString( self._sorted_media )
+        selected_files_string = ClientMedia.GetMediasFiletypeSummaryString( self._selected_media )
         
         s = num_files_string # 23 files
         
@@ -615,13 +614,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             s += ' - '
             
             # if 1 selected, we show the whole mime string, so no need to specify
-            if num_selected == 1 or selected_files_descriptor == num_files_descriptor:
+            if num_selected == 1 or selected_files_string == num_files_string:
                 
                 selected_files_string = HydrusData.ToHumanInt( num_selected )
-                
-            else:
-                
-                selected_files_string = '{} {}'.format( HydrusData.ToHumanInt( num_selected ), selected_files_descriptor )
                 
             
             if num_selected == 1: # 23 files - 1 video selected, file_info
@@ -771,17 +766,8 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _GetSelectedMediaOrdered( self ):
         
-        medias = []
-        
-        for media in self._sorted_media:
-            
-            if media in self._selected_media:
-                
-                medias.append( media )
-                
-            
-        
-        return medias
+        # note that this is fast because sorted_media is custom
+        return sorted( self._selected_media, key = lambda m: self._sorted_media.index( m ) )
         
     
     def _GetSimilarTo( self, max_hamming ):
@@ -2249,6 +2235,72 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 self._CopyHashesToClipboard( 'sha512' )
                 
+            elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
+                
+                ordered_selected_media = self._GetSelectedMediaOrdered()
+                
+                ( rearrange_type, rearrange_data ) = command.GetSimpleData()
+                
+                insertion_index = None
+                
+                if rearrange_type == CAC.REARRANGE_THUMBNAILS_TYPE_FIXED:
+                    
+                    insertion_index = rearrange_data
+                    
+                elif rearrange_type == CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND:
+                    
+                    rearrange_command = rearrange_data
+                    
+                    if rearrange_command == CAC.MOVE_HOME:
+                        
+                        insertion_index = 0
+                        
+                    elif rearrange_command == CAC.MOVE_END:
+                        
+                        insertion_index = len( self._sorted_media )
+                        
+                    else:
+                        
+                        if len( self._selected_media ) > 0:
+                            
+                            if rearrange_command in ( CAC.MOVE_LEFT, CAC.MOVE_RIGHT ):
+                                
+                                ordered_selected_media = self._GetSelectedMediaOrdered()
+                                
+                                earliest_index = self._sorted_media.index( ordered_selected_media[0] )
+                                
+                                if rearrange_command == CAC.MOVE_LEFT:
+                                    
+                                    if earliest_index > 0:
+                                        
+                                        insertion_index = earliest_index - 1
+                                        
+                                    
+                                elif rearrange_command == CAC.MOVE_RIGHT:
+                                    
+                                    insertion_index = earliest_index + 1
+                                    
+                                
+                            elif rearrange_command == CAC.MOVE_TO_FOCUS:
+                                
+                                if self._focused_media is not None:
+                                    
+                                    focus_index = self._sorted_media.index( self._focused_media )
+                                    
+                                    insertion_index = focus_index
+                                    
+                                
+                            
+                        
+                    
+                
+                if insertion_index is None:
+                    
+                    return
+                    
+                
+                self.MoveMedia( ordered_selected_media, insertion_index = insertion_index )
+                
             elif action == CAC.SIMPLE_SHOW_DUPLICATES:
                 
                 if self._HasFocusSingleton():
@@ -3180,6 +3232,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
+    def _NotifyThumbnailsHaveMoved( self ):
+        
+        self._DirtyAllPages()
+        
+        self.widget().update()
+        
+    
     def _RecalculateVirtualSize( self, called_from_resize_event = False ):
         
         my_size = QP.ScrollAreaVisibleRect( self ).size()
@@ -3561,6 +3620,15 @@ class MediaPanelThumbnails( MediaPanel ):
         self.ShowMenu()
         
     
+    def MoveMedia( self, medias: typing.List[ ClientMedia.Media ], insertion_index: int ):
+        
+        MediaPanel.MoveMedia( self, medias, insertion_index )
+        
+        self._NotifyThumbnailsHaveMoved()
+        
+        self._ScrollToMedia( medias[0] )
+        
+    
     def NewThumbnails( self, hashes ):
         
         affected_thumbnails = self._GetMedia( hashes )
@@ -3654,10 +3722,14 @@ class MediaPanelThumbnails( MediaPanel ):
                         rows = -1
                         columns = 0
                         
-                    else: # MOVE_DOWN
+                    elif move_direction == CAC.MOVE_DOWN:
                         
                         rows = 1
                         columns = 0
+                        
+                    else:
+                        
+                        raise NotImplementedError()
                         
                     
                     self._MoveThumbnailFocus( rows, columns, shift )
@@ -3835,7 +3907,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 rescind_unpin_phrase = 'rescind unpin from'
                 
                 archive_phrase = 'archive selected'
-                inbox_phrase = 'return selected to inbox'
+                inbox_phrase = 're-inbox selected'
                 local_delete_phrase = 'delete selected'
                 delete_physically_phrase = 'delete selected physically now'
                 undelete_phrase = 'undelete selected'
@@ -3860,7 +3932,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 rescind_unpin_phrase = 'rescind unpin from'
                 
                 archive_phrase = 'archive'
-                inbox_phrase = 'return to inbox'
+                inbox_phrase = 're-inbox'
                 local_delete_phrase = 'delete'
                 delete_physically_phrase = 'delete physically now'
                 undelete_phrase = 'undelete'
@@ -4000,11 +4072,11 @@ class MediaPanelThumbnails( MediaPanel ):
             
             selection_info_menu = ClientGUIMenus.GenerateMenu( menu )
             
+            selected_files_string = ClientMedia.GetMediasFiletypeSummaryString( self._selected_media )
+            
+            selection_info_menu_label = f'{selected_files_string}, {self._GetPrettyTotalSize( only_selected = True )}'
+            
             if multiple_selected:
-                
-                ( num_files_descriptor, selected_files_descriptor ) = self._GetSortedSelectedMimeDescriptors()
-                
-                selection_info_menu_label = '{} {}, {}'.format( HydrusData.ToHumanInt( num_selected ), selected_files_descriptor, self._GetPrettyTotalSize( only_selected = True ) )
                 
                 pretty_total_duration = self._GetPrettyTotalDuration( only_selected = True )
                 
@@ -4019,12 +4091,10 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 pretty_info_lines = list( focus_singleton.GetPrettyInfoLines() )
                 
-                top_line = pretty_info_lines.pop( 0 )
-                
-                selection_info_menu_label = top_line
-                
                 ClientGUIMediaMenus.AddPrettyInfoLines( selection_info_menu, pretty_info_lines )
                 
+            
+            ClientGUIMenus.AppendSeparator( selection_info_menu )
             
             ClientGUIMediaMenus.AddFileViewingStatsMenu( selection_info_menu, self._selected_media )
             
@@ -4098,7 +4168,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 ClientGUIMediaMenus.AddServiceKeyLabelsToMenu( selection_info_menu, common_petitioned_ipfs_service_keys, unpin_phrase )
                 
             
-            
             if len( selection_info_menu.actions() ) == 0:
                 
                 selection_info_menu.deleteLater()
@@ -4131,6 +4200,26 @@ class MediaPanelThumbnails( MediaPanel ):
             AddSelectMenu( self, menu, filter_counts, all_specific_file_domains, has_local_and_remote )
             AddRemoveMenu( self, menu, filter_counts, all_specific_file_domains, has_local_and_remote )
             
+            if len( self._selected_media ) > 0:
+                
+                ordered_selected_media = self._GetSelectedMediaOrdered()
+                
+                try:
+                    
+                    earliest_index = self._sorted_media.index( ordered_selected_media[0] )
+                    
+                    num_selected = len( self._selected_media )
+                    
+                    selection_is_contiguous = num_selected > 0 and self._sorted_media.index( ordered_selected_media[-1] ) - earliest_index == num_selected - 1
+                    
+                    AddMoveMenu( self, menu, self._selected_media, self._sorted_media, self._focused_media, selection_is_contiguous, earliest_index )
+                    
+                except HydrusExceptions.DataMissing:
+                    
+                    pass
+                    
+                
+            
             ClientGUIMenus.AppendSeparator( menu )
             
             if has_local:
@@ -4159,9 +4248,18 @@ class MediaPanelThumbnails( MediaPanel ):
             
             local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( user_command_deletable_file_service_keys ), key = HG.client_controller.services_manager.GetName )
             
-            for file_service_key in local_file_service_keys_we_are_in:
+            if len( local_file_service_keys_we_are_in ) > 0:
                 
-                ClientGUIMenus.AppendMenuItem( menu, '{} from {}'.format( local_delete_phrase, HG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete the selected files.', self._Delete, file_service_key )
+                delete_menu = ClientGUIMenus.GenerateMenu( menu )
+                
+                for file_service_key in local_file_service_keys_we_are_in:
+                    
+                    service_name = HG.client_controller.services_manager.GetName( file_service_key )
+                    
+                    ClientGUIMenus.AppendMenuItem( delete_menu, f'from {service_name}', f'Delete the selected files from {service_name}.', self._Delete, file_service_key )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, delete_menu, local_delete_phrase )
                 
             
             if selection_has_trash:
@@ -4528,9 +4626,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         MediaPanel.Sort( self, media_sort )
         
-        self._DirtyAllPages()
-        
-        self.widget().update()
+        self._NotifyThumbnailsHaveMoved()
         
     
     def ThumbnailsReset( self ):
@@ -4768,7 +4864,81 @@ class MediaPanelThumbnails( MediaPanel ):
             
         
     
-def AddRemoveMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domains, has_local_and_remote ):
+
+def AddMoveMenu( win: MediaPanel, menu: QW.QMenu, selected_media: typing.Set[ ClientMedia.Media ], sorted_media: ClientMedia.SortedList, focused_media: typing.Optional[ ClientMedia.Media ], selection_is_contiguous: bool, earliest_index: int ):
+    
+    if len( selected_media ) == 0 or len( selected_media ) == len( sorted_media ):
+        
+        return
+        
+    
+    move_menu = ClientGUIMenus.GenerateMenu( menu )
+    
+    if earliest_index > 0:
+        
+        ClientGUIMenus.AppendMenuItem(
+            move_menu,
+            'to start',
+            'Move the selected thumbnails to the start of the media list.',
+            win.ProcessApplicationCommand,
+            CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_HOME ) )
+        )
+        
+        ClientGUIMenus.AppendMenuItem(
+            move_menu,
+            'back one',
+            'Move the selected thumbnails back one position.',
+            win.ProcessApplicationCommand,
+            CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_LEFT ) )
+        )
+        
+    
+    if focused_media is not None:
+        
+        try:
+            
+            focused_index = sorted_media.index( focused_media )
+            
+            if focused_index != earliest_index or not selection_is_contiguous:
+                
+                ClientGUIMenus.AppendMenuItem(
+                    move_menu,
+                    'to here',
+                    'Move the selected thumbnails to the focused position (most likely the one you clicked on).',
+                    win.ProcessApplicationCommand,
+                    CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_TO_FOCUS ) )
+                )
+                
+            
+        except HydrusExceptions.DataMissing:
+            
+            pass
+            
+        
+    
+    if earliest_index + len( selected_media ) < len( sorted_media ):
+        
+        ClientGUIMenus.AppendMenuItem(
+            move_menu,
+            'forward one',
+            'Move the selected thumbnails forward one position.',
+            win.ProcessApplicationCommand,
+            CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_RIGHT ) )
+        )
+        
+        ClientGUIMenus.AppendMenuItem(
+            move_menu,
+            'to end',
+            'Move the selected thumbnails to the end of the media list.',
+            win.ProcessApplicationCommand,
+            CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_END ) )
+        )
+        
+    
+    ClientGUIMenus.AppendMenu( menu, move_menu, 'move' )
+    
+
+def AddRemoveMenu( win: MediaPanel, menu: QW.QMenu, filter_counts, all_specific_file_domains, has_local_and_remote ):
     
     file_filter_all = ClientMediaFileFilter.FileFilter( ClientMediaFileFilter.FILE_FILTER_ALL )
     

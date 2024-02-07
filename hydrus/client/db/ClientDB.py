@@ -28,6 +28,7 @@ from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientOptions
 from hydrus.client import ClientServices
@@ -177,7 +178,7 @@ def report_content_speed_to_job_status( job_status, rows_done, total_rows, preci
     
     popup_message = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
-    HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
+    CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
     job_status.SetStatusText( popup_message, 2 )
     
 def report_speed_to_job_status( job_status, precise_timestamp, num_rows, row_name ):
@@ -188,7 +189,7 @@ def report_speed_to_job_status( job_status, precise_timestamp, num_rows, row_nam
     
     popup_message = 'processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
-    HG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
+    CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
     job_status.SetStatusText( popup_message, 2 )
     
 def report_speed_to_log( precise_timestamp, num_rows, row_name ):
@@ -212,7 +213,7 @@ class JobDatabaseClient( HydrusData.JobDatabase ):
         
         if HG.db_ui_hang_relief_mode:
             
-            if QC.QThread.currentThread() == HG.client_controller.main_qt_thread:
+            if QC.QThread.currentThread() == CG.client_controller.main_qt_thread:
                 
                 HydrusData.Print( 'ui-hang event processing: begin' )
                 QW.QApplication.instance().processEvents()
@@ -1093,7 +1094,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     orphans_found = True
                     
-                    client_files_manager = HG.client_controller.client_files_manager
+                    client_files_manager = CG.client_controller.client_files_manager
                     
                     those_that_exist_on_disk = set()
                     
@@ -1168,7 +1169,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                             hashes = self.modules_hashes_local_cache.GetHashes( [ row[0] for row in import_rows ] )
                             
-                            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = 'reparented file records' )
+                            CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes, page_name = 'reparented file records' )
                             
                         
                     
@@ -1947,7 +1948,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if max_num_pairs is None:
             
-            max_num_pairs = HG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
+            max_num_pairs = CG.client_controller.new_options.GetInteger( 'duplicate_filter_max_batch_size' )
             
         
         # we need to batch non-intersecting decisions here to keep it simple at the gui-level
@@ -2446,7 +2447,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( hashes_that_need_refresh ) > 0:
             
-            HG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
+            CG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
             
         
     
@@ -4570,7 +4571,7 @@ class DB( HydrusDB.HydrusDB ):
         
         needed_hashes = []
         
-        client_files_manager = HG.client_controller.client_files_manager
+        client_files_manager = CG.client_controller.client_files_manager
         
         for hash_id in needed_hash_ids:
             
@@ -5619,7 +5620,7 @@ class DB( HydrusDB.HydrusDB ):
         
             text = 'searching potential duplicates: {}'.format( HydrusData.ToHumanInt( num_done ) )
             
-            HG.client_controller.frame_splash_status.SetSubtext( text )
+            CG.client_controller.frame_splash_status.SetSubtext( text )
             
             for ( i, hash_id ) in enumerate( group_of_hash_ids ):
                 
@@ -5638,7 +5639,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                     
                 
-                should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
+                should_stop = CG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
                 
                 if should_stop:
                     
@@ -6013,7 +6014,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         if action == HC.CONTENT_UPDATE_ADD:
                             
-                            if not HG.client_controller.tag_display_manager.TagOK( ClientTags.TAG_DISPLAY_STORAGE, service_key, tag ):
+                            if not CG.client_controller.tag_display_manager.TagOK( ClientTags.TAG_DISPLAY_STORAGE, service_key, tag ):
                                 
                                 continue
                                 
@@ -6026,7 +6027,7 @@ class DB( HydrusDB.HydrusDB ):
                             
                         elif action == HC.CONTENT_UPDATE_PEND:
                             
-                            if not HG.client_controller.tag_display_manager.TagOK( ClientTags.TAG_DISPLAY_STORAGE, service_key, tag ):
+                            if not CG.client_controller.tag_display_manager.TagOK( ClientTags.TAG_DISPLAY_STORAGE, service_key, tag ):
                                 
                                 continue
                                 
@@ -9803,6 +9804,8 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        # bitrot gap here, update code above should never run!
+        
         if version == 553:
             
             try:
@@ -9879,7 +9882,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         from hydrus.client.gui import ClientGUIDialogsQuick
                         
-                        result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Regen animation thumbnails?' )
+                        result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Regen animation thumbnails?', auto_yes_time = 600 )
                         
                         return result == QW.QDialog.Accepted
                         
@@ -10055,6 +10058,38 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 560:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'derpibooru.org file page parser',
+                    'e621 file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
         
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
@@ -10464,6 +10499,8 @@ class DB( HydrusDB.HydrusDB ):
         
         self._CloseDBConnection()
         
+        successful_names = []
+        
         try:
             
             for name in ok_names:
@@ -10492,6 +10529,8 @@ class DB( HydrusDB.HydrusDB ):
                     
                     HydrusData.Print( 'Vacuumed ' + db_path + ' in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( time_took ) )
                     
+                    successful_names.append( name )
+                    
                 except Exception as e:
                     
                     HydrusData.Print( 'vacuum failed:' )
@@ -10504,8 +10543,6 @@ class DB( HydrusDB.HydrusDB ):
                     
                     HydrusData.ShowText( text )
                     
-                    self._InitDBConnection()
-                    
                     return
                     
                 
@@ -10516,7 +10553,11 @@ class DB( HydrusDB.HydrusDB ):
             
             self._InitDBConnection()
             
-            self.modules_db_maintenance.RegisterSuccessfulVacuum( name )
+            for name in successful_names:
+                
+                # can't do this without the db connection lol
+                self.modules_db_maintenance.RegisterSuccessfulVacuum( name )
+                
             
             job_status.SetStatusText( 'done!' )
             
@@ -10644,7 +10685,7 @@ class DB( HydrusDB.HydrusDB ):
         
         for filename in self._db_filenames.values():
             
-            HG.client_controller.frame_splash_status.SetText( filename )
+            CG.client_controller.frame_splash_status.SetText( filename )
             
             source = os.path.join( path, filename )
             dest = os.path.join( self._db_dir, filename )
@@ -10675,7 +10716,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        HG.client_controller.frame_splash_status.SetText( 'media files' )
+        CG.client_controller.frame_splash_status.SetText( 'media files' )
         
         client_files_source = os.path.join( path, 'client_files' )
         client_files_default = os.path.join( self._db_dir, 'client_files' )

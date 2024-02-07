@@ -552,7 +552,7 @@ class FileImportJob( object ):
             
             hashes = { self.GetHash() }
             
-            content_update_package = ClientContentUpdates.ContentUpdatePackage.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
+            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
             
             HG.client_controller.Write( 'content_updates', content_update_package )
             

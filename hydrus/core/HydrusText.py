@@ -281,16 +281,24 @@ def NonFailingUnicodeDecode( data, encoding ):
     
     return ( text, encoding )
     
+
 def RemoveNewlines( text: str ) -> str:
     
-    text = ''.join( text.splitlines() )
+    good_lines = [ l.strip() for l in text.splitlines() ]
+    
+    good_lines = [ l for l in good_lines if l != '' ]
+    
+    # I really want to make this ' '.join(), but I'm sure that would break some old parsers
+    text = ''.join( good_lines )
     
     return text
     
+
 def SortStringsIgnoringCase( list_of_strings ):
     
     list_of_strings.sort( key = lambda s: s.lower() )
     
+
 def StripIOInputLine( t ):
     
     t = re_leading_byte_order_mark.sub( '', t )

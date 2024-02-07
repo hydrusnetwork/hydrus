@@ -786,6 +786,11 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
             # maybe should use HydrusText.DeserialiseNewlinedTexts, but that might change/break some existing parsers with the strip() trim
             raw_texts = [ HydrusText.RemoveNewlines( raw_text ) for raw_text in raw_texts ]
             
+        else:
+            
+            # note this does get rid of leading/trailing newlines, which is fine!
+            raw_texts = [ raw_text.strip() for raw_text in raw_texts ]
+            
         
         texts = self._string_processor.ProcessStrings( raw_texts )
         

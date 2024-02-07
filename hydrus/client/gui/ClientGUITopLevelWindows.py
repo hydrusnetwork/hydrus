@@ -192,8 +192,11 @@ def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
-    maximised = tlw.isMaximized()
-    fullscreen = tlw.isFullScreen()
+    if remember_size:
+        
+        maximised = tlw.isMaximized()
+        fullscreen = tlw.isFullScreen()
+        
     
     if not ( maximised or fullscreen ):
         
@@ -201,8 +204,15 @@ def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
         
         if safe_position is not None:
             
-            last_size = ( tlw.size().width(), tlw.size().height() )
-            last_position = ( safe_position.x(), safe_position.y() )
+            if remember_size:
+                
+                last_size = ( tlw.size().width(), tlw.size().height() )
+                
+            
+            if remember_position:
+                
+                last_position = ( safe_position.x(), safe_position.y() )
+                
             
         
     

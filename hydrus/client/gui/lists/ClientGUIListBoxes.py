@@ -1174,6 +1174,29 @@ class ListBox( QW.QScrollArea ):
         self._last_view_start = None
         
     
+    def _CopySelectedTexts( self ):
+        
+        if len( self._selected_terms ) > 1:
+            
+            # keep order
+            terms = [ term for term in self._ordered_terms if term in self._selected_terms ]
+            
+        else:
+            
+            # nice and fast
+            terms = self._selected_terms
+            
+        
+        texts = [ term.GetCopyableText() for term in terms ]
+        
+        if len( texts ) > 0:
+            
+            text = '\n'.join( texts )
+            
+            HG.client_controller.pub( 'clipboard', 'text', text )
+            
+        
+    
     def _DataHasChanged( self ):
         
         self._SetVirtualSize()
@@ -1984,6 +2007,10 @@ class ListBox( QW.QScrollArea ):
                 
                 self.widget().update()
                 
+            elif ctrl and key_code in ( ord( 'C' ), ord( 'c' ), QC.Qt.Key_Insert ):
+                
+                self._CopySelectedTexts()
+                
             else:
                 
                 hit_logical_index = None
@@ -2011,7 +2038,7 @@ class ListBox( QW.QScrollArea ):
                             ctrl = False
                             
                             hit_logical_index = ( self._last_hit_logical_index - 1 ) % len( self._ordered_terms )
-                        
+                            
                         elif ctrl and key_code in ( ord( 'N' ), ord( 'n' ) ):
                             
                             # remove ctrl key to make it act exactly like the down arrow
@@ -3289,15 +3316,18 @@ class ListBoxTags( ListBox ):
         
         def add_favourite_tags( tags ):
             
-            message = f'Add{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}to the favourites list?'
-            
-            from hydrus.client.gui import ClientGUIDialogsQuick
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result != QW.QDialog.Accepted:
+            if len( tags ) > 5:
                 
-                return
+                message = f'Add{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}to the favourites list?'
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result != QW.QDialog.Accepted:
+                    
+                    return
+                    
                 
             
             favourite_tags = set( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )

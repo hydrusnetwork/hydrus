@@ -635,8 +635,17 @@ def safe_copy2( source, dest ):
     
     if FileModifiedTimeIsOk( mtime ):
         
-        # this overwrites on conflict without hassle
-        shutil.copy2( source, dest )
+        try:
+            
+            # this overwrites on conflict without hassle
+            shutil.copy2( source, dest )
+            
+        except PermissionError:
+            
+            HydrusData.Print( f'Failed to copy2 metadata from {source} to {dest}! mtime was {HydrusTime.TimestampToPrettyTime( mtime )}' )
+            
+            shutil.copy( source, dest )
+            
         
     else:
         

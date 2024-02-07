@@ -219,7 +219,8 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
 
 def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
-    num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+    num_already_in = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT )
+    num_successful = file_seed_cache.GetFileSeedCount( CC.STATUS_SUCCESSFUL_AND_NEW ) + num_already_in
     num_vetoed = file_seed_cache.GetFileSeedCount( CC.STATUS_VETOED )
     num_deleted = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED )
     num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
@@ -242,6 +243,11 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
         ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'successful\' file import items from the queue'.format( HydrusData.ToHumanInt( num_successful ) ), 'Tell this log to clear out successful files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_SUCCESSFUL_AND_CHILD_FILES ) )
         
     
+    if num_already_in > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'already in db\' file import items from the queue'.format( HydrusData.ToHumanInt( num_already_in ) ), 'Tell this log to clear out successful but non-new files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, ) )
+        
+    
     if num_deleted > 0:
         
         ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'previously deleted\' file import items from the queue'.format( HydrusData.ToHumanInt( num_deleted ) ), 'Tell this log to clear out deleted files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_DELETED, ) )
@@ -260,6 +266,13 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
     if num_skipped > 0:
         
         ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_SKIPPED, ) )
+        
+    
+    if len( file_seed_cache ) > 0:
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete everything from the queue', 'Tell this log to clear out everything, resetting the queue to empty.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_DELETED, CC.STATUS_ERROR, CC.STATUS_VETOED, CC.STATUS_SKIPPED, CC.STATUS_SUCCESSFUL_AND_CHILD_FILES ) )
         
     
     ClientGUIMenus.AppendSeparator( menu )
@@ -354,7 +367,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         note = file_seed.note
         
         pretty_file_seed_data = str( file_seed_data )
-        pretty_status = CC.status_string_lookup[ status ]
+        pretty_status = CC.status_string_lookup[ status ] if status != CC.STATUS_UNKNOWN else ''
         pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
         pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )
         

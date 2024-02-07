@@ -11,6 +11,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientTime
@@ -733,7 +734,9 @@ class StringMatch( StringProcessingStep ):
             
             try:
                 
-                result = re.search( r, text )
+                text_to_test = ''.join( text.splitlines() ).strip()
+                
+                result = re.search( r, text_to_test )
                 
             except Exception as e:
                 

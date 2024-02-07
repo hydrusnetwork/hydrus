@@ -2898,6 +2898,11 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
     
     def _RewindProcessing( self ) -> bool:
         
+        if self._currently_fetching_pairs:
+            
+            return False
+            
+        
         def test_we_can_pop():
             
             if len( self._processed_pairs ) == 0:
@@ -4513,15 +4518,20 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             info_lines = self._current_media.GetPrettyInfoLines()
             
-            top_line = info_lines.pop( 0 )
-            
             info_menu = ClientGUIMenus.GenerateMenu( menu )
             
             ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
             
+            ClientGUIMenus.AppendSeparator( info_menu )
+            
             ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
             
-            ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
+            filetype_summary = ClientMedia.GetMediasFiletypeSummaryString( [ self._current_media ] )
+            size_summary = HydrusData.ToHumanBytes( self._current_media.GetSize() )
+            
+            info_summary = f'{filetype_summary}, {size_summary}'
+            
+            ClientGUIMenus.AppendMenu( menu, info_menu, info_summary )
             
             #
             
@@ -4550,10 +4560,8 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                     ClientGUIMenus.AppendMenuItem( zoom_menu, 'zoom to max', 'Set the zoom to the maximum possible.', self._media_container.ZoomMax )
                     
                 
-                ClientGUIMenus.AppendMenu( menu, zoom_menu, 'current zoom: {}'.format( ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() ) ) )
+                ClientGUIMenus.AppendMenu( menu, zoom_menu, 'zoom: {}'.format( ClientData.ConvertZoomToPercentage( self._media_container.GetCurrentZoom() ) ) )
                 
-            
-            AddAudioVolumeMenu( menu, self.CANVAS_TYPE )
             
             if self.parentWidget().isFullScreen():
                 
@@ -4587,6 +4595,10 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendSeparator( menu )
             
+            AddAudioVolumeMenu( menu, self.CANVAS_TYPE )
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
             ClientGUIMenus.AppendMenuItem( menu, 'remove from view', 'Remove this file from the list you are viewing.', self._Remove )
             
             ClientGUIMenus.AppendSeparator( menu )
@@ -4611,9 +4623,16 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             local_file_service_keys_we_are_in = sorted( locations_manager.GetCurrent().intersection( local_file_service_keys ), key = HG.client_controller.services_manager.GetName )
             
-            for file_service_key in local_file_service_keys_we_are_in:
+            if len( local_file_service_keys_we_are_in ) > 0:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'delete from {}'.format( HG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                delete_menu = ClientGUIMenus.GenerateMenu( menu )
+                
+                for file_service_key in local_file_service_keys_we_are_in:
+                    
+                    ClientGUIMenus.AppendMenuItem( delete_menu, 'from {}'.format( HG.client_controller.services_manager.GetName( file_service_key ) ), 'Delete this file.', self._Delete, file_service_key = file_service_key )
+                    
+                
+                ClientGUIMenus.AppendMenu( menu, delete_menu, 'delete' )
                 
             
             #

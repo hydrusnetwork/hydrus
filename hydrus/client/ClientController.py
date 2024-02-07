@@ -27,6 +27,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDaemons
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientOptions
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
@@ -35,6 +36,7 @@ from hydrus.client.db import ClientDB
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUISplash
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.interfaces import ClientControllerInterface
 
 if not HG.twisted_is_broke:
     
@@ -127,13 +129,13 @@ class App( QW.QApplication ):
         
         # this is also called explicitly right at the end of the program. I set setQuitonLastWindowClosed False and then call quit explicitly, so it needs to be idempotent on the exit calls
         
-        if HG.client_controller is not None:
+        if CG.client_controller is not None:
             
-            if HG.client_controller.ProgramIsShuttingDown():
+            if CG.client_controller.ProgramIsShuttingDown():
                 
                 screw_it_time = HydrusTime.GetNow() + 30
                 
-                while not HG.client_controller.ProgramIsShutDown():
+                while not CG.client_controller.ProgramIsShutDown():
                     
                     time.sleep( 0.5 )
                     
@@ -145,14 +147,14 @@ class App( QW.QApplication ):
                 
             else:
                 
-                HG.client_controller.SetDoingFastExit( True )
+                CG.client_controller.SetDoingFastExit( True )
                 
-                HG.client_controller.Exit()
+                CG.client_controller.Exit()
                 
             
         
     
-class Controller( HydrusController.HydrusController ):
+class Controller( ClientControllerInterface.ClientControllerInterface, HydrusController.HydrusController ):
     
     my_instance = None
     
@@ -169,10 +171,12 @@ class Controller( HydrusController.HydrusController ):
         self.gui = None
         
         HydrusController.HydrusController.__init__( self, db_dir )
+        ClientControllerInterface.ClientControllerInterface.__init__( self )
         
         self._name = 'client'
         
         HG.client_controller = self
+        CG.client_controller = self
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason
         self.options = ClientDefaults.GetClientDefaultOptions()
@@ -1062,7 +1066,7 @@ class Controller( HydrusController.HydrusController ):
         
         if self.new_options.GetBoolean( 'boot_with_network_traffic_paused' ):
             
-            HG.client_controller.new_options.SetBoolean( 'pause_all_new_network_traffic', True )
+            CG.client_controller.new_options.SetBoolean( 'pause_all_new_network_traffic', True )
             
         
         self.parsing_cache = ClientCaches.ParsingCache()
@@ -1261,7 +1265,7 @@ class Controller( HydrusController.HydrusController ):
         
         self.frame_splash_status.SetTitleText( 'booting gui' + HC.UNICODE_ELLIPSIS )
         
-        subscriptions = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
+        subscriptions = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
         self.files_maintenance_manager = ClientFiles.FilesMaintenanceManager( self )
         
@@ -1316,7 +1320,7 @@ class Controller( HydrusController.HydrusController ):
         
         def qt_code_pregui():
             
-            shortcut_sets = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+            shortcut_sets = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
             
             from hydrus.client.gui import ClientGUIShortcuts
             
@@ -2106,7 +2110,7 @@ class Controller( HydrusController.HydrusController ):
     
     def SynchroniseAccounts( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ):
+        if CG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ):
             
             return
             
@@ -2126,7 +2130,7 @@ class Controller( HydrusController.HydrusController ):
     
     def SynchroniseRepositories( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ):
+        if CG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ):
             
             return
             
@@ -2222,6 +2226,12 @@ class Controller( HydrusController.HydrusController ):
             self.CleanRunningFile()
             
             QP.CallAfter( QW.QApplication.exit )
+            
+        except HydrusExceptions.DBVersionException as e:
+            
+            self.BlockingSafeShowCriticalMessage( 'database version error', str( e ) )
+            
+            QP.CallAfter( QW.QApplication.exit, 1 )
             
         except HydrusExceptions.DBAccessException as e:
             

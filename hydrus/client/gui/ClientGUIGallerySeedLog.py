@@ -297,7 +297,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_gallery_seed_index = HydrusData.ToHumanInt( gallery_seed_index )
         pretty_url = url
-        pretty_status = CC.status_string_lookup[ status ]
+        pretty_status = CC.status_string_lookup[ status ] if status != CC.STATUS_UNKNOWN else ''
         pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
         pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )
         pretty_note = note.split( os.linesep )[0]

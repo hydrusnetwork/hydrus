@@ -16,6 +16,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -5988,7 +5989,7 @@ class TestClientAPI( unittest.TestCase ):
         
         file_path = HG.test_controller.client_files_manager.GetFilePath( hash, HC.IMAGE_PNG, check_file_exists = False )
         
-        shutil.copy2( path, file_path )
+        HydrusPaths.safe_copy2( path, file_path )
         
         thumb_hash = b'\x17\xde\xd6\xee\x1b\xfa\x002\xbdj\xc0w\x92\xce5\xf0\x12~\xfe\x915\xb3\xb3tA\xac\x90F\x95\xc2T\xc5'
         
@@ -5996,7 +5997,7 @@ class TestClientAPI( unittest.TestCase ):
         
         thumb_path = HG.test_controller.client_files_manager._GenerateExpectedThumbnailPath( hash )
         
-        shutil.copy2( path, thumb_path )
+        HydrusPaths.safe_copy2( path, thumb_path )
         
         api_permissions = set_up_permissions[ 'search_green_files' ]
         

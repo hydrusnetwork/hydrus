@@ -236,14 +236,26 @@ class HydrusDB( HydrusDBBase.DBBase ):
             self._ReportOverupdatedDB( version )
             
         
+        if version < HC.SOFTWARE_VERSION - 50:
+            
+            raise HydrusExceptions.DBVersionException( 'Your current database version of hydrus ' + str( version ) + ' is too old for this software version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
+            
+        
+        bitrot_rows = [
+            ( 'client', 551, 558, 'millisecond timestamp conversion' )
+        ]
+        
+        for ( bitrot_db_name, latest_affected_version, safe_update_version, reason ) in bitrot_rows:
+            
+            if self._db_name == bitrot_db_name and version <= latest_affected_version:
+                
+                raise HydrusExceptions.DBVersionException( f'Sorry, due to a bitrot issue ({reason}), you cannot update to this software version (v{HC.SOFTWARE_VERSION}) if your database is on v{latest_affected_version} or earlier (you are on v{version}). Please download and update to v{safe_update_version} first!' )
+                
+            
+        
         if version < ( HC.SOFTWARE_VERSION - 15 ):
             
             self._ReportUnderupdatedDB( version )
-            
-        
-        if version < HC.SOFTWARE_VERSION - 50:
-            
-            raise Exception( 'Your current database version of hydrus ' + str( version ) + ' is too old for this software version ' + str( HC.SOFTWARE_VERSION ) + ' to update. Please try updating with version ' + str( version + 45 ) + ' or earlier first.' )
             
         
         self._RepairDB( version )

@@ -133,7 +133,17 @@ class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
         edit_panel.Add( formulae_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if collapse_newlines:
+            
+            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
+            
+        else:
+            
+            label = 'Newlines are not collapsed here (probably a note parser)'
+            
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -322,7 +332,17 @@ class EditContextVariableFormulaPanel( EditSpecificFormulaPanel ):
         gridbox = ClientGUICommon.WrapInGrid( edit_panel, rows )
         
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if collapse_newlines:
+            
+            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
+            
+        else:
+            
+            label = 'Newlines are not collapsed here (probably a note parser)'
+            
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -847,7 +867,17 @@ class EditHTMLFormulaPanel( EditSpecificFormulaPanel ):
         edit_panel.Add( tag_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if collapse_newlines:
+            
+            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
+            
+        else:
+            
+            label = 'Newlines are not collapsed here (probably a note parser)'
+            
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
@@ -1195,7 +1225,17 @@ class EditJSONFormulaPanel( EditSpecificFormulaPanel ):
         edit_panel.Add( parse_rules_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
         edit_panel.Add( ae_button_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         edit_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, 'Newlines are removed from parsed strings right after parsing, before string processing.', ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        if collapse_newlines:
+            
+            label = 'Newlines are removed from parsed strings right after parsing, before string processing.'
+            
+        else:
+            
+            label = 'Newlines are not collapsed here (probably a note parser)'
+            
+        
+        edit_panel.Add( ClientGUICommon.BetterStaticText( edit_panel, label, ellipsize_end = True ), CC.FLAGS_EXPAND_PERPENDICULAR )
         edit_panel.Add( self._string_processor_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #

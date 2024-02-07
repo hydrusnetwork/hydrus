@@ -11,6 +11,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
@@ -47,7 +48,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._column_list_type = column_list_type
         
-        self._column_list_status: ClientGUIListStatus.ColumnListStatus = HG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
         self._original_column_list_status = self._column_list_status
         
         self.setAlternatingRowColors( True )
@@ -106,7 +107,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self.setMinimumWidth( total_width )
         '''
-        main_tlw = HG.client_controller.GetMainTLW()
+        main_tlw = CG.client_controller.GetMainTLW()
         
         # if last section is set too low, for instance 3, the column seems unable to ever shrink from initial (expanded to fill space) size
         #  _    _  ___  _    _    __     __   ___  
@@ -180,8 +181,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.header().setContextMenuPolicy( QC.Qt.CustomContextMenu )
         self.header().customContextMenuRequested.connect( self._ShowHeaderMenu )
         
-        HG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_all_listctrl_status' )
-        HG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_listctrl_status' )
+        CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_all_listctrl_status' )
+        CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_listctrl_status' )
         
     
     def _AddDataInfo( self, data_info ):
@@ -227,7 +228,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self._column_list_status = self._GenerateCurrentStatus()
         
-        HG.client_controller.column_list_manager.SaveStatus( self._column_list_status )
+        CG.client_controller.column_list_manager.SaveStatus( self._column_list_status )
         
     
     def _GenerateCurrentStatus( self ) -> ClientGUIListStatus.ColumnListStatus:
@@ -236,7 +237,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         status.SetColumnListType( self._column_list_type )
         
-        main_tlw = HG.client_controller.GetMainTLW()
+        main_tlw = CG.client_controller.GetMainTLW()
         
         columns = []
         
@@ -391,7 +392,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         name = CGLC.column_list_type_name_lookup[ self._column_list_type ]
         
-        ClientGUIMenus.AppendMenuItem( menu, f'reset default column widths for "{name}" lists', 'Reset the column widths and other display settings for all lists of this type', HG.client_controller.column_list_manager.ResetToDefaults, self._column_list_type )
+        ClientGUIMenus.AppendMenuItem( menu, f'reset default column widths for "{name}" lists', 'Reset the column widths and other display settings for all lists of this type', CG.client_controller.column_list_manager.ResetToDefaults, self._column_list_type )
         
         CGC.core().PopupMenu( self, menu )
         
@@ -713,7 +714,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.blockSignals( True )
         self.header().blockSignals( True )
         
-        self._column_list_status: ClientGUIListStatus.ColumnListStatus = HG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
         self._original_column_list_status = self._column_list_status
         
         #
@@ -722,7 +723,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         #
         
-        main_tlw = HG.client_controller.GetMainTLW()
+        main_tlw = CG.client_controller.GetMainTLW()
         
         MIN_SECTION_SIZE_CHARS = 3
         
@@ -934,7 +935,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             last_column_chars = self._original_column_list_status.GetColumnWidth( last_column_type )
             
-            main_tlw = HG.client_controller.GetMainTLW()
+            main_tlw = CG.client_controller.GetMainTLW()
             
             width += ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, last_column_chars )
             
@@ -1165,7 +1166,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             json = export_object.DumpToString()
             
-            HG.client_controller.pub( 'clipboard', 'text', json )
+            CG.client_controller.pub( 'clipboard', 'text', json )
             
         
     
@@ -1297,11 +1298,11 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportFromClipboard( self ):
         
-        if HG.client_controller.ClipboardHasImage():
+        if CG.client_controller.ClipboardHasImage():
             
             try:
                 
-                qt_image = HG.client_controller.GetClipboardImage()
+                qt_image = CG.client_controller.GetClipboardImage()
                 
             except:
                 
@@ -1332,7 +1333,7 @@ class BetterListCtrlPanel( QW.QWidget ):
             
             try:
                 
-                raw_text = HG.client_controller.GetClipboardText()
+                raw_text = CG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 

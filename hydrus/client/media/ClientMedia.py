@@ -114,6 +114,82 @@ def GetMediaResultsTagCount( media_results, tag_service_key, tag_display_type ):
     return GetTagsManagersTagCount( tags_managers, tag_service_key, tag_display_type )
     
 
+def GetMediasFiletypeSummaryString( medias: typing.Collection[ "Media" ] ):
+    
+        def GetDescriptor( plural, classes, num_collections ):
+            
+            suffix = 's' if plural else ''
+            
+            if len( classes ) == 0:
+                
+                return 'file' + suffix
+                
+            
+            if len( classes ) == 1:
+                
+                ( mime, ) = classes
+                
+                if mime == HC.APPLICATION_HYDRUS_CLIENT_COLLECTION:
+                    
+                    collections_suffix = 's' if num_collections > 1 else ''
+                    
+                    return 'file{} in {} collection{}'.format( suffix, HydrusData.ToHumanInt( num_collections ), collections_suffix )
+                    
+                else:
+                    
+                    return HC.mime_string_lookup[ mime ] + suffix
+                    
+                
+            
+            if len( classes.difference( HC.IMAGES ) ) == 0:
+                
+                return 'image' + suffix
+                
+            elif len( classes.difference( HC.ANIMATIONS ) ) == 0:
+                
+                return 'animation' + suffix
+                
+            elif len( classes.difference( HC.VIDEO ) ) == 0:
+                
+                return 'video' + suffix
+                
+            elif len( classes.difference( HC.AUDIO ) ) == 0:
+                
+                return 'audio file' + suffix
+                
+            else:
+                
+                return 'file' + suffix
+                
+            
+        
+        num_files = sum( [ media.GetNumFiles() for media in medias ] )
+        
+        if num_files > 1000:
+            
+            filetype_summary = 'files'
+            
+        else:
+            
+            mimes = { media.GetMime() for media in medias }
+            
+            if HC.APPLICATION_HYDRUS_CLIENT_COLLECTION in mimes:
+                
+                num_collections = len( [ media for media in medias if isinstance( media, MediaCollection ) ] )
+                
+            else:
+                
+                num_collections = 0
+                
+            
+            plural = len( medias ) > 1 or sum( ( m.GetNumFiles() for m in medias ) ) > 1
+            
+            filetype_summary = GetDescriptor( plural, mimes, num_collections )
+            
+        
+        return f'{HydrusData.ToHumanInt( num_files )} {filetype_summary}'
+        
+
 def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
     
     tags_managers = []
@@ -1089,6 +1165,13 @@ class MediaList( object ):
     def HasNoMedia( self ):
         
         return len( self._sorted_media ) == 0
+        
+    
+    def MoveMedia( self, medias: typing.List[ Media ], insertion_index: int ):
+        
+        self._sorted_media.move_items( medias, insertion_index )
+        
+        self._RecalcHashes()
         
     
     def ProcessContentUpdatePackage( self, full_content_update_package: ClientContentUpdates.ContentUpdatePackage ):
@@ -2950,6 +3033,9 @@ class SortedList( object ):
         
     
     def index( self, item ):
+        """
+        This is fast!
+        """
         
         if self._indices_dirty:
             
@@ -2968,11 +3054,71 @@ class SortedList( object ):
         return result
         
     
-    def insert_items( self, items ):
+    def insert_items( self, items, insertion_index = None ):
         
-        self.append_items( items )
+        if insertion_index is None:
+            
+            self.append_items( items )
+            
+            self.sort()
+            
+        else:
+            
+            # don't forget we can insert elements in the final slot for an append, where index >= len( muh_list ) 
+            
+            for ( i, item ) in enumerate( items ):
+                
+                self._sorted_list.insert( insertion_index + i, item )
+                
+            
+            self._DirtyIndices()
+            
         
-        self.sort()
+    
+    def move_items( self, new_items: typing.List, insertion_index: int ):
+        
+        items_to_move = []
+        items_before_insertion_index = 0
+        
+        if insertion_index < 0:
+            
+            insertion_index = max( 0, len( self._sorted_list ) + ( insertion_index + 1 ) )
+            
+        
+        for new_item in new_items:
+            
+            try:
+                
+                index = self.index( new_item )
+                
+            except HydrusExceptions.DataMissing:
+                
+                continue
+                
+            
+            items_to_move.append( new_item )
+            
+            if index < insertion_index:
+                
+                items_before_insertion_index += 1
+                
+            
+        
+        if items_before_insertion_index > 0: # i.e. we are moving to the right
+            
+            items_before_insertion_index -= 1
+            
+        
+        adjusted_insertion_index = insertion_index# - items_before_insertion_index
+        
+        if len( items_to_move ) == 0:
+            
+            return
+            
+        
+        self.remove_items( items_to_move )
+        
+        self.insert_items( items_to_move, insertion_index = adjusted_insertion_index )
         
     
     def remove_items( self, items ):

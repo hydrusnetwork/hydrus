@@ -159,6 +159,10 @@ SIMPLE_OPEN_FILE_IN_FILE_EXPLORER = 146
 SIMPLE_COPY_LITTLE_BMP = 147
 SIMPLE_MOVE_THUMBNAIL_FOCUS = 148
 SIMPLE_SELECT_FILES = 149
+SIMPLE_REARRANGE_THUMBNAILS = 150
+
+REARRANGE_THUMBNAILS_TYPE_FIXED = 0
+REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
 
 MOVE_HOME = 0
 MOVE_END = 1
@@ -168,6 +172,7 @@ MOVE_UP = 4
 MOVE_DOWN = 5
 MOVE_PAGE_UP = 6
 MOVE_PAGE_DOWN = 7
+MOVE_TO_FOCUS = 8
 
 move_enum_to_str_lookup = {
     MOVE_HOME : 'home',
@@ -177,7 +182,8 @@ move_enum_to_str_lookup = {
     MOVE_UP : 'up',
     MOVE_DOWN : 'down',
     MOVE_PAGE_UP : 'page up',
-    MOVE_PAGE_DOWN : 'page down'
+    MOVE_PAGE_DOWN : 'page down',
+    MOVE_TO_FOCUS : 'to focus'
 }
 
 SELECTION_STATUS_NORMAL = 0
@@ -338,7 +344,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW : 'force the animation scanbar to show (flip on/off)',
     SIMPLE_OPEN_COMMAND_PALETTE : 'open the command palette',
     SIMPLE_MOVE_THUMBNAIL_FOCUS : 'move the thumbnail focus',
-    SIMPLE_SELECT_FILES : 'select files'
+    SIMPLE_SELECT_FILES : 'select files',
+    SIMPLE_REARRANGE_THUMBNAILS : 'move thumbnails',
     }
 
 legacy_simple_str_to_enum_lookup = {
@@ -757,6 +764,19 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 file_filter = self.GetSimpleData()
                 
                 s = f'{s} ({file_filter.ToString()})'
+                
+            elif action == SIMPLE_REARRANGE_THUMBNAILS:
+                
+                ( rearrange_type, rearrange_data ) = self.GetSimpleData()
+                
+                if rearrange_type == REARRANGE_THUMBNAILS_TYPE_COMMAND:
+                    
+                    s = f'{s} ({move_enum_to_str_lookup[ rearrange_data ]})'
+                    
+                elif rearrange_type == REARRANGE_THUMBNAILS_TYPE_FIXED:
+                    
+                    s = f'{s} (to index {HydrusData.ToHumanInt(rearrange_data)})'
+                    
                 
             
             return s

@@ -331,6 +331,7 @@ class RatingNumericalSubPanel( QW.QWidget ):
             
         
     
+
 class RatingIncDecSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
@@ -396,6 +397,7 @@ class RatingIncDecSubPanel( QW.QWidget ):
         self._ratings_incdec.SetValue( action )
         
     
+
 class SimpleSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, shortcuts_name: str ):
@@ -427,6 +429,31 @@ class SimpleSubPanel( QW.QWidget ):
         choices = [ ( HC.duplicate_type_string_lookup[ t ], t ) for t in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
         
         self._duplicate_type = ClientGUICommon.BetterRadioBox( self._duplicates_type_panel, choices = choices )
+        
+        #
+        
+        self._thumbnail_rearrange_panel = QW.QWidget( self )
+        
+        self._thumbnail_rearrange_type = ClientGUICommon.BetterChoice( self )
+        
+        for rearrange_type in [
+            CAC.MOVE_HOME,
+            CAC.MOVE_END,
+            CAC.MOVE_LEFT,
+            CAC.MOVE_RIGHT,
+            CAC.MOVE_TO_FOCUS
+        ]:
+            
+            self._thumbnail_rearrange_type.addItem( CAC.move_enum_to_str_lookup[ rearrange_type ], rearrange_type )
+            
+        
+        #
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._thumbnail_rearrange_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._thumbnail_rearrange_panel.setLayout( vbox )
         
         #
         
@@ -530,6 +557,7 @@ class SimpleSubPanel( QW.QWidget ):
         QP.AddToLayout( vbox, self._seek_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._thumbnail_move_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._file_filter_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._thumbnail_rearrange_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
         
@@ -542,6 +570,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         action = self._simple_actions.GetValue()
         
+        self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_REARRANGE_THUMBNAILS )
         self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_SHOW_DUPLICATES )
         self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
         self._thumbnail_move_panel.setVisible( action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS )
@@ -585,6 +614,12 @@ class SimpleSubPanel( QW.QWidget ):
                 file_filter = self._file_filter.GetValue()
                 
                 simple_data = file_filter
+                
+            elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
+                
+                rearrange_type = self._thumbnail_rearrange_type.GetValue()
+                
+                simple_data = ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, rearrange_type )
                 
             else:
                 
@@ -632,6 +667,12 @@ class SimpleSubPanel( QW.QWidget ):
             file_filter = command.GetSimpleData()
             
             self._file_filter.SetValue( file_filter )
+            
+        elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
+            
+            ( rearrange_type, rearrange_data ) = command.GetSimpleData()
+            
+            self._thumbnail_rearrange_type.SetValue( rearrange_data )
             
         
         self._UpdateControls()
@@ -742,6 +783,7 @@ class TagSubPanel( QW.QWidget ):
         self._tag_value.setText( tag )
         
     
+
 class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
     
     PANEL_SIMPLE = 0

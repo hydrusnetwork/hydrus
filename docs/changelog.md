@@ -7,6 +7,49 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 561](https://github.com/hydrusnetwork/hydrus/releases/tag/v561)
+
+### rearranging thumbnails
+
+* on the thumbnail menu, there is a new 'move' submenu. you can move the current selection of files to the start or end of the media list, or to one before or after the earliest selected file, or to the file you right-clicked on to create the menu, or to the first file's position if the selection is not contiguous. if the selection is non-contiguous, it will be made so in the move
+* added these rearrange commands to the shortcuts system, as 'move thumbnails' under the 'thumbnails' set. I wasn't sure whether to add some default shortcuts, like ctrl+numpad 7/3/4/6 for home/end/left/right or something--let me know what you think
+
+### misc
+
+* thanks to user help, fixed a stupid typo from last week that caused some bad errors (including crashes, in some cases) when doing non-simple duplicate filtering (issue #1514). this is the issue the v560a hotfix was made for
+* fixed another stupid content update typo that was causing 'already in db' results to not get metadata updates
+* as a hardcoded shortcut, Ctrl+C or Ctrl+Insert now copies the currently selected tags in any taglist. it'll output the full tag/predicate text, with namespace, no counts
+* I've shortened some thumbnail/media-viewer menu labels, made the 'delete' line into a submenu, and ensured the top info line is always a short variant, with detailed info bumped off to the submenu off the top line. I hate how these menus are often super-wide and thus a pain to navigate to the submenus, so let me know what situations still make them wide
+* the file log arrow button menu now has entries for 'delete already in db' and 'delete everything'
+* the 'add these tags to the favourites list?' yes/no now only fires if you try to add more than five tags ot once
+* the various dialogs in the client that auto-yes or auto-no now show a live countdown in their title string
+* the window position saving system is now stricter about what it records. maximised and fullscreen state is only saved if 'remember size' is false, and the last size/position is not saved at all if 'remember size/position' is false (previously, it would save these values but not restore them, but let's try being more precise here)
+* fixed a 'omg what happened, closing the window now' error in the duplicate filter if you try to 'go back' while it is loading a new set of pairs to show
+* fixed the 'vacuum db' command to correctly save 'last vacuumed time' for all files vacuumed in a job, not just the last!
+* whenever a `copy2` file copy (which includes copying file times and permission bits) fails for permission reasons, hydrus now falls back to a normal `copy` and logs the failure, including the modified time that failed to copy (which is the bit we actually care about here)
+
+### db update stuff
+
+* if there is a known bitrot issue on update, you now get a nicer error message. rather than the actual error, you are now told which version is safe to update to. to christen this system, I've added a check for the recent millisecond timestamp conversion, which caused some issues for users updating older clients. **if your client is v551 or older and you try to update to v561 or later, you will be told to update to v558 first.** sorry for the inconvenience here, and thank you for the reports (issue #1512)
+* if you try to boot a database more than 50 versions earlier than the code, the client-based version popups now happen in the correct order, with the >50 exception firing before the >15 warning
+* when an update asks a not-super-important yes/no question, I will now make it auto-yes or auto-no after ten minutes with the recommended value. this will ensure that automatic updaters will still progress (previously, they were hanging forever!)
+
+### some downloader stuff
+
+* thanks to a user, the derpibooru now fetches the post description as a note and the source as an associable URL. I tweaked the submitted stuff a bit, simplifying the parsing and discluding 'No description provided.' notes
+* thanks to a user, the e621 parser can now grab files from posts where the (spicy, I think) content is normally not shown due to a guest login. the posts still won't show up in guest-login gallery searches, so this won't alter your normal results, but if you run into a post like this in your browser and drag-and-drop it onto the client, it now works
+* I tried to improve the parsing system's de-newlining. this thing is a long-time hack--I've never liked it and I want to replace it with proper multi-line support--but for now I've made sure the de-newliner strips each line of leading/trailing whitespace and discards empty lines. the mode that _doesn't_ collapse newlines (note parsing, for the most part) now _does_ strip leading/trailing newlines along with other whitespace, meaning you no longer have to try and strip extra `<p>` and `<br>` tags and stuff yourself when grabbing notes. also, the formula UI where it says 'Newlines are collapsed before...' now says when it won't be collapsing newlines due to it being a note parser
+* the String Match processing step now explicitly removes newlines before it runs, meaning it can still catch multi-line notes properly. you can now run a proper regex on a multi-line note
+
+### boring cleanup
+
+* optimised some thumbnail handling code, stuff like fetching the current list of sorted selected media
+* large collections will be a little faster to select and otherwise do operations on
+* sketched out a new `ClientGlobals` and client controller interface and started refactoring various HG.client_controller to the new CG. this makes no important running changes, but it cleans the messy HG file and will help future coding and type checking in the IDE as it is fleshed out
+* added some help text to the edit file maintenance panel and fixed some gonk layout in the 'add new work' panel
+* fixed some instances of the 'unknown' import status showing as a blank string
+* fixed an error message in the export folder export job that fired when a file to be exported is missing--it was just giving blank instead of the file hash, and its direction to file maintenance was old and unclear
+
 ## [Version 560](https://github.com/hydrusnetwork/hydrus/releases/tag/v560)
 
 ### editing times for multiple files
@@ -455,48 +498,3 @@ title: Changelog
 * fixed a timing issue that meant popup messages were auto-dismissed from the popup toaster up to a second after they were being 'deleted' by their parent functiions. subscription flow felt more laggy because of this
 * fixed the file info manager's duplicate call to duplicate unusual metadata like has_exif and blurhash
 * removed some old code that isn't used any more
-
-## [Version 551](https://github.com/hydrusnetwork/hydrus/releases/tag/v551)
-
-### misc
-
-* thanks to a user, we have a new checkbox under _options->thumbnails_ that disables thumbnail fading. they'll just blink into place in one frame as soon as ready
-* after looking at this code myself, I gave it a full clean. the actual thumbnail fade animation is now handled with some proper objects rather than a scatter of variables passed around
-* I also doubled the default fade time to 500ms. I expect I'll add an option for it, especially if we rework all this into the proper Qt animation engine and get it performing better
-* fixed the crashes users on PyQt were seeing! I made one tiny change (1->1.0) last week, and PyQt didn't like it, so any view of Mr Bones or 'open externally' panels, or the media viewer top-right ratings hover was leading to program instability
-* the system predicates for 'has/no duration', 'has/no frames', 'has/no notes', 'has/no words' (i.e. the respective 'num x' system pred, but either = 0 or >0) are now aware that they are each others' inverse, so if you ctrl+double-click or do similar edit actions, they'll flip
-* updated the 'PTR for dummies' page to link to a new QuickSync source, kindly maintained and hosted by a user
-
-### code cleanup and misc bug fixes
-
-* sped up some random iteration across the program (e.g. when deciding which order to waterfall thumbnails in, which can suffer from overhead if you do a fast giganto-scroll)
-* cleaned up the code that does image alpha channel (transparency) detection, comparison, and stripping
-* unified how the variety of image loads and conversions perform the 'strip this image of useless transparency data' normalisation step. thumbnails from krita, svg, and pdf are now stripped of useless alpha. also, all 'import this serialised object png' avenues now handle pngs with spurious alpha
-* I think I fixed the alpha channel stripping code to handle 'LA' (greyscale with transparency) files. if you try to import a hydrus serialised object png file that is for some crazy reason now LA, I think it'll work!
-* when a files popup message filters its current files and the count goes to 0 (happens if you re-click the button after deleting everything it has to show), the message now auto-dismisses itself (previously it was nuking the button but staying as a thin strip of null panel space)
-* fixed a bug where `system:date` predicates were displaying labels an hour off (usually midnight -> 11pm, thus cycling back to the previous day) thanks to the clocks changed (in the USA) last weekend. I suspect there is more of this, here and there, so let me know what you see
-* fixed a counting typo error with the delete files code when you delete the last file in a domain but the domain thinks it already has 0 files
-* fixed up similar code across the database to forestall future typos on SQLite SUMs
-* improved and unified the 'hydrus temp dir' management code. if the specific per-process hydrus temp dir is cleared out by an external factor (I'm guessing just the OS cleaning up during a long running client session), hydrus should just simply make a new folder as needed. with luck, this will fix a problem with drag and drop export that ran into this
-
-### many file move/copy error handling improvements
-
-* _tl;dr: if hydrus can't put a file somewhere, it deals with that better now_
-* improved how file move/merge function reports its errors, and how all its callers handle them
-* the 'rename a file's file extension when its filetype changes' job now correctly recognises when it fails to rename a file due to a reason other than the file being currently in use
-* import folders now correctly detect when they fail to 'move' action a file out after processing
-* the check file integrity routine now correctly detects when it fails to move a damaged file from file storage to a landing zone in the main db directory. this failure now cancels the job properly and prints a nicer error to the log
-* improved how the file copy/mirror function reports its errors, and how all its callers handle them
-* saving a serialised object png now properly catches a 'transfer from temp dir to dest location' move error
-* the internal database backup and restore routines now detect file copy errors better
-* a drag and drop export operation that wants to put the files in the temp dir and also fails to collect its files nicely now correctly raises an error
-* failing to set the mpv file on options save (and the subsequent mpv-load action) now reports its error correctly
-* exporting update files now handles a missing update file more gracefully
-* mergedirectory and mirrordirectory now fail instantly after any single error, rather than several
-* added some more file/directory pre-checks to all the merge/mirror functions
-* deleted some old unused code here
-
-### client api
-
-* thanks to a user, the Client API now has a 'generate_hashes' endpoint that returns the sha256 hash (and pixel hash and perceptual hashes of any appropriate image file) of any file you give it
-* the client api version is now 55

@@ -2614,6 +2614,12 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
+        text = 'Here is the outstanding file maintenance work. This will be slowly completed in the background, usually a file every few seconds (you can edit this under _options->maintenance and processing_). Although you can rush work if you want to, it is best to generally leave it alone.'
+        
+        st = ClientGUICommon.BetterStaticText( self._current_work_panel, text )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, jobs_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._current_work_panel.setLayout( vbox )
@@ -2643,7 +2649,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         QP.AddToLayout( hbox, self._run_search_st, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( hbox, self._run_search, CC.FLAGS_CENTER_PERPENDICULAR )
         
-        self._search_panel.Add( self._tag_autocomplete, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._search_panel.Add( self._tag_autocomplete, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._search_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
@@ -2692,12 +2698,17 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
-        label = 'First, select which files you wish to queue up for the job using a normal search. Hit \'run this search\' to select those files.'
-        label += os.linesep
-        label += 'Then select the job type and click \'add job\'.'
+        label = 'Here you can queue up new file maintenance work. You determine the files to run a job on by loading a normal file search.'
+        label += '\n' * 2
+        label += 'Once your search is set, you need to hit \'run this search\' to actually load up the files. Then select the job type to apply and click \'add job\'. Click \'see description\' for more information on the job.'
+        label += '\n' * 2
+        label += 'Be cautious--do not queue up an integrity scan for all your files on a whim! If you don\'t know what a job does, do not add it!'
         
-        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self._new_work_panel,label=label), CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._search_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        st = ClientGUICommon.BetterStaticText( self._new_work_panel, label )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._search_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._button_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._action_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         

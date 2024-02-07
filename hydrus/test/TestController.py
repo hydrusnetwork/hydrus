@@ -25,6 +25,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientFiles
 from hydrus.client import ClientFilesPhysical
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientOptions
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
@@ -194,6 +195,8 @@ class Controller( object ):
         HG.client_controller = self
         HG.server_controller = self
         HG.test_controller = self
+        
+        CG.client_controller = self
         
         self.db = self
         self.gui = self
