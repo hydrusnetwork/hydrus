@@ -2243,18 +2243,12 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _InitialiseMenubar( self ):
         
-        use_global_menubar = HC.PLATFORM_MACOS
+        self._menubar = QW.QMenuBar( )
         
-        if use_global_menubar:
+        if not self._menubar.isNativeMenuBar():
             
-            self._menubar = QW.QMenuBar( )
-            
-        else:
-            
-            self._menubar = QW.QMenuBar( self )
-        
-        self._menubar.setNativeMenuBar( use_global_menubar )
-        
+            self._menubar.setParent( self )
+                
         self._menu_updater_file = self._InitialiseMenubarGetMenuUpdaterFile()
         self._menu_updater_database = self._InitialiseMenubarGetMenuUpdaterDatabase()
         self._menu_updater_network = self._InitialiseMenubarGetMenuUpdaterNetwork()
