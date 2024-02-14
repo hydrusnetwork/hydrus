@@ -10,6 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
@@ -86,7 +87,7 @@ class CollectComboCtrl( QW.QComboBox ):
         
         text_and_data_tuples = set()
         
-        for media_sort in HG.client_controller.new_options.GetDefaultNamespaceSorts():
+        for media_sort in CG.client_controller.new_options.GetDefaultNamespaceSorts():
             
             namespaces = media_sort.GetNamespaces()
             
@@ -104,7 +105,7 @@ class CollectComboCtrl( QW.QComboBox ):
         
         text_and_data_tuples = sorted( ( ( namespace, ( 'namespace', namespace ) ) for namespace in text_and_data_tuples ) )
         
-        star_ratings_services = HG.client_controller.services_manager.GetServices( HC.STAR_RATINGS_SERVICES )
+        star_ratings_services = CG.client_controller.services_manager.GetServices( HC.STAR_RATINGS_SERVICES )
         
         for star_ratings_service in star_ratings_services:
             
@@ -314,7 +315,7 @@ class MediaCollectControl( QW.QWidget ):
         
         if media_collect is None:
             
-            media_collect = HG.client_controller.new_options.GetDefaultCollect()
+            media_collect = CG.client_controller.new_options.GetDefaultCollect()
             
         
         self._media_collect = media_collect
@@ -359,7 +360,7 @@ class MediaCollectControl( QW.QWidget ):
         
         self._collect_comboctrl.installEventFilter( self )
         
-        HG.client_controller.sub( self, 'NotifyAdvancedMode', 'notify_advanced_mode' )
+        CG.client_controller.sub( self, 'NotifyAdvancedMode', 'notify_advanced_mode' )
         
     
     def _BroadcastCollect( self ):
@@ -369,7 +370,7 @@ class MediaCollectControl( QW.QWidget ):
     
     def _UpdateButtonsVisible( self ):
         
-        self._tag_context_button.setVisible( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) )
+        self._tag_context_button.setVisible( CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) )
         
     
     def _UpdateLabel( self ):
@@ -425,7 +426,7 @@ class MediaCollectControl( QW.QWidget ):
     
     def ListenForNewOptions( self ):
         
-        HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def NotifyAdvancedMode( self ):
@@ -599,7 +600,7 @@ class MediaSortControl( QW.QWidget ):
                 
             
         
-        default_namespace_sorts = HG.client_controller.new_options.GetDefaultNamespaceSorts()
+        default_namespace_sorts = CG.client_controller.new_options.GetDefaultNamespaceSorts()
         
         if menu is not None:
             
@@ -631,7 +632,7 @@ class MediaSortControl( QW.QWidget ):
             ClientGUIMenus.AppendMenuItem( submenu, 'custom', 'Set a custom namespace sort', self._SetCustomNamespaceSortFromUser )
             
         
-        rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
+        rating_service_keys = CG.client_controller.services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
         
         if len( rating_service_keys ) > 0:
             
@@ -767,7 +768,7 @@ class MediaSortControl( QW.QWidget ):
         
         ( sort_metatype, sort_data ) = self._sort_type
         
-        show_tag_button = sort_metatype == 'namespaces' and HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        show_tag_button = sort_metatype == 'namespaces' and CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
         self._tag_context_button.setVisible( show_tag_button )
         
@@ -782,7 +783,7 @@ class MediaSortControl( QW.QWidget ):
         
         ( sort_metatype, sort_data ) = self._sort_type
         
-        show_tdt = sort_metatype == 'namespaces' and HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        show_tdt = sort_metatype == 'namespaces' and CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
         if show_tdt:
             
@@ -811,11 +812,11 @@ class MediaSortControl( QW.QWidget ):
     
     def _UserChoseASort( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'save_page_sort_on_change' ):
+        if CG.client_controller.new_options.GetBoolean( 'save_page_sort_on_change' ):
             
             media_sort = self._GetCurrentSort()
             
-            HG.client_controller.new_options.SetDefaultSort( media_sort )
+            CG.client_controller.new_options.SetDefaultSort( media_sort )
             
         
     
@@ -885,7 +886,7 @@ class MediaSortControl( QW.QWidget ):
     
     def wheelEvent( self, event ):
         
-        if HG.client_controller.new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' ):
+        if CG.client_controller.new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' ):
             
             if self._sort_type_button.rect().contains( self._sort_type_button.mapFromGlobal( QG.QCursor.pos() ) ):
                 

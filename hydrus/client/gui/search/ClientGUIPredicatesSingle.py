@@ -13,6 +13,7 @@ from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
@@ -308,7 +309,7 @@ class PanelPredicateSystemSingle( PanelPredicateSystem ):
             return predicate
             
         
-        custom_defaults = HG.client_controller.new_options.GetCustomDefaultSystemPredicates( comparable_predicate = default_predicate )
+        custom_defaults = CG.client_controller.new_options.GetCustomDefaultSystemPredicates( comparable_predicate = default_predicate )
         
         if len( custom_defaults ) > 0:
             
@@ -322,7 +323,7 @@ class PanelPredicateSystemSingle( PanelPredicateSystem ):
         
         default_predicate = self.GetDefaultPredicate()
         
-        HG.client_controller.new_options.ClearCustomDefaultSystemPredicates( comparable_predicate = default_predicate )
+        CG.client_controller.new_options.ClearCustomDefaultSystemPredicates( comparable_predicate = default_predicate )
         
     
     def GetDefaultPredicate( self ) -> ClientSearch.Predicate:
@@ -339,14 +340,14 @@ class PanelPredicateSystemSingle( PanelPredicateSystem ):
         
         predicates = self.GetPredicates()
         
-        HG.client_controller.new_options.SetCustomDefaultSystemPredicates( comparable_predicates = predicates )
+        CG.client_controller.new_options.SetCustomDefaultSystemPredicates( comparable_predicates = predicates )
         
     
     def UsesCustomDefault( self ) -> bool:
         
         default_predicate = self.GetDefaultPredicate()
         
-        custom_defaults = HG.client_controller.new_options.GetCustomDefaultSystemPredicates( comparable_predicate = default_predicate )
+        custom_defaults = CG.client_controller.new_options.GetCustomDefaultSystemPredicates( comparable_predicate = default_predicate )
         
         return len( custom_defaults ) > 0
         
@@ -882,7 +883,7 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         self._status = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
         
-        services = HG.client_controller.services_manager.GetServices( HC.REAL_FILE_SERVICES )
+        services = CG.client_controller.services_manager.GetServices( HC.REAL_FILE_SERVICES )
         
         choices = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
@@ -1542,7 +1543,7 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
         
         self._url_classes = ClientGUICommon.BetterChoice( self )
         
-        for url_class in HG.client_controller.network_engine.domain_manager.GetURLClasses():
+        for url_class in CG.client_controller.network_engine.domain_manager.GetURLClasses():
             
             if url_class.ShouldAssociateWithFiles():
                 
@@ -2181,11 +2182,11 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
     
     def _Paste( self ):
         
-        if HG.client_controller.ClipboardHasImage():
+        if CG.client_controller.ClipboardHasImage():
             
             try:
                 
-                qt_image = HG.client_controller.GetClipboardImage()
+                qt_image = CG.client_controller.GetClipboardImage()
                 
                 numpy_image = ClientGUIFunctions.ConvertQtImageToNumPy( qt_image )
                 
@@ -2206,7 +2207,7 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
             
             try:
                 
-                raw_text = HG.client_controller.GetClipboardText()
+                raw_text = CG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 

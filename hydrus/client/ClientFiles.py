@@ -24,6 +24,7 @@ from hydrus.core.files.images import HydrusImageOpening
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientFilesPhysical
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientPaths
@@ -530,7 +531,7 @@ class ClientFilesManager( object ):
             
             self._controller.BlockingSafeShowCriticalMessage( 'About to auto-heal client file folders.', summary_message )
             
-            HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+            CG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
             
         
     
@@ -608,7 +609,7 @@ class ClientFilesManager( object ):
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
-        thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+        thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
         target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
         
@@ -725,7 +726,7 @@ class ClientFilesManager( object ):
         
         ( ideal_media_base_locations, ideal_thumbnail_override_base_location ) = self._controller.Read( 'ideal_client_files_locations' )
         
-        service_info = HG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        service_info = CG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         
         all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
         
@@ -1049,7 +1050,7 @@ class ClientFilesManager( object ):
         
         self._ReinitSubfolders()
         
-        if HG.client_controller.IsFirstStart():
+        if CG.client_controller.IsFirstStart():
             
             try:
                 
@@ -1183,9 +1184,9 @@ class ClientFilesManager( object ):
     
     def _WaitOnWakeup( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'file_system_waits_on_wakeup' ):
+        if CG.client_controller.new_options.GetBoolean( 'file_system_waits_on_wakeup' ):
             
-            while HG.client_controller.JustWokeFromSleep():
+            while CG.client_controller.JustWokeFromSleep():
                 
                 HydrusThreading.CheckIfThreadShuttingDown()
                 
@@ -1297,7 +1298,7 @@ class ClientFilesManager( object ):
                     
                     hash = bytes.fromhex( should_be_a_hex_hash )
                     
-                    is_an_orphan = HG.client_controller.Read( 'is_an_orphan', 'file', hash )
+                    is_an_orphan = CG.client_controller.Read( 'is_an_orphan', 'file', hash )
                     
                 except:
                     
@@ -1364,7 +1365,7 @@ class ClientFilesManager( object ):
                     
                     hash = bytes.fromhex( should_be_a_hex_hash )
                     
-                    is_an_orphan = HG.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
+                    is_an_orphan = CG.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
                     
                 except:
                     
@@ -1785,7 +1786,7 @@ class ClientFilesManager( object ):
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
-            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
             ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( (media_width, media_height), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
@@ -2000,9 +2001,9 @@ class FilesMaintenanceManager( object ):
     
     def _AbleToDoBackgroundMaintenance( self ):
         
-        HG.client_controller.WaitUntilViewFree()
+        CG.client_controller.WaitUntilViewFree()
         
-        if HG.client_controller.CurrentlyIdle():
+        if CG.client_controller.CurrentlyIdle():
             
             if not self._controller.new_options.GetBoolean( 'file_maintenance_during_idle' ):
                 
@@ -2162,7 +2163,7 @@ class FilesMaintenanceManager( object ):
                 
                 try:
                     
-                    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                    url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url )
                     
                 except HydrusExceptions.URLClassException:
                     
@@ -2236,12 +2237,12 @@ class FilesMaintenanceManager( object ):
                 
                 def qt_add_url( url ):
                     
-                    HG.client_controller.gui.ImportURL( url, 'missing files redownloader' )
+                    CG.client_controller.gui.ImportURL( url, 'missing files redownloader' )
                     
                 
                 for url in useful_urls:
                     
-                    HG.client_controller.CallBlockingToQt( HG.client_controller.gui, qt_add_url, url )
+                    CG.client_controller.CallBlockingToQt( CG.client_controller.gui, qt_add_url, url )
                     
                 
             
@@ -2887,7 +2888,7 @@ class FilesMaintenanceManager( object ):
                         
                         job_status.SetFiles( [ hash ], 'I/O error file' )
                         
-                        HG.client_controller.pub( 'message', job_status )
+                        CG.client_controller.pub( 'message', job_status )
                         
                         self._serious_error_encountered = True
                         self._shutdown = True
@@ -2908,7 +2909,7 @@ class FilesMaintenanceManager( object ):
                         
                         job_status.SetFiles( [ hash ], 'failed file' )
                         
-                        HG.client_controller.pub( 'message', job_status )
+                        CG.client_controller.pub( 'message', job_status )
                         
                     finally:
                         
@@ -2969,7 +2970,7 @@ class FilesMaintenanceManager( object ):
         
         job_status = ClientThreading.JobStatus( cancellable = True )
         
-        job_types_to_counts = HG.client_controller.Read( 'file_maintenance_get_job_counts' )
+        job_types_to_counts = CG.client_controller.Read( 'file_maintenance_get_job_counts' )
         
         # in a dict so the hook has scope to alter it
         vr_status = {}

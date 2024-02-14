@@ -15,6 +15,7 @@ from hydrus.core import HydrusText
 from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
@@ -120,7 +121,7 @@ class TestPanel( QW.QWidget ):
     
     def _Copy( self ):
         
-        HG.client_controller.pub( 'clipboard', 'text', self._example_data_raw )
+        CG.client_controller.pub( 'clipboard', 'text', self._example_data_raw )
         
     
     def _FetchFromURL( self ):
@@ -148,7 +149,7 @@ class TestPanel( QW.QWidget ):
             
             network_job.OverrideBandwidth()
             
-            HG.client_controller.network_engine.AddJob( network_job )
+            CG.client_controller.network_engine.AddJob( network_job )
             
             example_bytes = None
             
@@ -182,7 +183,7 @@ class TestPanel( QW.QWidget ):
                 
                 url = dlg.GetValue()
                 
-                HG.client_controller.CallToThread( do_it, url )
+                CG.client_controller.CallToThread( do_it, url )
                 
             
         
@@ -191,7 +192,7 @@ class TestPanel( QW.QWidget ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
             try:
                 
@@ -290,7 +291,7 @@ class TestPanel( QW.QWidget ):
                     
                     try:
                         
-                        j = HG.client_controller.parsing_cache.GetJSON( example_data )
+                        j = CG.client_controller.parsing_cache.GetJSON( example_data )
                         
                         example_data_to_show = json.dumps( j, indent = 4 )
                         
@@ -495,7 +496,7 @@ class TestPanelPageParser( TestPanel ):
     
     def _CopyPostConversion( self ):
         
-        HG.client_controller.pub( 'clipboard', 'text', self._example_data_post_conversion )
+        CG.client_controller.pub( 'clipboard', 'text', self._example_data_post_conversion )
         
     
     def _RefreshDataPreviews( self ):
@@ -627,7 +628,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         
         joiner = os.linesep * 2
         
-        HG.client_controller.pub( 'clipboard', 'text', joiner.join( self._example_data_post_separation ) )
+        CG.client_controller.pub( 'clipboard', 'text', joiner.join( self._example_data_post_separation ) )
         
     
     def _SetExampleData( self, example_data, example_bytes = None ):

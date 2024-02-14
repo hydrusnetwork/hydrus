@@ -14,6 +14,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
@@ -898,7 +899,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def ConvertURLsToMediaViewerTuples( self, urls ):
         
-        show_unmatched_urls_in_media_viewer = HG.client_controller.new_options.GetBoolean( 'show_unmatched_urls_in_media_viewer' )
+        show_unmatched_urls_in_media_viewer = CG.client_controller.new_options.GetBoolean( 'show_unmatched_urls_in_media_viewer' )
         
         url_tuples = []
         unmatched_url_tuples = []
@@ -1067,14 +1068,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if domain in self._second_level_domains_to_network_infrastructure_errors:
                 
-                number_of_errors = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_number' )
+                number_of_errors = CG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_number' )
                 
                 if number_of_errors == 0:
                     
                     return True
                     
                 
-                error_time_delta = HG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
+                error_time_delta = CG.client_controller.new_options.GetInteger( 'domain_network_infrastructure_error_time_delta' )
                 
                 network_infrastructure_errors = self._second_level_domains_to_network_infrastructure_errors[ domain ]
                 
@@ -1128,8 +1129,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            gug_key = HG.client_controller.new_options.GetKey( 'default_gug_key' )
-            gug_name = HG.client_controller.new_options.GetString( 'default_gug_name' )
+            gug_key = CG.client_controller.new_options.GetKey( 'default_gug_key' )
+            gug_name = CG.client_controller.new_options.GetString( 'default_gug_name' )
             
             return ( gug_key, gug_name )
             
@@ -1857,8 +1858,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             ( gug_key, gug_name ) = gug_key_and_name
             
-            HG.client_controller.new_options.SetKey( 'default_gug_key', gug_key )
-            HG.client_controller.new_options.SetString( 'default_gug_name', gug_name )
+            CG.client_controller.new_options.SetKey( 'default_gug_key', gug_key )
+            CG.client_controller.new_options.SetString( 'default_gug_name', gug_name )
             
         
     
@@ -2386,7 +2387,7 @@ class DomainValidationPopupProcess( object ):
                 
                 job_status.SetVariable( 'popup_yes_no_question', question )
                 
-                HG.client_controller.pub( 'message', job_status )
+                CG.client_controller.pub( 'message', job_status )
                 
                 result = job_status.GetIfHasVariable( 'popup_yes_no_answer' )
                 

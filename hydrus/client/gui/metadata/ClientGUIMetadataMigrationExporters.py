@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -239,7 +240,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                HG.client_controller.services_manager.GetName( self._service_key )
+                CG.client_controller.services_manager.GetName( self._service_key )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -339,7 +340,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._service_selection_panel.setVisible( True )
             
-            if not HG.client_controller.services_manager.ServiceExists( self._service_key ):
+            if not CG.client_controller.services_manager.ServiceExists( self._service_key ):
                 
                 message = 'Hey, the tag service for your exporter does not seem to exist! Maybe it was deleted. Please select a new one that does.'
                 
@@ -399,7 +400,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            name = HG.client_controller.services_manager.GetName( self._service_key )
+            name = CG.client_controller.services_manager.GetName( self._service_key )
             
         except HydrusExceptions.DataMissing:
             

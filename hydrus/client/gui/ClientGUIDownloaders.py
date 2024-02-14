@@ -12,6 +12,7 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -365,7 +366,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = gug.GetExampleURL()
             
-            example_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
+            example_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
             
             self._example_url.setText( example_url )
             
@@ -386,7 +387,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( example_url )
+                url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( example_url )
                 
                 if url_class is None:
                     
@@ -706,9 +707,9 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            example_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
+            example_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( example_url )
             
-            url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( example_url )
+            url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( example_url )
             
         except:
             

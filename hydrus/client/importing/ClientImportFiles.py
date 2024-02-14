@@ -12,6 +12,7 @@ from hydrus.core.files.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientContentUpdates
@@ -91,7 +92,7 @@ def CheckFileImportStatus( file_import_status: FileImportStatus ) -> FileImportS
                 return file_import_status
                 
             
-            HG.client_controller.client_files_manager.GetFilePath( hash, mime = mime )
+            CG.client_controller.client_files_manager.GetFilePath( hash, mime = mime )
             
         except HydrusExceptions.FileMissingException:
             
@@ -187,7 +188,7 @@ class FileImportJob( object ):
                     status_hook( 'copying file into file storage' )
                     
                 
-                HG.client_controller.client_files_manager.AddFile( hash, mime, self._temp_path, thumbnail_bytes = self._thumbnail_bytes )
+                CG.client_controller.client_files_manager.AddFile( hash, mime, self._temp_path, thumbnail_bytes = self._thumbnail_bytes )
                 
                 if status_hook is not None:
                     
@@ -196,7 +197,7 @@ class FileImportJob( object ):
                 
                 self._file_import_options.CheckReadyToImport()
                 
-                self._post_import_file_status = HG.client_controller.WriteSynchronous( 'import_file', self )
+                self._post_import_file_status = CG.client_controller.WriteSynchronous( 'import_file', self )
                 
             else:
                 
@@ -208,7 +209,7 @@ class FileImportJob( object ):
             # if the file is already in the database but not in all the desired file services, let's push content updates to make it happen
             if self._pre_import_file_status.status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
                 
-                media_result = HG.client_controller.Read( 'media_result', self._pre_import_file_status.hash )
+                media_result = CG.client_controller.Read( 'media_result', self._pre_import_file_status.hash )
                 
                 destination_location_context = self._file_import_options.GetDestinationLocationContext()
                 
@@ -229,7 +230,7 @@ class FileImportJob( object ):
                         content_update_package.AddContentUpdate( service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) )
                         
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                    CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                 
             
@@ -265,7 +266,7 @@ class FileImportJob( object ):
             status_hook( 'checking for file status' )
             
         
-        self._pre_import_file_status = HG.client_controller.Read( 'hash_status', 'sha256', hash, prefix = 'file recognised' )
+        self._pre_import_file_status = CG.client_controller.Read( 'hash_status', 'sha256', hash, prefix = 'file recognised' )
         
         if self._pre_import_file_status.hash is None:
             
@@ -303,7 +304,7 @@ class FileImportJob( object ):
             HydrusData.ShowText( 'File import job mime: {}'.format( HC.mime_string_lookup[ mime ] ) )
             
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         if mime in HC.DECOMPRESSION_BOMB_IMAGES and not self._file_import_options.AllowsDecompressionBombs():
             
@@ -349,13 +350,13 @@ class FileImportJob( object ):
                 HydrusData.ShowText( 'File import job generating thumbnail' )
                 
             
-            bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-            thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
-            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            bounding_dimensions = CG.client_controller.options[ 'thumbnail_dimensions' ]
+            thumbnail_scale_type = CG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+            thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
             target_resolution = HydrusImageHandling.GetThumbnailResolution( ( width, height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
             
-            percentage_in = HG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
+            percentage_in = CG.client_controller.new_options.GetInteger( 'video_thumbnail_percentage_in' )
             
             extra_description = f'File with hash "{self.GetHash().hex()}".'
             
@@ -554,7 +555,7 @@ class FileImportJob( object ):
             
             content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
             
-            HG.client_controller.Write( 'content_updates', content_update_package )
+            CG.client_controller.Write( 'content_updates', content_update_package )
             
         
     

@@ -12,6 +12,7 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
@@ -74,7 +75,7 @@ def ExportToClipboard( file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
     payload = GetExportableSourcesString( file_seed_cache )
     
-    HG.client_controller.pub( 'clipboard', 'text', payload )
+    CG.client_controller.pub( 'clipboard', 'text', payload )
     
 def ExportToPNG( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache ):
     
@@ -93,7 +94,7 @@ def ImportFromClipboard( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds
     
     try:
         
-        raw_text = HG.client_controller.GetClipboardText()
+        raw_text = CG.client_controller.GetClipboardText()
         
     except HydrusExceptions.DataMissing as e:
         
@@ -213,7 +214,7 @@ def ShowFilesInNewPage( file_seed_cache: ClientImportFileSeeds.FileSeedCache, sh
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         
-        HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
+        CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
         
     
 
@@ -410,7 +411,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = separator.join( notes )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -424,7 +425,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = separator.join( ( file_seed.file_seed_data for file_seed in file_seeds ) )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -694,7 +695,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                    CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                 
             
@@ -723,7 +724,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
             
-            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
+            CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         
     
@@ -908,7 +909,7 @@ class FileSeedCacheStatusControl( QW.QFrame ):
         
         #
         
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _GetFileSeedCache( self ):
@@ -985,7 +986,7 @@ class FileSeedCacheStatusControl( QW.QFrame ):
                     
                     do_it_anyway = True # to update the gauge
                     
-                    HG.client_controller.pub( 'refresh_page_name', self._page_key )
+                    CG.client_controller.pub( 'refresh_page_name', self._page_key )
                     
                 
             

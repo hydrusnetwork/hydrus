@@ -4,6 +4,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.media import ClientMediaManagers
 
 class MediaResult( object ):
@@ -32,7 +33,7 @@ class MediaResult( object ):
         
         try:
             
-            service = HG.client_controller.services_manager.GetService( service_key )
+            service = CG.client_controller.services_manager.GetService( service_key )
             
         except HydrusExceptions.DataMissing:
             
@@ -163,7 +164,7 @@ class MediaResult( object ):
         
         # TODO: ultimately replace this with metadata conditionals for whatever the user likes, 'don't delete anything rated 5 stars', whatever
         
-        delete_lock_for_archived_files = HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
+        delete_lock_for_archived_files = CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' )
         
         if delete_lock_for_archived_files:
             
@@ -194,7 +195,7 @@ class MediaResult( object ):
         
         try:
             
-            service = HG.client_controller.services_manager.GetService( service_key )
+            service = CG.client_controller.services_manager.GetService( service_key )
             
         except HydrusExceptions.DataMissing:
             

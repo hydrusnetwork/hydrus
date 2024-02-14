@@ -9,7 +9,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
+
+from hydrus.client import ClientGlobals as CG
 
 from hydrus.client.gui import QtPorting as QP
 
@@ -114,7 +115,7 @@ def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
     
     menu.addAction( menu_item )
     
-    BindMenuItem( menu_item, HG.client_controller.pub, 'clipboard', 'text', copy_text )
+    BindMenuItem( menu_item, CG.client_controller.pub, 'clipboard', 'text', copy_text )
     
     return menu_item
     
@@ -202,7 +203,7 @@ class StatusBarRedirectFilter( QC.QObject ):
             
             if event.type() == QC.QEvent.StatusTip:
                 
-                QW.QApplication.instance().sendEvent( HG.client_controller.gui, event )
+                QW.QApplication.instance().sendEvent( CG.client_controller.gui, event )
                 
                 return True
                 

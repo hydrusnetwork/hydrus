@@ -7,10 +7,11 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 
 def FilterOutRedundantMetaServices( list_of_service_keys: typing.List[ bytes ] ):
     
-    services_manager = HG.client_controller.services_manager
+    services_manager = CG.client_controller.services_manager
     
     special_local_file_service_keys = { CC.TRASH_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY }
     
@@ -37,13 +38,13 @@ def FilterOutRedundantMetaServices( list_of_service_keys: typing.List[ bytes ] )
 
 def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_local_file_domains_allowed: bool ):
     
-    services_manager = HG.client_controller.services_manager
+    services_manager = CG.client_controller.services_manager
     
     service_types_in_order = [ HC.LOCAL_FILE_DOMAIN ]
     
     if not only_local_file_domains_allowed:
         
-        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        advanced_mode = CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
         if len( services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) ) > 1 or advanced_mode:
             
@@ -91,7 +92,7 @@ def SortFileServiceKeysNicely( list_of_service_keys ):
 
 def ValidLocalDomainsFilter( service_keys ):
     
-    return [ service_key for service_key in service_keys if HG.client_controller.services_manager.ServiceExists( service_key ) and HG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
+    return [ service_key for service_key in service_keys if CG.client_controller.services_manager.ServiceExists( service_key ) and CG.client_controller.services_manager.GetServiceType( service_key ) == HC.LOCAL_FILE_DOMAIN ]
     
 class LocationContext( HydrusSerialisable.SerialisableBase ):
     

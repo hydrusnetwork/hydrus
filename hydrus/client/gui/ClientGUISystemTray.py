@@ -7,6 +7,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import QtPorting as QP
 
@@ -107,7 +108,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         self._minimise_restore_menu_item.setText( label )
         
-        show_it = self._ui_is_currently_shown and not HG.client_controller.new_options.GetBoolean( 'minimise_client_to_system_tray' )
+        show_it = self._ui_is_currently_shown and not CG.client_controller.new_options.GetBoolean( 'minimise_client_to_system_tray' )
         
         self._minimise_restore_menu_item.setVisible( show_it )
         
@@ -156,7 +157,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
     
     def _UpdateTooltip( self ):
         
-        app_display_name = HG.client_controller.new_options.GetString( 'app_display_name' )
+        app_display_name = CG.client_controller.new_options.GetString( 'app_display_name' )
         
         tooltip = app_display_name
         

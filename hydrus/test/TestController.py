@@ -192,7 +192,6 @@ class Controller( object ):
         HydrusPaths.MakeSureDirectoryExists( client_files_default )
         
         HG.controller = self
-        HG.client_controller = self
         HG.server_controller = self
         HG.test_controller = self
         
@@ -205,7 +204,7 @@ class Controller( object ):
         
         self._call_to_threads = []
         
-        self._pubsub = HydrusPubSub.HydrusPubSub( self, lambda o: True )
+        self._pubsub = HydrusPubSub.HydrusPubSub( lambda o: True )
         
         self.new_options = ClientOptions.ClientOptions()
         

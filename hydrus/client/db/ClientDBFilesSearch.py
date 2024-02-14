@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBDefinitionsCache
@@ -1072,7 +1073,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
             else:
                 
-                service = HG.client_controller.services_manager.GetService( rating_service_key )
+                service = CG.client_controller.services_manager.GetService( rating_service_key )
                 
                 service_type = service.GetServiceType()
                 
@@ -1278,7 +1279,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         have_cross_referenced_file_locations = False
         
-        HG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetIdleTimer()
         
         system_predicates = file_search_context.GetSystemPredicates()
         
@@ -1549,7 +1550,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     service_id = self.modules_services.GetServiceId( rating_service_key )
                     
-                    service = HG.client_controller.services_manager.GetService( rating_service_key )
+                    service = CG.client_controller.services_manager.GetService( rating_service_key )
                     
                     service_type = service.GetServiceType()
                     
@@ -1784,7 +1785,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                     
                     service_id = self.modules_services.GetServiceId( rating_service_key )
                     
-                    service = HG.client_controller.services_manager.GetService( rating_service_key )
+                    service = CG.client_controller.services_manager.GetService( rating_service_key )
                     
                     service_type = service.GetServiceType()
                     

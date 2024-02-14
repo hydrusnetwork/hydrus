@@ -8,6 +8,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientAPI
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -33,7 +34,7 @@ class CaptureAPIAccessPermissionsRequestPanel( ClientGUIScrolledPanels.ReviewPan
         
         self.widget().setLayout( vbox )
         
-        self._repeating_job = HG.client_controller.CallRepeatingQtSafe( self, 0.0, 0.5, 'repeating client api permissions check', self.REPEATINGUpdate )
+        self._repeating_job = CG.client_controller.CallRepeatingQtSafe( self, 0.0, 0.5, 'repeating client api permissions check', self.REPEATINGUpdate )
         
     
     def GetAPIAccessPermissions( self ):

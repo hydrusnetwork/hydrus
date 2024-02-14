@@ -1,5 +1,6 @@
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+
+from hydrus.client import ClientGlobals as CG
 
 LIKE = 0
 DISLIKE = 1
@@ -142,7 +143,7 @@ def GetShape( service_key ):
     
     try:
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
         shape = service.GetShape()
         

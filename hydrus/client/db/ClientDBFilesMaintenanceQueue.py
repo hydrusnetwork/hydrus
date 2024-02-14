@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBModule
 
@@ -55,12 +56,12 @@ class ClientDBFilesMaintenanceQueue( ClientDBModule.ClientDBModule ):
         
         self._ExecuteMany( 'REPLACE INTO file_maintenance_jobs ( hash_id, job_type, time_can_start ) VALUES ( ?, ?, ? );', ( ( hash_id, job_type, time_can_start ) for hash_id in hash_ids ) )
         
-        if HG.client_controller.IsBooted():
+        if CG.client_controller.IsBooted():
             
             try:
                 
                 # if this happens during boot db update, this doesn't exist lol
-                HG.client_controller.files_maintenance_manager.Wake()
+                CG.client_controller.files_maintenance_manager.Wake()
                 
             except:
                 

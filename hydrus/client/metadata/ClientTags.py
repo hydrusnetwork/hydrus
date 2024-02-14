@@ -1,12 +1,10 @@
 import collections
-import threading
 import typing
 
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
-from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 
 TAG_DISPLAY_STORAGE = 0
 TAG_DISPLAY_DISPLAY_ACTUAL = 1
@@ -39,7 +37,7 @@ def RenderTag( tag, render_for_user: bool ):
     
     if render_for_user:
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         if new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ):
             

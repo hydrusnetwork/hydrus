@@ -9,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
@@ -93,7 +94,7 @@ def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSea
                 
                 edited_predicates = panel.GetValue()
                 
-                HG.client_controller.new_options.PushRecentPredicates( edited_predicates )
+                CG.client_controller.new_options.PushRecentPredicates( edited_predicates )
                 
                 result = list( non_editable_predicates )
                 result.extend( edited_predicates )
@@ -164,7 +165,7 @@ def FleshOutPredicates( widget: QW.QWidget, predicates: typing.Collection[ Clien
                     
                     preds = panel.GetValue()
                     
-                    HG.client_controller.new_options.PushRecentPredicates( preds )
+                    CG.client_controller.new_options.PushRecentPredicates( preds )
                     
                     good_predicates.extend( preds )
                     
@@ -698,7 +699,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_RATING:
             
-            services_manager = HG.client_controller.services_manager
+            services_manager = CG.client_controller.services_manager
             
             ratings_services = services_manager.GetServices( HC.RATINGS_SERVICES )
             
@@ -785,7 +786,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( recent_predicate_types ) > 0:
                 
-                recent_predicates = HG.client_controller.new_options.GetRecentPredicates( recent_predicate_types )
+                recent_predicates = CG.client_controller.new_options.GetRecentPredicates( recent_predicate_types )
                 
                 recent_predicates = [ pred for pred in recent_predicates if pred not in all_static_preds ]
                 
@@ -862,7 +863,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         
         for predicate in predicates:
             
-            HG.client_controller.new_options.RemoveRecentPredicate( predicate )
+            CG.client_controller.new_options.RemoveRecentPredicate( predicate )
             
         
         button.hide()
@@ -978,7 +979,7 @@ class TagContextButton( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         service_types_in_order = [ HC.LOCAL_TAG, HC.TAG_REPOSITORY, HC.COMBINED_TAG ]
         
@@ -1016,11 +1017,11 @@ class TagContextButton( ClientGUICommon.BetterButton ):
         
         tag_context = tag_context.Duplicate()
         
-        tag_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        tag_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
         self._tag_context = tag_context
         
-        label = self._tag_context.ToString( HG.client_controller.services_manager.GetName )
+        label = self._tag_context.ToString( CG.client_controller.services_manager.GetName )
         
         if self._use_short_label:
             

@@ -8,12 +8,12 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
@@ -46,8 +46,8 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         
         self._hashes = set()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _Draw( self, painter ):
@@ -57,8 +57,6 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
         painter.eraseRect( painter.viewport() )
         
         if self._current_media is not None:
-            
-            ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
             
             ClientGUIRatings.DrawIncDec( painter, 0, 0, self._service_key, self._rating_state, self._rating )
             
@@ -72,7 +70,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
@@ -116,9 +114,14 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
                 
                 self._hashes = set()
                 
+                self._rating_state = None
+                self._rating = None
+                
             else:
                 
                 self._hashes = self._current_media.GetHashes()
+                
+                ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
                 
             
             self.update()
@@ -136,9 +139,10 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
         
         self._canvas_key = canvas_key
         self._current_media = None
+        self._hashes = set()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _Draw( self, painter ):
@@ -162,7 +166,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
@@ -175,7 +179,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
@@ -255,8 +259,8 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
         
         self._hashes = set()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _ClearRating( self ):
@@ -269,7 +273,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
@@ -295,7 +299,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
             
             content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_RATINGS, HC.CONTENT_UPDATE_ADD, ( rating, self._hashes ) )
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( self._service_key, content_update ) )
             
         
     
@@ -397,7 +401,7 @@ class CanvasHoverFrame( QW.QFrame ):
         
         parent.installEventFilter( self )
         
-        HG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
+        CG.client_controller.sub( self, 'SetDisplayMedia', 'canvas_new_display_media' )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -687,8 +691,8 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
         
     
     def _Archive( self ):
@@ -737,15 +741,15 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._archive_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().archive, self._Archive )
         self._archive_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.setToolTip( 'send to trash' )
         self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().trash_delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().trash_delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._delete_button.setToolTip( 'delete completely' )
         self._delete_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().undelete, HG.client_controller.pub, 'canvas_undelete', self._canvas_key )
+        self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().undelete, CG.client_controller.pub, 'canvas_undelete', self._canvas_key )
         self._undelete_button.setToolTip( 'undelete' )
         self._undelete_button.setFocusPolicy( QC.Qt.TabFocus )
         
@@ -792,7 +796,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._show_embedded_metadata_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().listctrl, self._ShowFileEmbeddedMetadata )
         self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, HG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
+        fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, CG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.setToolTip( 'fullscreen switch' )
         fullscreen_switch.setFocusPolicy( QC.Qt.TabFocus )
         
@@ -812,7 +816,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         drag_button.pressed.connect( self.DragButtonHit )
         drag_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        close = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
+        close = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )
         close.setToolTip( 'close' )
         close.setFocusPolicy( QC.Qt.TabFocus )
         
@@ -863,7 +867,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 self._delete_button.hide()
                 
             
-            if set( locations_manager.GetDeleted() ).isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) ):
+            if set( locations_manager.GetDeleted() ).isdisjoint( CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) ):
                 
                 self._undelete_button.hide()
                 
@@ -941,7 +945,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
     
     def _FlipActiveDefaultCustomShortcut( self, name ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         default_media_viewer_custom_shortcuts = list( new_options.GetStringList( 'default_media_viewer_custom_shortcuts' ) )
         
@@ -971,7 +975,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
     
     def _ShowShortcutMenu( self ):
         
-        all_shortcut_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
+        all_shortcut_names = CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
         
         custom_shortcuts_names = [ name for name in all_shortcut_names if name not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         
@@ -982,7 +986,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         if len( custom_shortcuts_names ) > 0:
             
             my_canvas_active_custom_shortcuts = self._my_canvas.GetActiveCustomShortcutNames()
-            default_media_viewer_custom_shortcuts = HG.client_controller.new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
+            default_media_viewer_custom_shortcuts = CG.client_controller.new_options.GetStringList( 'default_media_viewer_custom_shortcuts' )
             
             current_menu = ClientGUIMenus.GenerateMenu( menu )
             
@@ -1222,7 +1226,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         like_hbox = QP.HBoxLayout( spacing = 0 )
         
-        like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        like_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         if len( like_services ) > 0:
             
@@ -1242,7 +1246,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         # each numerical one in turn
         
-        numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        numerical_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
         for service in numerical_services:
             
@@ -1259,7 +1263,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         incdec_hbox = QP.HBoxLayout( spacing = 0 )
         
-        incdec_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        incdec_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
         if len( incdec_services ) > 0:
             
@@ -1287,7 +1291,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         self._ResetData()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
     def _Archive( self ):
@@ -1412,7 +1416,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                 
                 QP.ClearLayout( self._urls_vbox, delete_widgets = True )
                 
-                url_tuples = HG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
+                url_tuples = CG.client_controller.network_engine.domain_manager.ConvertURLsToMediaViewerTuples( urls )
                 
                 for ( display_string, url ) in url_tuples:
                     
@@ -1609,7 +1613,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
         
         self._ResetNotes()
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
     def _EditNotes( self, name ):
@@ -1807,7 +1811,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         self._show_in_a_page_button.setToolTip( 'send pair to the duplicates media page, for later processing' )
         self._show_in_a_page_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, HG.client_controller.pub, 'canvas_delete', self._canvas_key )
+        self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
         self._trash_button.setToolTip( 'send to trash' )
         self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
         
@@ -1816,7 +1820,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'this is better\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_BETTER ) ) )
         menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'same quality\'', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_SAME_QUALITY ) ) )
         
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             menu_items.append( ( 'normal', 'edit duplicate metadata merge options for \'alternates\' (advanced!)', 'edit what content is merged when you filter files', HydrusData.Call( self._EditMergeOptions, HC.DUPLICATE_ALTERNATE ) ) )
             
@@ -1827,7 +1831,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().cog, menu_items )
         self._cog_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, HG.client_controller.pub, 'canvas_close', self._canvas_key )
+        close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )
         close_button.setToolTip( 'close filter' )
         close_button.setFocusPolicy( QC.Qt.TabFocus )
         
@@ -1942,13 +1946,13 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        HG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
-        HG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
+        CG.client_controller.sub( self, 'SetDuplicatePair', 'canvas_new_duplicate_pair' )
+        CG.client_controller.sub( self, 'SetIndexString', 'canvas_new_index_string' )
         
     
     def _EditBackgroundSwitchIntensity( self ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         for ( message, tooltip, variable_name ) in [
             ( 'intensity for A', 'This changes the background colour when you are looking at A. If you have a pure white/black background, it helps to highlight transparency vs opaque white/black image background.', 'duplicate_background_switch_intensity_a' ),
@@ -1983,7 +1987,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     def _EditMergeOptions( self, duplicate_type ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
         
@@ -2121,7 +2125,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
         
         self.setLayout( vbox )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         
     
     def _GetIdealSizeAndPosition( self ):

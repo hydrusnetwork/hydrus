@@ -4,11 +4,10 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.search import ClientSearch
@@ -20,7 +19,7 @@ def GetRealFileImportOptions( file_import_options: "FileImportOptions", loud_or_
     
     if file_import_options.IsDefault():
         
-        file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( loud_or_quiet )
+        file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( loud_or_quiet )
         
     
     return file_import_options
@@ -65,7 +64,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            fallback = HG.client_controller.services_manager.GetLocalMediaFileServices()[0].GetServiceKey()
+            fallback = CG.client_controller.services_manager.GetLocalMediaFileServices()[0].GetServiceKey()
             
         except:
             

@@ -3,12 +3,11 @@ import typing
 import weakref
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusThreading
-from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -40,12 +39,12 @@ class MediaResultCache( object ):
         # this means that if a user refreshes a search and the existing media result handles briefly go to zero...
         # or if the client api makes repeated requests on the same media results...
         # then that won't be a chance for the weakvaluedict to step in. we'll keep this scratchpad of stuff
-        self._fifo_timeout_cache = ClientCachesBase.DataCache( HG.client_controller, 'media result cache', 2048, 120 )
+        self._fifo_timeout_cache = ClientCachesBase.DataCache( CG.client_controller, 'media result cache', 2048, 120 )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_data' )
-        HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
-        HG.client_controller.sub( self, 'NewForceRefreshTags', 'notify_new_force_refresh_tags_data' )
-        HG.client_controller.sub( self, 'NewTagDisplayRules', 'notify_new_tag_display_rules' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_data' )
+        CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_data' )
+        CG.client_controller.sub( self, 'NewForceRefreshTags', 'notify_new_force_refresh_tags_data' )
+        CG.client_controller.sub( self, 'NewTagDisplayRules', 'notify_new_tag_display_rules' )
         
     
     def AddMediaResults( self, media_results: typing.Iterable[ ClientMediaResult.MediaResult ] ):
@@ -151,7 +150,7 @@ class MediaResultCache( object ):
                     return
                     
                 
-                hash_ids_to_tags_managers = HG.client_controller.Read( 'force_refresh_tags_managers', group_of_hash_ids )
+                hash_ids_to_tags_managers = CG.client_controller.Read( 'force_refresh_tags_managers', group_of_hash_ids )
                 
                 with self._lock:
                     
@@ -167,7 +166,7 @@ class MediaResultCache( object ):
                     
                 
             
-            HG.client_controller.pub( 'refresh_all_tag_presentation_gui' )
+            CG.client_controller.pub( 'refresh_all_tag_presentation_gui' )
             
         
         with self._lock:
@@ -175,7 +174,7 @@ class MediaResultCache( object ):
             hash_ids = list( self._hash_ids_to_media_results.keys() )
             
         
-        HG.client_controller.CallToThread( do_it, hash_ids )
+        CG.client_controller.CallToThread( do_it, hash_ids )
         
     
     def NewTagDisplayRules( self ):
@@ -188,7 +187,7 @@ class MediaResultCache( object ):
                 
             
         
-        HG.client_controller.pub( 'refresh_all_tag_presentation_gui' )
+        CG.client_controller.pub( 'refresh_all_tag_presentation_gui' )
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):

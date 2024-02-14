@@ -2,9 +2,9 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
@@ -48,7 +48,7 @@ class ClientDBRecentTags( ClientDBModule.ClientDBModule ):
         
         newest_first = sorted( tag_ids_to_timestamps_ms.keys(), key = sort_key, reverse = True )
         
-        num_we_want = HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
+        num_we_want = CG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
         
         if num_we_want is None:
             

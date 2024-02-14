@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core.networking import HydrusNetwork
 
+from hydrus.client import ClientGlobals as CG
 def ConvertClientToServerUpdateToContentUpdates( client_to_server_update: HydrusNetwork.ClientToServerUpdate ):
     
     content_updates = []
@@ -270,7 +271,7 @@ class ContentUpdatePackage( object ):
             
             try:
                 
-                service = HG.client_controller.services_manager.GetService( service_key )
+                service = CG.client_controller.services_manager.GetService( service_key )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -354,7 +355,7 @@ class ContentUpdatePackage( object ):
             
             if len( content_updates ) > 0:
                 
-                name = HG.client_controller.services_manager.GetName( service_key )
+                name = CG.client_controller.services_manager.GetName( service_key )
                 
                 locations.add( name )
                 

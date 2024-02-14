@@ -13,6 +13,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -45,9 +46,9 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         
         #
         
-        like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
-        numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
-        incdec_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        like_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        numerical_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        incdec_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
         self._panels = []
         
@@ -125,14 +126,14 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         
         text = json.dumps( [ ( service_key.hex(), rating ) for ( service_key, rating ) in rating_clipboard_pairs ] )
         
-        HG.client_controller.pub( 'clipboard', 'text', text )
+        CG.client_controller.pub( 'clipboard', 'text', text )
         
     
     def _Paste( self ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -173,7 +174,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
             if content_update_package.HasContent():
                 
-                HG.client_controller.Write( 'content_updates', content_update_package )
+                CG.client_controller.Write( 'content_updates', content_update_package )
                 
             
         finally:

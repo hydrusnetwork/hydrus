@@ -5,7 +5,6 @@ import time
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
@@ -13,6 +12,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 
 class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
@@ -386,7 +386,7 @@ class TagDisplayMaintenanceManager( object ):
                     self._go_faster.discard( service_key )
                     
                 
-                rest_ratio = HG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_work_hard' ) / 100
+                rest_ratio = CG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_work_hard' ) / 100
                 
             
         
@@ -394,11 +394,11 @@ class TagDisplayMaintenanceManager( object ):
             
             if self._controller.CurrentlyIdle():
                 
-                rest_ratio = HG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_idle' ) / 100
+                rest_ratio = CG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_idle' ) / 100
                 
             else:
                 
-                rest_ratio = HG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_normal' ) / 100
+                rest_ratio = CG.client_controller.new_options.GetInteger( 'tag_display_processing_rest_percentage_normal' ) / 100
                 
                 if actual_work_time > expected_work_time * 10:
                     
@@ -451,17 +451,17 @@ class TagDisplayMaintenanceManager( object ):
             
             if service_key in self._go_faster:
                 
-                return HG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) / 1000
+                return CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_work_hard' ) / 1000
                 
             
         
         if self._controller.CurrentlyIdle():
             
-            return HG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) / 1000
+            return CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_idle' ) / 1000
             
         else:
             
-            return HG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) / 1000
+            return CG.client_controller.new_options.GetInteger( 'tag_display_processing_work_time_ms_normal' ) / 1000
             
         
     

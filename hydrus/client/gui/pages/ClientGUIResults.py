@@ -22,6 +22,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIDragDrop
@@ -182,11 +183,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         self._empty_page_status_override = None
         
-        HG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
-        HG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
-        HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
-        HG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
-        HG.client_controller.sub( self, 'LaunchMediaViewerOnFocus', 'launch_media_viewer' )
+        CG.client_controller.sub( self, 'AddMediaResults', 'add_media_results' )
+        CG.client_controller.sub( self, 'RemoveMedia', 'remove_media' )
+        CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'SelectByTags', 'select_files_with_tags' )
+        CG.client_controller.sub( self, 'LaunchMediaViewerOnFocus', 'launch_media_viewer' )
         
         self._had_changes_to_tag_presentation_while_hidden = False
         
@@ -222,7 +223,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                 
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) ) )
             
         
     
@@ -270,7 +271,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 if media.IsStaticImage():
                     
-                    HG.client_controller.pub( 'clipboard', 'bmp', ( media, resolution ) )
+                    CG.client_controller.pub( 'clipboard', 'bmp', ( media, resolution ) )
                     
                     copied = True
                     
@@ -282,7 +283,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _CopyFilesToClipboard( self ):
         
-        client_files_manager = HG.client_controller.client_files_manager
+        client_files_manager = CG.client_controller.client_files_manager
         
         media = self._GetSelectedFlatMedia( discriminant = CC.DISCRIMINANT_LOCAL )
         
@@ -300,7 +301,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if len( paths ) > 0:
             
-            HG.client_controller.pub( 'clipboard', 'paths', paths )
+            CG.client_controller.pub( 'clipboard', 'paths', paths )
             
         
     
@@ -327,11 +328,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             media = self._GetFocusSingleton()
             
-            client_files_manager = HG.client_controller.client_files_manager
+            client_files_manager = CG.client_controller.client_files_manager
             
             path = client_files_manager.GetFilePath( media.GetHash(), media.GetMime() )
             
-            HG.client_controller.pub( 'clipboard', 'text', path )
+            CG.client_controller.pub( 'clipboard', 'text', path )
             
         
     
@@ -339,7 +340,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         media_results = self.GenerateMediaResults( discriminant = CC.DISCRIMINANT_LOCAL, selected_media = set( self._selected_media ) )
         
-        client_files_manager = HG.client_controller.client_files_manager
+        client_files_manager = CG.client_controller.client_files_manager
         
         paths = []
         
@@ -352,7 +353,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             text = os.linesep.join( paths )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -371,7 +372,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 return
                 
             
-            service = HG.client_controller.services_manager.GetService( service_key )
+            service = CG.client_controller.services_manager.GetService( service_key )
             
             if service.GetServiceType() == HC.IPFS:
                 
@@ -380,7 +381,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 filename = multihash_prefix + filename
                 
             
-            HG.client_controller.pub( 'clipboard', 'text', filename )
+            CG.client_controller.pub( 'clipboard', 'text', filename )
             
         
     
@@ -388,7 +389,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         prefix = ''
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
         if service.GetServiceType() == HC.IPFS:
             
@@ -407,7 +408,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 copy_string = os.linesep.join( filenames )
                 
-                HG.client_controller.pub( 'clipboard', 'text', copy_string )
+                CG.client_controller.pub( 'clipboard', 'text', copy_string )
                 
             else:
                 
@@ -428,7 +429,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 ( possible_suggested_file_service_key, ) = self._location_context.current_service_keys
                 
-                if HG.client_controller.services_manager.GetServiceType( possible_suggested_file_service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES + ( HC.FILE_REPOSITORY, ):
+                if CG.client_controller.services_manager.GetServiceType( possible_suggested_file_service_key ) in HC.SPECIFIC_LOCAL_FILE_SERVICES + ( HC.FILE_REPOSITORY, ):
                     
                     file_service_key = possible_suggested_file_service_key
                     
@@ -444,7 +445,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             media_to_delete = [ m for m in media_to_delete if only_those_in_file_service_key in m.GetLocationsManager().GetCurrent() ]
             
         
-        if file_service_key is None or HG.client_controller.services_manager.GetServiceType( file_service_key ) in HC.LOCAL_FILE_SERVICES:
+        if file_service_key is None or CG.client_controller.services_manager.GetServiceType( file_service_key ) in HC.LOCAL_FILE_SERVICES:
             
             default_reason = 'Deleted from Media Page.'
             
@@ -471,11 +472,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             for content_update_package in content_update_packages:
                 
-                HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                 
             
         
-        HG.client_controller.CallToThread( do_it, content_update_packages )
+        CG.client_controller.CallToThread( do_it, content_update_packages )
         
     
     def _DeselectSelect( self, media_to_deselect, media_to_select ):
@@ -510,7 +511,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _DownloadHashes( self, hashes ):
         
-        HG.client_controller.quick_download_manager.DownloadFiles( hashes )
+        CG.client_controller.quick_download_manager.DownloadFiles( hashes )
         
     
     def _EndShiftSelect( self ):
@@ -788,7 +789,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             initial_predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( tuple( hashes ), max_hamming ) ) ]
             
-            HG.client_controller.pub( 'new_page_query', self._location_context, initial_predicates = initial_predicates )
+            CG.client_controller.pub( 'new_page_query', self._location_context, initial_predicates = initial_predicates )
             
         
     
@@ -934,9 +935,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                     focus_it = False
                     
-                    if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_ctrl_click' ):
+                    if CG.client_controller.new_options.GetBoolean( 'focus_preview_on_ctrl_click' ):
                         
-                        if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ):
+                        if CG.client_controller.new_options.GetBoolean( 'focus_preview_on_ctrl_click_only_static' ):
                             
                             focus_it = media.GetDurationMS() is None
                             
@@ -983,9 +984,9 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 focus_it = False
                 
-                if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_shift_click' ):
+                if CG.client_controller.new_options.GetBoolean( 'focus_preview_on_shift_click' ):
                     
-                    if HG.client_controller.new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ):
+                    if CG.client_controller.new_options.GetBoolean( 'focus_preview_on_shift_click_only_static' ):
                         
                         focus_it = media.GetDurationMS() is None
                         
@@ -1042,7 +1043,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     
                 
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, hashes ) ) )
             
         
     
@@ -1057,7 +1058,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 return
                 
             
-            new_options = HG.client_controller.new_options
+            new_options = CG.client_controller.new_options
             
             ( media_show_action, media_start_paused, media_start_with_embed ) = new_options.GetMediaShowAction( media.GetMime() )
             
@@ -1066,11 +1067,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 hash = media.GetHash()
                 mime = media.GetMime()
                 
-                client_files_manager = HG.client_controller.client_files_manager
+                client_files_manager = CG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                new_options = HG.client_controller.new_options
+                new_options = CG.client_controller.new_options
                 
                 launch_path = new_options.GetMimeLaunch( mime )
                 
@@ -1137,7 +1138,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if len( flat_media ) > 0:
             
-            if len( HG.client_controller.services_manager.GetServices( HC.RATINGS_SERVICES ) ) > 0:
+            if len( CG.client_controller.services_manager.GetServices( HC.RATINGS_SERVICES ) ) > 0:
                 
                 with ClientGUIDialogsManage.DialogManageRatings( self, flat_media ) as dlg:
                     
@@ -1246,11 +1247,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 hash = media.GetHash()
                 mime = media.GetMime()
                 
-                client_files_manager = HG.client_controller.client_files_manager
+                client_files_manager = CG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
-                new_options = HG.client_controller.new_options
+                new_options = CG.client_controller.new_options
                 
                 launch_path = new_options.GetMimeLaunch( mime )
                 
@@ -1270,7 +1271,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 hash = focused_singleton.GetHash()
                 mime = focused_singleton.GetMime()
                 
-                client_files_manager = HG.client_controller.client_files_manager
+                client_files_manager = CG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -1292,7 +1293,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 hash = focused_singleton.GetHash()
                 mime = focused_singleton.GetMime()
                 
-                client_files_manager = HG.client_controller.client_files_manager
+                client_files_manager = CG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -1319,7 +1320,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:
             
-            remote_service = HG.client_controller.services_manager.GetService( remote_service_key )
+            remote_service = CG.client_controller.services_manager.GetService( remote_service_key )
             
             service_type = remote_service.GetServiceType()
             
@@ -1344,7 +1345,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                         
                         content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( remote_service_key, content_update )
                         
-                        HG.client_controller.Write( 'content_updates', content_update_package )
+                        CG.client_controller.Write( 'content_updates', content_update_package )
                         
                     
                 
@@ -1356,14 +1357,14 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( remote_service_key, content_update )
                 
-                HG.client_controller.Write( 'content_updates', content_update_package )
+                CG.client_controller.Write( 'content_updates', content_update_package )
                 
             
         
     
     def _PublishSelectionChange( self, tags_changed = False ):
         
-        if HG.client_controller.gui.IsCurrentPage( self._page_key ):
+        if CG.client_controller.gui.IsCurrentPage( self._page_key ):
             
             if len( self._selected_media ) == 0:
                 
@@ -1395,7 +1396,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _PublishSelectionIncrement( self, medias ):
         
-        if HG.client_controller.gui.IsCurrentPage( self._page_key ):
+        if CG.client_controller.gui.IsCurrentPage( self._page_key ):
             
             medias = list( medias )
             
@@ -1495,13 +1496,13 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 time.sleep( 0.1 )
                 
-                HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.RunJobImmediately, flat_media, job_type )
+                CG.client_controller.CallToThread( CG.client_controller.files_maintenance_manager.RunJobImmediately, flat_media, job_type )
                 
             else:
                 
                 hashes = { media.GetHash() for media in flat_media }
                 
-                HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.ScheduleJob, hashes, job_type )
+                CG.client_controller.CallToThread( CG.client_controller.files_maintenance_manager.ScheduleJob, hashes, job_type )
                 
             
         
@@ -1510,7 +1511,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         hashes = self._GetSelectedHashes( discriminant = CC.DISCRIMINANT_NOT_LOCAL )
         
-        HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ) )
+        CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ) )
         
     
     def _RescindPetitionFiles( self, file_service_key ):
@@ -1519,7 +1520,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PETITION, hashes ) ) )
             
         
     
@@ -1529,7 +1530,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_RESCIND_PEND, hashes ) ) )
             
         
     
@@ -1616,11 +1617,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             yes_no_text = 'apply "{}"'.format( HC.duplicate_type_string_lookup[ duplicate_type ] )
             
-            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ] or ( HG.client_controller.new_options.GetBoolean( 'advanced_mode' ) and duplicate_type == HC.DUPLICATE_ALTERNATE ):
+            if duplicate_type in [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ] or ( CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) and duplicate_type == HC.DUPLICATE_ALTERNATE ):
                 
                 yes_no_text += ' (with default duplicate metadata merge options)'
                 
-                new_options = HG.client_controller.new_options
+                new_options = CG.client_controller.new_options
                 
                 duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
                 
@@ -1793,7 +1794,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if len( pair_info ) > 0:
             
-            HG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
+            CG.client_controller.WriteSynchronous( 'duplicate_pair_status', pair_info )
             
             return True
             
@@ -1805,7 +1806,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         duplicate_types = [ HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ]
         
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             duplicate_types.append( HC.DUPLICATE_ALTERNATE )
             
@@ -1821,7 +1822,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             return
             
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
         
@@ -1924,7 +1925,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             if do_it:
                 
-                HG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
+                CG.client_controller.WriteSynchronous( 'duplicate_set_king', focused_hash )
                 
             
         else:
@@ -2020,7 +2021,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                     info[ 'timeout' ] = timeout
                     info[ 'hashes' ] = hashes
                     
-                    HG.client_controller.Write( 'local_booru_share', share_key, info )
+                    CG.client_controller.Write( 'local_booru_share', share_key, info )
                     
                 
             
@@ -2032,13 +2033,13 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         hashes = self._GetSelectedHashes( ordered = True )
         
-        activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
+        activate_window = CG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
         
         predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, value = ( tuple( hashes ), 'sha256' ) ) ]
         
         page_name = 'duplicates'
         
-        HG.client_controller.pub( 'new_page_duplicates', self._location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+        CG.client_controller.pub( 'new_page_duplicates', self._location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
         
     
     def _ShowSelectionInNewPage( self ):
@@ -2058,7 +2059,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 media_collect = ClientMedia.MediaCollect()
                 
             
-            HG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes, initial_sort = media_sort, initial_collect = media_collect )
+            CG.client_controller.pub( 'new_page_query', self._location_context, initial_hashes = hashes, initial_sort = media_sort, initial_collect = media_collect )
             
         
     
@@ -2086,7 +2087,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:
             
-            ipfs_service = HG.client_controller.services_manager.GetService( file_service_key )
+            ipfs_service = CG.client_controller.services_manager.GetService( file_service_key )
             
         
         with ClientGUIDialogs.DialogTextEntry( self, 'Enter a note to describe this directory.' ) as dlg:
@@ -2095,7 +2096,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
                 note = dlg.GetValue()
                 
-                HG.client_controller.CallToThread( ipfs_service.PinDirectory, hashes, note )
+                CG.client_controller.CallToThread( ipfs_service.PinDirectory, hashes, note )
                 
             
         
@@ -2106,7 +2107,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if hashes is not None and len( hashes ) > 0:   
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( file_service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PEND, hashes ) ) )
             
         
     
@@ -2114,13 +2115,13 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         if page_key == self._page_key:
             
-            HG.client_controller.pub( 'refresh_page_name', self._page_key )
+            CG.client_controller.pub( 'refresh_page_name', self._page_key )
             
             result = ClientMedia.ListeningMediaList.AddMediaResults( self, media_results )
             
             self.newMediaAdded.emit()
             
-            HG.client_controller.pub( 'notify_new_pages_count' )
+            CG.client_controller.pub( 'notify_new_pages_count' )
             
             return result
             
@@ -2674,13 +2675,13 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             painter = QG.QPainter( self )
             
-            bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+            bg_colour = CG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
             
             painter.setBackground( QG.QBrush( bg_colour ) )
             
             painter.eraseRect( painter.viewport() )
             
-            background_pixmap = HG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
+            background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
             
             if background_pixmap is not None:
                 
@@ -2702,7 +2703,7 @@ class MediaPanelLoading( MediaPanel ):
         
         MediaPanel.__init__( self, parent, page_key, management_controller, [] )
         
-        HG.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
+        CG.client_controller.sub( self, 'SetNumQueryResults', 'set_num_query_results' )
         
     
     def _GetPrettyStatusForStatusBar( self ):
@@ -2752,6 +2753,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._num_columns = 1
         
         self._drag_init_coordinates = None
+        self._drag_click_timestamp_ms = 0
         self._drag_prefire_event_count = 0
         self._hashes_to_thumbnails_waiting_to_be_drawn: typing.Dict[ bytes, ThumbnailWaitingToBeDrawn ] = {}
         self._hashes_faded = set()
@@ -2762,7 +2764,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
+        thumbnail_scroll_rate = float( CG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
         
         self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
@@ -2778,12 +2780,12 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._UpdateScrollBars()
         
-        HG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
-        HG.client_controller.sub( self, 'NotifyNewFileInfo', 'new_file_info' )
-        HG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
-        HG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
-        HG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
-        HG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
+        CG.client_controller.sub( self, 'MaintainPageCache', 'memory_maintenance_pulse' )
+        CG.client_controller.sub( self, 'NotifyNewFileInfo', 'new_file_info' )
+        CG.client_controller.sub( self, 'NewThumbnails', 'new_thumbnails' )
+        CG.client_controller.sub( self, 'ThumbnailsReset', 'notify_complete_thumbnail_reset' )
+        CG.client_controller.sub( self, 'RedrawAllThumbnails', 'refresh_all_tag_presentation_gui' )
+        CG.client_controller.sub( self, 'WaterfallThumbnails', 'waterfall_thumbnails' )
         
     
     def _CalculateVisiblePageIndices( self ):
@@ -2818,7 +2820,7 @@ class MediaPanelThumbnails( MediaPanel ):
         canvas_width = int( my_width * dpr )
         canvas_height = int( self._num_rows_per_canvas_page * thumbnail_span_height * dpr )
         
-        canvas_page = HG.client_controller.bitmap_manager.GetQtImage( canvas_width, canvas_height, 32 )
+        canvas_page = CG.client_controller.bitmap_manager.GetQtImage( canvas_width, canvas_height, 32 )
         
         canvas_page.setDevicePixelRatio( dpr )
         
@@ -2850,7 +2852,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( thumbnails ) > 0:
             
-            HG.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
+            CG.client_controller.GetCache( 'thumbnail' ).CancelWaterfall( self._page_key, thumbnails )
             
         
         self._dirty_canvas_pages.append( canvas_page )
@@ -2860,9 +2862,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         painter = QG.QPainter( canvas_page )
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
-        bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+        bg_colour = CG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
         
         if HG.thumbnail_debug_mode and page_index % 2 == 0:
             
@@ -2896,9 +2898,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         thumbnails_to_render_later = []
         
-        thumbnail_cache = HG.client_controller.GetCache( 'thumbnail' )
+        thumbnail_cache = CG.client_controller.GetCache( 'thumbnail' )
         
-        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
         for ( thumbnail_index, thumbnail ) in page_thumbnails:
             
@@ -2933,7 +2935,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( thumbnails_to_render_later ) > 0:
             
-            HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+            CG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
             
         
     
@@ -2944,7 +2946,7 @@ class MediaPanelThumbnails( MediaPanel ):
             return
             
         
-        if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
+        if not CG.client_controller.gui.IsCurrentPage( self._page_key ):
             
             self._DirtyAllPages()
             
@@ -2986,7 +2988,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             bitmap = thumbnail.GetQtImage( self.devicePixelRatio() )
             
-            fade_thumbnails = HG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
+            fade_thumbnails = CG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
             
             if fade_thumbnails:
                 
@@ -3000,7 +3002,7 @@ class MediaPanelThumbnails( MediaPanel ):
             self._hashes_to_thumbnails_waiting_to_be_drawn[ hash ] = thumbnail_draw_object
             
         
-        HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+        CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
     
     def _GenerateMediaCollection( self, media_results ):
@@ -3023,7 +3025,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
         ( x, y ) = ( column * thumbnail_span_width + thumbnail_margin, row * thumbnail_span_height + thumbnail_margin )
         
@@ -3041,8 +3043,8 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def _GetThumbnailSpanDimensions( self ):
         
-        thumbnail_border = HG.client_controller.new_options.GetInteger( 'thumbnail_border' )
-        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
+        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
         return ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], ( thumbnail_border + thumbnail_margin ) * 2 )
         
@@ -3059,7 +3061,7 @@ class MediaPanelThumbnails( MediaPanel ):
         x_mod = x % t_span_x
         y_mod = y % t_span_y
         
-        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
         if x_mod <= thumbnail_margin or y_mod <= thumbnail_margin or x_mod > t_span_x - thumbnail_margin or y_mod > t_span_y - thumbnail_margin:
             
@@ -3294,7 +3296,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         visible_thumbnails = [ thumbnail for thumbnail in thumbnails if self._MediaIsInCleanPage( thumbnail ) ]
         
-        thumbnail_cache = HG.client_controller.GetCache( 'thumbnail' )
+        thumbnail_cache = CG.client_controller.GetCache( 'thumbnail' )
         
         thumbnails_to_render_now = []
         thumbnails_to_render_later = []
@@ -3318,7 +3320,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( thumbnails_to_render_later ) > 0:
             
-            HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
+            CG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails_to_render_later )
             
         
     
@@ -3382,9 +3384,9 @@ class MediaPanelThumbnails( MediaPanel ):
         
         self._PublishSelectionChange()
         
-        HG.client_controller.pub( 'refresh_page_name', self._page_key )
+        CG.client_controller.pub( 'refresh_page_name', self._page_key )
         
-        HG.client_controller.pub( 'notify_new_pages_count' )
+        CG.client_controller.pub( 'notify_new_pages_count' )
         
         self.widget().update()
         
@@ -3427,7 +3429,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
             
-            new_options = HG.client_controller.new_options
+            new_options = CG.client_controller.new_options
             
             percent_visible = new_options.GetInteger( 'thumbnail_visibility_scroll_percent' ) / 100
             
@@ -3483,7 +3485,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 self._RecalculateVirtualSize()
                 
-                HG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
+                CG.client_controller.GetCache( 'thumbnail' ).Waterfall( self._page_key, thumbnails )
                 
                 if len( self._selected_media ) == 0:
                     
@@ -3519,7 +3521,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
             else:
                 
-                can_download = not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetRemoteFileServiceKeys() )
+                can_download = not locations_manager.GetCurrent().isdisjoint( CG.client_controller.services_manager.GetRemoteFileServiceKeys() )
                 
                 if can_download:
                     
@@ -3545,7 +3547,7 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def MaintainPageCache( self ):
         
-        if not HG.client_controller.gui.IsCurrentPage( self._page_key ):
+        if not CG.client_controller.gui.IsCurrentPage( self._page_key ):
             
             self._DirtyAllPages()
             
@@ -3579,9 +3581,9 @@ class MediaPanelThumbnails( MediaPanel ):
                 # prefire deal here is mpv lags on initial click, which can cause a drag (and hence an immediate pause) event by accident when mouserelease isn't processed quick
                 # so now we'll say we can't start a drag unless we get a smooth ramp to our pixel delta threshold
                 clean_drag_started = self._drag_prefire_event_count >= 10
-                moved_a_decent_bit_from_start = total_absolute_pixels_moved > 20
+                prob_not_an_accidental_click = HydrusTime.TimeHasPassedMS( self._drag_click_timestamp_ms + 100 )
                 
-                if clean_drag_started and moved_a_decent_bit_from_start:
+                if clean_drag_started and prob_not_an_accidental_click:
                     
                     media = self._GetSelectedFlatMedia( discriminant = CC.DISCRIMINANT_LOCAL )
                     
@@ -3603,6 +3605,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._drag_init_coordinates = None
             self._drag_prefire_event_count = 0
+            self._drag_click_timestamp_ms = 0
             
         
         event.ignore()
@@ -3655,16 +3658,16 @@ class MediaPanelThumbnails( MediaPanel ):
         
         def do_it( win, callable, affected_hashes ):
             
-            media_results = HG.client_controller.Read( 'media_results', affected_hashes )
+            media_results = CG.client_controller.Read( 'media_results', affected_hashes )
             
             hashes_to_media_results = { media_result.GetHash() : media_result for media_result in media_results }
             
-            HG.client_controller.CallAfterQtSafe( win, 'new file info notification', qt_do_update, hashes_to_media_results )
+            CG.client_controller.CallAfterQtSafe( win, 'new file info notification', qt_do_update, hashes_to_media_results )
             
         
         affected_hashes = self._hashes.intersection( hashes )
         
-        HG.client_controller.CallToThread( do_it, self, do_it, affected_hashes )
+        CG.client_controller.CallToThread( do_it, self, do_it, affected_hashes )
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
@@ -3810,11 +3813,11 @@ class MediaPanelThumbnails( MediaPanel ):
     
     def ShowMenu( self, do_not_show_just_return = False ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         advanced_mode = new_options.GetBoolean( 'advanced_mode' )
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         flat_selected_medias = ClientMedia.FlattenMedia( self._selected_media )
         
@@ -3832,7 +3835,7 @@ class MediaPanelThumbnails( MediaPanel ):
         all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY } )
         all_local_file_domains = services_manager.Filter( all_specific_file_domains, ( HC.LOCAL_FILE_DOMAIN, ) )
         
-        all_local_file_domains_sorted = sorted( all_local_file_domains, key = HG.client_controller.services_manager.GetName )
+        all_local_file_domains_sorted = sorted( all_local_file_domains, key = CG.client_controller.services_manager.GetName )
         
         all_file_repos = services_manager.Filter( all_specific_file_domains, ( HC.FILE_REPOSITORY, ) )
         
@@ -3859,7 +3862,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             collections_selected = True in ( media.IsCollection() for media in self._selected_media )
             
-            services_manager = HG.client_controller.services_manager
+            services_manager = CG.client_controller.services_manager
             
             services = services_manager.GetServices()
             
@@ -3943,7 +3946,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             # info about the files
             
-            remote_service_keys = HG.client_controller.services_manager.GetRemoteFileServiceKeys()
+            remote_service_keys = CG.client_controller.services_manager.GetRemoteFileServiceKeys()
             
             groups_of_current_remote_service_keys = [ locations_manager.GetCurrent().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
             groups_of_pending_remote_service_keys = [ locations_manager.GetPending().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
@@ -4246,7 +4249,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             user_command_deletable_file_service_keys = local_media_file_service_keys.union( [ CC.LOCAL_UPDATE_SERVICE_KEY ] )
             
-            local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( user_command_deletable_file_service_keys ), key = HG.client_controller.services_manager.GetName )
+            local_file_service_keys_we_are_in = sorted( current_file_service_keys.intersection( user_command_deletable_file_service_keys ), key = CG.client_controller.services_manager.GetName )
             
             if len( local_file_service_keys_we_are_in ) > 0:
                 
@@ -4254,7 +4257,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 for file_service_key in local_file_service_keys_we_are_in:
                     
-                    service_name = HG.client_controller.services_manager.GetName( file_service_key )
+                    service_name = CG.client_controller.services_manager.GetName( file_service_key )
                     
                     ClientGUIMenus.AppendMenuItem( delete_menu, f'from {service_name}', f'Delete the selected files from {service_name}.', self._Delete, file_service_key )
                     
@@ -4548,7 +4551,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 hash_id_str = str( focus_singleton.GetHashId() )
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', HG.client_controller.pub, 'clipboard', 'text', hash_id_str )
+                ClientGUIMenus.AppendMenuItem( copy_menu, 'file_id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', CG.client_controller.pub, 'clipboard', 'text', hash_id_str )
                 
             
             for ipfs_service_key in self._focused_media.GetLocationsManager().GetCurrent().intersection( ipfs_service_keys ):
@@ -4633,7 +4636,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        thumbnail_scroll_rate = float( HG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
+        thumbnail_scroll_rate = float( CG.client_controller.new_options.GetString( 'thumbnail_scroll_rate' ) )
         
         self.verticalScrollBar().setSingleStep( int( round( thumbnail_span_height * thumbnail_scroll_rate ) ) )
         
@@ -4653,7 +4656,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         ( thumbnail_span_width, thumbnail_span_height ) = self._GetThumbnailSpanDimensions()
         
-        thumbnail_margin = HG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
+        thumbnail_margin = CG.client_controller.new_options.GetInteger( 'thumbnail_margin' )
         
         hashes = list( self._hashes_to_thumbnails_waiting_to_be_drawn.keys() )
         
@@ -4734,7 +4737,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         if len( self._hashes_to_thumbnails_waiting_to_be_drawn ) == 0:
             
-            HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+            CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
         
         
@@ -4759,6 +4762,7 @@ class MediaPanelThumbnails( MediaPanel ):
         def mousePressEvent( self, event ):
             
             self._parent._drag_init_coordinates = QG.QCursor.pos()
+            self._parent._drag_click_timestamp_ms = HydrusTime.GetNowMS()
             
             thumb = self._parent._GetThumbnailUnderMouse( event )
             
@@ -4810,13 +4814,13 @@ class MediaPanelThumbnails( MediaPanel ):
             
             y_start = self._parent._GetYStart()
             
-            bg_colour = HG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+            bg_colour = CG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
             
             painter.setBackground( QG.QBrush( bg_colour ) )
             
             painter.eraseRect( painter.viewport() )
             
-            background_pixmap = HG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
+            background_pixmap = CG.client_controller.bitmap_manager.GetMediaBackgroundPixmap()
             
             if background_pixmap is not None:
                 
@@ -5144,9 +5148,9 @@ class Thumbnail( Selectable ):
         # we don't really want to mess around with DPR here, we just want to draw thumbs
         # that said, this works after a medium-high headache getting it there, so let's not get ahead of ourselves
         
-        thumbnail_hydrus_bmp = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
+        thumbnail_hydrus_bmp = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( self )
         
-        thumbnail_border = HG.client_controller.new_options.GetInteger( 'thumbnail_border' )
+        thumbnail_border = CG.client_controller.new_options.GetInteger( 'thumbnail_border' )
         
         ( width, height ) = ClientData.AddPaddingToDimensions( HC.options[ 'thumbnail_dimensions' ], thumbnail_border * 2 )
         
@@ -5154,7 +5158,7 @@ class Thumbnail( Selectable ):
         
         qt_image_height = int( height * device_pixel_ratio )
         
-        qt_image = HG.client_controller.bitmap_manager.GetQtImage( qt_image_width, qt_image_height, 24 )
+        qt_image = CG.client_controller.bitmap_manager.GetQtImage( qt_image_width, qt_image_height, 24 )
         
         qt_image.setDevicePixelRatio( device_pixel_ratio )
         
@@ -5202,7 +5206,7 @@ class Thumbnail( Selectable ):
         painter.setRenderHint( QG.QPainter.Antialiasing, True ) # seems to do nothing, it only affects primitives?
         painter.setRenderHint( QG.QPainter.SmoothPixmapTransform, True ) # makes the thumb QImage scale up and down prettily when we need it, either because it is too small or DPR gubbins
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         if not local:
             
@@ -5229,7 +5233,7 @@ class Thumbnail( Selectable ):
         
         # the painter isn't getting QSS style from the qt_image, we need to set the font explitly to get font size changes from QSS etc..
         
-        f = QG.QFont( HG.client_controller.gui.font() )
+        f = QG.QFont( CG.client_controller.gui.font() )
         
         # this line magically fixes the bad text, as above
         f.setStyleStrategy( QG.QFont.PreferAntialias )
@@ -5240,7 +5244,7 @@ class Thumbnail( Selectable ):
         
         raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
         
-        thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+        thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
         if thumbnail_dpr_percent != 100:
             
@@ -5264,7 +5268,7 @@ class Thumbnail( Selectable ):
         
         TEXT_BORDER = 1
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         tags = self.GetTagsManager().GetCurrentAndPending( CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_SINGLE_MEDIA )
         
@@ -5476,9 +5480,9 @@ class Thumbnail( Selectable ):
             icons_to_draw.append( CC.global_pixmaps().play )
             
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
-        remote_file_service_keys = HG.client_controller.services_manager.GetRemoteFileServiceKeys()
+        remote_file_service_keys = CG.client_controller.services_manager.GetRemoteFileServiceKeys()
         
         current = locations_manager.GetCurrent().intersection( remote_file_service_keys )
         pending = locations_manager.GetPending().intersection( remote_file_service_keys )

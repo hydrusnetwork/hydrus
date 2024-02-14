@@ -8,6 +8,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 
 SIMPLE_ARCHIVE_DELETE_FILTER_BACK = 0
 SIMPLE_ARCHIVE_DELETE_FILTER_DELETE = 1
@@ -798,11 +799,11 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     
                     value_string = 'uncertain rating, "{}"'.format( value )
                     
-                    if HG.client_controller is not None and HG.client_controller.IsBooted():
+                    if CG.client_controller is not None and CG.client_controller.IsBooted():
                         
                         try:
                             
-                            service = HG.client_controller.services_manager.GetService( service_key )
+                            service = CG.client_controller.services_manager.GetService( service_key )
                             
                             value_string = service.ConvertNoneableRatingToString( value )
                             
@@ -821,7 +822,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    from_name = HG.client_controller.services_manager.GetName( value )
+                    from_name = CG.client_controller.services_manager.GetName( value )
                     
                     value_string = '(from {})'.format( from_name )
                     
@@ -849,7 +850,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 components.append( 'for' )
                 
             
-            services_manager = HG.client_controller.services_manager
+            services_manager = CG.client_controller.services_manager
             
             if services_manager.ServiceExists( service_key ):
                 

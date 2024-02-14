@@ -1,10 +1,8 @@
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
-
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -29,25 +27,25 @@ def ChangeVolume( volume_type, volume ):
     
     ( mute_option_name, volume_option_name ) = volume_types_to_option_names[ volume_type ]
     
-    HG.client_controller.new_options.SetInteger( volume_option_name, volume )
+    CG.client_controller.new_options.SetInteger( volume_option_name, volume )
     
-    HG.client_controller.pub( 'new_audio_volume' )
+    CG.client_controller.pub( 'new_audio_volume' )
     
 def FlipMute( volume_type ):
     
     ( mute_option_name, volume_option_name ) = volume_types_to_option_names[ volume_type ]
     
-    HG.client_controller.new_options.FlipBoolean( mute_option_name )
+    CG.client_controller.new_options.FlipBoolean( mute_option_name )
     
-    HG.client_controller.pub( 'new_audio_mute' )
+    CG.client_controller.pub( 'new_audio_mute' )
     
 def SetMute( volume_type, mute ):
     
     ( mute_option_name, volume_option_name ) = volume_types_to_option_names[ volume_type ]
     
-    HG.client_controller.new_options.SetBoolean( mute_option_name, mute )
+    CG.client_controller.new_options.SetBoolean( mute_option_name, mute )
     
-    HG.client_controller.pub( 'new_audio_mute' )
+    CG.client_controller.pub( 'new_audio_mute' )
     
 class AudioMuteButton( ClientGUICommon.BetterBitmapButton ):
     
@@ -59,14 +57,14 @@ class AudioMuteButton( ClientGUICommon.BetterBitmapButton ):
         
         ClientGUICommon.BetterBitmapButton.__init__( self, parent, pixmap, FlipMute, self._volume_type )
         
-        HG.client_controller.sub( self, 'UpdateMute', 'new_audio_mute' )
+        CG.client_controller.sub( self, 'UpdateMute', 'new_audio_mute' )
         
     
     def _GetCorrectPixmap( self ):
         
         ( mute_option_name, volume_option_name ) = volume_types_to_option_names[ self._volume_type ]
         
-        if HG.client_controller.new_options.GetBoolean( mute_option_name ):
+        if CG.client_controller.new_options.GetBoolean( mute_option_name ):
             
             pixmap = CC.global_pixmaps().mute
             
@@ -165,7 +163,7 @@ class VolumeControl( QW.QWidget ):
             
             self._specific_mute.setToolTip( 'Mute/unmute: {}'.format( CC.canvas_type_str_lookup[ self._canvas_type ] ) )
             
-            if HG.client_controller.new_options.GetBoolean( option_to_use ):
+            if CG.client_controller.new_options.GetBoolean( option_to_use ):
                 
                 slider_volume_type = volume_type
                 
@@ -198,7 +196,7 @@ class VolumeControl( QW.QWidget ):
             
             self.adjustSize()
             
-            HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+            CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
             
         
         def DoShowHide( self ):
@@ -260,7 +258,7 @@ class VolumeControl( QW.QWidget ):
                 volume_type = AUDIO_PREVIEW
                 
             
-            if HG.client_controller.new_options.GetBoolean( option_to_use ):
+            if CG.client_controller.new_options.GetBoolean( option_to_use ):
                 
                 slider_volume_type = volume_type
                 
@@ -300,7 +298,7 @@ class VolumeSlider( QW.QSlider ):
         
         ( mute_option_name, volume_option_name ) = volume_types_to_option_names[ self._volume_type ]
         
-        return HG.client_controller.new_options.GetInteger( volume_option_name )
+        return CG.client_controller.new_options.GetInteger( volume_option_name )
         
     
     def _VolumeSliderMoved( self ):

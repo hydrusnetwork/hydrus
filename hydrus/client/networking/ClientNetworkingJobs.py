@@ -1,4 +1,3 @@
-import calendar
 import datetime
 import io
 import os
@@ -20,6 +19,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
@@ -256,7 +256,7 @@ class NetworkJob( object ):
             return False
             
         
-        max_connection_attempts_allowed = HG.client_controller.new_options.GetInteger( 'max_connection_attempts_allowed' )
+        max_connection_attempts_allowed = CG.client_controller.new_options.GetInteger( 'max_connection_attempts_allowed' )
         
         return self._current_connection_attempt_number <= max_connection_attempts_allowed
         
@@ -270,7 +270,7 @@ class NetworkJob( object ):
         
         if self._method == 'GET':
             
-            max_attempts_allowed = HG.client_controller.new_options.GetInteger( 'max_request_attempts_allowed_get' )
+            max_attempts_allowed = CG.client_controller.new_options.GetInteger( 'max_request_attempts_allowed_get' )
             
         else:
             
@@ -335,7 +335,7 @@ class NetworkJob( object ):
     
     def _GetTimeouts( self ):
         
-        connect_timeout = HG.client_controller.new_options.GetInteger( 'network_timeout' )
+        connect_timeout = CG.client_controller.new_options.GetInteger( 'network_timeout' )
         
         read_timeout = connect_timeout * 6
         
@@ -1014,7 +1014,7 @@ class NetworkJob( object ):
     
     def _WaitOnConnectionError( self, status_text: str ):
         
-        connection_error_wait_time = HG.client_controller.new_options.GetInteger( 'connection_error_wait_time' )
+        connection_error_wait_time = CG.client_controller.new_options.GetInteger( 'connection_error_wait_time' )
         
         self._connection_error_wake_time = HydrusTime.GetNow() + ( ( self._current_connection_attempt_number - 1 ) * connection_error_wait_time )
         
@@ -1033,7 +1033,7 @@ class NetworkJob( object ):
     
     def _WaitOnNetworkTrafficPaused( self, status_text: str ):
         
-        while HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) and not self._IsCancelled():
+        while CG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) and not self._IsCancelled():
             
             with self._lock:
                 
@@ -1057,7 +1057,7 @@ class NetworkJob( object ):
         # 429/509/529 response from server. basically means 'I'm under big load mate'
         # a future version of this could def talk to domain manager and add a temp delay so other network jobs can be informed
         
-        serverside_bandwidth_wait_time = HG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )
+        serverside_bandwidth_wait_time = CG.client_controller.new_options.GetInteger( 'serverside_bandwidth_wait_time' )
         
         problem_rating = ( self._current_connection_attempt_number + self._current_request_attempt_number ) - 1
         

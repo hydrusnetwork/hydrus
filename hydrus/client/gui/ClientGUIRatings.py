@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientRatings
@@ -183,7 +184,7 @@ def GetNumericalWidth( service_key ):
     
     try:
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
         num_stars = service.GetNumStars()
         
@@ -198,7 +199,7 @@ def GetPenAndBrushColours( service_key, rating_state ):
     
     try:
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
         colour = service.GetColour( rating_state )
         
@@ -218,7 +219,7 @@ def GetStars( service_key, rating_state, rating ):
     
     try:
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
     except HydrusExceptions.DataMissing:
         
@@ -265,7 +266,7 @@ class RatingIncDec( QW.QWidget ):
         
         self._service_key = service_key
         
-        self._service = HG.client_controller.services_manager.GetService( self._service_key )
+        self._service = CG.client_controller.services_manager.GetService( self._service_key )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -298,11 +299,11 @@ class RatingIncDec( QW.QWidget ):
         
         if self.isEnabled():
             
-            text = HG.client_controller.services_manager.GetName( self._service_key )
+            text = CG.client_controller.services_manager.GetName( self._service_key )
             
             try:
                 
-                service = HG.client_controller.services_manager.GetService( self._service_key )
+                service = CG.client_controller.services_manager.GetService( self._service_key )
                 
                 tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateAndRatingToString( self._rating_state, self._rating ) )
                 
@@ -489,11 +490,11 @@ class RatingLike( QW.QWidget ):
         
         if self.isEnabled():
             
-            text = HG.client_controller.services_manager.GetName( self._service_key )
+            text = CG.client_controller.services_manager.GetName( self._service_key )
             
             try:
                 
-                service = HG.client_controller.services_manager.GetService( self._service_key )
+                service = CG.client_controller.services_manager.GetService( self._service_key )
                 
                 tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateToString( self._rating_state ) )
                 
@@ -608,7 +609,7 @@ class RatingNumerical( QW.QWidget ):
         
         self._service_key = service_key
         
-        self._service = HG.client_controller.services_manager.GetService( self._service_key )
+        self._service = CG.client_controller.services_manager.GetService( self._service_key )
         
         self._num_stars = self._service.GetNumStars()
         self._allow_zero = self._service.AllowZero()
@@ -708,11 +709,11 @@ class RatingNumerical( QW.QWidget ):
         
         if self.isEnabled():
             
-            text = HG.client_controller.services_manager.GetName( self._service_key )
+            text = CG.client_controller.services_manager.GetName( self._service_key )
             
             try:
                 
-                service = HG.client_controller.services_manager.GetService( self._service_key )
+                service = CG.client_controller.services_manager.GetService( self._service_key )
                 
                 tt = '{} - {}'.format( service.GetName(), service.ConvertRatingStateAndRatingToString( self._rating_state, self._rating ) )
                 

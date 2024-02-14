@@ -1,19 +1,20 @@
+import typing
 
 from hydrus.core.interfaces import HydrusThreadingInterface
 
 class HydrusControllerInterface( object ):
     
-    def pub( self, topic, *args, **kwargs ) -> None:
+    def pub( self, topic: str, *args, **kwargs ) -> None:
         
         raise NotImplementedError()
         
     
-    def pubimmediate( self, topic, *args, **kwargs ) -> None:
+    def pubimmediate( self, topic: str, *args, **kwargs ) -> None:
         
         raise NotImplementedError()
         
     
-    def sub( self, object, method_name, topic ) -> None:
+    def sub( self, obj: object, method_name: str, topic: str ) -> None:
         
         raise NotImplementedError()
         
@@ -28,22 +29,22 @@ class HydrusControllerInterface( object ):
         raise NotImplementedError()
         
     
-    def CallLater( self, initial_delay, func, *args, **kwargs ) -> HydrusThreadingInterface.SchedulableJobInterface:
+    def CallLater( self, initial_delay: float, func: typing.Callable, *args, **kwargs ) -> HydrusThreadingInterface.SchedulableJobInterface:
         
         raise NotImplementedError()
         
     
-    def CallRepeating( self, initial_delay, period, func, *args, **kwargs ) -> HydrusThreadingInterface.SchedulableJobInterface:
+    def CallRepeating( self, initial_delay: float, period: float, func: typing.Callable, *args, **kwargs ) -> HydrusThreadingInterface.SchedulableJobInterface:
         
         raise NotImplementedError()
         
     
-    def CallToThread( self, callable, *args, **kwargs ) -> None:
+    def CallToThread( self, func: typing.Callable, *args, **kwargs ) -> None:
         
         raise NotImplementedError()
         
     
-    def CallToThreadLongRunning( self, callable, *args, **kwargs ) -> None:
+    def CallToThreadLongRunning( self, func: typing.Callable, *args, **kwargs ) -> None:
         
         raise NotImplementedError()
         

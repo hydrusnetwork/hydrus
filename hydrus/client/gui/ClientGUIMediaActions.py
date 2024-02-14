@@ -16,6 +16,7 @@ from hydrus.core.files.images import HydrusImageOpening
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientFiles
 from hydrus.client import ClientPDFHandling
 from hydrus.client import ClientThreading
@@ -42,7 +43,7 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
     
     try:
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
     except HydrusExceptions.DataMissing:
         
@@ -116,7 +117,7 @@ def ApplyContentApplicationCommandToMedia( parent: QW.QWidget, command: CAC.Appl
         
         if len( content_updates ) > 0:
             
-            HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, content_updates ) )
+            CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service_key, content_updates ) )
             
         
     
@@ -144,7 +145,7 @@ def ClearDeleteRecord( win, media ):
             
             content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
             
-            HG.client_controller.Write( 'content_updates', content_update_package )
+            CG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
@@ -172,7 +173,7 @@ def EditFileNotes( win: QW.QWidget, media: ClientMedia.MediaSingleton, name_to_s
             
             content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
             
-            HG.client_controller.Write( 'content_updates', content_update_package )
+            CG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
@@ -193,7 +194,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
             
             if content_update_package.HasContent():
                 
-                HG.client_controller.Write( 'content_updates', content_update_package )
+                CG.client_controller.Write( 'content_updates', content_update_package )
                 
                 result = panel.GetFileModifiedUpdateData()
                 
@@ -223,7 +224,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
                             
                             if not showed_popup and HydrusTime.TimeHasPassed( time_started + 3 ):
                                 
-                                HG.client_controller.pub( 'message', job_status )
+                                CG.client_controller.pub( 'message', job_status )
                                 
                                 showed_popup = True
                                 
@@ -235,13 +236,13 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
                             
                             final_time_ms = file_modified_timestamp_ms + ( i * step_ms )
                             
-                            HG.client_controller.client_files_manager.UpdateFileModifiedTimestampMS( m, final_time_ms )
+                            CG.client_controller.client_files_manager.UpdateFileModifiedTimestampMS( m, final_time_ms )
                             
                         
                         job_status.FinishAndDismiss()
                         
                     
-                    HG.client_controller.CallToThread( do_it )
+                    CG.client_controller.CallToThread( do_it )
                     
                 
             
@@ -494,7 +495,7 @@ def GetContentUpdatesForAppliedContentApplicationCommandTags( parent: QW.QWidget
     
 def GetLocalFileActionServiceKeys( media: typing.Collection[ ClientMedia.MediaSingleton ] ):
     
-    local_media_file_service_keys = set( HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+    local_media_file_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ) )
     
     local_duplicable_to_file_service_keys = set()
     local_moveable_from_and_to_file_service_keys = set()
@@ -529,7 +530,7 @@ def GetLocalFileActionServiceKeys( media: typing.Collection[ ClientMedia.MediaSi
 
 def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action: int, media: typing.Collection[ ClientMedia.MediaSingleton ], source_service_key: typing.Optional[ bytes ] = None ):
     
-    dest_service_name = HG.client_controller.services_manager.GetName( dest_service_key )
+    dest_service_name = CG.client_controller.services_manager.GetName( dest_service_key )
     
     applicable_media = [ m for m in media if m.GetLocationsManager().IsLocal() and dest_service_key not in m.GetLocationsManager().GetCurrent() and m.GetMime() not in HC.HYDRUS_UPDATE_FILES ]
     
@@ -540,12 +541,12 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     
     ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = GetLocalFileActionServiceKeys( media )
     
-    do_yes_no = do_yes_no = HG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' )
+    do_yes_no = do_yes_no = CG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' )
     yes_no_text = 'Add {} files to {}?'.format( HydrusData.ToHumanInt( len( applicable_media ) ), dest_service_name )
     
     if action == HC.CONTENT_UPDATE_MOVE:
         
-        do_yes_no = HG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_move' )
+        do_yes_no = CG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_move' )
         
         local_moveable_from_and_to_file_service_keys = { pair for pair in local_moveable_from_and_to_file_service_keys if pair[1] == dest_service_key }
         
@@ -584,7 +585,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
                 for potential_source_service_key in potential_source_service_keys:
                     
-                    potential_source_service_name = HG.client_controller.services_manager.GetName( potential_source_service_key )
+                    potential_source_service_name = CG.client_controller.services_manager.GetName( potential_source_service_key )
                     
                     text = 'move {} in "{}" to "{}"'.format( len( potential_source_service_keys_to_applicable_media[ potential_source_service_key ] ), potential_source_service_name, dest_service_name )
                     
@@ -606,7 +607,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
             
         
-        source_service_name = HG.client_controller.services_manager.GetName( source_service_key )
+        source_service_name = CG.client_controller.services_manager.GetName( source_service_key )
         
         applicable_media = potential_source_service_keys_to_applicable_media[ source_service_key ]
         
@@ -644,7 +645,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
         
         if num_to_do > BLOCK_SIZE:
             
-            HG.client_controller.pub( 'message', job_status )
+            CG.client_controller.pub( 'message', job_status )
             
         
         now_ms = HydrusTime.GetNowMS()
@@ -679,7 +680,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, undelete_hashes ) )
                 
             
-            HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( dest_service_key, content_updates ) )
+            CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( dest_service_key, content_updates ) )
             
             if action == HC.CONTENT_UPDATE_MOVE:
                 
@@ -687,7 +688,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 
                 content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE, block_of_hashes, reason = 'Moved to {}'.format( dest_service_name ) ) ]
                 
-                HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( source_service_key, content_updates ) )
+                CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( source_service_key, content_updates ) )
                 
             
             pauser.Pause()
@@ -742,7 +743,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
                 
                 if num_to_do > BLOCK_SIZE:
                     
-                    HG.client_controller.pub( 'message', job_status )
+                    CG.client_controller.pub( 'message', job_status )
                     
                 
                 for ( i, block_of_media ) in enumerate( HydrusLists.SplitListIntoChunks( medias, BLOCK_SIZE ) ):
@@ -757,7 +758,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
                     
                     hashes = { media.GetHash() for media in block_of_media }
                     
-                    HG.client_controller.WriteSynchronous( 'force_filetype', hashes, forced_mime )
+                    CG.client_controller.WriteSynchronous( 'force_filetype', hashes, forced_mime )
                     
                     hashes_we_needed_to_dupe = set()
                     
@@ -773,7 +774,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
                             mime_to_move_to = media.GetFileInfoManager().GetOriginalMime()
                             
                         
-                        needed_to_dupe_the_file = HG.client_controller.client_files_manager.ChangeFileExt( hash, current_mime, mime_to_move_to )
+                        needed_to_dupe_the_file = CG.client_controller.client_files_manager.ChangeFileExt( hash, current_mime, mime_to_move_to )
                         
                         if needed_to_dupe_the_file:
                             
@@ -783,7 +784,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
                     
                     if len( hashes_we_needed_to_dupe ) > 0:
                         
-                        HG.client_controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', hashes_we_needed_to_dupe, ClientFiles.REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + 3600 )
+                        CG.client_controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', hashes_we_needed_to_dupe, ClientFiles.REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + 3600 )
                         
                     
                     pauser.Pause()
@@ -821,7 +822,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
     hash = media.GetHash()
     mime = media.GetMime()
     
-    path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
     
     if mime == HC.APPLICATION_PDF:
         
@@ -872,11 +873,11 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
 
 def UndeleteFiles( hashes ):
     
-    local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+    local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
     
     for chunk_of_hashes in HydrusData.SplitIteratorIntoChunks( hashes, 64 ):
         
-        media_results = HG.client_controller.Read( 'media_results', chunk_of_hashes )
+        media_results = CG.client_controller.Read( 'media_results', chunk_of_hashes )
         
         service_keys_to_hashes = collections.defaultdict( list )
         
@@ -903,7 +904,7 @@ def UndeleteFiles( hashes ):
             
             content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
             
-            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     
@@ -919,7 +920,7 @@ def UndeleteMedia( win, media ):
     
     media_deleted_service_keys = HydrusData.MassUnion( ( m.GetLocationsManager().GetDeleted() for m in undeletable_media ) )
     
-    local_file_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
+    local_file_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
     
     undeletable_services = [ local_file_service for local_file_service in local_file_services if local_file_service.GetServiceKey() in media_deleted_service_keys ]
     
@@ -938,7 +939,7 @@ def UndeleteMedia( win, media ):
             
             if len( choice_tuples ) > 1:
                 
-                service = HG.client_controller.services_manager.GetService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                service = CG.client_controller.services_manager.GetService( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
                 
                 choice_tuples.append( ( 'all the above', service, 'Undelete back to all services the files have been deleted from.' ) )
                 
@@ -985,7 +986,7 @@ def UndeleteMedia( win, media ):
                 
                 content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
                 
-                HG.client_controller.Write( 'content_updates', content_update_package )
+                CG.client_controller.Write( 'content_updates', content_update_package )
                 
             
         

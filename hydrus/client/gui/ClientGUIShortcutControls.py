@@ -11,6 +11,7 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -26,7 +27,7 @@ def ManageShortcuts( win: QW.QWidget ):
     
     shortcuts_manager = ClientGUIShortcuts.shortcuts_manager()
     
-    call_mouse_buttons_primary_secondary = HG.client_controller.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' )
+    call_mouse_buttons_primary_secondary = CG.client_controller.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' )
     
     all_shortcuts = shortcuts_manager.GetShortcutSets()
     
@@ -40,13 +41,13 @@ def ManageShortcuts( win: QW.QWidget ):
             
             ( call_mouse_buttons_primary_secondary, shortcut_sets ) = panel.GetValue()
             
-            HG.client_controller.new_options.SetBoolean( 'call_mouse_buttons_primary_secondary', call_mouse_buttons_primary_secondary )
+            CG.client_controller.new_options.SetBoolean( 'call_mouse_buttons_primary_secondary', call_mouse_buttons_primary_secondary )
             
             ClientGUIShortcuts.SetMouseLabels( call_mouse_buttons_primary_secondary )
             
             dupe_shortcut_sets = [ shortcut_set.Duplicate() for shortcut_set in shortcut_sets ]
             
-            HG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET ], dupe_shortcut_sets )
+            CG.client_controller.Write( 'serialisables_overwrite', [ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET ], dupe_shortcut_sets )
             
             shortcuts_manager.SetShortcutSets( shortcut_sets )
             
@@ -388,7 +389,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._edit_custom_button = ClientGUICommon.BetterButton( custom_panel, 'edit', self._EditCustom )
         self._delete_button = ClientGUICommon.BetterButton( custom_panel, 'delete', self._Delete )
         
-        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             custom_panel.hide()
             

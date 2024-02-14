@@ -21,6 +21,7 @@ from hydrus.core.files.images import HydrusImageHandling
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFilesPhysical
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -59,7 +60,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._original_options = dict( HC.options )
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         self._original_new_options = self._new_options.Duplicate()
         
         self._listbook = ClientGUICommon.ListBook( self )
@@ -160,7 +161,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             coloursets_panel = ClientGUICommon.StaticBox( self, 'coloursets' )
             
@@ -281,7 +282,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             general = ClientGUICommon.StaticBox( self, 'general' )
             
@@ -471,7 +472,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             gallery_downloader = ClientGUICommon.StaticBox( self, 'gallery downloader' )
             
-            gug_key_and_name = HG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
+            gug_key_and_name = CG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
             
             self._default_gug = ClientGUIImport.GUGKeyAndNameSelector( gallery_downloader, gug_key_and_name )
             
@@ -641,7 +642,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HG.client_controller.network_engine.domain_manager.SetDefaultGUGKeyAndName( self._default_gug.GetValue() )
+            CG.client_controller.network_engine.domain_manager.SetDefaultGUGKeyAndName( self._default_gug.GetValue() )
             
             self._new_options.SetInteger( 'gallery_page_wait_period_pages', self._gallery_page_wait_period_pages.value() )
             HC.options[ 'gallery_file_limit' ] = self._gallery_file_limit.GetValue()
@@ -822,7 +823,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             browser_panel = ClientGUICommon.StaticBox( self, 'web browser launch path' )
             
@@ -1008,7 +1009,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             self._export_location = QP.DirPickerCtrl( self )
             
@@ -1090,8 +1091,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._use_advanced_file_deletion_dialog.clicked.connect( self._UpdateAdvancedControls )
             
-            self._remember_last_advanced_file_deletion_special_action.setChecked( HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ) )
-            self._remember_last_advanced_file_deletion_reason.setChecked( HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ) )
+            self._remember_last_advanced_file_deletion_special_action.setChecked( CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ) )
+            self._remember_last_advanced_file_deletion_reason.setChecked( CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ) )
             
             self._advanced_file_deletion_reasons.AddDatas( self._new_options.GetStringList( 'advanced_file_deletion_reasons' ) )
             
@@ -1216,8 +1217,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetStringList( 'advanced_file_deletion_reasons', self._advanced_file_deletion_reasons.GetData() )
             
-            HG.client_controller.new_options.SetBoolean( 'remember_last_advanced_file_deletion_special_action', self._remember_last_advanced_file_deletion_special_action.isChecked() )
-            HG.client_controller.new_options.SetBoolean( 'remember_last_advanced_file_deletion_reason', self._remember_last_advanced_file_deletion_reason.isChecked() )
+            CG.client_controller.new_options.SetBoolean( 'remember_last_advanced_file_deletion_special_action', self._remember_last_advanced_file_deletion_special_action.isChecked() )
+            CG.client_controller.new_options.SetBoolean( 'remember_last_advanced_file_deletion_reason', self._remember_last_advanced_file_deletion_reason.isChecked() )
             
         
     
@@ -1227,7 +1228,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             self._file_viewing_statistics_active = QW.QCheckBox( self )
             self._file_viewing_statistics_active_on_archive_delete_filter = QW.QCheckBox( self )
@@ -1359,7 +1360,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             self._app_display_name.setText( self._new_options.GetString( 'app_display_name' ) )
             
@@ -1583,6 +1584,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._wheel_scrolls_tab_bar = QW.QCheckBox( self._pages_panel )
             self._wheel_scrolls_tab_bar.setToolTip( 'When you scroll your mouse wheel over some tabs, the normal behaviour is to change the tab selection. If you often have overloaded tab bars, you might like to have the mouse wheel actually scroll the tab bar itself.' )
             
+            self._disable_page_tab_dnd = QW.QCheckBox( self._pages_panel )
+            
+            self._disable_page_tab_dnd.setToolTip( 'Trying to debug some client hangs!' )
+            
             self._force_hide_page_signal_on_new_page = QW.QCheckBox( self._pages_panel )
             
             self._force_hide_page_signal_on_new_page.setToolTip( 'If your video still plays with sound in the preview viewer when you create a new page, please try this.' )
@@ -1613,7 +1618,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            gui_session_names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
+            gui_session_names = CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER )
             
             if CC.LAST_SESSION_SESSION_NAME not in gui_session_names:
                 
@@ -1665,6 +1670,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._total_pages_warning.setValue( self._new_options.GetInteger( 'total_pages_warning' ) )
             
+            self._disable_page_tab_dnd.setChecked( self._new_options.GetBoolean( 'disable_page_tab_dnd' ) )
+            
             self._force_hide_page_signal_on_new_page.setChecked( self._new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ) )
             
             self._set_search_focus_on_page_change.setChecked( self._new_options.GetBoolean( 'set_search_focus_on_page_change' ) )
@@ -1695,6 +1702,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
             rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
             rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
+            rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
             rows.append( ( 'BUGFIX: Force \'hide page\' signal when creating a new page: ', self._force_hide_page_signal_on_new_page ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._pages_panel, rows )
@@ -1772,6 +1780,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.value() )
             
+            self._new_options.SetBoolean( 'disable_page_tab_dnd', self._disable_page_tab_dnd.isChecked() )
             self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )
             
             self._new_options.SetBoolean( 'page_drop_chase_normally', self._page_drop_chase_normally.isChecked() )
@@ -1850,7 +1859,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             self._jobs_panel = ClientGUICommon.StaticBox( self, 'when to run high cpu jobs' )
             
@@ -2351,7 +2360,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             #
             
@@ -2813,7 +2822,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if mpv_conf_path is not None and mpv_conf_path != '' and os.path.exists( mpv_conf_path ) and os.path.isfile( mpv_conf_path ):
                 
-                dest_mpv_conf_path = HG.client_controller.GetMPVConfPath()
+                dest_mpv_conf_path = CG.client_controller.GetMPVConfPath()
                 
                 try:
                     
@@ -3076,7 +3085,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_tag_service_search_page.addItem( 'all known tags', CC.COMBINED_TAG_SERVICE_KEY )
             
-            services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+            services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
             
             for service in services:
                 
@@ -3244,7 +3253,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._namespace_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in HG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
+            self._namespace_sort_by.AddDatas( [ media_sort.sort_type[1] for media_sort in CG.client_controller.new_options.GetDefaultNamespaceSorts() ] )
             
             self._save_page_sort_on_change.setChecked( self._new_options.GetBoolean( 'save_page_sort_on_change' ) )
             
@@ -3966,7 +3975,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             elif not HC.PLATFORM_WINDOWS:
                 
-                if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                     
                     label = 'This is turned off for non-advanced non-Windows users for now.'
                     
@@ -4033,7 +4042,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             favourites_st = ClientGUICommon.BetterStaticText( favourites_panel, desc )
             favourites_st.setWordWrap( True )
             
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
             self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
@@ -4403,7 +4412,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites_services = ClientGUICommon.BetterChoice( suggested_tags_favourites_panel )
             
-            tag_services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+            tag_services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
             
             for tag_service in tag_services:
                 
@@ -4416,7 +4425,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._suggested_favourites_dict = {}
             
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
@@ -4474,7 +4483,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._favourite_file_lookup_script = ClientGUICommon.BetterChoice( suggested_tags_file_lookup_script_panel )
             
-            script_names = sorted( HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ) )
+            script_names = sorted( CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP ) )
             
             for name in script_names:
                 
@@ -5046,16 +5055,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         try:
             
-            HG.client_controller.WriteSynchronous( 'save_options', HC.options )
+            CG.client_controller.WriteSynchronous( 'save_options', HC.options )
             
-            HG.client_controller.WriteSynchronous( 'serialisable', self._new_options )
+            CG.client_controller.WriteSynchronous( 'serialisable', self._new_options )
             
             # we do this to convert tuples to lists and so on
             test_new_options = self._new_options.Duplicate()
             
             if test_new_options.GetMediaViewOptions() != self._original_new_options.GetMediaViewOptions():
                 
-                HG.client_controller.pub( 'clear_image_tile_cache' )
+                CG.client_controller.pub( 'clear_image_tile_cache' )
                 
             
             res_changed = HC.options[ 'thumbnail_dimensions' ] != self._original_options[ 'thumbnail_dimensions' ]
@@ -5064,7 +5073,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if res_changed or type_changed or dpr_changed:
                 
-                HG.client_controller.pub( 'reset_thumbnail_cache' )
+                CG.client_controller.pub( 'reset_thumbnail_cache' )
                 
             
         except Exception as e:
@@ -5148,7 +5157,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         text = os.linesep.join( urls )
         
-        HG.client_controller.pub( 'clipboard', 'text', text )
+        CG.client_controller.pub( 'clipboard', 'text', text )
         
     
     def _EnterURLs( self, urls, only_add = False ):
@@ -5160,7 +5169,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             try:
                 
-                normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
                 normalised_urls.append( normalised_url )
                 
@@ -5228,7 +5237,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -5385,7 +5394,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, self._pending_content_updates )
             
-            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     
@@ -5437,7 +5446,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         text += os.linesep * 2
         text += 'Although it is best if you can find everything, you only _have_ to fix the subdirectories starting with \'f\', which store your original files. Those starting \'t\' and \'r\' are for your thumbnails, which can be regenerated with a bit of work.'
         text += os.linesep * 2
-        text += 'Then hit \'apply\', and the client will launch. You should double-check all your locations under database->migrate database immediately.'
+        text += 'Then hit \'apply\', and the client will launch. You should double-check all your locations under \'database->move media files\' immediately.'
         text += os.linesep * 2
         text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help. Regardless of the situation, the document at "install_dir/db/help my media files are broke.txt" may be useful background reading.'
         
@@ -5625,7 +5634,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ( correct_rows, thumb_problems ) = self._GetValue()
         
-        HG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
+        CG.client_controller.WriteSynchronous( 'repair_client_files', correct_rows )
         
     
     def UserIsOKToOK( self ):

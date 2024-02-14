@@ -3,14 +3,12 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
-from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -148,9 +146,9 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
         
         if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags ):
             
-            if not HG.client_controller.services_manager.ServiceExists( exporter.GetServiceKey() ):
+            if not CG.client_controller.services_manager.ServiceExists( exporter.GetServiceKey() ):
                 
-                exporter.SetServiceKey( HG.client_controller.services_manager.GetDefaultLocalTagService().GetServiceKey() )
+                exporter.SetServiceKey( CG.client_controller.services_manager.GetDefaultLocalTagService().GetServiceKey() )
                 
             
         

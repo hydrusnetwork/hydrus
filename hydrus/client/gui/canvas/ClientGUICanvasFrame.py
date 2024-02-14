@@ -6,6 +6,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -24,9 +25,9 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media_viewer' ] )
         
-        HG.client_controller.gui.RegisterCanvasFrameReference( self )
+        CG.client_controller.gui.RegisterCanvasFrameReference( self )
         
-        self.destroyed.connect( HG.client_controller.gui.MaintainCanvasFrameReferences )
+        self.destroyed.connect( CG.client_controller.gui.MaintainCanvasFrameReferences )
         
         self._was_maximised_before_fullscreen = True
         
@@ -97,19 +98,19 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
             
             if action == CAC.SIMPLE_EXIT_APPLICATION:
                 
-                HG.client_controller.gui.TryToExit()
+                CG.client_controller.gui.TryToExit()
                 
             elif action == CAC.SIMPLE_EXIT_APPLICATION_FORCE_MAINTENANCE:
                 
-                HG.client_controller.gui.TryToExit( force_shutdown_maintenance = True )
+                CG.client_controller.gui.TryToExit( force_shutdown_maintenance = True )
                 
             elif action == CAC.SIMPLE_RESTART_APPLICATION:
                 
-                HG.client_controller.gui.TryToExit( restart = True )
+                CG.client_controller.gui.TryToExit( restart = True )
                 
             elif action == CAC.SIMPLE_HIDE_TO_SYSTEM_TRAY:
                 
-                HG.client_controller.gui.HideToSystemTray()
+                CG.client_controller.gui.HideToSystemTray()
                 
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER:
                 
@@ -121,7 +122,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
                 
             elif action == CAC.SIMPLE_FLIP_DARKMODE:
                 
-                HG.client_controller.gui.FlipDarkmode()
+                CG.client_controller.gui.FlipDarkmode()
                 
             elif action == CAC.SIMPLE_GLOBAL_AUDIO_MUTE:
                 
@@ -137,11 +138,11 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
                 
             elif action == CAC.SIMPLE_GLOBAL_PROFILE_MODE_FLIP:
                 
-                HG.client_controller.FlipProfileMode()
+                CG.client_controller.FlipProfileMode()
                 
             elif action == CAC.SIMPLE_GLOBAL_FORCE_ANIMATION_SCANBAR_SHOW:
                 
-                HG.client_controller.new_options.FlipBoolean( 'force_animation_scanbar_show' )
+                CG.client_controller.new_options.FlipBoolean( 'force_animation_scanbar_show' )
                 
             else:
                 

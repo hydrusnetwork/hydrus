@@ -15,7 +15,7 @@ FYI: In hydrus's file storage, there are two sets of 256 sub folders. One is 'fx
 
 Once you are booted, your client may throw up lots of missing thumbnail/file errors. Do not worry so much about these for now, but it would be best to close your larger pages and pause the import pages for now. Don't pause network traffic, since we'll be using that in a minute.
 
-If you needed to remap your file locations during pre-boot repair, then hit _database->migrate database_. It may still have your old damaged location set as the 'ideal', and the remapped correct locations set as just a temporary location it currently wants to move away from. Correct this by giving the new locations some weight and removing the old locations. Once you are done, you should only see good locations listed, no desire to move anything, with 'current' and 'ideal' usage at the same percentage.
+If you needed to remap your file locations during pre-boot repair, then hit _database->move media files_. It may still have your old damaged location set as the 'ideal', and the remapped correct locations set as just a temporary location it currently wants to move away from. Correct this by giving the new locations some weight and removing the old locations. Once you are done, you should only see good locations listed, no desire to move anything, with 'current' and 'ideal' usage at the same percentage.
 
 Next, we have two classes of problem: files in the database but not in storage, and files in storage but not in the database.
 

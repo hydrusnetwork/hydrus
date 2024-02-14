@@ -175,7 +175,6 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self._name = 'client'
         
-        HG.client_controller = self
         CG.client_controller = self
         
         # just to set up some defaults, in case some db update expects something for an odd yaml-loading reason

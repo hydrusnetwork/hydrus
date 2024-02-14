@@ -17,6 +17,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientStrings
 from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingJobs
@@ -1238,7 +1239,7 @@ class ParseFormulaHTML( ParseFormula ):
         
         try:
             
-            root = HG.client_controller.parsing_cache.GetSoup( parsing_text )
+            root = CG.client_controller.parsing_cache.GetSoup( parsing_text )
             
         except Exception as e:
             
@@ -1901,7 +1902,7 @@ class ParseFormulaJSON( ParseFormula ):
         
         try:
             
-            j = HG.client_controller.parsing_cache.GetJSON( parsing_text )
+            j = CG.client_controller.parsing_cache.GetJSON( parsing_text )
             
         except Exception as e:
             
@@ -2903,7 +2904,7 @@ class ParseNodeContentLink( HydrusSerialisable.SerialisableBase ):
             
             network_job.OverrideBandwidth()
             
-            HG.client_controller.network_engine.AddJob( network_job )
+            CG.client_controller.network_engine.AddJob( network_job )
             
             try:
                 
@@ -3097,7 +3098,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
             try:
                 
-                source_to_desired = HG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
+                source_to_desired = CG.client_controller.Read( 'file_hashes', ( sha256_hash, ), 'sha256', hash_type )
                 
                 other_hash = list( source_to_desired.values() )[0]
                 
@@ -3113,7 +3114,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             hash = media.GetHash()
             mime = media.GetMime()
             
-            client_files_manager = HG.client_controller.client_files_manager
+            client_files_manager = CG.client_controller.client_files_manager
             
             try:
                 
@@ -3213,7 +3214,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
         
         network_job.OverrideBandwidth()
         
-        HG.client_controller.network_engine.AddJob( network_job )
+        CG.client_controller.network_engine.AddJob( network_job )
         
         try:
             

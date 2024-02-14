@@ -15,6 +15,7 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogs
@@ -46,7 +47,7 @@ def GetQueryHeadersQualityInfo( query_headers: typing.Iterable[ ClientImportSubs
         
         try:
             
-            query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
+            query_log_container = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
             
         except HydrusExceptions.DataMissing:
             
@@ -57,7 +58,7 @@ def GetQueryHeadersQualityInfo( query_headers: typing.Iterable[ ClientImportSubs
         
         hashes = fsc.GetHashes()
         
-        media_results = HG.client_controller.Read( 'media_results', hashes )
+        media_results = CG.client_controller.Read( 'media_results', hashes )
         
         num_inbox = 0
         num_archived = 0
@@ -97,7 +98,7 @@ def GetQueryLogContainers( query_headers: typing.Iterable[ ClientImportSubscript
         
         try:
             
-            query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
+            query_log_container = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_header.GetQueryLogContainerName() )
             
         except HydrusExceptions.DBException as e:
             
@@ -172,7 +173,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         queries_panel.AddButton( 'check now', self._CheckNow, enabled_check_func = self._ListCtrlCanCheckNow )
         queries_panel.AddButton( 'reset', self._STARTReset, enabled_check_func = self._ListCtrlCanResetCache )
         
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             queries_panel.AddSeparator()
             
@@ -188,7 +189,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._file_limits_panel = ClientGUICommon.StaticBox( self, 'synchronisation' )
         
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             limits_max = 50000
             
@@ -343,7 +344,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gug_key_and_name = self._gug_key_and_name.GetValue()
         
-        initial_search_text = HG.client_controller.network_engine.domain_manager.GetInitialSearchText( gug_key_and_name )
+        initial_search_text = CG.client_controller.network_engine.domain_manager.GetInitialSearchText( gug_key_and_name )
         
         query_header = ClientImportSubscriptionQuery.SubscriptionQueryHeader()
         
@@ -476,7 +477,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            estimate = query_header.GetBandwidthWaitingEstimate( HG.client_controller.network_engine.bandwidth_manager, self._original_subscription.GetName() )
+            estimate = query_header.GetBandwidthWaitingEstimate( CG.client_controller.network_engine.bandwidth_manager, self._original_subscription.GetName() )
             
             if estimate == 0:
                 
@@ -524,7 +525,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( clipboard_text ) > 0:
             
-            HG.client_controller.pub( 'clipboard', 'text', clipboard_text )
+            CG.client_controller.pub( 'clipboard', 'text', clipboard_text )
             
         
     
@@ -581,7 +582,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 try:
                     
-                    old_query_log_container = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_log_container_name )
+                    old_query_log_container = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_log_container_name )
                     
                 except HydrusExceptions.DataMissing:
                     
@@ -695,7 +696,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         text = os.linesep.join( data_strings )
         
-        HG.client_controller.pub( 'clipboard', 'text', text )
+        CG.client_controller.pub( 'clipboard', 'text', text )
         
     
     def _STARTShowQualityInfo( self ):
@@ -809,7 +810,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -1188,9 +1189,9 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         self._check_now = QW.QCheckBox( self )
         self._paused = QW.QCheckBox( self )
         
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, HG.client_controller )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self, CG.client_controller )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, HG.client_controller, True, True, 'search' )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self, CG.client_controller, True, True, 'search' )
         
         tag_import_options = query_header.GetTagImportOptions()
         show_downloader_options = False # just for additional tags, no parsing gubbins needed
@@ -1388,7 +1389,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         
-        if HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ):
+        if CG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ):
             
             message = 'SUBSCRIPTIONS ARE CURRENTLY GLOBALLY PAUSED! CHECK THE NETWORK MENU TO UNPAUSE THEM.'
             
@@ -1634,7 +1635,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             try:
                 
-                ( min_estimate, max_estimate ) = subscription.GetBandwidthWaitingEstimateMinMax( HG.client_controller.network_engine.bandwidth_manager )
+                ( min_estimate, max_estimate ) = subscription.GetBandwidthWaitingEstimateMinMax( CG.client_controller.network_engine.bandwidth_manager )
                 
                 if max_estimate == 0: # don't seem to be any delays of any kind
                     
@@ -2032,7 +2033,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def Add( self ):
         
-        gug_key_and_name = HG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
+        gug_key_and_name = CG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
         
         empty_subscription = ClientImportSubscriptions.Subscription( 'new subscription', gug_key_and_name = gug_key_and_name )
         

@@ -2,8 +2,8 @@ import sqlite3
 import typing
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBFilesInbox
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
@@ -22,7 +22,7 @@ class ClientDBFileDeleteLock( ClientDBModule.ClientDBModule ):
         
         # TODO: like in the MediaSingleton object, eventually extend this to the metadata conditional object
         
-        if HG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
+        if CG.client_controller.new_options.GetBoolean( 'delete_lock_for_archived_files' ):
             
             service = self.modules_services.GetService( service_id )
             

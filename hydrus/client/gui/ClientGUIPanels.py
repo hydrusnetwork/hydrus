@@ -2,6 +2,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -107,7 +108,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         
         service = self._service_callable()
         
-        HG.client_controller.CallToThread( do_it, service )
+        CG.client_controller.CallToThread( do_it, service )
         
     
     def _CheckRunning( self ):
@@ -166,7 +167,7 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         
         service = self._service_callable()
         
-        HG.client_controller.CallToThread( do_it, service )
+        CG.client_controller.CallToThread( do_it, service )
         
     
     def _EnableNoCopy( self ):
@@ -216,6 +217,6 @@ class IPFSDaemonStatusAndInteractionPanel( ClientGUICommon.StaticBox ):
         
         service = self._service_callable()
         
-        HG.client_controller.CallToThread( do_it, service )
+        CG.client_controller.CallToThread( do_it, service )
         
     

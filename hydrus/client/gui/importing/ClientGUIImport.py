@@ -14,6 +14,7 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -158,7 +159,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         tags = HydrusTags.CleanTags( tags )
         
-        tags = HG.client_controller.tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, self._service_key, tags )
+        tags = CG.client_controller.tag_display_manager.FilterTags( ClientTags.TAG_DISPLAY_STORAGE, self._service_key, tags )
         
         return tags
         
@@ -447,7 +448,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self._tags_panel, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
             
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._tag_autocomplete_all = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self._tags_panel, self.EnterTags, default_location_context, service_key, show_paste_button = True )
             
@@ -589,7 +590,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             try:
                 
-                raw_text = HG.client_controller.GetClipboardText()
+                raw_text = CG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -654,7 +655,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def EnterTags( self, tags ):
             
-            HG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
+            CG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
             
             if len( tags ) > 0:
                 
@@ -678,7 +679,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def EnterTagsSingle( self, tags ):
             
-            HG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
+            CG.client_controller.Write( 'push_recent_tags', self._service_key, tags )
             
             if len( tags ) > 0:
                 
@@ -812,9 +813,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._notebook.addTab( self._metadata_router_page, 'sidecars' )
         
-        services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+        services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
-        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
+        default_tag_service_key = CG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         for service in services:
             
@@ -857,13 +858,13 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+        if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
             current_page = self._notebook.currentWidget()
             
             if current_page in self._filename_tagging_option_pages:
                 
-                HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+                CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
                 
             
         
@@ -1016,7 +1017,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._schedule_refresh_file_list_job = None
                 
             
-            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh path list', self.RefreshFileList )
+            self._schedule_refresh_file_list_job = CG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh path list', self.RefreshFileList )
             
         
         def SetSearchFocus( self ):
@@ -1139,7 +1140,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._schedule_refresh_file_list_job = None
                 
             
-            self._schedule_refresh_file_list_job = HG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh path list', self.RefreshFileList )
+            self._schedule_refresh_file_list_job = CG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh path list', self.RefreshFileList )
             
         
         def SetSearchFocus( self ):
@@ -1235,7 +1236,7 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
             self._schedule_refresh_tags_job = None
             
         
-        self._schedule_refresh_tags_job = HG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh tags', self.RefreshTags )
+        self._schedule_refresh_tags_job = CG.client_controller.CallLaterQtSafe( self, 0.5, 'refresh tags', self.RefreshTags )
         
     
 class GalleryImportPanel( ClientGUICommon.StaticBox ):
@@ -1256,7 +1257,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self, 'imports' )
         
         self._file_status = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, HG.client_controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, CG.client_controller, self._page_key )
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
         
         self._files_pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
@@ -1269,7 +1270,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._gallery_pause_button = ClientGUICommon.BetterBitmapButton( self._gallery_panel, CC.global_pixmaps().gallery_pause, self.PauseGallery )
         self._gallery_pause_button.setToolTip( 'pause/play search' )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, HG.client_controller, False, True, 'search', page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( self._gallery_panel, CG.client_controller, False, True, 'search', page_key = self._page_key )
         
         self._gallery_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._gallery_panel )
         
@@ -1330,7 +1331,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         self._UpdateControlsForNewGalleryImport()
         
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
@@ -1501,7 +1502,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
     
     def TIMERUIUpdate( self ):
         
-        if HG.client_controller.gui.IShouldRegularlyUpdate( self ):
+        if CG.client_controller.gui.IShouldRegularlyUpdate( self ):
             
             self._UpdateStatus()
             
@@ -1513,7 +1514,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'gallery selector', self._Edit )
         
-        gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+        gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
         
         if gug is not None:
             
@@ -1528,7 +1529,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
     def _Edit( self ):
         
-        domain_manager = HG.client_controller.network_engine.domain_manager
+        domain_manager = CG.client_controller.network_engine.domain_manager
         
         # maybe relegate to hidden page and something like "(does not work)" if no gallery url class match
         
@@ -1627,7 +1628,7 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
         
         label = self._gug_key_and_name[1]
         
-        gug = HG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
+        gug = CG.client_controller.network_engine.domain_manager.GetGUG( self._gug_key_and_name )
         
         if gug is None:
             
@@ -1683,7 +1684,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._files_pause_button.setToolTip( 'pause/play files' )
         
         self._file_status = ClientGUICommon.BetterStaticText( imports_panel, ellipsize_end = True )
-        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, HG.client_controller, self._page_key )
+        self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( imports_panel, CG.client_controller, self._page_key )
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( imports_panel )
         
         #
@@ -1700,7 +1701,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._check_now_button = QW.QPushButton( 'check now', checker_panel )
         self._check_now_button.clicked.connect( self.EventCheckNow )
         
-        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, HG.client_controller, True, False, 'check', page_key = self._page_key )
+        self._gallery_seed_log_control = ClientGUIGallerySeedLog.GallerySeedLogStatusControl( checker_panel, CG.client_controller, True, False, 'check', page_key = self._page_key )
         
         checker_options = ClientImportOptions.CheckerOptions()
         
@@ -1776,7 +1777,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         
         self._UpdateControlsForNewWatcher()
         
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _SetCheckerOptions( self, checker_options ):
@@ -2007,7 +2008,7 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
     
     def TIMERUIUpdate( self ):
         
-        if HG.client_controller.gui.IShouldRegularlyUpdate( self ):
+        if CG.client_controller.gui.IShouldRegularlyUpdate( self ):
             
             self._UpdateStatus()
             

@@ -15,6 +15,7 @@ from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client.metadata import ClientContentUpdates
@@ -38,7 +39,7 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         return t
         
     
-    decent_expected_filename_length = 16
+    decent_expected_filename_length = 64
     
     try:
         
@@ -152,7 +153,10 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         filename = filename[ : - len( ext ) ]
         
     
-    filename = HydrusPaths.ElideFilenameOrDirectorySafely( filename, num_characters_used_in_other_components = destination_directory_num_characters_in_filesystem )
+    # sidecar suffixes, and in general we don't want to spam giganto strings to people's hard drives
+    extra_characters_and_padding = 64
+    
+    filename = HydrusPaths.ElideFilenameOrDirectorySafely( filename, num_characters_used_in_other_components = destination_directory_num_characters_in_filesystem + extra_characters_and_padding )
     
     if do_not_use_filenames is not None:
         
@@ -179,7 +183,7 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
 
 def GetExportPath():
     
-    portable_path = HG.client_controller.options[ 'export_path' ]
+    portable_path = CG.client_controller.options[ 'export_path' ]
     
     if portable_path is None:
         
@@ -316,7 +320,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if file_search_context is None:
             
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
             
@@ -328,7 +332,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if phrase is None:
             
-            phrase = HG.client_controller.new_options.GetString( 'export_phrase' )
+            phrase = CG.client_controller.new_options.GetString( 'export_phrase' )
             
         
         self._path = path
@@ -500,7 +504,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _DoExport( self, job_status: ClientThreading.JobStatus ):
         
-        query_hash_ids = HG.client_controller.Read( 'file_query_ids', self._file_search_context, apply_implicit_limit = False )
+        query_hash_ids = CG.client_controller.Read( 'file_query_ids', self._file_search_context, apply_implicit_limit = False )
         
         media_results = []
         
@@ -515,12 +519,12 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 return
                 
             
-            if HG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
+            if CG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                 
                 return
                 
             
-            more_media_results = HG.client_controller.Read( 'media_results_from_ids', block_of_hash_ids )
+            more_media_results = CG.client_controller.Read( 'media_results_from_ids', block_of_hash_ids )
             
             media_results.extend( more_media_results )
             
@@ -540,7 +544,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         sync_paths = set()
         
-        client_files_manager = HG.client_controller.client_files_manager
+        client_files_manager = CG.client_controller.client_files_manager
         
         num_actually_copied = 0
         
@@ -553,7 +557,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                 return
                 
             
-            if HG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
+            if CG.client_controller.new_options.GetBoolean( 'pause_export_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
                 
                 return
                 
@@ -705,7 +709,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if self._delete_from_client_after_export:
             
-            local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+            local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
             
             service_keys_to_deletee_hashes = collections.defaultdict( list )
             
@@ -752,7 +756,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason )
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update ) )
+                    CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update ) )
                     
                 
             
@@ -796,7 +800,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if popup_desired:
                 
-                HG.client_controller.pub( 'message', job_status )
+                CG.client_controller.pub( 'message', job_status )
                 
             
             self._DoExport( job_status )
@@ -829,7 +833,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             self._last_checked = HydrusTime.GetNow()
             self._run_now = False
             
-            HG.client_controller.WriteSynchronous( 'serialisable', self )
+            CG.client_controller.WriteSynchronous( 'serialisable', self )
             
             job_status.FinishAndDismiss()
             

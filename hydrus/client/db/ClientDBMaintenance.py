@@ -11,6 +11,7 @@ from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBModule
 
@@ -219,18 +220,25 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         return pk_column_names
         
     
-    def _TableHasAtLeastRowCount( self, name, row_count ):
+    def _TableHasAtLeastRowCount( self, name, minimum_row_count ):
+        
+        num_rows_found = 0
+        BLOCK_SIZE = max( 1, min( 10000, int( minimum_row_count / 10 ) ) )
         
         cursor = self._Execute( 'SELECT 1 FROM {};'.format( name ) )
         
-        for i in range( row_count ):
+        while num_rows_found < minimum_row_count:
             
-            r = cursor.fetchone()
+            result = cursor.fetchmany( BLOCK_SIZE )
             
-            if r is None:
+            num_rows_this_loop = len( result )
+            
+            if num_rows_this_loop == 0:
                 
                 return False
                 
+            
+            num_rows_found += num_rows_this_loop
             
         
         return True
@@ -255,11 +263,11 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                 
                 job_status.SetStatusTitle( 'database maintenance - analyzing' )
                 
-                HG.client_controller.pub( 'modal_message', job_status )
+                CG.client_controller.pub( 'modal_message', job_status )
                 
                 for name in HydrusData.IterateListRandomlyAndFast( names_to_analyze ):
                     
-                    HG.client_controller.frame_splash_status.SetText( 'analyzing ' + name )
+                    CG.client_controller.frame_splash_status.SetText( 'analyzing ' + name )
                     job_status.SetStatusText( 'analyzing ' + name )
                     
                     time.sleep( 0.02 )
@@ -275,7 +283,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                         HydrusData.Print( 'Analyzed ' + name + ' in ' + HydrusTime.TimeDeltaToPrettyTimeDelta( time_took ) )
                         
                     
-                    p1 = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
+                    p1 = CG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
                     p2 = job_status.IsCancelled()
                     
                     if p1 or p2:
@@ -340,7 +348,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             
             job_status.SetStatusTitle( prefix_string + 'preparing' )
             
-            HG.client_controller.pub( 'modal_message', job_status )
+            CG.client_controller.pub( 'modal_message', job_status )
             
             job_status.SetStatusTitle( prefix_string + 'running' )
             job_status.SetStatusText( 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
@@ -610,7 +618,8 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             boundaries.append( ( 100, True, 6 * 3600 ) )
             boundaries.append( ( 10000, True, 3 * 86400 ) )
             boundaries.append( ( 100000, False, 3 * 30 * 86400 ) )
-            # anything bigger than 100k rows will now not be analyzed
+            boundaries.append( ( 10000000, False, 12 * 30 * 86400 ) )
+            # anything bigger than 10M rows will now not be analyzed
             
             existing_names_to_info = { name : ( num_rows, HydrusTime.SecondiseMS( timestamp_ms ) ) for ( name, num_rows, timestamp_ms ) in self._Execute( 'SELECT name, num_rows, timestamp_ms FROM analyze_timestamps;' ) }
             

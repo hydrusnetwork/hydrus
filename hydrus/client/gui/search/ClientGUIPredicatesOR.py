@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.search import ClientSearch
@@ -34,7 +35,7 @@ class ORPredicateControl( QW.QWidget ):
         
         page_key = HydrusData.GenerateKey()
         
-        location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+        location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = predicates )
         

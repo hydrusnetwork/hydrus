@@ -7,6 +7,7 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBModule
@@ -61,10 +62,10 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
     
     def CullFileViewingStatistics( self ):
         
-        media_min = HG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' )
-        media_max = HG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' )
-        preview_min = HG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' )
-        preview_max = HG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' )
+        media_min = CG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_media_min_time' )
+        media_max = CG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_media_max_time' )
+        preview_min = CG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_preview_min_time' )
+        preview_max = CG.client_controller.new_options.GetNoneableInteger( 'file_viewing_statistics_preview_max_time' )
         
         if media_min is not None and media_max is not None and media_min > media_max:
             

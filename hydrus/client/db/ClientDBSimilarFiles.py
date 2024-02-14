@@ -9,6 +9,7 @@ from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
@@ -664,14 +665,14 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 
                 if pub_job_status and not job_status_pubbed and HydrusTime.TimeHasPassed( time_started + 5 ):
                     
-                    HG.client_controller.pub( 'modal_message', job_status )
+                    CG.client_controller.pub( 'modal_message', job_status )
                     
                     job_status_pubbed = True
                     
                 
                 ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                 
-                should_stop = HG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
+                should_stop = CG.client_controller.ShouldStopThisWork( maintenance_mode, stop_time = stop_time )
                 
                 if should_quit or should_stop:
                     
@@ -682,7 +683,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 
                 text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
                 
-                HG.client_controller.frame_splash_status.SetSubtext( text )
+                CG.client_controller.frame_splash_status.SetSubtext( text )
                 job_status.SetStatusText( text )
                 job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                 
@@ -720,7 +721,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
     def MaintenanceDue( self ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         if new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
@@ -745,7 +746,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
             job_status.SetStatusTitle( 'regenerating similar file search data' )
             
-            HG.client_controller.pub( 'modal_message', job_status )
+            CG.client_controller.pub( 'modal_message', job_status )
             
             job_status.SetStatusText( 'purging search info of orphans' )
             

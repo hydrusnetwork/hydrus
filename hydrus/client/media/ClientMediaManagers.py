@@ -11,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientTime
 from hydrus.client.metadata import ClientContentUpdates
@@ -750,7 +751,7 @@ class LocationsManager( object ):
     
     def _AddToService( self, service_key, do_undelete = False, forced_import_time_ms = None ):
         
-        service_type = HG.client_controller.services_manager.GetServiceType( service_key )
+        service_type = CG.client_controller.services_manager.GetServiceType( service_key )
         
         if forced_import_time_ms is None:
             
@@ -787,7 +788,7 @@ class LocationsManager( object ):
                 
             
         
-        local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+        local_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
         
         if service_key in local_service_keys:
             
@@ -820,7 +821,7 @@ class LocationsManager( object ):
         
         if service_type in HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE:
             
-            all_service_keys_covered_by_combined_deleted_files = HG.client_controller.services_manager.GetServiceKeys( HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE )
+            all_service_keys_covered_by_combined_deleted_files = CG.client_controller.services_manager.GetServiceKeys( HC.FILE_SERVICES_COVERED_BY_COMBINED_DELETED_FILE )
             
             if len( self._deleted.intersection( all_service_keys_covered_by_combined_deleted_files ) ) == 0:
                 
@@ -831,7 +832,7 @@ class LocationsManager( object ):
     
     def _DeleteFromService( self, service_key: bytes, reason: typing.Optional[ str ] ):
         
-        service_type = HG.client_controller.services_manager.GetServiceType( service_key )
+        service_type = CG.client_controller.services_manager.GetServiceType( service_key )
         
         if service_key in self._current:
             
@@ -863,7 +864,7 @@ class LocationsManager( object ):
         
         self._petitioned.discard( service_key )
         
-        local_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+        local_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
         
         if service_key in local_service_keys:
             
@@ -956,7 +957,7 @@ class LocationsManager( object ):
     
     def GetRemoteLocationStrings( self ):
         
-        remote_file_services = list( HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
+        remote_file_services = list( CG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
         
         remote_file_services.sort( key = lambda s: s.GetName() )
         
@@ -1105,7 +1106,7 @@ class LocationsManager( object ):
                     
                     if service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                         
-                        service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE ) )
+                        service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_FILE ) )
                         
                     else:
                         
@@ -1138,7 +1139,7 @@ class LocationsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_ADD:
                 
-                service_type = HG.client_controller.services_manager.GetServiceType( service_key )
+                service_type = CG.client_controller.services_manager.GetServiceType( service_key )
                 
                 if service_type == HC.IPFS:
                     
@@ -1171,7 +1172,7 @@ class LocationsManager( object ):
                 
                 if service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
                     
-                    for s_k in HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
                         
                         if s_k in self._current:
                             
@@ -1181,7 +1182,7 @@ class LocationsManager( object ):
                     
                 elif service_key == CC.COMBINED_LOCAL_FILE_SERVICE_KEY:
                     
-                    for s_k in HG.client_controller.services_manager.GetServiceKeys( ( HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.COMBINED_LOCAL_MEDIA, HC.LOCAL_FILE_DOMAIN, HC.LOCAL_FILE_TRASH_DOMAIN, HC.LOCAL_FILE_UPDATE_DOMAIN ) ):
                         
                         if s_k in self._current:
                             
@@ -1198,7 +1199,7 @@ class LocationsManager( object ):
                 
                 if service_key == CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY:
                     
-                    for s_k in HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
+                    for s_k in CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) ):
                         
                         if s_k in self._deleted:
                             
@@ -1383,7 +1384,7 @@ class RatingsManager( object ):
             
         else:
             
-            service_type = HG.client_controller.services_manager.GetServiceType( service_key )
+            service_type = CG.client_controller.services_manager.GetServiceType( service_key )
             
             if service_type == HC.LOCAL_RATING_INCDEC:
                 
@@ -1398,7 +1399,7 @@ class RatingsManager( object ):
     
     def GetRatingForAPI( self, service_key ) -> typing.Union[ int, bool, None ]:
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
         service_type = service.GetServiceType()
         
@@ -1602,7 +1603,7 @@ class TagsManager( object ):
         
         # display filtering
         
-        tag_display_manager = HG.client_controller.tag_display_manager
+        tag_display_manager = CG.client_controller.tag_display_manager
         
         source_service_keys_to_statuses_to_tags = self._tag_display_types_to_service_keys_to_statuses_to_tags[ ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ]
         

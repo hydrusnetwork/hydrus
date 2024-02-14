@@ -15,6 +15,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client.importing import ClientImporting
 from hydrus.client.metadata import ClientTags
@@ -117,7 +118,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -318,7 +319,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
+            ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( self.url )
             
         except HydrusExceptions.URLClassException:
             
@@ -362,7 +363,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
     
     def WorksInNewSystem( self ):
         
-        ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
+        ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.url )
         
         if url_type == HC.URL_TYPE_GALLERY and can_parse:
             
@@ -398,7 +399,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             url_for_child_referral = gallery_url
             
-            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( gallery_url )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( gallery_url )
             
             if url_type not in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
@@ -410,7 +411,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'Cannot parse {}: {}'.format( match_name, cannot_parse_reason) )
                 
             
-            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
+            ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
             
             status_hook( 'downloading gallery page' )
             
@@ -438,7 +439,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             network_job.OverrideBandwidth( 30 )
             
-            HG.client_controller.network_engine.AddJob( network_job )
+            CG.client_controller.network_engine.AddJob( network_job )
             
             with network_job_presentation_context_factory( network_job ) as njpc:
                 
@@ -453,7 +454,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             if actual_fetched_url != url_to_check:
                 
-                ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                 
                 if url_type == HC.URL_TYPE_GALLERY:
                     
@@ -463,7 +464,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         url_for_child_referral = gallery_url
                         
-                        ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
+                        ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( gallery_url )
                         
                     else:
                         
@@ -603,7 +604,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                         
                         # we have failed to parse a next page url, but we would still like one, so let's see if the url match can provide one
                         
-                        url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url_to_check )
+                        url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url_to_check )
                         
                         if url_class is not None and url_class.CanGenerateNextGalleryPage():
                             
@@ -1186,7 +1187,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
             self._SetStatusDirty()
             
         
-        HG.client_controller.pub( 'gallery_seed_log_gallery_seeds_updated', self._gallery_seed_log_key, gallery_seeds )
+        CG.client_controller.pub( 'gallery_seed_log_gallery_seeds_updated', self._gallery_seed_log_key, gallery_seeds )
         
     
     def RemoveGallerySeeds( self, gallery_seeds_to_delete ):

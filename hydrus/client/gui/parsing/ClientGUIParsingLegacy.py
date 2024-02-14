@@ -1,7 +1,6 @@
 import os
 import threading
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
@@ -12,6 +11,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
@@ -197,7 +197,7 @@ class EditNodes( QW.QWidget ):
             
             json = export_object.DumpToString()
             
-            HG.client_controller.pub( 'clipboard', 'text', json )
+            CG.client_controller.pub( 'clipboard', 'text', json )
             
         
     
@@ -265,7 +265,7 @@ class EditNodes( QW.QWidget ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -426,7 +426,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         
         network_job.OverrideBandwidth()
         
-        HG.client_controller.network_engine.AddJob( network_job )
+        CG.client_controller.network_engine.AddJob( network_job )
         
         try:
             
@@ -502,7 +502,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
         data = self._example_data.toPlainText()
         referral_url = self._referral_url
         
-        HG.client_controller.CallToThread( do_it, node, data, referral_url )
+        CG.client_controller.CallToThread( do_it, node, data, referral_url )
         
     
     def GetExampleData( self ):
@@ -827,7 +827,7 @@ And pass that html to a number of 'parsing children' that will each look through
         
         data = self._example_data.toPlainText()
         
-        HG.client_controller.CallToThread( do_it, script, job_status, data )
+        CG.client_controller.CallToThread( do_it, script, job_status, data )
         
     
     def GetExampleData( self ):
@@ -900,7 +900,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         for script_type in self.SCRIPT_TYPES:
             
-            scripts.extend( HG.client_controller.Read( 'serialisable_named', script_type ) )
+            scripts.extend( CG.client_controller.Read( 'serialisable_named', script_type ) )
             
         
         for script in scripts:
@@ -1026,7 +1026,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         scripts = self._scripts.GetData()
         
-        HG.client_controller.Write( 'serialisables_overwrite', self.SCRIPT_TYPES, scripts )
+        CG.client_controller.Write( 'serialisables_overwrite', self.SCRIPT_TYPES, scripts )
         
     
     def Delete( self ):
@@ -1098,7 +1098,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             json = export_object.DumpToString()
             
-            HG.client_controller.pub( 'clipboard', 'text', json )
+            CG.client_controller.pub( 'clipboard', 'text', json )
             
         
     
@@ -1123,7 +1123,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -1314,7 +1314,7 @@ class ScriptManagementControl( QW.QWidget ):
             
             if self._job_status is None:
                 
-                HG.client_controller.gui.UnregisterUIUpdateWindow( self )
+                CG.client_controller.gui.UnregisterUIUpdateWindow( self )
                 
             
         
@@ -1360,5 +1360,5 @@ class ScriptManagementControl( QW.QWidget ):
             self._job_status = job_status
             
         
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         

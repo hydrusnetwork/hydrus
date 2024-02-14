@@ -15,6 +15,7 @@ from hydrus.core.files import HydrusAnimationHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIMedia
@@ -104,7 +105,7 @@ def log_handler( loglevel, component, message ):
             'Error splitting the input' in message
         ]
         
-        HG.client_controller.CallBlockingToQt( HG.client_controller.gui, EmergencyDumpOutGlobal, True in probably_crashy_tests, f'{component}: {message}' )
+        CG.client_controller.CallBlockingToQt( CG.client_controller.gui, EmergencyDumpOutGlobal, True in probably_crashy_tests, f'{component}: {message}' )
         
     
     HydrusData.DebugPrint( '[MPV {}] {}: {}'.format( loglevel, component, message ) )
@@ -269,10 +270,10 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self.destroyed.connect( self._player.terminate )
         
-        HG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
-        HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
-        HG.client_controller.sub( self, 'UpdateConf', 'notify_new_options' )
-        HG.client_controller.sub( self, 'SetLogLevel', 'set_mpv_log_level' )
+        CG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
+        CG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
+        CG.client_controller.sub( self, 'UpdateConf', 'notify_new_options' )
+        CG.client_controller.sub( self, 'SetLogLevel', 'set_mpv_log_level' )
         
         self.installEventFilter( self )
         
@@ -304,14 +305,14 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
             
-            if HG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
+            if CG.client_controller.new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ):
                 
                 return ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_MEDIA_VIEWER ]
                 
             
         elif self._canvas_type == CC.CANVAS_PREVIEW:
             
-            if HG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
+            if CG.client_controller.new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ):
                 
                 return ClientGUIMediaControls.volume_types_to_option_names[ ClientGUIMediaControls.AUDIO_PREVIEW ]
                 
@@ -536,7 +537,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 job_status.SetFiles( [ original_media.GetHash() ], 'MPV-crasher' )
                 
-                HG.client_controller.pub( 'message', job_status )
+                CG.client_controller.pub( 'message', job_status )
                 
             else:
                 
@@ -945,7 +946,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 # so let's see what happens here
                 mute_override = not self._media.HasAudio()
                 
-                client_files_manager = HG.client_controller.client_files_manager
+                client_files_manager = CG.client_controller.client_files_manager
                 
                 path = client_files_manager.GetFilePath( hash, mime )
                 
@@ -955,7 +956,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self._player.pause = True
                 
-                if mime in HC.VIEWABLE_ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                if mime in HC.VIEWABLE_ANIMATIONS and not CG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
                     
                     if mime == HC.ANIMATION_GIF:
                         
@@ -1033,11 +1034,11 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def UpdateConf( self ):
         
-        mpv_config_path = HG.client_controller.GetMPVConfPath()
+        mpv_config_path = CG.client_controller.GetMPVConfPath()
         
         if not os.path.exists( mpv_config_path ):
             
-            default_mpv_config_path = HG.client_controller.GetDefaultMPVConfPath()
+            default_mpv_config_path = CG.client_controller.GetDefaultMPVConfPath()
             
             if not os.path.exists( default_mpv_config_path ):
                 

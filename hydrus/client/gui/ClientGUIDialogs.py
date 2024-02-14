@@ -11,6 +11,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
@@ -41,9 +42,9 @@ class Dialog( QP.Dialog ):
         
         self.setWindowFlag( QC.Qt.WindowContextHelpButtonHint, on = False )
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -52,7 +53,7 @@ class Dialog( QP.Dialog ):
             QP.CallAfter( QP.CenterOnWindow, parent, self )
             
         
-        HG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetIdleTimer()
         
     
     def keyPressEvent( self, event ):
@@ -160,7 +161,7 @@ class DialogGenerateNewAccounts( Dialog ):
         
         self._num.setValue( 1 )
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
         response = service.Request( HC.GET, 'account_types' )
         
@@ -227,7 +228,7 @@ class DialogGenerateNewAccounts( Dialog ):
             expires = HydrusTime.GetNow() + lifetime
             
         
-        service = HG.client_controller.services_manager.GetService( self._service_key )
+        service = CG.client_controller.services_manager.GetService( self._service_key )
         
         try:
             
@@ -311,7 +312,7 @@ class DialogInputLocalBooruShare( Dialog ):
         
         self._hashes = hashes
         
-        self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = CG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         internal_port = self._service.GetPort()
         
@@ -388,16 +389,16 @@ class DialogInputLocalBooruShare( Dialog ):
             return
             
         
-        HG.client_controller.pub( 'clipboard', 'text', url )
+        CG.client_controller.pub( 'clipboard', 'text', url )
         
     
     def EventCopyInternalShareURL( self ):
         
-        self._service = HG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
+        self._service = CG.client_controller.services_manager.GetService( CC.LOCAL_BOORU_SERVICE_KEY )
         
         url = self._service.GetInternalShareURL( self._share_key )
         
-        HG.client_controller.pub( 'clipboard', 'text', url )
+        CG.client_controller.pub( 'clipboard', 'text', url )
         
     
     def GetInfo( self ):
@@ -521,7 +522,7 @@ class DialogInputTags( Dialog ):
         
         self._tags = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, service_key, tag_display_type = tag_display_type )
         
-        default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+        default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         self._tag_autocomplete = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterTags, default_location_context, service_key, show_paste_button = True )
         

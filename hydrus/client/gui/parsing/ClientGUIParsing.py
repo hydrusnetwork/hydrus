@@ -14,6 +14,7 @@ from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
@@ -1591,9 +1592,9 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         network_job.OverrideBandwidth()
         
-        HG.client_controller.network_engine.AddJob( network_job )
+        CG.client_controller.network_engine.AddJob( network_job )
         
-        HG.client_controller.CallToThread( wait_and_do_it, network_job )
+        CG.client_controller.CallToThread( wait_and_do_it, network_job )
         
     
     def GetFormula( self ):

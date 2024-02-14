@@ -49,7 +49,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         }
         
     
-    def _PopulateHashIdsToHashesCache( self, hash_ids, exception_on_error = False ):
+    def _PopulateHashIdsToHashesCache( self, hash_ids ):
         
         if len( self._hash_ids_to_hashes_cache ) > 100000:
             
@@ -89,11 +89,6 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                 for hash_id in uncached_hash_ids:
                     
                     if hash_id not in uncached_hash_ids_to_hashes:
-                        
-                        if exception_on_error:
-                            
-                            raise HydrusExceptions.DataMissing( 'Did not find all entries for those hash ids!' )
-                            
                         
                         # TODO: ultimately move this to the 'recover from missing definitions' stuff I am building in ClientDB, since the local hash cache may have it
                         # for now though, screw it
@@ -304,7 +299,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
         
         if hash_ids is not None:
             
-            self._PopulateHashIdsToHashesCache( hash_ids, exception_on_error = True )
+            self._PopulateHashIdsToHashesCache( hash_ids )
             
             hash_ids_to_hashes = { hash_id : self._hash_ids_to_hashes_cache[ hash_id ] for hash_id in hash_ids }
             

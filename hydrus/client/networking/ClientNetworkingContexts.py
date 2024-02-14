@@ -4,7 +4,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
-
+from hydrus.client import ClientGlobals as CG
 class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_CONTEXT
@@ -180,7 +180,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 
                 service_key = self.context_data
                 
-                services_manager = HG.client_controller.services_manager
+                services_manager = CG.client_controller.services_manager
                 
                 if services_manager.ServiceExists( service_key ):
                     

@@ -46,7 +46,7 @@ If you would like to move your files and thumbnails to new locations, I generall
 ??? note "Missing Locations"
     If your folders are in the wrong locations on a client boot, a repair dialog appears, and you can manually update the client's internal understanding. This is not impossible to figure out, _and in some tricky storage situations doing this on purpose can be faster than letting the client migrate things itself_, but generally it is best and safest to do everything through the dialog.
 
-Go _database->migrate database_, giving you this dialog:
+Go _database->move media files_, giving you this dialog:
 
 ![](images/db_migration.png)
 
@@ -56,7 +56,7 @@ The buttons let you add more locations and remove old ones. The operations on th
 
 **Weight** means the relative amount of media you would like to store in that location. It only matters if you are spreading your files across multiple locations. If location A has a weight of 1 and B has a weight of 2, A will get approximately one third of your files and B will get approximately two thirds.
 
-**Max Size** means the max total size of files the client will want to store in that location. Again, it only matters if you are spreading your files across multiple locations, but it is a simple way to ensure you don't go over a particular smaller hard drive's size. One location must always be limitless. This is not precise, so give it some padding. When one location is maxed out, the remaining locations will distribute the remainder of the files according to their respective weights. _For the meantime, this will not update by itself. If you import many files, the location may go over its limit and you will have to revisit 'migrate database' to rebalance your files again. Bear with me--I will fix this soon with the background migrate._ 
+**Max Size** means the max total size of files the client will want to store in that location. Again, it only matters if you are spreading your files across multiple locations, but it is a simple way to ensure you don't go over a particular smaller hard drive's size. One location must always be limitless. This is not precise, so give it some padding. When one location is maxed out, the remaining locations will distribute the remainder of the files according to their respective weights. _For the meantime, this will not update by itself. If you import many files, the location may go over its limit and you will have to revisit 'move media files' to rebalance your files again. Bear with me--I will fix this soon with the background migrate._ 
 
 Let's set up an example move:
 

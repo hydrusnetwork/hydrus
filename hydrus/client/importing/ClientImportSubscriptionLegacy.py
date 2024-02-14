@@ -11,6 +11,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDownloading
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
@@ -126,7 +127,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
         
         threshold = 90
         
-        bandwidth_ok = HG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_network_contexts, threshold = threshold )
+        bandwidth_ok = CG.client_controller.network_engine.bandwidth_manager.CanDoWork( example_network_contexts, threshold = threshold )
         
         if HG.subscription_report_mode:
             
@@ -171,7 +172,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
         
         url = file_seed.file_seed_data
         
-        domain_ok = HG.client_controller.network_engine.domain_manager.DomainOK( url )
+        domain_ok = CG.client_controller.network_engine.domain_manager.DomainOK( url )
         
         if HG.subscription_report_mode:
             
@@ -185,7 +186,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
         
         example_network_contexts = self._GetExampleNetworkContexts( subscription_name )
         
-        ( estimate, bandwidth_network_context ) = HG.client_controller.network_engine.bandwidth_manager.GetWaitingEstimateAndContext( example_network_contexts )
+        ( estimate, bandwidth_network_context ) = CG.client_controller.network_engine.bandwidth_manager.GetWaitingEstimateAndContext( example_network_contexts )
         
         return estimate
         
@@ -484,7 +485,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         
         self._queries = []
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         self._checker_options = new_options.GetDefaultSubscriptionCheckerOptions()
         
@@ -517,7 +518,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _CanDoWorkNow( self ):
         
-        p1 = not ( self._paused or HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ) or HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
+        p1 = not ( self._paused or CG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ) or CG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
         p2 = not ( HG.started_shutdown or HydrusThreading.IsThreadShuttingDown() )
         p3 = self._NoDelays()
         
@@ -525,7 +526,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             message = 'Subscription "{}" CanDoWork check.'.format( self._name )
             message += os.linesep
-            message += 'Paused/Global/Network Pause: {}/{}/{}'.format( self._paused, HG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ), HG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
+            message += 'Paused/Global/Network Pause: {}/{}/{}'.format( self._paused, CG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ), CG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
             message += os.linesep
             message += 'Started/Thread shutdown: {}/{}'.format( HG.started_shutdown, HydrusThreading.IsThreadShuttingDown() )
             message += os.linesep
@@ -571,7 +572,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         
         queries = list( self._queries )
         
-        if HG.client_controller.new_options.GetBoolean( 'process_subs_in_random_order' ):
+        if CG.client_controller.new_options.GetBoolean( 'process_subs_in_random_order' ):
             
             random.shuffle( queries )
             
@@ -649,7 +650,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             nj = file_seed.GetExampleNetworkJob( self._GenerateNetworkJobFactory( query ) )
             
-            nj.engine = HG.client_controller.network_engine
+            nj.engine = CG.client_controller.network_engine
             
             if nj.CurrentlyNeedsLogin():
                 
@@ -709,7 +710,7 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
             
             nj = gallery_seed.GetExampleNetworkJob( self._GenerateNetworkJobFactory( query ) )
             
-            nj.engine = HG.client_controller.network_engine
+            nj.engine = CG.client_controller.network_engine
             
             if nj.CurrentlyNeedsLogin():
                 

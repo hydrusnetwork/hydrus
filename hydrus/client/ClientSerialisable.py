@@ -17,6 +17,7 @@ from hydrus.core import HydrusTemp
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 
 # ok, the serialised png format is:
@@ -39,7 +40,7 @@ else:
 
 def CreateTopImage( width, title, payload_description, text ):
     
-    text_extent_qt_image = HG.client_controller.bitmap_manager.GetQtImage( 20, 20, 24 )
+    text_extent_qt_image = CG.client_controller.bitmap_manager.GetQtImage( 20, 20, 24 )
     
     painter = QG.QPainter( text_extent_qt_image )
     
@@ -92,7 +93,7 @@ def CreateTopImage( width, title, payload_description, text ):
     
     #
     
-    top_qt_image = HG.client_controller.bitmap_manager.GetQtImage( width, top_height, 24 )
+    top_qt_image = CG.client_controller.bitmap_manager.GetQtImage( width, top_height, 24 )
     
     painter = QG.QPainter( top_qt_image )
     

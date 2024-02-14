@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client.db import ClientDB
@@ -3027,7 +3028,7 @@ class TestTagParents( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'tag_parents', tag_parents )
         
-        cls._tag_parents_manager = ClientManagers.TagParentsManager( HG.client_controller )
+        cls._tag_parents_manager = ClientManagers.TagParentsManager( CG.client_controller )
         
     
     def test_expand_predicates( self ):

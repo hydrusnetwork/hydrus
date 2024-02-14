@@ -2,6 +2,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 
 PRESENTATION_STATUS_ANY_GOOD = 0
@@ -239,7 +240,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                s = 'in {}'.format( self._location_context.ToString( HG.client_controller.services_manager.GetName ) )
+                s = 'in {}'.format( self._location_context.ToString( CG.client_controller.services_manager.GetName ) )
                 
             
             summary = '{}, {}'.format( summary, s )
@@ -310,7 +311,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if len( needs_inbox_lookup ) > 0:
             
-            inbox_hashes = HG.client_controller.Read( 'inbox_hashes', needs_inbox_lookup )
+            inbox_hashes = CG.client_controller.Read( 'inbox_hashes', needs_inbox_lookup )
             
             for ( hash, status ) in hashes_and_statuses:
                 
@@ -345,7 +346,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if not location_context.IsAllKnownFiles():
                 
-                presented_hashes = HG.client_controller.Read( 'filter_hashes', location_context, presented_hashes )
+                presented_hashes = CG.client_controller.Read( 'filter_hashes', location_context, presented_hashes )
                 
             
         

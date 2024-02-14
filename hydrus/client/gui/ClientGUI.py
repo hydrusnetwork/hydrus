@@ -94,6 +94,7 @@ from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.services import ClientGUIClientsideServices
 from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.interfaces import ClientControllerInterface
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -467,7 +468,7 @@ def THREADUploadPending( service_key ):
 
 class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.MainFrameThatResizes ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
         
         self._controller = controller
         
@@ -3090,7 +3091,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'migrate database', 'Review and manage the locations your database is stored.', self._MigrateDatabase )
+        ClientGUIMenus.AppendMenuItem( menu, 'move media files', 'Review and manage the locations your database is stored.', self._MoveMediaFiles )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3462,8 +3463,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendMenuItem( tests, 'run the ui test', 'Run hydrus_dev\'s weekly UI Test. Guaranteed to work and not mess up your session, ha ha.', self._RunUITest )
         ClientGUIMenus.AppendMenuItem( tests, 'run the client api test', 'Run hydrus_dev\'s weekly Client API Test. Guaranteed to work and not mess up your session, ha ha.', self._RunClientAPITest )
-        ClientGUIMenus.AppendMenuItem( tests, 'run the server test', 'This will try to boot the server in your install folder and initialise it.', self._RunServerTest )
-        ClientGUIMenus.AppendMenuItem( tests, 'run the server test on fresh server', 'This will try to initialise an already running server.', self._RunServerTest, do_boot = False )
+        ClientGUIMenus.AppendMenuItem( tests, 'run the server test on fresh server', 'This will try to initialise an already running server.', self._RunServerTest )
         
         ClientGUIMenus.AppendMenu( debug, tests, 'tests, do not touch' )
         
@@ -4971,11 +4971,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         with ClientGUIDialogsManage.DialogManageUPnP( self ) as dlg: dlg.exec()
         
     
-    def _MigrateDatabase( self ):
+    def _MoveMediaFiles( self ):
         
-        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'migrate database' ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'move media files' ) as dlg:
             
-            panel = ClientGUIScrolledPanelsReview.MigrateDatabasePanel( dlg, self._controller )
+            panel = ClientGUIScrolledPanelsReview.MoveMediaFilesPanel( dlg, self._controller )
             
             dlg.SetPanel( panel )
             
@@ -6182,91 +6182,12 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         CG.client_controller.CallToThread( do_it )
         
     
-    def _RunServerTest( self, do_boot = True ):
+    def _RunServerTest( self ):
         
         def do_it():
             
             host = '127.0.0.1'
             port = HC.DEFAULT_SERVER_ADMIN_PORT
-            
-            if do_boot:
-                
-                if HydrusNetworking.LocalPortInUse( port ):
-                    
-                    HydrusData.ShowText( 'The server appears to be already running. Either that, or something else is using port ' + str( HC.DEFAULT_SERVER_ADMIN_PORT ) + '.' )
-                    
-                    return
-                    
-                else:
-                    
-                    try:
-                        
-                        HydrusData.ShowText( 'Starting server' + HC.UNICODE_ELLIPSIS )
-                        
-                        db_param = '-d=' + self._controller.GetDBDir()
-                        
-                        if HC.PLATFORM_WINDOWS:
-                            
-                            server_frozen_path = os.path.join( HC.BASE_DIR, 'hydrus_server.exe' )
-                            
-                        else:
-                            
-                            server_frozen_path = os.path.join( HC.BASE_DIR, 'hydrus_server' )
-                            
-                        
-                        if os.path.exists( server_frozen_path ):
-                            
-                            cmd = [ server_frozen_path, db_param ]
-                            
-                        else:
-                            
-                            python_executable = sys.executable
-                            
-                            if python_executable.endswith( 'hydrus_client.exe' ) or python_executable.endswith( 'hydrus_client' ):
-                                
-                                raise Exception( 'Could not automatically set up the server--could not find hydrus_client executable or python executable.' )
-                                
-                            
-                            if 'pythonw' in python_executable:
-                                
-                                python_executable = python_executable.replace( 'pythonw', 'python' )
-                                
-                            
-                            server_script_path = os.path.join( HC.BASE_DIR, 'hydrus_server.py' )
-                            
-                            cmd = [ python_executable, server_script_path, db_param ]
-                            
-                        
-                        sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
-                        
-                        HydrusData.CheckProgramIsNotShuttingDown()
-                        
-                        subprocess.Popen( cmd, **sbp_kwargs )
-                        
-                        time_waited = 0
-                        
-                        while not HydrusNetworking.LocalPortInUse( port ):
-                            
-                            time.sleep( 3 )
-                            
-                            time_waited += 3
-                            
-                            if time_waited > 30:
-                                
-                                raise Exception( 'The server\'s port did not appear!' )
-                                
-                            
-                        
-                    except:
-                        
-                        HydrusData.ShowText( 'I tried to start the server, but something failed!' + os.linesep + traceback.format_exc() )
-                        
-                        return
-                        
-                    
-                
-            
-            time.sleep( 5 )
             
             HydrusData.ShowText( 'Creating admin service' + HC.UNICODE_ELLIPSIS )
             
@@ -7178,7 +7099,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             dlg.exec()
             
         
-        self._MigrateDatabase()
+        self._MoveMediaFiles()
         
     
     def eventFilter( self, watched, event ):

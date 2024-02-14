@@ -60,6 +60,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._initial_height_num_chars = height_num_chars
         self._forced_height_num_chars = None
         
+        self._has_initialised_size = False
+        
         self._data_to_tuples_func = data_to_tuples_func
         
         self._use_simple_delete = use_simple_delete
@@ -107,6 +109,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self.setMinimumWidth( total_width )
         '''
+        
         main_tlw = CG.client_controller.GetMainTLW()
         
         # if last section is set too low, for instance 3, the column seems unable to ever shrink from initial (expanded to fill space) size
@@ -118,13 +121,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         # I think this is because of mismatch between set size and min size! So ensuring we never set smaller than that initially should fix this???!?
         
         MIN_SECTION_SIZE_CHARS = 3
-        MIN_LAST_SECTION_SIZE_CHARS = 10
         
         self._min_section_width = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, MIN_SECTION_SIZE_CHARS )
         
         self.header().setMinimumSectionSize( self._min_section_width )
         
         last_column_index = self._column_list_status.GetColumnCount() - 1
+        
+        self.header().setStretchLastSection( True )
         
         for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
             
@@ -161,8 +165,6 @@ class BetterListCtrl( QW.QTreeWidget ):
             self.setColumnWidth( i, width_pixels )
             
         
-        self.header().setStretchLastSection( True )
-        
         self._delete_key_callback = delete_key_callback
         self._activation_callback = activation_callback
         
@@ -181,8 +183,42 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.header().setContextMenuPolicy( QC.Qt.CustomContextMenu )
         self.header().customContextMenuRequested.connect( self._ShowHeaderMenu )
         
+        CG.client_controller.CallAfterQtSafe( self, 'initialising multi-column list widths', self._InitialiseColumnWidths )
+        
         CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_all_listctrl_status' )
         CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_listctrl_status' )
+        
+    
+    def _InitialiseColumnWidths( self ):
+        
+        MIN_SECTION_SIZE_CHARS = 3
+        
+        main_tlw = CG.client_controller.GetMainTLW()
+        
+        last_column_index = self._column_list_status.GetColumnCount() - 1
+        
+        for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
+            
+            if i == last_column_index:
+                
+                width_chars = MIN_SECTION_SIZE_CHARS
+                
+            else:
+                
+                width_chars = self._column_list_status.GetColumnWidth( column_type )
+                
+            
+            width_chars = max( width_chars, MIN_SECTION_SIZE_CHARS )
+            
+            # ok this is a pain in the neck issue, but fontmetrics changes afte widget init. I guess font gets styled on top afterwards
+            # this means that if I use this window's fontmetrics here, in init, then it is different later on, and we get creeping growing columns lmao
+            # several other places in the client are likely affected in different ways by this also!
+            width_pixels = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, width_chars )
+            
+            self.setColumnWidth( i, width_pixels )
+            
+        
+        self._has_initialised_size = True
         
     
     def _AddDataInfo( self, data_info ):
@@ -219,9 +255,12 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def _SectionsResized( self, logical_index, old_size, new_size ):
         
-        self._DoStatusChanged()
-        
-        self.updateGeometry()
+        if self._has_initialised_size:
+            
+            self._DoStatusChanged()
+            
+            self.updateGeometry()
+            
         
     
     def _DoStatusChanged( self ):
@@ -895,9 +934,15 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def resizeEvent( self, event ):
         
-        self._DoStatusChanged()
+        result = QW.QTreeWidget.resizeEvent( self, event )
         
-        return QW.QTreeWidget.resizeEvent( self, event )
+        # do not touch this! weird hack that fixed a new bug in 6.6.1 where all columns would reset on load to 100px wide!
+        if self._has_initialised_size:
+            
+            self._DoStatusChanged()
+            
+        
+        return result
         
     
     def sizeHint( self ):

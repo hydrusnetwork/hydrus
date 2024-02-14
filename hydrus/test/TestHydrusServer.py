@@ -12,15 +12,14 @@ import twisted.internet.ssl
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusEncryption
-from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
-from hydrus.core.networking import HydrusServerRequest
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientServices
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -291,7 +290,7 @@ class TestServer( unittest.TestCase ):
             f.write( EXAMPLE_THUMBNAIL )
             
         
-        local_booru_manager = HG.client_controller.local_booru_manager
+        local_booru_manager = CG.client_controller.local_booru_manager
         
         #
         

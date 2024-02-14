@@ -3,11 +3,10 @@ import os
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -58,7 +57,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._width.setValue( 512 )
         
-        last_png_export_dir = HG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
+        last_png_export_dir = CG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
         
         if title is not None:
             
@@ -162,7 +161,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             base_dir = os.path.dirname( path )
             
-            HG.client_controller.new_options.SetNoneableString( 'last_png_export_dir', base_dir )
+            CG.client_controller.new_options.SetNoneableString( 'last_png_export_dir', base_dir )
             
         
         if not path.endswith( '.png' ):
@@ -174,7 +173,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.setText( 'done!' )
         
-        HG.client_controller.CallLaterQtSafe( self._export, 2.0, 'png export set text', self._export.setText, 'export' )
+        CG.client_controller.CallLaterQtSafe( self._export, 2.0, 'png export set text', self._export.setText, 'export' )
         
     
 class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -197,7 +196,7 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        last_png_export_dir = HG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
+        last_png_export_dir = CG.client_controller.new_options.GetNoneableString( 'last_png_export_dir' )
         
         if last_png_export_dir is not None:
             
@@ -258,7 +257,7 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if last_png_export_dir is not None and last_png_export_dir != '':
             
-            HG.client_controller.new_options.SetNoneableString( 'last_png_export_dir', last_png_export_dir )
+            CG.client_controller.new_options.SetNoneableString( 'last_png_export_dir', last_png_export_dir )
             
         
         for obj in self._payload_objs:
@@ -279,6 +278,6 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._export.setText( 'done!' )
         
-        HG.client_controller.CallLaterQtSafe( self._export, 2.0, 'png export set text', self._export.setText, 'export' )
+        CG.client_controller.CallLaterQtSafe( self._export, 2.0, 'png export set text', self._export.setText, 'export' )
         
     

@@ -7,6 +7,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.search import ClientSearch
 
 from hydrus.external import SystemPredicateParser
@@ -109,7 +110,7 @@ def file_service_pred_generator( o, v, u ):
         
         service_name = v
         
-        service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_FILE_SERVICES, service_name )
+        service_key = CG.client_controller.services_manager.GetServiceKeyFromName( HC.REAL_FILE_SERVICES, service_name )
         
     except:
         
@@ -148,9 +149,9 @@ def rating_service_pred_generator( operator, value_and_service_name ):
         
         ( value, service_name ) = value_and_service_name
         
-        service_key = HG.client_controller.services_manager.GetServiceKeyFromName( HC.RATINGS_SERVICES, service_name )
+        service_key = CG.client_controller.services_manager.GetServiceKeyFromName( HC.RATINGS_SERVICES, service_name )
         
-        service = HG.client_controller.services_manager.GetService( service_key )
+        service = CG.client_controller.services_manager.GetService( service_key )
         
     except:
         
@@ -189,7 +190,7 @@ def url_class_pred_generator( include, url_class_name ):
     
     try:
         
-        url_class = HG.client_controller.network_engine.domain_manager.GetURLClassFromName( url_class_name )
+        url_class = CG.client_controller.network_engine.domain_manager.GetURLClassFromName( url_class_name )
         
     except HydrusExceptions.DataMissing as e:
         

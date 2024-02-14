@@ -8,6 +8,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.search import ClientSearch
 
 CLIENT_API_PERMISSION_ADD_URLS = 0
@@ -78,7 +79,7 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
         
         self._lock = threading.Lock()
         
-        HG.client_controller.sub( self, 'MaintainMemory', 'memory_maintenance_pulse' )
+        CG.client_controller.sub( self, 'MaintainMemory', 'memory_maintenance_pulse' )
         
     
     def _GetSerialisableInfo( self ):

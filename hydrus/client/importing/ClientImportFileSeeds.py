@@ -21,7 +21,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientData
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImportFiles
@@ -44,7 +44,7 @@ def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, url: str ):
     
     try:
         
-        url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
     except HydrusExceptions.URLClassException:
         
@@ -52,19 +52,19 @@ def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, url: str ):
         return False
         
     
-    url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+    url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url )
     
     # direct file URLs do not care about neighbours, since that can mean tokenised or different CDN URLs
     url_is_worried_about_neighbours = url_class is not None and url_class.GetURLType() not in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN )
     
     if url_is_worried_about_neighbours:
         
-        media_result = HG.client_controller.Read( 'media_result', hash )
+        media_result = CG.client_controller.Read( 'media_result', hash )
         
         file_urls = media_result.GetLocationsManager().GetURLs()
         
         # normalise to collapse http/https dupes
-        file_urls = HG.client_controller.network_engine.domain_manager.NormaliseURLs( file_urls )
+        file_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( file_urls )
         
         for file_url in file_urls:
             
@@ -82,7 +82,7 @@ def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, url: str ):
             
             try:
                 
-                file_url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( file_url )
+                file_url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( file_url )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -221,12 +221,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         urls.difference_update( all_primary_urls )
         
-        primary_url_classes = { HG.client_controller.network_engine.domain_manager.GetURLClass( url ) for url in all_primary_urls }
+        primary_url_classes = { CG.client_controller.network_engine.domain_manager.GetURLClass( url ) for url in all_primary_urls }
         primary_url_classes.discard( None )
         
         # ok when a booru has a """"""source"""""" url that points to a file alternate on the same booru, that isn't what we call a source url
         # so anything that has a source url with the same url class as our primaries, just some same-site loopback, we'll dump
-        urls = { url for url in urls if HG.client_controller.network_engine.domain_manager.GetURLClass( url ) not in primary_url_classes }
+        urls = { url for url in urls if CG.client_controller.network_engine.domain_manager.GetURLClass( url ) not in primary_url_classes }
         
         self._source_urls.update( urls )
         
@@ -235,7 +235,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if len( tags ) > 0:
             
-            tags_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, tags )
+            tags_to_siblings = CG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, tags )
             
             all_chain_tags = set( itertools.chain.from_iterable( tags_to_siblings.values() ) )
             
@@ -332,7 +332,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             lookup_url = self._GetImportOptionsLookupURL()
             
-            note_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultNoteImportOptionsForURL( lookup_url )
+            note_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultNoteImportOptionsForURL( lookup_url )
             
         else:
             
@@ -348,7 +348,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             lookup_url = self._GetImportOptionsLookupURL()
             
-            tag_import_options = HG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( lookup_url )
+            tag_import_options = CG.client_controller.network_engine.domain_manager.GetDefaultTagImportOptionsForURL( lookup_url )
             
         else:
             
@@ -639,7 +639,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             status_hook( 'downloading file' )
             
-            url_to_fetch = HG.client_controller.network_engine.domain_manager.GetURLToFetch( file_url )
+            url_to_fetch = CG.client_controller.network_engine.domain_manager.GetURLToFetch( file_url )
             
             network_job = network_job_factory( 'GET', url_to_fetch, temp_path = temp_path, referral_url = referral_url )
             
@@ -655,7 +655,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             network_job.SetFileImportOptions( file_import_options )
             
-            HG.client_controller.network_engine.AddJob( network_job )
+            CG.client_controller.network_engine.AddJob( network_job )
             
             with network_job_presentation_context_factory( network_job ) as njpc:
                 
@@ -673,7 +673,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 self._AddPrimaryURLs( ( actual_fetched_url, ) )
                 
-                ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                 
                 if actual_url_type == HC.URL_TYPE_POST and actual_can_parse:
                     
@@ -685,7 +685,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        ( original_url_type, original_match_name, original_can_parse, original_cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+                        ( original_url_type, original_match_name, original_can_parse, original_cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
                         
                         if original_url_type == actual_url_type and original_match_name == actual_match_name:
                             
@@ -770,7 +770,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -838,7 +838,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         for ( hash_type, found_hash ) in jobs:
             
-            file_import_status = HG.client_controller.Read( 'hash_status', hash_type, found_hash, prefix = '{} hash recognised'.format( hash_type ) )
+            file_import_status = CG.client_controller.Read( 'hash_status', hash_type, found_hash, prefix = '{} hash recognised'.format( hash_type ) )
             
             # there's some subtle gubbins going on here
             # an sha256 'haven't seen this before' result will not set the hash here and so will not count as a match
@@ -893,12 +893,12 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         # now that we store primary and source urls separately, we'll trust any primary but be careful about source
         # trusting classless source urls was too much of a hassle with too many boorus providing bad source urls like user account pages
         
-        urls.extend( ( url for url in self._source_urls if HG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) ) )
+        urls.extend( ( url for url in self._source_urls if CG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) ) )
         
         # now discard gallery pages or post urls that can hold multiple files
-        urls = [ url for url in urls if not HG.client_controller.network_engine.domain_manager.URLCanReferToMultipleFiles( url ) ]
+        urls = [ url for url in urls if not CG.client_controller.network_engine.domain_manager.URLCanReferToMultipleFiles( url ) ]
         
-        lookup_urls = HG.client_controller.network_engine.domain_manager.NormaliseURLs( urls )
+        lookup_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( urls )
         
         untrustworthy_domains = set()
         
@@ -909,7 +909,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 continue
                 
             
-            results = HG.client_controller.Read( 'url_statuses', lookup_url )
+            results = CG.client_controller.Read( 'url_statuses', lookup_url )
             
             if len( results ) == 0: # if no match found, this is a new URL, no useful data discovered
                 
@@ -1068,7 +1068,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+                ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -1104,7 +1104,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     # if our given referral is a post url, we are most probably a multi-file url
                     
-                    ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
+                    ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
                     
                     if url_type == HC.URL_TYPE_POST:
                         
@@ -1133,7 +1133,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                self.file_seed_data = HG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
+                self.file_seed_data = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -1220,9 +1220,9 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if hash is not None:
             
-            media_result = HG.client_controller.Read( 'media_result', hash )
+            media_result = CG.client_controller.Read( 'media_result', hash )
             
-            HG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
+            CG.client_controller.pub( 'add_media_results', page_key, ( media_result, ) )
             
         
     
@@ -1285,7 +1285,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
             
             if url_type == HC.URL_TYPE_FILE:
                 
@@ -1299,7 +1299,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if url_type == HC.URL_TYPE_UNKNOWN and self._referral_url is not None: # this is likely be a multi-file child of a post url file_seed
                 
-                ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
+                ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self._referral_url )
                 
                 if url_type == HC.URL_TYPE_POST: # we must have got here through parsing that m8, so let's assume this is an unrecognised file url
                     
@@ -1317,7 +1317,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         try:
             
-            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( self.file_seed_data )
             
             if url_type not in ( HC.URL_TYPE_POST, HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
                 
@@ -1347,7 +1347,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                     
                     url_for_child_referral = post_url
                     
-                    ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                    ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                     
                     status_hook( 'downloading file page' )
                     
@@ -1371,7 +1371,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         network_job.AddAdditionalHeader( key, value )
                         
                     
-                    HG.client_controller.network_engine.AddJob( network_job )
+                    CG.client_controller.network_engine.AddJob( network_job )
                     
                     with network_job_presentation_context_factory( network_job ) as njpc:
                         
@@ -1386,7 +1386,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         
                         # we have redirected, a 3XX response
                         
-                        ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
+                        ( actual_url_type, actual_match_name, actual_can_parse, actual_cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( actual_fetched_url )
                         
                         if actual_url_type == HC.URL_TYPE_POST and actual_can_parse:
                             
@@ -1396,7 +1396,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             url_for_child_referral = post_url
                             
-                            ( url_to_check, parser ) = HG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
+                            ( url_to_check, parser ) = CG.client_controller.network_engine.domain_manager.GetURLToFetchAndParser( post_url )
                             
                         
                     
@@ -1510,7 +1510,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             
                             desired_url = desired_urls[0]
                             
-                            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( desired_url )
+                            ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( desired_url )
                             
                             if url_type in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
                                 
@@ -1771,7 +1771,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if media_result is None:
                 
-                media_result = HG.client_controller.Read( 'media_result', hash )
+                media_result = CG.client_controller.Read( 'media_result', hash )
                 
             
             for ( service_key, content_updates ) in tag_import_options.GetContentUpdatePackage( self.status, media_result, set( self._tags ), external_filterable_tags = self._external_filterable_tags, external_additional_service_keys_to_tags = self._external_additional_service_keys_to_tags ).IterateContentUpdates():
@@ -1786,7 +1786,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             if media_result is None:
                 
-                media_result = HG.client_controller.Read( 'media_result', hash )
+                media_result = CG.client_controller.Read( 'media_result', hash )
                 
             
             names_and_notes = sorted( self._names_and_notes_dict.items() )
@@ -1801,7 +1801,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if content_update_package.HasContent():
             
-            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
         return did_work
@@ -1892,7 +1892,7 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
                     status_text += HydrusData.ToHumanInt( total_processed )
                     
                 
-                show_new_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_new_on_file_seed_short_summary' )
+                show_new_on_file_seed_short_summary = CG.client_controller.new_options.GetBoolean( 'show_new_on_file_seed_short_summary' )
                 
                 if show_new_on_file_seed_short_summary and num_successful_and_new:
                     
@@ -1906,7 +1906,7 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
                     simple_status_strings.append( '{}Ig'.format( HydrusData.ToHumanInt( num_ignored ) ) )
                     
                 
-                show_deleted_on_file_seed_short_summary = HG.client_controller.new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' )
+                show_deleted_on_file_seed_short_summary = CG.client_controller.new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' )
                 
                 if show_deleted_on_file_seed_short_summary and num_deleted > 0:
                     
@@ -2411,7 +2411,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
             return
             
         
-        HG.client_controller.pub( 'file_seed_cache_file_seeds_updated', self._file_seed_cache_key, file_seeds )
+        CG.client_controller.pub( 'file_seed_cache_file_seeds_updated', self._file_seed_cache_key, file_seeds )
         
     
     def _SetFileSeedsToIndicesDirty( self ):

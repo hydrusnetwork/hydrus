@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientTags
@@ -385,7 +386,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
             file_service_key = self.filter_data
             
-            s = HG.client_controller.services_manager.GetName( file_service_key )
+            s = CG.client_controller.services_manager.GetName( file_service_key )
             
         elif self.filter_type == FILE_FILTER_TAGS:
             
@@ -395,7 +396,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
             
             if tag_service_key != CC.COMBINED_TAG_SERVICE_KEY:
                 
-                s = '{} on {}'.format( s, HG.client_controller.services_manager.GetName( tag_service_key ) )
+                s = '{} on {}'.format( s, CG.client_controller.services_manager.GetName( tag_service_key ) )
                 
             
             s = HydrusText.ElideText( s, 64 )
@@ -492,5 +493,5 @@ def ReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Media ] ):
     
     job_status.SetFiles( hashes, 'see them' )
     
-    HG.client_controller.pub( 'message', job_status )
+    CG.client_controller.pub( 'message', job_status )
     

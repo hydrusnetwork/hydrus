@@ -70,6 +70,7 @@ from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.db import ClientDBTagSuggestions
 from hydrus.client.db import ClientDBURLMap
 from hydrus.client.importing import ClientImportFiles
+from hydrus.client.interfaces import ClientControllerInterface
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.media import ClientMediaResultCache
@@ -226,7 +227,7 @@ class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'service_info', 'system_predicates', 'missing_thumbnail_hashes' ]
     
-    def __init__( self, controller, db_dir, db_name ):
+    def __init__( self, controller: ClientControllerInterface.ClientControllerInterface, db_dir, db_name ):
         
         self._initial_messages = []
         
