@@ -128,12 +128,12 @@ This is the Command Palette (default Ctrl+P), and specifically the background co
 
 QLocatorResultWidget#selectedLocatorResult
 {
-	background-color: #006ffa
+	background-color: palette(highlight);
 }
 
 QLocatorResultWidget QWidget
 {
-	background: transparent
+	background: transparent;
 }
 
 
@@ -169,5 +169,5 @@ We hack it with hardcoded 'style' attribute in the html in python code.
 
 QLabel#HydrusHyperlink
 {
-	qproperty-link_color: #0000ff;
+	qproperty-link_color: palette(link);
 }
