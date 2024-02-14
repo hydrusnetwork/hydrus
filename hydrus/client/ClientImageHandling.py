@@ -6,10 +6,12 @@ import numpy.core.multiarray # important this comes before cv!
 
 import cv2
 
-from hydrus.client import ClientConstants as CC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files.images import HydrusImageHandling
+
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 
 cv_interpolation_enum_lookup = {}
 
@@ -28,7 +30,7 @@ def DiscardBlankPerceptualHashes( perceptual_hashes ):
 
 def GenerateNumPyImage( path, mime ):
     
-    force_pil = HG.client_controller.new_options.GetBoolean( 'load_images_with_pil' )
+    force_pil = CG.client_controller.new_options.GetBoolean( 'load_images_with_pil' )
     
     return HydrusImageHandling.GenerateNumPyImage( path, mime, force_pil = force_pil )
     
@@ -237,7 +239,7 @@ def GenerateShapePerceptualHashesNumPy( numpy_image ):
 def ResizeNumPyImageForMediaViewer( mime, numpy_image, target_resolution ):
     
     ( target_width, target_height ) = target_resolution
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     ( scale_up_quality, scale_down_quality ) = new_options.GetMediaZoomQuality( mime )
     

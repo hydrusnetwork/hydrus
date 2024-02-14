@@ -5,6 +5,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientGlobals as CG
+
 class ClientDBModule( HydrusDBModule.HydrusDBModule ):
     
     def _DisplayCatastrophicError( self, text: str ):
@@ -15,7 +17,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         
         HydrusData.DebugPrint( message )
         
-        HG.client_controller.BlockingSafeShowCriticalMessage( 'hydrus db failed', message )
+        CG.client_controller.BlockingSafeShowCriticalMessage( 'hydrus db failed', message )
         
     
     def _PresentMissingIndicesWarningToUser( self, index_names: typing.Collection[ str ] ):
@@ -27,9 +29,9 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         
         message = 'Your "{}" database module was missing {} indices. More information has been written to the log. This may or may not be a big deal, and on its own it is completely recoverable. If you do not have further problems, hydev does not need to know about it. The indices will be regenerated once you proceed--it may take some time.'.format( self.name, len( index_names ) )
         
-        HG.client_controller.BlockingSafeShowMessage( message )
+        CG.client_controller.BlockingSafeShowMessage( message )
         
-        HG.client_controller.frame_splash_status.SetText( 'recreating indices' )
+        CG.client_controller.frame_splash_status.SetText( 'recreating indices' )
         
     
     def _PresentMissingTablesWarningToUser( self, table_names: typing.Collection[ str ] ):
@@ -57,9 +59,9 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         
         message += 'If you proceed, the missing tables will be recreated. {}'.format( recovery_info )
         
-        HG.client_controller.BlockingSafeShowMessage( message )
+        CG.client_controller.BlockingSafeShowMessage( message )
         
-        HG.client_controller.frame_splash_status.SetText( 'recreating tables' )
+        CG.client_controller.frame_splash_status.SetText( 'recreating tables' )
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:

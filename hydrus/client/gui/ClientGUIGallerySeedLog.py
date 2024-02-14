@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
 from hydrus.client import ClientSerialisable
 from hydrus.client import ClientTime
@@ -56,7 +57,7 @@ def ImportFromClipboard( win: QW.QWidget, gallery_seed_log: ClientImportGalleryS
     
     try:
         
-        raw_text = HG.client_controller.GetClipboardText()
+        raw_text = CG.client_controller.GetClipboardText()
         
     except HydrusExceptions.DataMissing as e:
         
@@ -169,7 +170,7 @@ def ExportToClipboard( gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog
     
     payload = GetExportableURLsString( gallery_seed_log )
     
-    HG.client_controller.pub( 'clipboard', 'text', payload )
+    CG.client_controller.pub( 'clipboard', 'text', payload )
     
 def RetryErrors( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog ):
     
@@ -318,7 +319,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = separator.join( ( gallery_seed.url for gallery_seed in gallery_seeds ) )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -342,7 +343,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             
             text = separator.join( notes )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -634,7 +635,7 @@ class GallerySeedLogStatusControl( QW.QFrame ):
         
         #
         
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
     
     def _GetGallerySeedLog( self ):

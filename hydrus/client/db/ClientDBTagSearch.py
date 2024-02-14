@@ -13,6 +13,7 @@ from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBMaintenance
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMappingsStorage
@@ -1358,7 +1359,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
             message = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
             
-            HG.client_controller.frame_splash_status.SetSubtext( message )
+            CG.client_controller.frame_splash_status.SetSubtext( message )
             
             if status_hook is not None:
                 

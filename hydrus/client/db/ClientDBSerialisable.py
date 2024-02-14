@@ -13,6 +13,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
@@ -216,7 +217,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
             self._Execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
             
-            HG.client_controller.pub( 'refresh_local_booru_shares' )
+            CG.client_controller.pub( 'refresh_local_booru_shares' )
             
         
     
@@ -687,7 +688,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 if force_timestamp_ms is None:
                     
                     store_backups = True
-                    backup_depth = HG.client_controller.new_options.GetInteger( 'number_of_gui_session_backups' )
+                    backup_depth = CG.client_controller.new_options.GetInteger( 'number_of_gui_session_backups' )
                     
                 
             
@@ -936,7 +937,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
             self._Execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
             
-            HG.client_controller.pub( 'refresh_local_booru_shares' )
+            CG.client_controller.pub( 'refresh_local_booru_shares' )
             
         
     

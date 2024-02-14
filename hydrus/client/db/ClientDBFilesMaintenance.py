@@ -7,6 +7,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesMaintenanceQueue
@@ -260,7 +261,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
             
             if len( hashes_that_need_refresh ) > 0:
                 
-                HG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
+                CG.client_controller.pub( 'new_file_info', hashes_that_need_refresh )
                 
             
         

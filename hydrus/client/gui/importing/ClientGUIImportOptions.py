@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -48,7 +49,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if file_import_options.IsDefault():
             
-            file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD ).Duplicate()
+            file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD ).Duplicate()
             
             file_import_options.SetIsDefault( True )
             
@@ -174,7 +175,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         destination_location_context = file_import_options.GetDestinationLocationContext()
         
-        destination_location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        destination_location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
         self._destination_location_context = ClientGUILocation.LocationSearchContextButton( destination_panel, destination_location_context )
         
@@ -227,7 +228,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'exclude previously deleted files: ', self._exclude_deleted ) )
         
-        if show_downloader_options and HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if show_downloader_options and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
             rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
@@ -263,7 +264,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'archive all imports: ', self._auto_archive ) )
         
-        if show_downloader_options and HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if show_downloader_options and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             rows.append( ( 'associate primary urls: ', self._associate_primary_urls ) )
             rows.append( ( 'associate (and trust) additional source urls: ', self._associate_source_urls ) )
@@ -321,8 +322,8 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _LoadDefaultOptions( self ):
         
-        loud_file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD )
-        quiet_file_import_options = HG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
+        loud_file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_LOUD )
+        quiet_file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
         
         choice_tuples = []
         
@@ -383,7 +384,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         destination_location_context = file_import_options.GetDestinationLocationContext()
         
-        destination_location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        destination_location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
         self._destination_location_context.SetValue( destination_location_context )
         
@@ -741,7 +742,7 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _LoadDefaultOptions( self ):
         
-        domain_manager = HG.client_controller.network_engine.domain_manager
+        domain_manager = CG.client_controller.network_engine.domain_manager
         
         ( file_post_default_note_import_options, watchable_default_note_import_options, url_class_keys_to_default_note_import_options ) = domain_manager.GetDefaultNoteImportOptions()
         
@@ -1030,7 +1031,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._service_key = service_key
         self._show_downloader_options = show_downloader_options
         
-        name = HG.client_controller.services_manager.GetName( self._service_key )
+        name = CG.client_controller.services_manager.GetName( self._service_key )
         
         main_box = ClientGUICommon.StaticBox( self, name )
         
@@ -1050,7 +1051,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._get_tags_checkbox = QW.QCheckBox( 'get tags', downloader_options_panel )
         
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             message = None
             
@@ -1127,7 +1128,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit already-exist filter' ) as dlg:
             
-            namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+            namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
             
             message = 'If you do not want the \'only add tags that already exist\' option to apply to all tags coming in, set a filter here for the tags you _want_ to be exposed to this test.'
             message += os.linesep * 2
@@ -1335,7 +1336,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             st = ClientGUICommon.BetterStaticText( default_panel, label = 'Most of the time, you want to rely on the default tag import options!' )
             
@@ -1419,7 +1420,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _InitialiseServices( self, tag_import_options ):
         
-        services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+        services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
         
         for service in services:
             
@@ -1439,7 +1440,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _LoadDefaultOptions( self ):
         
-        domain_manager = HG.client_controller.network_engine.domain_manager
+        domain_manager = CG.client_controller.network_engine.domain_manager
         
         ( file_post_default_tag_import_options, watchable_default_tag_import_options, url_class_keys_to_default_tag_import_options ) = domain_manager.GetDefaultTagImportOptions()
         
@@ -1798,21 +1799,21 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         json_string = self._file_import_options.DumpToString()
         
-        HG.client_controller.pub( 'clipboard', 'text', json_string )
+        CG.client_controller.pub( 'clipboard', 'text', json_string )
         
     
     def _CopyNoteImportOptions( self ):
         
         json_string = self._note_import_options.DumpToString()
         
-        HG.client_controller.pub( 'clipboard', 'text', json_string )
+        CG.client_controller.pub( 'clipboard', 'text', json_string )
         
     
     def _CopyTagImportOptions( self ):
         
         json_string = self._tag_import_options.DumpToString()
         
-        HG.client_controller.pub( 'clipboard', 'text', json_string )
+        CG.client_controller.pub( 'clipboard', 'text', json_string )
         
     
     def _EditOptions( self ):
@@ -1862,7 +1863,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -1903,7 +1904,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -1944,7 +1945,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             

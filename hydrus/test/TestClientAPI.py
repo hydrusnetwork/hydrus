@@ -1,10 +1,8 @@
-import collections
 import hashlib
 import http.client
 import json
 import os
 import random
-import shutil
 import time
 import unittest
 import urllib
@@ -22,8 +20,9 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageHandling
 
-from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientAPI
+from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client import ClientTime
@@ -1224,7 +1223,7 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertIn( locked_hash.hex(), text ) # error message should be complaining about it
         
-        HG.client_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', False )
+        CG.client_controller.new_options.SetBoolean( 'delete_lock_for_archived_files', False )
         
         HG.test_controller.ClearReads( 'media_results' )
         
@@ -5274,7 +5273,7 @@ class TestClientAPI( unittest.TestCase ):
         only_return_basic_information_metadata = []
         only_return_basic_information_metadata_but_blurhash_too = []
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         for media_result in media_results:
             
@@ -5315,7 +5314,7 @@ class TestClientAPI( unittest.TestCase ):
                 
                 bounding_dimensions = HG.test_controller.options[ 'thumbnail_dimensions' ]
                 thumbnail_scale_type = HG.test_controller.new_options.GetInteger( 'thumbnail_scale_type' )
-                thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+                thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                 
                 ( thumbnail_expected_width, thumbnail_expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( file_info_manager.width, file_info_manager.height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                 

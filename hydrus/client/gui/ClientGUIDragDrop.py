@@ -6,11 +6,11 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.exporting import ClientExportingFiles
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
@@ -45,13 +45,13 @@ def DoFileExportDragDrop( window, page_key, media, alt_down ):
     
     #
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     do_secret_discord_dnd_fix = new_options.GetBoolean( 'secret_discord_dnd_fix' ) and alt_down
     
     #
     
-    client_files_manager = HG.client_controller.client_files_manager
+    client_files_manager = CG.client_controller.client_files_manager
     
     original_paths = []
     media_and_original_paths = []

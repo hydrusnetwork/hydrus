@@ -5,13 +5,12 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusProfiling
-from hydrus.core import HydrusTime
+from hydrus.core.interfaces import HydrusControllerInterface
 
 class HydrusPubSub( object ):
     
-    def __init__( self, controller, valid_callable ):
+    def __init__( self, valid_callable ):
         
-        self._controller = controller
         self._valid_callable = valid_callable
         
         self._doing_work = False

@@ -193,7 +193,7 @@ class FilesStorageBaseLocation( object ):
     def STATICGetIdealWeights( current_num_bytes: int, base_locations: typing.List[ "FilesStorageBaseLocation" ] ) -> typing.Dict[ "FilesStorageBaseLocation", float ]:
         
         # This is kind of tacked on logic versus the eager/able/needs/would stuff, but I'm collecting it here so at least the logic, pseudo-doubled, is in one place
-        # this is used by the migrate database listctrl atm, but maybe we can merge all this together sometime
+        # this is used by the 'move media files' listctrl atm, but maybe we can merge all this together sometime
         
         result = {}
         

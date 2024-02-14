@@ -14,6 +14,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusTime
+from hydrus.core.interfaces import HydrusControllerInterface
 
 def CheckCanVacuum( db_path, stop_time = None ):
     
@@ -133,7 +134,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     READ_WRITE_ACTIONS = []
     UPDATE_WAIT = 2
     
-    def __init__( self, controller, db_dir, db_name ):
+    def __init__( self, controller: HydrusControllerInterface.HydrusControllerInterface, db_dir, db_name ):
         
         HydrusDBBase.DBBase.__init__( self )
         

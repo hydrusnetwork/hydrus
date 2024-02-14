@@ -12,6 +12,7 @@ from hydrus.core import HydrusTags
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDuplicates
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.importing.options import FileImportOptions
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
@@ -188,6 +189,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'tag_display_maintenance_during_active' ] = True
         
         self._dictionary[ 'booleans' ][ 'save_page_sort_on_change' ] = False
+        self._dictionary[ 'booleans' ][ 'disable_page_tab_dnd' ] = False
         self._dictionary[ 'booleans' ][ 'force_hide_page_signal_on_new_page' ] = False
         
         self._dictionary[ 'booleans' ][ 'pause_export_folders_sync' ] = False
@@ -1213,7 +1215,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                location_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+                location_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
                 
                 if location_context.IsEmpty():
                     

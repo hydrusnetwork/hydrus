@@ -3,6 +3,8 @@ from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIMenus
 
 class GUICore( QC.QObject ):
@@ -14,6 +16,9 @@ class GUICore( QC.QObject ):
         QC.QObject.__init__( self )
         
         self._menu_open = False
+        
+        # TODO: populate this shortly after boot and use it in place of many manual pixel counts
+        self.decent_pixel_text_height = 10
         
         GUICore.my_instance = self
         
@@ -54,7 +59,7 @@ class GUICore( QC.QObject ):
             
             from hydrus.core import HydrusGlobals as HG
             
-            if HG.client_controller.new_options.GetBoolean( 'do_macos_debug_dialog_menus' ):
+            if CG.client_controller.new_options.GetBoolean( 'do_macos_debug_dialog_menus' ):
                 
                 from hydrus.client.gui import ClientGUICoreMenuDebug
                 
@@ -78,4 +83,5 @@ class GUICore( QC.QObject ):
         ClientGUIMenus.DestroyMenu( menu )
         
     
+
 core = GUICore.instance

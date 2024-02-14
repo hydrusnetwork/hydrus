@@ -17,6 +17,7 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
@@ -126,7 +127,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         self.setMinimumWidth( width )
         self.setMinimumHeight( height )
         
-        self._petition_service_keys = [ service.GetServiceKey() for service in HG.client_controller.services_manager.GetServices( HC.REPOSITORIES ) if True in ( service.HasPermission( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service.GetServiceType() ] ) ]
+        self._petition_service_keys = [ service.GetServiceKey() for service in CG.client_controller.services_manager.GetServices( HC.REPOSITORIES ) if True in ( service.HasPermission( content_type, HC.PERMISSION_ACTION_MODERATE ) for content_type in HC.SERVICE_TYPES_TO_CONTENT_TYPES[ service.GetServiceType() ] ) ]
         
         self._InitButtons( 'home' )
         
@@ -163,7 +164,7 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
             
         elif entry_type in ( 'page_query', 'page_petitions' ):
             
-            name = HG.client_controller.services_manager.GetService( obj ).GetName()
+            name = CG.client_controller.services_manager.GetService( obj ).GetName()
             
             button.setText( name )
             
@@ -1108,7 +1109,7 @@ class Page( QW.QWidget ):
                 
             
             # do this 'after' so on a long session setup, it all boots once session loaded
-            HG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
+            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
             
             self._initialised = True
             self._initial_hashes = []
@@ -1133,7 +1134,7 @@ class Page( QW.QWidget ):
         else:
             
             # do this 'after' so on a long session setup, it all boots once session loaded
-            HG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
+            CG.client_controller.CallAfterQtSafe( self, 'starting page controller', self._management_panel.Start )
             
             self._initialised = True
             
@@ -1243,7 +1244,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
     
     def _UpdateOptions( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
+        if CG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' ):
             
             self.tabBar().setElideMode( QC.Qt.ElideMiddle )
             
@@ -1252,7 +1253,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             self.tabBar().setElideMode( QC.Qt.ElideNone )
             
         
-        direction = HG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
+        direction = CG.client_controller.new_options.GetInteger( 'notebook_tab_alignment' )
         
         self.setTabPosition( directions_for_notebook_tabs[ direction ] )
         
@@ -1625,7 +1626,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         page_name = HydrusText.ElideText( full_page_name, max_page_name_chars )
         
-        do_tooltip = len( page_name ) != len( full_page_name ) or HG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' )
+        do_tooltip = len( page_name ) != len( full_page_name ) or CG.client_controller.new_options.GetBoolean( 'elide_page_tab_names' )
         
         num_string = ''
         
@@ -1794,7 +1795,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             click_over_page_of_pages = isinstance( page, PagesNotebook )
             
-            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                 
                 label = 'page weight: {}'.format( HydrusData.ToHumanInt( page.GetTotalWeight() ) )
                 
@@ -2140,10 +2141,10 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         job_status.SetStatusText( 'loading session "{}"'.format( name ) + HC.UNICODE_ELLIPSIS )
         
-        HG.client_controller.pub( 'message', job_status )
+        CG.client_controller.pub( 'message', job_status )
         
         # get that message showing before we do the work of loading session
-        HG.client_controller.app.processEvents()
+        CG.client_controller.app.processEvents()
         
         try:
             
@@ -2157,7 +2158,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return
             
         
-        HG.client_controller.app.processEvents()
+        CG.client_controller.app.processEvents()
         
         if load_in_a_page_of_pages:
             
@@ -2168,7 +2169,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             destination = self
             
         
-        HG.client_controller.app.processEvents()
+        CG.client_controller.app.processEvents()
         
         destination.AppendGUISession( session )
         
@@ -3419,7 +3420,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if give_it_a_blank_page:
             
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             page.NewPageQuery( default_location_context )
             

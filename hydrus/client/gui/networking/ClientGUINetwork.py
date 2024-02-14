@@ -15,6 +15,7 @@ from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -178,7 +179,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._context_data_services = ClientGUICommon.BetterChoice( self )
         
-        for service in HG.client_controller.services_manager.GetServices( HC.REPOSITORIES ):
+        for service in CG.client_controller.services_manager.GetServices( HC.REPOSITORIES ):
             
             self._context_data_services.addItem( service.GetName(), service.GetServiceKey() )
             
@@ -192,7 +193,7 @@ class EditNetworkContextPanel( ClientGUIScrolledPanels.EditPanel ):
             self._context_data_none.setVisible( False )
             
         
-        names = HG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_LEGACY )
+        names = CG.client_controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_LEGACY )
         
         for name in names:
             
@@ -599,7 +600,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._bandwidths.Sort()
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.5, 5.0, 'repeating all bandwidth status update', self._Update )
+        self._update_job = CG.client_controller.CallRepeatingQtSafe( self, 0.5, 5.0, 'repeating all bandwidth status update', self._Update )
         
         #
         
@@ -958,9 +959,9 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        self._rules_job = HG.client_controller.CallRepeatingQtSafe( self, 0.5, 5.0, 'repeating bandwidth rules update', self._UpdateRules )
+        self._rules_job = CG.client_controller.CallRepeatingQtSafe( self, 0.5, 5.0, 'repeating bandwidth rules update', self._UpdateRules )
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.5, 1.0, 'repeating bandwidth status update', self._Update )
+        self._update_job = CG.client_controller.CallRepeatingQtSafe( self, 0.5, 1.0, 'repeating bandwidth status update', self._Update )
         
     
     def _EditRules( self ):

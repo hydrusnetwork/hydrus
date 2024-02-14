@@ -27,6 +27,7 @@ from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMedia
@@ -63,7 +64,7 @@ def CalculateCanvasMediaSize( media, canvas_size: QC.QSize, show_action ):
     
     '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
         
-        animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+        animated_scanbar_height = CG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
         
         canvas_height -= animated_scanbar_height
         '''
@@ -93,7 +94,7 @@ def CalculateCanvasZooms( canvas_size: QC.QSize, canvas_type: int, device_pixel_
         return ( 1.0, 1.0 )
         
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     ( canvas_width, canvas_height ) = CalculateCanvasMediaSize( media, canvas_size, show_action )
     
@@ -210,11 +211,11 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
         # Note that this handles a zipfile default thumb too. by sending None resolution to GetThumbnailResolution, it falls back to default dimensions
         # imperfect, but overall fine for most situations
         
-        bounding_dimensions = HG.client_controller.options[ 'thumbnail_dimensions' ]
-        thumbnail_scale_type = HG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
+        bounding_dimensions = CG.client_controller.options[ 'thumbnail_dimensions' ]
+        thumbnail_scale_type = CG.client_controller.new_options.GetInteger( 'thumbnail_scale_type' )
         
         # we want the device independant size here, not actual pixels, so want to keep this 100
-        #thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+        #thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         thumbnail_dpr_percent = 100
         
         ( thumb_width, thumb_height ) = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
@@ -229,7 +230,7 @@ def CalculateMediaContainerSize( media, device_pixel_ratio: float, zoom, show_ac
         
         '''if ClientGUICanvasMedia.ShouldHaveAnimationBar( media, show_action ):
             
-            animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+            animated_scanbar_height = CG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
             
             media_height += animated_scanbar_height
             '''
@@ -445,7 +446,7 @@ class Animation( QW.QWidget ):
         
         if self._canvas_qt_pixmap is None:
             
-            self._canvas_qt_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( my_raw_width, my_raw_height )
+            self._canvas_qt_pixmap = CG.client_controller.bitmap_manager.GetQtPixmap( my_raw_width, my_raw_height )
             
         
         self._canvas_qt_pixmap.setDevicePixelRatio( self.devicePixelRatio() )
@@ -797,13 +798,13 @@ class Animation( QW.QWidget ):
             
             self._num_frames = 1
             
-            HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+            CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
         else:
             
             self._num_frames = self._media.GetNumFrames()
             
-            HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+            CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
             self.update()
             
@@ -834,7 +835,7 @@ class Animation( QW.QWidget ):
                             
                             do_times_to_play_animation_pause = False
                             
-                            if self._media.GetMime() in HC.VIEWABLE_ANIMATIONS and not HG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                            if self._media.GetMime() in HC.VIEWABLE_ANIMATIONS and not CG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
                                 
                                 times_to_play_animation = self._video_container.GetTimesToPlayAnimation()
                                 
@@ -885,7 +886,7 @@ class Animation( QW.QWidget ):
             
         except:
             
-            HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+            CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
             raise
             
@@ -1040,7 +1041,7 @@ class AnimationBar( QW.QWidget ):
                 
             
         
-        animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
+        animated_scanbar_nub_width = CG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
         
         num_frames_are_useful = self._num_frames is not None and self._num_frames > 1
         
@@ -1106,7 +1107,7 @@ class AnimationBar( QW.QWidget ):
         
         mouse_pos = self.mapFromGlobal( QG.QCursor.pos() )
         
-        animated_scanbar_nub_width = HG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
+        animated_scanbar_nub_width = CG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
         
         compensated_x_position = mouse_pos.x() - ( animated_scanbar_nub_width / 2 )
         
@@ -1135,7 +1136,7 @@ class AnimationBar( QW.QWidget ):
         
         self._media_window = None
         
-        HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+        CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
         
         self.update()
         
@@ -1239,7 +1240,7 @@ class AnimationBar( QW.QWidget ):
         self._currently_in_a_drag = False
         self._it_was_playing_before_drag = False
         
-        HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+        CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
         
         self._next_draw_info = None
         
@@ -1407,7 +1408,7 @@ class MediaContainer( QW.QWidget ):
         
         self.hide()
         
-        HG.client_controller.sub( self, 'Pause', 'pause_all_media' )
+        CG.client_controller.sub( self, 'Pause', 'pause_all_media' )
         
     
     def _DestroyOrHideThisMediaWindow( self, media_window ):
@@ -1440,12 +1441,12 @@ class MediaContainer( QW.QWidget ):
                 
                 if isinstance( media_window, ClientGUIMPV.MPVWidget ):
                     
-                    HG.client_controller.gui.ReleaseMPVWidget( media_window )
+                    CG.client_controller.gui.ReleaseMPVWidget( media_window )
                     
                 
                 if isinstance( media_window, QtMediaPlayer ):
                     
-                    HG.client_controller.gui.ReleaseQtMediaPlayer( media_window )
+                    CG.client_controller.gui.ReleaseQtMediaPlayer( media_window )
                     
                 
             else:
@@ -1539,7 +1540,7 @@ class MediaContainer( QW.QWidget ):
             
         elif self._show_action == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_MPV:
             
-            self._media_window = HG.client_controller.gui.GetMPVWidget( self )
+            self._media_window = CG.client_controller.gui.GetMPVWidget( self )
             
             self._media_window.SetCanvasType( self._canvas_type )
             
@@ -1693,7 +1694,7 @@ class MediaContainer( QW.QWidget ):
             
             if zoom_center_type_override is None:
                 
-                zoom_center_type = HG.client_controller.new_options.GetInteger( 'media_viewer_zoom_center' )
+                zoom_center_type = CG.client_controller.new_options.GetInteger( 'media_viewer_zoom_center' )
                 
             else:
                 
@@ -1765,7 +1766,7 @@ class MediaContainer( QW.QWidget ):
         
         self._media_window = None
         
-        HG.client_controller.gui.UnregisterUIUpdateWindow( self )
+        CG.client_controller.gui.UnregisterUIUpdateWindow( self )
         
         self.hide()
         
@@ -1873,11 +1874,11 @@ class MediaContainer( QW.QWidget ):
         
         if full_size:
             
-            animated_scanbar_height = HG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
+            animated_scanbar_height = CG.client_controller.new_options.GetInteger( 'animated_scanbar_height' )
             
         else:
             
-            animated_scanbar_height = HG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' )
+            animated_scanbar_height = CG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' )
             
             if animated_scanbar_height is None:
                 
@@ -1948,7 +1949,7 @@ class MediaContainer( QW.QWidget ):
     
     def IsAtMaxZoom( self ):
         
-        possible_zooms = HG.client_controller.new_options.GetMediaZooms()
+        possible_zooms = CG.client_controller.new_options.GetMediaZooms()
         
         max_zoom = max( possible_zooms )
         
@@ -2190,7 +2191,7 @@ class MediaContainer( QW.QWidget ):
             self._media_window.show()
             
         
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
         self.show()
         
@@ -2232,9 +2233,9 @@ class MediaContainer( QW.QWidget ):
             return
             
         
-        ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = HG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
+        ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = CG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
         
-        possible_zooms = HG.client_controller.new_options.GetMediaZooms()
+        possible_zooms = CG.client_controller.new_options.GetMediaZooms()
         
         if exact_zooms_only:
             
@@ -2417,11 +2418,11 @@ class MediaContainer( QW.QWidget ):
             return
             
         
-        possible_zooms = HG.client_controller.new_options.GetMediaZooms()
+        possible_zooms = CG.client_controller.new_options.GetMediaZooms()
         
         max_zoom = max( possible_zooms )
         
-        ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = HG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
+        ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = CG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
         
         if exact_zooms_only:
             
@@ -2450,7 +2451,7 @@ class MediaContainer( QW.QWidget ):
             return
             
         
-        ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = HG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
+        ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = CG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
         
         if exact_zooms_only:
             
@@ -2475,7 +2476,7 @@ class MediaContainer( QW.QWidget ):
             
         else:
             
-            possible_zooms = HG.client_controller.new_options.GetMediaZooms()
+            possible_zooms = CG.client_controller.new_options.GetMediaZooms()
             
         
         possible_zooms.append( self._canvas_zoom )
@@ -2553,11 +2554,11 @@ class MediaContainer( QW.QWidget ):
         
         if self._current_zoom == switch_base:
             
-            possible_zooms = HG.client_controller.new_options.GetMediaZooms()
+            possible_zooms = CG.client_controller.new_options.GetMediaZooms()
             
             max_zoom = max( possible_zooms )
             
-            ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = HG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
+            ( media_scale_up, media_scale_down, preview_scale_up, preview_scale_down, exact_zooms_only, scale_up_quality, scale_down_quality ) = CG.client_controller.new_options.GetMediaZoomOptions( self._media.GetMime() )
             
             if exact_zooms_only:
                 
@@ -2599,8 +2600,8 @@ class MediaContainer( QW.QWidget ):
         else:
             
             is_near = self.MouseIsNearAnimationBar()
-            show_small_instead_of_hiding = HG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) is not None
-            force_show = self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or HG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' )
+            show_small_instead_of_hiding = CG.client_controller.new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) is not None
+            force_show = self._volume_control.PopupIsVisible() or self._animation_bar.DoingADrag() or CG.client_controller.new_options.GetBoolean( 'force_animation_scanbar_show' )
             
             should_show_controls = is_near or show_small_instead_of_hiding or force_show
             
@@ -2670,7 +2671,7 @@ class EmbedButton( QW.QWidget ):
         
         self.setCursor( QG.QCursor( QC.Qt.PointingHandCursor ) )
         
-        HG.client_controller.sub( self, 'update', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'update', 'notify_new_colourset' )
         
     
     def _Redraw( self, painter ):
@@ -2684,7 +2685,7 @@ class EmbedButton( QW.QWidget ):
         center_y = my_height // 2
         radius = min( 50, center_x, center_y ) - 5
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         colour = self._background_colour_generator.GetColour()
         
@@ -2770,7 +2771,7 @@ class EmbedButton( QW.QWidget ):
         
         if needs_thumb:
             
-            thumbnail_path = HG.client_controller.client_files_manager.GetThumbnailPath( self._media )
+            thumbnail_path = CG.client_controller.client_files_manager.GetThumbnailPath( self._media )
             
             thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
             
@@ -2790,7 +2791,7 @@ class OpenExternallyPanel( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
         self._media = media
         
@@ -2798,9 +2799,9 @@ class OpenExternallyPanel( QW.QWidget ):
         
         if self._media.GetLocationsManager().IsLocal():
             
-            qt_pixmap = HG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media ).GetQtPixmap()
+            qt_pixmap = CG.client_controller.GetCache( 'thumbnail' ).GetThumbnail( media ).GetQtPixmap()
             
-            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
             if thumbnail_dpr_percent != 100:
                 
@@ -2849,7 +2850,7 @@ class OpenExternallyPanel( QW.QWidget ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        client_files_manager = HG.client_controller.client_files_manager
+        client_files_manager = CG.client_controller.client_files_manager
         
         path = client_files_manager.GetFilePath( hash, mime )
         
@@ -2909,8 +2910,8 @@ class QtMediaPlayer( QW.QWidget ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
         
-        HG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
-        HG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
+        CG.client_controller.sub( self, 'UpdateAudioMute', 'new_audio_mute' )
+        CG.client_controller.sub( self, 'UpdateAudioVolume', 'new_audio_volume' )
         
     
     def _MediaStatusChanged( self, status ):
@@ -3144,7 +3145,7 @@ class QtMediaPlayer( QW.QWidget ):
         self._my_video_output.setVisible( not is_audio )
         self._my_audio_placeholder.setVisible( is_audio )
         
-        path = HG.client_controller.client_files_manager.GetFilePath( self._media.GetHash(), self._media.GetMime() )
+        path = CG.client_controller.client_files_manager.GetFilePath( self._media.GetHash(), self._media.GetMime() )
         
         self._media_player.setSource( QC.QUrl.fromLocalFile( path ) )
         
@@ -3209,7 +3210,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
-        self._tile_cache = HG.client_controller.GetCache( 'image_tiles' )
+        self._tile_cache = CG.client_controller.GetCache( 'image_tiles' )
         
         self._canvas_tiles = {}
         
@@ -3255,7 +3256,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             # the trick of going ( 123456 // 16 ) * 16 to give you a nice multiple of 16 does not work with floats like 1.4 lmao.
             # what we can do instead is phrase 1.4 as 7/5 and use 7 as our int. any number cleanly divisible by 7 is cleanly divisible by 1.4
             
-            ideal_tile_dimension = HG.client_controller.new_options.GetInteger( 'ideal_tile_dimension' )
+            ideal_tile_dimension = CG.client_controller.new_options.GetInteger( 'ideal_tile_dimension' )
             
             nice_number = HydrusData.GetNicelyDivisibleNumberForZoom( self._zoom / self.devicePixelRatio(), ideal_tile_dimension )
             
@@ -3376,7 +3377,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         raw_width = raw_canvas_clip_rect.width()
         raw_height = raw_canvas_clip_rect.height()
         
-        tile_pixmap = HG.client_controller.bitmap_manager.GetQtPixmap( raw_width, raw_height )
+        tile_pixmap = CG.client_controller.bitmap_manager.GetQtPixmap( raw_width, raw_height )
         
         painter = QG.QPainter( tile_pixmap )
         
@@ -3690,13 +3691,13 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._media = media
         
-        image_cache = HG.client_controller.GetCache( 'images' )
+        image_cache = CG.client_controller.GetCache( 'images' )
         
         self._image_renderer = image_cache.GetImageRenderer( self._media )
         
         if not self._image_renderer.IsReady():
             
-            HG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+            CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
             
         
         self.update()
@@ -3710,12 +3711,12 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 self.update()
                 
-                HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+                CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
                 
             
         except:
             
-            HG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
+            CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
             
             raise
             

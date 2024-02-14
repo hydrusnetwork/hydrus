@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientData
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
@@ -267,7 +268,7 @@ class FileViewingStatsManager( object ):
     
     def _GenerateViewsRow( self, media: ClientMedia.Media, canvas_type: int, view_timestamp_ms: int, viewtime_delta: int ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         viewtime_min = None
         viewtime_max = None
@@ -341,8 +342,8 @@ class FileViewingStatsManager( object ):
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
         
-        HG.client_controller.pub( 'content_updates_data', content_update_package )
-        HG.client_controller.pub( 'content_updates_gui', content_update_package )
+        CG.client_controller.pub( 'content_updates_data', content_update_package )
+        CG.client_controller.pub( 'content_updates_gui', content_update_package )
         
     
     def Flush( self ):
@@ -374,7 +375,7 @@ class FileViewingStatsManager( object ):
     
     def FinishViewing( self, media: ClientMedia.MediaSingleton, canvas_type, view_timestamp_ms, viewtime_delta ):
         
-        if not HG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
+        if not CG.client_controller.new_options.GetBoolean( 'file_viewing_statistics_active' ):
             
             return
             

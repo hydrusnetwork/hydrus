@@ -4,9 +4,9 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientThreading
 from hydrus.client.importing import ClientImportFileSeeds
@@ -127,12 +127,12 @@ def PublishPresentationHashes( publishing_label: str, hashes: typing.List[ bytes
         
         job_status.Finish() # important to later make it auto-dismiss on all files disappearing
         
-        HG.client_controller.pub( 'message', job_status )
+        CG.client_controller.pub( 'message', job_status )
         
     
     if publish_files_to_page:
         
-        HG.client_controller.pub( 'imported_files_to_page', list( hashes ), publishing_label )
+        CG.client_controller.pub( 'imported_files_to_page', list( hashes ), publishing_label )
         
     
 

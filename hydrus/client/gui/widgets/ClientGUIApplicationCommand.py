@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
@@ -33,7 +34,7 @@ class LocalFilesSubPanel( QW.QWidget ):
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
+        services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
         
         for service in services:
             
@@ -98,7 +99,7 @@ class RatingLikeSubPanel( QW.QWidget ):
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         if len( services ) == 0:
             
@@ -209,7 +210,7 @@ class RatingNumericalSubPanel( QW.QWidget ):
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
         if len( services ) == 0:
             
@@ -265,7 +266,7 @@ class RatingNumericalSubPanel( QW.QWidget ):
         
         if service_key is not None:
             
-            service = HG.client_controller.services_manager.GetService( service_key )
+            service = CG.client_controller.services_manager.GetService( service_key )
             
             self._current_ratings_numerical_service = service
             
@@ -347,7 +348,7 @@ class RatingIncDecSubPanel( QW.QWidget ):
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ) )
+        services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, HC.LOCAL_RATING_INCDEC ) )
         
         if len( services ) == 0:
             
@@ -696,13 +697,13 @@ class TagSubPanel( QW.QWidget ):
         self._tag_value = QW.QLineEdit( self )
         self._tag_value.setReadOnly( True )
         
-        default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+        default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         self._tag_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY )
         
         #
         
-        services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
+        services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, HC.TAG_REPOSITORY ) )
         
         for service in services:
             
@@ -842,9 +843,9 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
             
             service_key = command.GetContentServiceKey()
             
-            if HG.client_controller.services_manager.ServiceExists( service_key ):
+            if CG.client_controller.services_manager.ServiceExists( service_key ):
                 
-                service = HG.client_controller.services_manager.GetService( service_key )
+                service = CG.client_controller.services_manager.GetService( service_key )
                 
                 action = command.GetContentAction()
                 value = command.GetContentValue()
@@ -853,7 +854,7 @@ class ApplicationCommandWidget( ClientGUIScrolledPanels.EditPanel ):
                 
                 ClientGUIDialogsMessage.ShowWarning( self, 'The service that this command relies upon no longer exists! This command will reset to a default form.' )
                 
-                local_tag_services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+                local_tag_services = list( CG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
                 
                 service = local_tag_services[0]
                 

@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIPredicatesSingle
@@ -22,7 +23,7 @@ class PredicateSystemRatingIncDecControl( QW.QWidget ):
         
         self._service_key = service_key
         
-        service = HG.client_controller.services_manager.GetService( self._service_key )
+        service = CG.client_controller.services_manager.GetService( self._service_key )
         
         name = service.GetName()
         
@@ -112,7 +113,7 @@ class PredicateSystemRatingLikeControl( QW.QWidget ):
         
         self._service_key = service_key
         
-        service = HG.client_controller.services_manager.GetService( self._service_key )
+        service = CG.client_controller.services_manager.GetService( self._service_key )
         
         name = service.GetName()
         
@@ -248,7 +249,7 @@ class PredicateSystemRatingNumericalControl( QW.QWidget ):
         
         self._service_key = service_key
         
-        service = HG.client_controller.services_manager.GetService( self._service_key )
+        service = CG.client_controller.services_manager.GetService( self._service_key )
         
         name = service.GetName()
         
@@ -422,7 +423,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
         
         #
         
-        local_like_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
+        local_like_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_LIKE, ) )
         
         gridbox = QP.GridLayout( cols = 5 )
         
@@ -454,7 +455,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
         
         #
         
-        local_numerical_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
+        local_numerical_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_NUMERICAL, ) )
         
         for service in local_numerical_services:
             
@@ -476,7 +477,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
         
         #
         
-        local_incdec_services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
+        local_incdec_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_RATING_INCDEC, ) )
         
         for service in local_incdec_services:
             
@@ -510,7 +511,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
     
     def _FilterWhatICanEdit( self, predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.Collection[ ClientSearch.Predicate ]:
         
-        local_rating_service_keys = HG.client_controller.services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
+        local_rating_service_keys = CG.client_controller.services_manager.GetServiceKeys( HC.RATINGS_SERVICES )
         
         good_predicates = []
         
@@ -541,7 +542,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
             return predicates
             
         
-        custom_default_predicates = HG.client_controller.new_options.GetCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
+        custom_default_predicates = CG.client_controller.new_options.GetCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
         
         custom_default_predicates = self._FilterWhatICanEdit( custom_default_predicates )
         
@@ -557,7 +558,7 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
     
     def ClearCustomDefault( self ):
         
-        HG.client_controller.new_options.ClearCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
+        CG.client_controller.new_options.ClearCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
         
     
     def GetDefaultPredicates( self ):
@@ -581,12 +582,12 @@ class PanelPredicateSystemRating( PanelPredicateSystemMultiple ):
         
         predicates = self.GetPredicates()
         
-        HG.client_controller.new_options.SetCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, predicates = predicates )
+        CG.client_controller.new_options.SetCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING, predicates = predicates )
         
     
     def UsesCustomDefault( self ) -> bool:
         
-        custom_default_predicates = HG.client_controller.new_options.GetCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
+        custom_default_predicates = CG.client_controller.new_options.GetCustomDefaultSystemPredicates( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_RATING )
         
         custom_default_predicates = self._FilterWhatICanEdit( custom_default_predicates )
         

@@ -22,6 +22,7 @@ from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientManagers
 from hydrus.client.gui import ClientGUIAsync
@@ -81,7 +82,7 @@ def EditNamespaceSort( win: QW.QWidget, sort_data ):
             
             if len( edited_namespaces ) > 0:
                 
-                if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+                if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                     
                     available_types = [
                         ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL,
@@ -121,7 +122,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._original_tag_autocomplete_options = tag_autocomplete_options
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         all_real_tag_service_keys = services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
         
@@ -331,7 +332,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        services = list( HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
+        services = list( CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
         
         select_service_key = services[0].GetServiceKey()
         
@@ -376,7 +377,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         self._sync_status.setWordWrap( True )
         
-        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+        if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
             
             self._sync_status.setText( 'Siblings and parents are set to sync all the time. Changes will start applying as soon as you ok this dialog.' )
             
@@ -384,7 +385,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+            if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
                 
                 self._sync_status.setText( 'Siblings and parents are only set to sync during idle time. Changes here will only start to apply when you are not using the client.' )
                 
@@ -436,7 +437,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            self._sibling_service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._sibling_box, 4, HG.client_controller.services_manager.GetName, add_callable = self._AddSibling )
+            self._sibling_service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._sibling_box, 4, CG.client_controller.services_manager.GetName, add_callable = self._AddSibling )
             
             #
             
@@ -448,7 +449,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
-            self._parent_service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._sibling_box, 4, HG.client_controller.services_manager.GetName, add_callable = self._AddParent )
+            self._parent_service_keys_listbox = ClientGUIListBoxes.QueueListBox( self._sibling_box, 4, CG.client_controller.services_manager.GetName, add_callable = self._AddParent )
             
             #
             
@@ -479,7 +480,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         def _AddService( self, current_service_keys ):
             
-            allowed_services = HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
+            allowed_services = CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES )
             
             allowed_services = [ service for service in allowed_services if service.GetServiceKey() not in current_service_keys ]
             
@@ -533,7 +534,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        services = list( HG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) )
+        services = list( CG.client_controller.services_manager.GetServices( ( HC.COMBINED_TAG, HC.LOCAL_TAG, HC.TAG_REPOSITORY ) ) )
         
         for service in services:
             
@@ -700,7 +701,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._show_all_panels_button = ClientGUICommon.BetterButton( self, 'show other panels', self._ShowAllPanels )
         self._show_all_panels_button.setToolTip( 'This shows the whitelist and advanced panels, in case you want to craft a clever blacklist with \'except\' rules.' )
         
-        show_the_button = self._only_show_blacklist and HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        show_the_button = self._only_show_blacklist and CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
         self._show_all_panels_button.setVisible( show_the_button )
         
@@ -1014,7 +1015,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def do_it( name ):
             
-            names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+            names_to_tag_filters = CG.client_controller.new_options.GetFavouriteTagFilters()
             
             if name in names_to_tag_filters:
                 
@@ -1029,11 +1030,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 del names_to_tag_filters[ name ]
                 
-                HG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
+                CG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
                 
             
         
-        names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+        names_to_tag_filters = CG.client_controller.new_options.GetFavouriteTagFilters()
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
@@ -1054,11 +1055,11 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ExportFavourite( self ):
         
-        names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+        names_to_tag_filters = CG.client_controller.new_options.GetFavouriteTagFilters()
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'this tag filter', 'export this tag filter', HG.client_controller.pub, 'clipboard', 'text', self.GetValue().DumpToString() )
+        ClientGUIMenus.AppendMenuItem( menu, 'this tag filter', 'export this tag filter', CG.client_controller.pub, 'clipboard', 'text', self.GetValue().DumpToString() )
         
         if len( names_to_tag_filters ) > 0:
             
@@ -1066,7 +1067,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             for ( name, tag_filter ) in names_to_tag_filters.items():
                 
-                ClientGUIMenus.AppendMenuItem( menu, name, 'export {}'.format( name ), HG.client_controller.pub, 'clipboard', 'text', tag_filter.DumpToString() )
+                ClientGUIMenus.AppendMenuItem( menu, name, 'export {}'.format( name ), CG.client_controller.pub, 'clipboard', 'text', tag_filter.DumpToString() )
                 
             
         
@@ -1092,7 +1093,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -1129,7 +1130,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+                names_to_tag_filters = CG.client_controller.new_options.GetFavouriteTagFilters()
                 
                 name = dlg.GetValue()
                 
@@ -1147,7 +1148,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 names_to_tag_filters[ name ] = tag_filter
                 
-                HG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
+                CG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
                 
                 self.SetValue( tag_filter )
                 
@@ -1386,7 +1387,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _LoadFavourite( self ):
         
-        names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+        names_to_tag_filters = CG.client_controller.new_options.GetFavouriteTagFilters()
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
@@ -1411,7 +1412,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                names_to_tag_filters = HG.client_controller.new_options.GetFavouriteTagFilters()
+                names_to_tag_filters = CG.client_controller.new_options.GetFavouriteTagFilters()
                 
                 name = dlg.GetValue()
                 tag_filter = self.GetValue()
@@ -1430,7 +1431,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 names_to_tag_filters[ name ] = tag_filter
                 
-                HG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
+                CG.client_controller.new_options.SetFavouriteTagFilters( names_to_tag_filters )
                 
             
         
@@ -1471,7 +1472,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._redundant_st.setText( text )
         
-        HG.client_controller.CallLaterQtSafe( self._redundant_st, 2, 'clear redundant error', self._redundant_st.setVisible, False )
+        CG.client_controller.CallLaterQtSafe( self._redundant_st, 2, 'clear redundant error', self._redundant_st.setVisible, False )
         
     
     def _SimpleAddBlacklistMultiple( self, tag_slices ):
@@ -1745,7 +1746,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     results = []
                     
-                    tags_to_siblings = HG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, test_tags )
+                    tags_to_siblings = CG.client_controller.Read( 'tag_siblings_lookup', CC.COMBINED_TAG_SERVICE_KEY, test_tags )
                     
                     for test_tag_and_siblings in tags_to_siblings.values():
                         
@@ -1947,16 +1948,16 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         #
         
-        services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        services = list( CG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
-        services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
+        services.extend( CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         
         if HG.gui_report_mode:
             
             HydrusData.ShowText( f'Opening manage tags on these services: {services}' )
             
         
-        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
+        default_tag_service_key = CG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         for service in services:
             
@@ -1978,6 +1979,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             page.showNext.connect( self.ShowNext )
             
             page.okSignal.connect( self.okSignal )
+            
+            page.valueChanged.connect( self._UpdatePageTabNames )
             
             if service_key == default_tag_service_key:
                 
@@ -2003,10 +2006,12 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         if self._canvas_key is not None:
             
-            HG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
+            CG.client_controller.sub( self, 'CanvasHasNewMedia', 'canvas_new_display_media' )
             
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
+        
+        self._UpdatePageTabNames()
         
         QP.CallAfter( self._SetSearchFocus )
         
@@ -2033,6 +2038,39 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
         
     
+    def _UpdatePageTabNames( self ):
+        
+        for index in range( self._tag_services.count() ):
+            
+            page = self._tag_services.widget( index )
+            
+            service_key = page.GetServiceKey()
+            
+            service_name = CG.client_controller.services_manager.GetServiceName( service_key )
+            
+            num_tags = page.GetTagCount()
+            
+            if num_tags > 0:
+                
+                tab_name = f'{service_name} ({num_tags})'
+                
+            else:
+                
+                tab_name = service_name
+                
+            
+            if page.HasChanges():
+                
+                tab_name += ' *'
+                
+            
+            if self._tag_services.tabText( index ) != tab_name:
+                
+                self._tag_services.setTabText( index, tab_name )
+                
+            
+        
+    
     def CanvasHasNewMedia( self, canvas_key, new_media_singleton ):
         
         if canvas_key == self._canvas_key:
@@ -2045,6 +2083,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                     page.SetMedia( self._current_media )
                     
+                
+                self._UpdatePageTabNames()
                 
             
         
@@ -2065,7 +2105,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         for content_update_package in content_update_packages:
             
-            HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     
@@ -2085,14 +2125,14 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         if page is not None:
             
-            HG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
+            CG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
             
         
-        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+        if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
             current_page = self._tag_services.currentWidget()
             
-            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
         
     
@@ -2163,7 +2203,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         if self._canvas_key is not None:
             
-            HG.client_controller.pub( 'canvas_show_next', self._canvas_key )
+            CG.client_controller.pub( 'canvas_show_next', self._canvas_key )
             
         
     
@@ -2171,7 +2211,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         if self._canvas_key is not None:
             
-            HG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
+            CG.client_controller.pub( 'canvas_show_previous', self._canvas_key )
             
         
     
@@ -2201,6 +2241,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         movePageRight = QC.Signal()
         showPrevious = QC.Signal()
         showNext = QC.Signal()
+        valueChanged = QC.Signal()
         
         def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, media, immediate_commit, canvas_key = None ):
             
@@ -2214,7 +2255,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._groups_of_content_updates = []
             
-            self._service = HG.client_controller.services_manager.GetService( self._tag_service_key )
+            self._service = CG.client_controller.services_manager.GetService( self._tag_service_key )
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
@@ -2226,7 +2267,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             #
             
-            self._new_options = HG.client_controller.new_options
+            self._new_options = CG.client_controller.new_options
             
             if self._i_am_local_tag_service:
                 
@@ -2324,7 +2365,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             if self._immediate_commit:
                 
-                HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+                CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
                 
             
             self._suggested_tags.mouseActivationOccurred.connect( self.SetTagBoxFocus )
@@ -2550,7 +2591,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         'splitting filename/title/etc... into individual tags'
                     ]
                     
-                    suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE )
+                    suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE )
                     
                     suggestions.extend( fixed_suggestions )
                     
@@ -2562,7 +2603,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                             
                             if reason not in fixed_suggestions:
                                 
-                                HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, reason )
+                                CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, reason )
                                 
                             
                         else:
@@ -2632,7 +2673,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                 
             
-            num_recent_tags = HG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
+            num_recent_tags = CG.client_controller.new_options.GetNoneableInteger( 'num_recent_tags' )
             
             if len( recent_tags ) > 0 and num_recent_tags is not None:
                 
@@ -2643,7 +2684,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     recent_tags = random.sample( recent_tags, num_recent_tags )
                     
                 
-                HG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
+                CG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
                 
             
             if len( content_updates_group ) > 0:
@@ -2652,7 +2693,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                     content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates_group )
                     
-                    HG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                    CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                 else:
                     
@@ -2663,6 +2704,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             
             self._tags_box.SetTagsByMedia( self._media )
+            
+            self.valueChanged.emit()
             
         
         def _MigrateTags( self ):
@@ -2676,7 +2719,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             def do_it( tag_service_key, hashes ):
                 
-                tlw = HG.client_controller.GetMainTLW()
+                tlw = CG.client_controller.GetMainTLW()
                 
                 frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'migrate tags' )
                 
@@ -2707,7 +2750,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 text = os.linesep.join( tags )
                 
-                HG.client_controller.pub( 'clipboard', 'text', text )
+                CG.client_controller.pub( 'clipboard', 'text', text )
                 
             
         
@@ -2756,7 +2799,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             try:
                 
-                raw_text = HG.client_controller.GetClipboardText()
+                raw_text = CG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -2855,6 +2898,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             return content_update_packages
             
         
+        def GetTagCount( self ):
+            
+            return self._tags_box.GetNumTerms()
+            
+        
         def GetServiceKey( self ):
             
             return self._tag_service_key
@@ -2921,6 +2969,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._tags_box.SetTagsByMedia( self._media )
             
+            self.valueChanged.emit()
+            
             self._suggested_tags.MediaUpdated()
             
         
@@ -2964,6 +3014,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._tags_box.SetTagsByMedia( self._media )
             
+            self.valueChanged.emit()
+            
             self._suggested_tags.SetMedia( media )
             
         
@@ -2983,11 +3035,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
+        default_tag_service_key = CG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
-        services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        services = list( CG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
-        services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
+        services.extend( CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         
         for service in services:
             
@@ -3018,11 +3070,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SaveDefaultTagServiceKey( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+        if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
             current_page = self._tag_services.currentWidget()
             
-            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
         
     
@@ -3049,7 +3101,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         if content_update_package.HasContent():
             
-            HG.client_controller.Write( 'content_updates', content_update_package )
+            CG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
@@ -3078,7 +3130,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._service_key = service_key
             
-            self._service = HG.client_controller.services_manager.GetService( self._service_key )
+            self._service = CG.client_controller.services_manager.GetService( self._service_key )
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
@@ -3134,7 +3186,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._children.setMinimumHeight( preview_height )
             self._parents.setMinimumHeight( preview_height )
             
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, default_location_context, service_key, show_paste_button = True )
             self._child_input.setEnabled( False )
@@ -3194,7 +3246,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._child_input.tagsPasted.connect( self.EnterChildrenOnlyAdd )
             self._parent_input.tagsPasted.connect( self.EnterParentsOnlyAdd )
             
-            HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
+            CG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
         
         def _AddButton( self ):
@@ -3285,7 +3337,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             'character/series/studio/etc... belonging (character x belongs to series y)'
                         ]
                         
-                        suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD )
+                        suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD )
                         
                         suggestions.extend( fixed_suggestions )
                         
@@ -3297,7 +3349,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                 
                                 if reason not in fixed_suggestions:
                                     
-                                    HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, reason )
+                                    CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, reason )
                                     
                                 
                             else:
@@ -3370,7 +3422,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                     'obvious typo/mistake'
                                 ]
                                 
-                                suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE )
+                                suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE )
                                 
                                 suggestions.extend( fixed_suggestions )
                                 
@@ -3383,7 +3435,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                                         
                                         if reason not in fixed_suggestions:
                                             
-                                            HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, reason )
+                                            CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, reason )
                                             
                                         
                                     else:
@@ -3617,7 +3669,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            HG.client_controller.pub( 'clipboard', 'text', export_string )
+            CG.client_controller.pub( 'clipboard', 'text', export_string )
             
         
         def _ExportToTXT( self ):
@@ -3657,7 +3709,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             try:
                 
-                raw_text = HG.client_controller.GetClipboardText()
+                raw_text = CG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -3984,8 +4036,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                 else:
                     
-                    synced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if not work_to_do ) )
-                    unsynced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if work_to_do ) )
+                    synced_names = sorted( ( CG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if not work_to_do ) )
+                    unsynced_names = sorted( ( CG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if work_to_do ) )
                     
                     synced_string = ', '.join( ( '"{}"'.format( name ) for name in synced_names ) )
                     unsynced_string = ', '.join( ( '"{}"'.format( name ) for name in unsynced_names ) )
@@ -4008,7 +4060,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+                    if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
                         
                         maintenance_part = 'Parents are set to sync all the time in the background.'
                         
@@ -4025,7 +4077,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         looking_good = False
                         
-                        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+                        if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
                             
                             maintenance_part = 'Parents are set to sync only when you are not using the client.'
                             changes_part = 'It may take some time for changes here to apply.'
@@ -4097,9 +4149,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            original_statuses_to_pairs = HG.client_controller.Read( 'tag_parents', service_key )
+            original_statuses_to_pairs = CG.client_controller.Read( 'tag_parents', service_key )
             
-            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = HG.client_controller.Read( 'tag_display_application' )
+            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = CG.client_controller.Read( 'tag_display_application' )
             
             service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_parent_applicable_service_keys.items() if service_key in s_ks }
             
@@ -4107,7 +4159,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             for s_k in service_keys_we_care_about:
                 
-                status = HG.client_controller.Read( 'tag_display_maintenance_status', s_k )
+                status = CG.client_controller.Read( 'tag_display_maintenance_status', s_k )
                 
                 work_to_do = status[ 'num_parents_to_sync' ] > 0
                 
@@ -4132,11 +4184,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        default_tag_service_key = HG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
+        default_tag_service_key = CG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
-        services = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
+        services = list( CG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) ) )
         
-        services.extend( HG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
+        services.extend( CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) ) )
         
         for service in services:
             
@@ -4167,11 +4219,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     def _SaveDefaultTagServiceKey( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+        if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
             
             current_page = self._tag_services.currentWidget()
             
-            HG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
             
         
     
@@ -4198,7 +4250,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         if content_update_package.HasContent():
             
-            HG.client_controller.Write( 'content_updates', content_update_package )
+            CG.client_controller.Write( 'content_updates', content_update_package )
             
         
     
@@ -4225,7 +4277,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         if page is not None:
             
-            HG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
+            CG.client_controller.CallAfterQtSafe( page, 'setting page focus', page.SetTagBoxFocus )
             
         
     
@@ -4239,7 +4291,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._service_key = service_key
             
-            self._service = HG.client_controller.services_manager.GetService( self._service_key )
+            self._service = CG.client_controller.services_manager.GetService( self._service_key )
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
@@ -4291,7 +4343,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._old_siblings.setMinimumHeight( preview_height )
             
-            default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+            default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, default_location_context, service_key, show_paste_button = True )
             self._old_input.setEnabled( False )
@@ -4345,7 +4397,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all.clicked.connect( self._UpdateListCtrlData )
             self._old_siblings.listBoxChanged.connect( self._UpdateListCtrlData )
             
-            HG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
+            CG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
             
             self._listctrl_async_updater = self._InitialiseListCtrlAsyncUpdater()
             
@@ -4455,7 +4507,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             'rewording/namespacing based on preference'
                         ]
                         
-                        suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD )
+                        suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD )
                         
                         suggestions.extend( fixed_suggestions )
                         
@@ -4469,7 +4521,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                                 
                                 if reason not in fixed_suggestions:
                                     
-                                    HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, reason )
+                                    CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, reason )
                                     
                                 
                             else:
@@ -4561,7 +4613,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                                 'correcting to repository standard'
                             ]
                             
-                            suggestions = HG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE )
+                            suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE )
                             
                             suggestions.extend( fixed_suggestions )
                             
@@ -4573,7 +4625,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                                     
                                     if reason not in fixed_suggestions:
                                         
-                                        HG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, reason )
+                                        CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, reason )
                                         
                                     
                                 else:
@@ -4956,7 +5008,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             export_string = self._GetExportString()
             
-            HG.client_controller.pub( 'clipboard', 'text', export_string )
+            CG.client_controller.pub( 'clipboard', 'text', export_string )
             
         
         def _ExportToTXT( self ):
@@ -4996,7 +5048,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             try:
                 
-                raw_text = HG.client_controller.GetClipboardText()
+                raw_text = CG.client_controller.GetClipboardText()
                 
             except HydrusExceptions.DataMissing as e:
                 
@@ -5369,8 +5421,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 else:
                     
-                    synced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if not work_to_do ) )
-                    unsynced_names = sorted( ( HG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if work_to_do ) )
+                    synced_names = sorted( ( CG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if not work_to_do ) )
+                    unsynced_names = sorted( ( CG.client_controller.services_manager.GetName( s_k ) for ( s_k, work_to_do ) in service_keys_to_work_to_do.items() if work_to_do ) )
                     
                     synced_string = ', '.join( ( '"{}"'.format( name ) for name in synced_names ) )
                     unsynced_string = ', '.join( ( '"{}"'.format( name ) for name in unsynced_names ) )
@@ -5393,7 +5445,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+                    if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
                         
                         maintenance_part = 'Siblings are set to sync all the time in the background.'
                         
@@ -5410,7 +5462,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         looking_good = False
                         
-                        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+                        if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
                             
                             maintenance_part = 'Siblings are set to sync only when you are not using the client.'
                             changes_part = 'It may take some time for changes here to apply.'
@@ -5483,9 +5535,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            original_statuses_to_pairs = HG.client_controller.Read( 'tag_siblings', service_key )
+            original_statuses_to_pairs = CG.client_controller.Read( 'tag_siblings', service_key )
             
-            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = HG.client_controller.Read( 'tag_display_application' )
+            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = CG.client_controller.Read( 'tag_display_application' )
             
             service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_sibling_applicable_service_keys.items() if service_key in s_ks }
             
@@ -5493,7 +5545,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             for s_k in service_keys_we_care_about:
                 
-                status = HG.client_controller.Read( 'tag_display_maintenance_status', s_k )
+                status = CG.client_controller.Read( 'tag_display_maintenance_status', s_k )
                 
                 work_to_do = status[ 'num_siblings_to_sync' ] > 0
                 
@@ -5522,7 +5574,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        services = list( HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
+        services = list( CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
         
         select_service_key = services[0].GetServiceKey()
         
@@ -5563,12 +5615,12 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self.widget().setLayout( vbox )
         
-        HG.client_controller.sub( self, '_UpdateStatusText', 'notify_new_menu_option' )
+        CG.client_controller.sub( self, '_UpdateStatusText', 'notify_new_menu_option' )
         
     
     def _UpdateStatusText( self ):
         
-        if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+        if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
             
             self._sync_status.setText( 'Siblings and parents are set to sync all the time. If there is work to do here, it should be cleared out in real time as you watch.' )
             
@@ -5576,7 +5628,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            if HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
+            if CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_idle' ):
                 
                 self._sync_status.setText( 'Siblings and parents are only set to sync during idle time. If there is work to do here, it should be cleared out when you are not using the client.' )
                 
@@ -5623,8 +5675,8 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._refresh_values_updater = self._InitialiseRefreshValuesUpdater()
             
-            HG.client_controller.sub( self, 'NotifyRefresh', 'notify_new_tag_display_sync_status' )
-            HG.client_controller.sub( self, '_StartRefresh', 'notify_new_tag_display_application' )
+            CG.client_controller.sub( self, 'NotifyRefresh', 'notify_new_tag_display_sync_status' )
+            CG.client_controller.sub( self, '_StartRefresh', 'notify_new_tag_display_application' )
             
             self._StartRefresh()
             
@@ -5640,7 +5692,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._refresh_button.setEnabled( False )
                 
                 # keep button available to slow down
-                running_fast_and_button_is_slow = HG.client_controller.tag_display_maintenance_manager.CurrentlyGoingFaster( self._service_key ) and 'slow' in self._go_faster_button.text()
+                running_fast_and_button_is_slow = CG.client_controller.tag_display_maintenance_manager.CurrentlyGoingFaster( self._service_key ) and 'slow' in self._go_faster_button.text()
                 
                 if not running_fast_and_button_is_slow:
                     
@@ -5650,7 +5702,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             def work_callable( args ):
                 
-                status = HG.client_controller.Read( 'tag_display_maintenance_status', service_key )
+                status = CG.client_controller.Read( 'tag_display_maintenance_status', service_key )
                 
                 time.sleep( 0.1 ) # for user feedback more than anything
                 
@@ -5746,13 +5798,13 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 self._go_faster_button.setVisible( sync_work_to_do and not sync_halted )
                 self._go_faster_button.setEnabled( sync_work_to_do and not sync_halted )
                 
-                if HG.client_controller.tag_display_maintenance_manager.CurrentlyGoingFaster( self._service_key ):
+                if CG.client_controller.tag_display_maintenance_manager.CurrentlyGoingFaster( self._service_key ):
                     
                     self._go_faster_button.setText( 'slow down!' )
                     
                 else:
                     
-                    if not HG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
+                    if not CG.client_controller.new_options.GetBoolean( 'tag_display_maintenance_during_active' ):
                         
                         self._go_faster_button.setText( 'work now!' )
                         
@@ -5773,7 +5825,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def _SyncFaster( self ):
             
-            HG.client_controller.tag_display_maintenance_manager.FlipSyncFaster( self._service_key )
+            CG.client_controller.tag_display_maintenance_manager.FlipSyncFaster( self._service_key )
             
             self._StartRefresh()
             
@@ -5816,7 +5868,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
-            namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+            namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
             
             panel = EditTagFilterPanel( dlg, self._tag_filter, only_show_blacklist = self._only_show_blacklist, namespaces = namespaces, message = self._message )
             

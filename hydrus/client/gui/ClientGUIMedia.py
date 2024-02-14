@@ -12,6 +12,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
@@ -56,7 +57,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
         num_hashes = len( sha256_hashes )
         num_remote_medias = len( [ not media.GetLocationsManager().IsLocal() for media in flat_media ] )
         
-        source_to_desired = HG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
+        source_to_desired = CG.client_controller.Read( 'file_hashes', sha256_hashes, 'sha256', hash_type )
         
         desired_hashes = [ source_to_desired[ source_hash ] for source_hash in sha256_hashes if source_hash in source_to_desired ]
         
@@ -98,20 +99,20 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
             text_lines = desired_hashes
             
         
-        if HG.client_controller.new_options.GetBoolean( 'prefix_hash_when_copying' ):
+        if CG.client_controller.new_options.GetBoolean( 'prefix_hash_when_copying' ):
             
             text_lines = [ '{}:{}'.format( hash_type, hex_hash ) for hex_hash in text_lines ]
             
         
         hex_hashes_text = os.linesep.join( text_lines )
         
-        HG.client_controller.pub( 'clipboard', 'text', hex_hashes_text )
+        CG.client_controller.pub( 'clipboard', 'text', hex_hashes_text )
         
         job_status = ClientThreading.JobStatus()
         
         job_status.SetStatusText( '{} {} hashes copied'.format( HydrusData.ToHumanInt( len( desired_hashes ) ), hash_type ) )
         
-        HG.client_controller.pub( 'message', job_status )
+        CG.client_controller.pub( 'message', job_status )
         
         job_status.FinishAndDismiss( 2 )
         
@@ -131,7 +132,7 @@ def CopyMediaURLs( medias ):
     
     urls_string = os.linesep.join( urls )
     
-    HG.client_controller.pub( 'clipboard', 'text', urls_string )
+    CG.client_controller.pub( 'clipboard', 'text', urls_string )
     
 def CopyMediaURLClassURLs( medias, url_class ):
     
@@ -144,7 +145,7 @@ def CopyMediaURLClassURLs( medias, url_class ):
         for url in media_urls:
             
             # can't do 'url_class.matches', as it will match too many
-            if HG.client_controller.network_engine.domain_manager.GetURLClass( url ) == url_class:
+            if CG.client_controller.network_engine.domain_manager.GetURLClass( url ) == url_class:
                 
                 urls.add( url )
                 
@@ -155,7 +156,7 @@ def CopyMediaURLClassURLs( medias, url_class ):
     
     urls_string = os.linesep.join( urls )
     
-    HG.client_controller.pub( 'clipboard', 'text', urls_string )
+    CG.client_controller.pub( 'clipboard', 'text', urls_string )
     
 def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
     
@@ -183,7 +184,7 @@ def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Collection[ Cl
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILE_VIEWING_STATS, HC.CONTENT_UPDATE_DELETE, hashes )
         
-        HG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) )
+        CG.client_controller.Write( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update ) )
         
     
 def DoOpenKnownURLFromShortcut( win, media ):
@@ -199,7 +200,7 @@ def DoOpenKnownURLFromShortcut( win, media ):
             
             try:
                 
-                url_class = HG.client_controller.network_engine.domain_manager.GetURLClass( url )
+                url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -249,7 +250,7 @@ def DoOpenKnownURLFromShortcut( win, media ):
 
 def EditDuplicateContentMergeOptions( win: QW.QWidget, duplicate_type: int ):
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
     
@@ -273,11 +274,11 @@ def OpenExternally( media ):
     hash = media.GetHash()
     mime = media.GetMime()
     
-    client_files_manager = HG.client_controller.client_files_manager
+    client_files_manager = CG.client_controller.client_files_manager
     
     path = client_files_manager.GetFilePath( hash, mime )
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     launch_path = new_options.GetMimeLaunch( mime )
     
@@ -289,7 +290,7 @@ def OpenFileLocation( media ):
     hash = media.GetHash()
     mime = media.GetMime()
     
-    path = HG.client_controller.client_files_manager.GetFilePath( hash, mime )
+    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
     
     HydrusPaths.OpenFileLocation( path )
     
@@ -307,7 +308,7 @@ def OpenURLs( urls ):
             message += ' This will take some time.'
             
         
-        tlw = HG.client_controller.GetMainTLW()
+        tlw = CG.client_controller.GetMainTLW()
         
         result = ClientGUIDialogsQuick.GetYesNo( tlw, message )
         
@@ -329,7 +330,7 @@ def OpenURLs( urls ):
             
             job_status.SetStatusTitle( 'Opening URLs' )
             
-            HG.client_controller.pub( 'message', job_status )
+            CG.client_controller.pub( 'message', job_status )
             
         
         try:
@@ -363,7 +364,7 @@ def OpenURLs( urls ):
             
         
     
-    HG.client_controller.CallToThread( do_it, urls )
+    CG.client_controller.CallToThread( do_it, urls )
     
 def OpenMediaURLs( medias ):
     
@@ -389,7 +390,7 @@ def OpenMediaURLClassURLs( medias, url_class ):
         for url in media_urls:
             
             # can't do 'url_class.matches', as it will match too many
-            if HG.client_controller.network_engine.domain_manager.GetURLClass( url ) == url_class:
+            if CG.client_controller.network_engine.domain_manager.GetURLClass( url ) == url_class:
                 
                 urls.add( url )
                 
@@ -403,23 +404,23 @@ def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, h
     
     # TODO: this can be replaced by a call to the MediaResult when it holds these hashes
     # don't forget to return itself in position 0!
-    hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
+    hashes = CG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
     
     if hashes is not None and len( hashes ) > 1:
         
-        HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
+        CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
         
     else:
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
         
-        hashes = HG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
+        hashes = CG.client_controller.Read( 'file_duplicate_hashes', location_context, hash, duplicate_type )
         
         if hashes is not None and len( hashes ) > 1:
             
             HydrusData.ShowText( 'Could not find the members of this group in this location, so searched all known files and found more.' )
             
-            HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
+            CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = hashes )
             
         else:
             

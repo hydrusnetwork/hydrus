@@ -36,7 +36,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         pubsub_valid_callable = self._GetPubsubValidCallable()
         
-        self._pubsub = HydrusPubSub.HydrusPubSub( self, pubsub_valid_callable )
+        self._pubsub = HydrusPubSub.HydrusPubSub( pubsub_valid_callable )
         self._daemon_jobs = {}
         self._caches = {}
         self._managers = {}

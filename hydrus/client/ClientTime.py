@@ -6,6 +6,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 
 try:
     
@@ -115,7 +116,7 @@ def TimestampIsSensible( timestamp: typing.Optional[ int ] ) -> bool:
 
 def TimestampToPrettyTimeDelta( timestamp, just_now_string = 'just now', just_now_threshold = 3, history_suffix = ' ago', show_seconds = True, no_prefix = False ):
     
-    if HG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
+    if CG.client_controller.new_options.GetBoolean( 'always_show_iso_time' ):
         
         return HydrusTime.TimestampToPrettyTime( timestamp )
         
@@ -236,7 +237,7 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
                 
                 try:
                     
-                    service_string = HG.client_controller.services_manager.GetName( self.location )
+                    service_string = CG.client_controller.services_manager.GetName( self.location )
                     
                 except:
                     

@@ -11,6 +11,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusPSDHandling
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaManagers
@@ -230,11 +231,11 @@ def GetShowAction( media: "MediaSingleton", canvas_type: int ):
     
     if canvas_type == CC.CANVAS_PREVIEW:
         
-        action =  HG.client_controller.new_options.GetPreviewShowAction( mime )
+        action =  CG.client_controller.new_options.GetPreviewShowAction( mime )
         
     else:
         
-        action = HG.client_controller.new_options.GetMediaShowAction( mime )
+        action = CG.client_controller.new_options.GetMediaShowAction( mime )
         
     
     if mime == HC.APPLICATION_PSD and action[0] == CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE and not HydrusPSDHandling.PSD_TOOLS_OK:
@@ -522,7 +523,7 @@ class MediaCollect( HydrusSerialisable.SerialisableBase ):
     def ToString( self ):
         
         s_list = list( self.namespaces )
-        s_list.extend( [ HG.client_controller.services_manager.GetName( service_key ) for service_key in self.rating_service_keys if HG.client_controller.services_manager.ServiceExists( service_key ) ] )
+        s_list.extend( [ CG.client_controller.services_manager.GetName( service_key ) for service_key in self.rating_service_keys if CG.client_controller.services_manager.ServiceExists( service_key ) ] )
         
         if len( s_list ) == 0:
             
@@ -1207,7 +1208,7 @@ class MediaList( object ):
                     
                     if action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_DELETE_FROM_SOURCE_AFTER_MIGRATE ):
                         
-                        local_file_domains = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                        local_file_domains = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                         all_local_file_services = set( list( local_file_domains ) + [ CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.TRASH_SERVICE_KEY, CC.LOCAL_UPDATE_SERVICE_KEY ] )
                         
                         #
@@ -1229,7 +1230,7 @@ class MediaList( object ):
                         
                         user_says_remove_and_possibly_trashed_from_non_trash_local_view = HC.options[ 'remove_trashed_files' ] and possibly_trashed and not we_are_looking_at_trash
                         
-                        user_says_remove_and_moved_from_this_local_file_domain = HG.client_controller.new_options.GetBoolean( 'remove_local_domain_moved_files' ) and moved_from_this_domain_to_another
+                        user_says_remove_and_moved_from_this_local_file_domain = CG.client_controller.new_options.GetBoolean( 'remove_local_domain_moved_files' ) and moved_from_this_domain_to_another
                         
                         if physically_deleted_and_local_view or user_says_remove_and_possibly_trashed_from_non_trash_local_view or deleted_from_repo_and_repo_view or user_says_remove_and_moved_from_this_local_file_domain:
                             
@@ -1314,7 +1315,7 @@ class MediaList( object ):
         
         self._media_sort = media_sort
         
-        media_sort_fallback = HG.client_controller.new_options.GetFallbackSort()
+        media_sort_fallback = CG.client_controller.new_options.GetFallbackSort()
         
         media_sort_fallback.Sort( self._location_context, self._sorted_media )
         
@@ -1332,8 +1333,8 @@ class ListeningMediaList( MediaList ):
         
         MediaList.__init__( self, location_context, media_results )
         
-        HG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
-        HG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
+        CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
+        CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
         
     
     def AddMediaResults( self, media_results ):
@@ -1501,7 +1502,7 @@ class MediaCollection( MediaList, Media ):
         deleted_to_timestamps_ms = {}
         deleted_to_previously_imported_timestamps_ms = {}
         
-        for service_key in HG.client_controller.services_manager.GetServiceKeys( HC.REAL_FILE_SERVICES ):
+        for service_key in CG.client_controller.services_manager.GetServiceKeys( HC.REAL_FILE_SERVICES ):
             
             current_timestamps_ms = [ timestamp_ms for timestamp_ms in ( times_manager.GetImportedTimestampMS( service_key ) for times_manager in all_timestamp_managers ) if timestamp_ms is not None ]
             
@@ -1958,7 +1959,7 @@ class MediaSingleton( Media ):
         
         if has_audio:
             
-            audio_label = HG.client_controller.new_options.GetString( 'has_audio_label' )
+            audio_label = CG.client_controller.new_options.GetString( 'has_audio_label' )
             
             info_string += f', {audio_label}'
             
@@ -1978,7 +1979,7 @@ class MediaSingleton( Media ):
         current_service_keys = locations_manager.GetCurrent()
         deleted_service_keys = locations_manager.GetDeleted()
         
-        local_file_services = HG.client_controller.services_manager.GetLocalMediaFileServices()
+        local_file_services = CG.client_controller.services_manager.GetLocalMediaFileServices()
         
         seen_local_file_service_timestamps_ms = set()
         
@@ -2000,7 +2001,7 @@ class MediaSingleton( Media ):
             
             import_timestamp_ms = times_manager.GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            if HG.client_controller.new_options.GetBoolean( 'hide_uninteresting_local_import_time' ):
+            if CG.client_controller.new_options.GetBoolean( 'hide_uninteresting_local_import_time' ):
                 
                 # if we haven't already printed this timestamp somewhere
                 line_is_interesting = False not in ( timestamp_ms_is_interesting( timestamp_ms, import_timestamp_ms ) for timestamp_ms in seen_local_file_service_timestamps_ms )
@@ -2063,7 +2064,7 @@ class MediaSingleton( Media ):
         
         if file_modified_timestamp_ms is not None:
             
-            if HG.client_controller.new_options.GetBoolean( 'hide_uninteresting_modified_time' ):
+            if CG.client_controller.new_options.GetBoolean( 'hide_uninteresting_modified_time' ):
                 
                 # if we haven't already printed this timestamp somewhere
                 line_is_interesting = False not in ( timestamp_ms_is_interesting( timestamp_ms, file_modified_timestamp_ms ) for timestamp_ms in seen_local_file_service_timestamps_ms )
@@ -2105,13 +2106,13 @@ class MediaSingleton( Media ):
                 
             
         
-        for service_key in current_service_keys.intersection( HG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
+        for service_key in current_service_keys.intersection( CG.client_controller.services_manager.GetServiceKeys( HC.REMOTE_FILE_SERVICES ) ):
             
             timestamp_ms = times_manager.GetImportedTimestampMS( service_key )
             
             try:
                 
-                service = HG.client_controller.services_manager.GetService( service_key )
+                service = CG.client_controller.services_manager.GetService( service_key )
                 
             except HydrusExceptions.DataMissing:
                 
@@ -2189,7 +2190,7 @@ class MediaSingleton( Media ):
     
     def GetTitleString( self ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         tag_summary_generator = new_options.GetTagSummaryGenerator( 'media_viewer_top' )
         
@@ -2885,7 +2886,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                service = HG.client_controller.services_manager.GetService( service_key )
+                service = CG.client_controller.services_manager.GetService( service_key )
                 
                 name = service.GetName()
                 

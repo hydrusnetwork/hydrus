@@ -12,6 +12,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -368,7 +369,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            default_string_converter = HG.client_controller.new_options.GetRawSerialisable( 'last_used_string_conversion_step' )
+            default_string_converter = CG.client_controller.new_options.GetRawSerialisable( 'last_used_string_conversion_step' )
             
             default_conversions = default_string_converter.GetConversions()
             
@@ -408,7 +409,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_default_string_converter = ClientStrings.StringConverter( conversions = [ ( conversion_type, data ) ] )
                 
-                HG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
+                CG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
                 
                 enumerated_conversion = ( number, conversion_type, data )
                 
@@ -566,7 +567,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     new_default_string_converter = ClientStrings.StringConverter( conversions = [ ( conversion_type, data ) ] )
                     
-                    HG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
+                    CG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
                     
                     enumerated_conversion = ( number, conversion_type, data )
                     

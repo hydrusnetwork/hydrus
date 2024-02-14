@@ -4,7 +4,8 @@ from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
+
+from hydrus.client import ClientGlobals as CG
 
 # This holds common calls for the various QMessageBox dialogs
 # a thread can call these safely and they'll block
@@ -33,9 +34,9 @@ def ShowDialog( dialog_call: typing.Callable, win: typing.Optional[ QW.QWidget ]
         
     else:
         
-        qt_obj = HG.client_controller.app if win is None else win
+        qt_obj = CG.client_controller.app if win is None else win
         
-        HG.client_controller.CallBlockingToQt( qt_obj, dialog_call, win, title, message )
+        CG.client_controller.CallBlockingToQt( qt_obj, dialog_call, win, title, message )
         
     
 

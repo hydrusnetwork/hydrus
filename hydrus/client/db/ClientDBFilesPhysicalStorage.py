@@ -7,6 +7,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientFilesPhysical
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBModule
 
 class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
@@ -270,6 +271,6 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
             self._Execute( 'INSERT INTO ideal_thumbnail_override_location ( location ) VALUES ( ? );', ( portable_path, ) )
             
         
-        HG.client_controller.pub( 'new_ideal_client_files_locations' )
+        CG.client_controller.pub( 'new_ideal_client_files_locations' )
         
     

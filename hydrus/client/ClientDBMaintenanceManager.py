@@ -8,9 +8,12 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
+from hydrus.client.interfaces import ClientControllerInterface
+
 class DatabaseMaintenanceManager( object ):
     
-    def __init__( self, controller ):
+    def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
         
         self._controller = controller
         
@@ -34,7 +37,7 @@ class DatabaseMaintenanceManager( object ):
             return True
             
         
-        if HG.client_controller.CurrentlyIdle():
+        if CG.client_controller.CurrentlyIdle():
             
             if not self._controller.new_options.GetBoolean( 'database_deferred_delete_maintenance_during_idle' ):
                 
@@ -66,15 +69,15 @@ class DatabaseMaintenanceManager( object ):
         
         if self._is_working_hard:
             
-            rest_ratio = HG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_work_hard' ) / 100
+            rest_ratio = CG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_work_hard' ) / 100
             
-        elif HG.client_controller.CurrentlyIdle():
+        elif CG.client_controller.CurrentlyIdle():
             
-            rest_ratio = HG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_idle' ) / 100
+            rest_ratio = CG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_idle' ) / 100
             
         else:
             
-            rest_ratio = HG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_normal' ) / 100
+            rest_ratio = CG.client_controller.new_options.GetInteger( 'deferred_table_delete_rest_percentage_normal' ) / 100
             
         
         reasonable_work_time = min( 5 * work_period, time_it_took )
@@ -86,15 +89,15 @@ class DatabaseMaintenanceManager( object ):
         
         if self._is_working_hard:
             
-            return HG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) / 1000
+            return CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_work_hard' ) / 1000
             
-        elif HG.client_controller.CurrentlyIdle():
+        elif CG.client_controller.CurrentlyIdle():
             
-            return HG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) / 1000
+            return CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_idle' ) / 1000
             
         else:
             
-            return HG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) / 1000
+            return CG.client_controller.new_options.GetInteger( 'deferred_table_delete_work_time_ms_normal' ) / 1000
             
         
     
@@ -143,7 +146,7 @@ class DatabaseMaintenanceManager( object ):
                     
                     try:
                         
-                        still_work_to_do = HG.client_controller.WriteSynchronous( 'do_deferred_table_delete_work', time_to_stop )
+                        still_work_to_do = CG.client_controller.WriteSynchronous( 'do_deferred_table_delete_work', time_to_stop )
                         
                     except Exception as e:
                         

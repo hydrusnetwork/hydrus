@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
@@ -427,7 +428,7 @@ def SetBitmapButtonBitmap( button, bitmap ):
     
 def SetFocusLater( win: QW.QWidget ):
     
-    HG.client_controller.CallAfterQtSafe( win, 'set focus to a window', win.setFocus, QC.Qt.OtherFocusReason )
+    CG.client_controller.CallAfterQtSafe( win, 'set focus to a window', win.setFocus, QC.Qt.OtherFocusReason )
     
 def TLWIsActive( window ):
     
@@ -457,7 +458,7 @@ def TLWOrChildIsActive( win ):
 
 def UpdateAppDisplayName():
     
-    app_display_name = HG.client_controller.new_options.GetString( 'app_display_name' )
+    app_display_name = CG.client_controller.new_options.GetString( 'app_display_name' )
     
     QW.QApplication.instance().setApplicationDisplayName( '{} {}'.format( app_display_name, HC.SOFTWARE_VERSION ) )
     

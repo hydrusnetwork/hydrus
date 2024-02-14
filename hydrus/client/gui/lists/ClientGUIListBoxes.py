@@ -17,6 +17,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIAsync
@@ -419,7 +420,7 @@ class AddEditDeleteListBox( QW.QWidget ):
             
             json = export_object.DumpToString()
             
-            HG.client_controller.pub( 'clipboard', 'text', json )
+            CG.client_controller.pub( 'clipboard', 'text', json )
             
         
     
@@ -500,7 +501,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -1193,7 +1194,7 @@ class ListBox( QW.QScrollArea ):
             
             text = '\n'.join( texts )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -1752,7 +1753,7 @@ class ListBox( QW.QScrollArea ):
             return
             
         
-        fades_can_ever_happen = QtInit.WE_ARE_QT6 and HG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' )
+        fades_can_ever_happen = QtInit.WE_ARE_QT6 and CG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' )
         
         current_visible_index = first_visible_positional_index
         
@@ -2226,6 +2227,11 @@ class ListBox( QW.QScrollArea ):
         return text_height * self._total_positional_rows + 20
         
     
+    def GetNumTerms( self ):
+        
+        return len( self._ordered_terms )
+        
+    
     def HasValues( self ):
         
         return len( self._ordered_terms ) > 0
@@ -2370,29 +2376,29 @@ class ListBoxTags( ListBox ):
         
         if terms_may_have_sibling_or_parent_info:
             
-            self._show_parent_decorators = HG.client_controller.new_options.GetBoolean( 'show_parent_decorators_on_storage_taglists' )
-            self._show_sibling_decorators = HG.client_controller.new_options.GetBoolean( 'show_sibling_decorators_on_storage_taglists' )
+            self._show_parent_decorators = CG.client_controller.new_options.GetBoolean( 'show_parent_decorators_on_storage_taglists' )
+            self._show_sibling_decorators = CG.client_controller.new_options.GetBoolean( 'show_sibling_decorators_on_storage_taglists' )
             
-            self._extra_parent_rows_allowed = HG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_taglists' )
+            self._extra_parent_rows_allowed = CG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_taglists' )
             
         
         self._render_for_user = not self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
         self._page_key = None # placeholder. if a subclass sets this, it changes menu behaviour to allow 'select this tag' menu pubsubs
         
-        self._sibling_connector_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        self._sibling_connector_string = CG.client_controller.new_options.GetString( 'sibling_connector' )
         self._sibling_connector_namespace = None
         
-        if not HG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' ):
+        if not CG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' ):
             
-            self._sibling_connector_namespace = HG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
+            self._sibling_connector_namespace = CG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
             
         
         self._UpdateBackgroundColour()
         
-        HG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
-        HG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
-        HG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        CG.client_controller.sub( self, 'ForceTagRecalc', 'refresh_all_tag_presentation_gui' )
+        CG.client_controller.sub( self, '_UpdateBackgroundColour', 'notify_new_colourset' )
+        CG.client_controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         
     
     def _GetCopyableTagStrings( self, command ):
@@ -2495,7 +2501,7 @@ class ListBoxTags( ListBox ):
     
     def _NewDuplicateFilterPage( self, predicates ):
         
-        activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
+        activate_window = CG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
         
         predicates = ClientGUISearch.FleshOutPredicates( self, predicates )
         
@@ -2510,12 +2516,12 @@ class ListBoxTags( ListBox ):
         
         location_context = self._GetCurrentLocationContext()
         
-        HG.client_controller.pub( 'new_page_duplicates', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+        CG.client_controller.pub( 'new_page_duplicates', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
         
     
     def _NewSearchPages( self, pages_of_predicates ):
         
-        activate_window = HG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
+        activate_window = CG.client_controller.new_options.GetBoolean( 'activate_window_on_tag_search_page_activation' )
         
         for predicates in pages_of_predicates:
             
@@ -2532,7 +2538,7 @@ class ListBoxTags( ListBox ):
             
             location_context = self._GetCurrentLocationContext()
             
-            HG.client_controller.pub( 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+            CG.client_controller.pub( 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
             
             activate_window = False
             
@@ -2546,7 +2552,7 @@ class ListBoxTags( ListBox ):
             
             text = os.linesep.join( texts )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -2576,7 +2582,7 @@ class ListBoxTags( ListBox ):
                     return
                     
                 
-                HG.client_controller.tag_display_manager.HideTags( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tags )
+                CG.client_controller.tag_display_manager.HideTags( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tags )
                 
             elif command == 'hide_namespace':
                 
@@ -2596,10 +2602,10 @@ class ListBoxTags( ListBox ):
                 
                 tag_slices = [ namespace if namespace == '' else namespace + ':' for namespace in namespaces ]
                 
-                HG.client_controller.tag_display_manager.HideTags( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tag_slices )
+                CG.client_controller.tag_display_manager.HideTags( self._tag_display_type, CC.COMBINED_TAG_SERVICE_KEY, tag_slices )
                 
             
-            HG.client_controller.pub( 'notify_new_tag_display_rules' )
+            CG.client_controller.pub( 'notify_new_tag_display_rules' )
             
         else:
             
@@ -2648,7 +2654,7 @@ class ListBoxTags( ListBox ):
     
     def _UpdateBackgroundColour( self ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         self._background_colour = new_options.GetColour( CC.COLOUR_TAGS_BOX )
         
@@ -2728,12 +2734,12 @@ class ListBoxTags( ListBox ):
     
     def NotifyNewOptions( self ):
         
-        new_sibling_connector_string = HG.client_controller.new_options.GetString( 'sibling_connector' )
+        new_sibling_connector_string = CG.client_controller.new_options.GetString( 'sibling_connector' )
         new_sibling_connector_namespace = None
         
-        if not HG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' ):
+        if not CG.client_controller.new_options.GetBoolean( 'fade_sibling_connector' ):
             
-            new_sibling_connector_namespace = HG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
+            new_sibling_connector_namespace = CG.client_controller.new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' )
             
         
         if new_sibling_connector_string != self._sibling_connector_string or new_sibling_connector_namespace != self._sibling_connector_namespace:
@@ -2895,7 +2901,7 @@ class ListBoxTags( ListBox ):
                 
                 def sp_work_callable():
                     
-                    selected_tag_to_service_keys_to_siblings_and_parents = HG.client_controller.Read( 'tag_siblings_and_parents_lookup', ( selected_tag, ) )
+                    selected_tag_to_service_keys_to_siblings_and_parents = CG.client_controller.Read( 'tag_siblings_and_parents_lookup', ( selected_tag, ) )
                     
                     service_keys_to_siblings_and_parents = selected_tag_to_service_keys_to_siblings_and_parents[ selected_tag ]
                     
@@ -2904,7 +2910,7 @@ class ListBoxTags( ListBox ):
                 
                 def sp_publish_callable( service_keys_to_siblings_and_parents ):
                     
-                    service_keys_in_order = HG.client_controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
+                    service_keys_in_order = CG.client_controller.services_manager.GetServiceKeys( HC.REAL_TAG_SERVICES )
                     
                     all_siblings = set()
                     
@@ -2952,7 +2958,7 @@ class ListBoxTags( ListBox ):
                     num_parents = len( parents_to_service_keys )
                     num_children = len( children_to_service_keys )
                     
-                    service_keys_to_service_names = { service_key : HG.client_controller.services_manager.GetName( service_key ) for service_key in service_keys_in_order }
+                    service_keys_to_service_names = { service_key : CG.client_controller.services_manager.GetName( service_key ) for service_key in service_keys_in_order }
                     
                     ALL_SERVICES_LABEL = 'all services'
                     
@@ -3047,7 +3053,7 @@ class ListBoxTags( ListBox ):
                             
                             ideal_label = 'ideal is "{}" on: {}'.format( ideal, convert_service_keys_to_name_string( ideals_to_service_keys[ ideal ] ) )
                             
-                            ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, HG.client_controller.pub, 'clipboard', 'text', ideal )
+                            ClientGUIMenus.AppendMenuItem( siblings_menu, ideal_label, ideal_label, CG.client_controller.pub, 'clipboard', 'text', ideal )
                             
                         
                         #
@@ -3330,13 +3336,13 @@ class ListBoxTags( ListBox ):
                     
                 
             
-            favourite_tags = set( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+            favourite_tags = set( CG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
             
             favourite_tags.update( tags )
             
-            HG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
+            CG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
             
-            HG.client_controller.pub( 'notify_new_favourite_tags' )
+            CG.client_controller.pub( 'notify_new_favourite_tags' )
             
         
         def remove_favourite_tags( tags ):
@@ -3352,16 +3358,16 @@ class ListBoxTags( ListBox ):
                 return
                 
             
-            favourite_tags = set( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+            favourite_tags = set( CG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
             
             favourite_tags.difference_update( tags )
             
-            HG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
+            CG.client_controller.new_options.SetStringList( 'favourite_tags', list( favourite_tags ) )
             
-            HG.client_controller.pub( 'notify_new_favourite_tags' )
+            CG.client_controller.pub( 'notify_new_favourite_tags' )
             
         
-        favourite_tags = list( HG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
+        favourite_tags = list( CG.client_controller.new_options.GetStringList( 'favourite_tags' ) )
         
         to_add = set( selected_actual_tags ).difference( favourite_tags )
         to_remove = set( selected_actual_tags ).intersection( favourite_tags )
@@ -3754,7 +3760,7 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
                 
                 tags_to_lookup = set( tags_to_terms.keys() )
                 
-                db_tags_to_ideals_and_parents = HG.client_controller.Read( 'tag_display_decorators', service_key, tags_to_lookup )
+                db_tags_to_ideals_and_parents = CG.client_controller.Read( 'tag_display_decorators', service_key, tags_to_lookup )
                 
                 terms_to_info.update( { tags_to_terms[ tag ] : info for ( tag, info ) in db_tags_to_ideals_and_parents.items() } )
                 
@@ -3771,7 +3777,7 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
             
             selected_actual_tags = self._GetTagsFromTerms( self._selected_terms )
             
-            HG.client_controller.pub( 'select_files_with_tags', self._page_key, self._service_key, and_or_or, set( selected_actual_tags ) )
+            CG.client_controller.pub( 'select_files_with_tags', self._page_key, self._service_key, and_or_or, set( selected_actual_tags ) )
             
         
     
@@ -3972,7 +3978,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, tag_display_type = tag_display_type, height_num_chars = 24 )
         
-        self._tag_sort = HG.client_controller.new_options.GetDefaultTagSort()
+        self._tag_sort = CG.client_controller.new_options.GetDefaultTagSort()
         
         self._last_media_results = set()
         
@@ -4175,7 +4181,7 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         ListBoxTagsDisplayCapable.AddAdditionalMenuItems( self, menu )
         
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             submenu = ClientGUIMenus.GenerateMenu( menu )
             
@@ -4397,7 +4403,7 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         self._tags_box = None
         
         # make this its own panel
-        self._tag_sort = ClientGUITagSorting.TagSortControl( self, HG.client_controller.new_options.GetDefaultTagSort(), show_siblings = show_siblings_sort )
+        self._tag_sort = ClientGUITagSorting.TagSortControl( self, CG.client_controller.new_options.GetDefaultTagSort(), show_siblings = show_siblings_sort )
         
         self._tag_sort.valueChanged.connect( self.EventSort )
         
@@ -4417,7 +4423,7 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
         
         if service_key != CC.COMBINED_TAG_SERVICE_KEY:
             
-            title = '{} for {}'.format( title, HG.client_controller.services_manager.GetName( service_key ) )
+            title = '{} for {}'.format( title, CG.client_controller.services_manager.GetName( service_key ) )
             
         
         self.SetTitle( title )
@@ -4463,7 +4469,7 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
     def _Activate( self, ctrl_down, shift_down ) -> bool:
         
-        HG.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
+        CG.client_controller.pub( 'canvas_manage_tags', self._canvas_key )
         
         return True
         

@@ -35,6 +35,36 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_562"><a href="#version_562">version 562</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>page tab drag and drops will now not start unless the click has lasted more than 100ms</li>
+                        <li>same for thumbnail drag and drop--it perviously did a 20 pixel deadzone, but time checks detect accidental/spastic clicks better and stops false negatives when you start dragging on certain edges</li>
+                        <li>added a 'BUGFIX: disable page tab drag and drop' setting to _options->gui pages_. while adding this, I may have accidentally fixed the issue I wanted to investigate (rare hangs on page DnD)</li>
+                        <li>the manage tags dialog now shows the current count of tags for each page tab, and, if there are outstanding changes, shows an asterisk</li>
+                        <li>the `migrate database` dialog is renamed `move media files`</li>
+                        <li><h3>fixes</h3></li>
+                        <li>fixed the basic copy/paste in the single 'edit datetime' panel, wich was often raising a dumb error. this thing also now exports millisecond data (issue #1520)</li>
+                        <li>I am pretty sure I fixed the column-resizing problem in the very new PySide6 (Qt) 6.6.1, which it seems AUR users were recently updated to in an automatic OS update. all columns were setting to 100px width on initialisation. I think it is now safe to try out 6.6.1. I am still not sure why it was doing this, but some extra safeguards seem to have fixed it and also not broken things for <=6.6.0, so let me know what you run into! if you were affected by this, recall that you can right-click on any multi-column list header and say 'reset widths' to get something sensible back here</li>
+                        <li>when exporting files, the max size is now clipped another 84 characters (64 + 20 more, which usually ends up about 150 characters max for the output filename), in order to give padding for longer sidecar suffixes and also avoid going right to the filesystem limit, which broadly isn't sensible</li>
+                        <li>I think I fixed an issue where the mouse could stay hidden, perhaps, just on Wayland, after closing the media viewer with your keyboard (issue #1518)</li>
+                        <li>fixed inc/dec ratings in the media viewer not updating their tooltips on new media correctly</li>
+                        <li>if you hit 'open this location' on the export files window and the location does not exist, you now get a nice messagebox rather than a semi-silent error</li>
+                        <li><h3>analyze</h3></li>
+                        <li>background: some databases that process the PTR superfast or otherwise import a lot of data to a new file domain sometimes encounter massively massively slow tag update actions (typically tag-delete when the tags involved have siblings/parents), so I want to make the critical 'ANALYZE' call more timely</li>
+                        <li>the 'analyze' database maintenance call will be soft-called far more regularly during normal repository processing, not just on first sync</li>
+                        <li>sped up how some pre-analyze calculation is done</li>
+                        <li>the size limit for automatic database analyze maintenance is raised from 100k rows to 10M</li>
+                        <li>I hope to do more work here in future, probably making a review panel like we did for vacuum</li>
+                        <li>if your repository processing sometimes hangs your whole damn client for 10-15 minutes, hit _database->db maintenance->analyze->full_! this job may take 30-60 minutes to finish</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>finished the HG->CG.client_controller refactor I started last week. this was a thousand lines changed from one braindead format to another, but it will be a useful step towards untangling the hell-nest import hierarchy</li>
+                        <li>did a scattering of the clientinterface typing, getting a feel for where I want to take this</li>
+                        <li>deleted the old in-client server-test's 'boot' variant; this is no longer used and was always super hacky to maintain</li>
+                        <li>I removed an old basic error raising routine that would sometimes kick in when a hash definition is missing. this routine now always fills in the missing data with garbage and does its best to recover the invalid situation automatically, with decent logging, while still informing the user that things are well busted m8. it isn't the user's job to fix this, and there is no good fix anyway, so no point halting work and giving it to the user to figure out!</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_561"><a href="#version_561">version 561</a></h2>
                     <ul>
                         <li><h3>rearranging thumbnails</h3></li>

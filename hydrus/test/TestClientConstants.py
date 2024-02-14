@@ -3,9 +3,9 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientManagers
 from hydrus.client import ClientServices
 from hydrus.client.metadata import ClientContentUpdates
@@ -40,7 +40,7 @@ class TestManagers( unittest.TestCase ):
         
         HG.test_controller.SetRead( 'services', services )
         
-        services_manager = ClientServices.ServicesManager( HG.client_controller )
+        services_manager = ClientServices.ServicesManager( CG.client_controller )
         
         #
         
@@ -84,7 +84,7 @@ class TestManagers( unittest.TestCase ):
         command_1_inverted = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_INBOX, { hash_1 } ) )
         command_2_inverted = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, { hash_2 } ) )
         
-        undo_manager = ClientManagers.UndoManager( HG.client_controller )
+        undo_manager = ClientManagers.UndoManager( CG.client_controller )
         
         #
         

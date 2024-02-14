@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP
 
 class JobStatus( object ):
@@ -85,7 +86,7 @@ class JobStatus( object ):
                     return
                     
                 
-                if HG.client_controller.ShouldStopThisWork( self._maintenance_mode, self._stop_time ):
+                if CG.client_controller.ShouldStopThisWork( self._maintenance_mode, self._stop_time ):
                     
                     self.Cancel()
                     

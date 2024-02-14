@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
@@ -81,7 +82,7 @@ class NetworkJobControl( QW.QFrame ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit bandwidth rules for {}'.format( network_context.ToString() ) ) as dlg:
             
-            bandwidth_rules = HG.client_controller.network_engine.bandwidth_manager.GetRules( network_context )
+            bandwidth_rules = CG.client_controller.network_engine.bandwidth_manager.GetRules( network_context )
             
             summary = network_context.GetSummary()
             
@@ -93,7 +94,7 @@ class NetworkJobControl( QW.QFrame ):
                 
                 bandwidth_rules = panel.GetValue()
                 
-                HG.client_controller.network_engine.bandwidth_manager.SetRules( network_context, bandwidth_rules )
+                CG.client_controller.network_engine.bandwidth_manager.SetRules( network_context, bandwidth_rules )
                 
             
         
@@ -332,7 +333,7 @@ class NetworkJobControl( QW.QFrame ):
             return
             
         
-        HG.client_controller.pub( 'clipboard', 'text', self._error_text )
+        CG.client_controller.pub( 'clipboard', 'text', self._error_text )
         
     
     def ClearNetworkJob( self ):
@@ -345,7 +346,7 @@ class NetworkJobControl( QW.QFrame ):
             
             self._Update()
             
-            HG.client_controller.gui.UnregisterUIUpdateWindow( self )
+            CG.client_controller.gui.UnregisterUIUpdateWindow( self )
             
         
     
@@ -369,7 +370,7 @@ class NetworkJobControl( QW.QFrame ):
             
             self._Update()
             
-            HG.client_controller.gui.RegisterUIUpdateWindow( self )
+            CG.client_controller.gui.RegisterUIUpdateWindow( self )
             
         
     
@@ -399,7 +400,7 @@ class NetworkJobControl( QW.QFrame ):
         
         self._OverrideBandwidthIfAppropriate()
         
-        if self._should_update_freely or HG.client_controller.gui.IShouldRegularlyUpdate( self ):
+        if self._should_update_freely or CG.client_controller.gui.IShouldRegularlyUpdate( self ):
             
             self._Update()
             

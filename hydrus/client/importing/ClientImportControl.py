@@ -1,10 +1,10 @@
 import typing
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing import ClientImportGallerySeeds
 from hydrus.client.importing.options import FileImportOptions
@@ -16,7 +16,7 @@ def CheckImporterCanDoFileWorkBecausePaused( paused: bool, file_seed_cache: Clie
         raise HydrusExceptions.VetoException( 'paused' )
         
     
-    if HG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' ):
+    if CG.client_controller.new_options.GetBoolean( 'pause_all_file_queues' ):
         
         raise HydrusExceptions.VetoException( 'all file import queues are paused! network->pause to resume!' )
         
@@ -28,7 +28,7 @@ def CheckImporterCanDoFileWorkBecausePaused( paused: bool, file_seed_cache: Clie
         raise HydrusExceptions.VetoException()
         
     
-    if HG.client_controller.PageClosedButNotDestroyed( page_key ):
+    if CG.client_controller.PageClosedButNotDestroyed( page_key ):
         
         raise HydrusExceptions.VetoException( 'page is closed' )
         
@@ -53,7 +53,7 @@ def CheckImporterCanDoGalleryWorkBecausePaused( paused: bool, gallery_seed_log: 
         raise HydrusExceptions.VetoException( 'paused' )
         
     
-    if HG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' ):
+    if CG.client_controller.new_options.GetBoolean( 'pause_all_gallery_searches' ):
         
         raise HydrusExceptions.VetoException( 'all gallery searches are paused! network->pause to resume!' )
         
@@ -78,7 +78,7 @@ def CheckCanDoNetworkWork( no_work_until: int, no_work_until_reason: str ):
         raise HydrusExceptions.VetoException( no_work_text )
         
     
-    if HG.client_controller.network_engine.IsBusy():
+    if CG.client_controller.network_engine.IsBusy():
         
         raise HydrusExceptions.VetoException( 'network engine is too busy!' )
         
@@ -128,5 +128,5 @@ def NeatenStatusText( text: str ) -> str:
 
 def PageImporterShouldStopWorking( page_key: bytes ):
     
-    return HG.started_shutdown or not HG.client_controller.PageAlive( page_key )
+    return HG.started_shutdown or not CG.client_controller.PageAlive( page_key )
     

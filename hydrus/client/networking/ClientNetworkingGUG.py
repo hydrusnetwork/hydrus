@@ -7,6 +7,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.networking import ClientNetworkingFunctions
 
 class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
@@ -77,7 +78,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             
             example_url = self.GetExampleURL()
             
-            ( url_type, match_name, can_parse, cannot_parse_reason ) = HG.client_controller.network_engine.domain_manager.GetURLParseCapability( example_url )
+            ( url_type, match_name, can_parse, cannot_parse_reason ) = CG.client_controller.network_engine.domain_manager.GetURLParseCapability( example_url )
             
         except Exception as e:
             
@@ -281,7 +282,7 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         for gug_key_and_name in self._gug_keys_and_names:
             
-            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+            gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
             
             if gug is not None:
                 
@@ -296,7 +297,7 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         for gug_key_and_name in self._gug_keys_and_names:
             
-            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+            gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
             
             if gug is not None:
                 
@@ -313,7 +314,7 @@ class NestedGalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
         
         for gug_key_and_name in self._gug_keys_and_names:
             
-            gug = HG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
+            gug = CG.client_controller.network_engine.domain_manager.GetGUG( gug_key_and_name )
             
             if gug is not None:
                 

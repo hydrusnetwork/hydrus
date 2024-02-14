@@ -28,6 +28,7 @@ from hydrus.core.files import HydrusFileHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientMigration
 from hydrus.client import ClientParsing
@@ -70,7 +71,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         icon_label = ClientGUICommon.BetterStaticText( self )
-        icon_label.setPixmap( HG.client_controller.frame_icon_pixmap )
+        icon_label.setPixmap( CG.client_controller.frame_icon_pixmap )
         
         name_label = ClientGUICommon.BetterStaticText( self, name )
         name_label_font = name_label.font()
@@ -120,7 +121,7 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
     
 
-class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
+class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, controller ):
         
@@ -130,11 +131,11 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
-        self._client_files_subfolders = HG.client_controller.Read( 'client_files_subfolders' )
+        self._client_files_subfolders = CG.client_controller.Read( 'client_files_subfolders' )
         
         ( self._media_base_locations, self._ideal_thumbnails_base_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
-        service_info = HG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+        service_info = CG.client_controller.Read( 'service_info', CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
         
         self._all_local_files_total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
         self._all_local_files_total_num = service_info[ HC.SERVICE_INFO_NUM_FILES ]
@@ -638,7 +639,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _GetThumbnailSizeEstimates( self ):
         
-        ( t_width, t_height ) = HG.client_controller.options[ 'thumbnail_dimensions' ]
+        ( t_width, t_height ) = CG.client_controller.options[ 'thumbnail_dimensions' ]
         
         typical_thumb_num_pixels = 320 * 240
         typical_thumb_size = 36 * 1024
@@ -700,7 +701,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         job_status = ClientThreading.JobStatus( cancellable = True, stop_time = stop_time )
         
-        HG.client_controller.pub( 'do_file_storage_rebalance', job_status )
+        CG.client_controller.pub( 'do_file_storage_rebalance', job_status )
         
         self._OKParent()
         
@@ -871,7 +872,7 @@ class MigrateDatabasePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Update( self ):
         
-        self._client_files_subfolders = HG.client_controller.Read( 'client_files_subfolders' )
+        self._client_files_subfolders = CG.client_controller.Read( 'client_files_subfolders' )
         
         ( self._media_base_locations, self._ideal_thumbnails_base_location_override ) = self._controller.Read( 'ideal_client_files_locations' )
         
@@ -965,11 +966,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         try:
             
-            service = HG.client_controller.services_manager.GetService( self._service_key )
+            service = CG.client_controller.services_manager.GetService( self._service_key )
             
         except HydrusExceptions.DataMissing:
             
-            services = HG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
+            services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_TAG, ) )
             
             service = next( iter( services ) )
             
@@ -991,7 +992,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._migration_source = ClientGUICommon.BetterChoice( self._migration_panel )
         
-        location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+        location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         self._migration_source_hash_type_st = ClientGUICommon.BetterStaticText( self._migration_panel, 'hash type: unknown' )
         
@@ -1194,7 +1195,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 desired_hash_type = self._migration_destination_hash_type_choice.GetValue()
                 
-                destination = ClientMigration.MigrationDestinationHTA( HG.client_controller, self._dest_archive_path, desired_hash_type )
+                destination = ClientMigration.MigrationDestinationHTA( CG.client_controller, self._dest_archive_path, desired_hash_type )
                 
             else:
                 
@@ -1202,7 +1203,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 desired_hash_type = 'sha256'
                 
-                destination = ClientMigration.MigrationDestinationTagServiceMappings( HG.client_controller, destination_service_key, content_action )
+                destination = ClientMigration.MigrationDestinationTagServiceMappings( CG.client_controller, destination_service_key, content_action )
                 
             
             file_filtering_type = self._migration_source_file_filtering_type.GetValue()
@@ -1225,7 +1226,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 else:
                     
-                    extra_info = ' for files in "{}"'.format( location_context.ToString( HG.client_controller.services_manager.GetName ) )
+                    extra_info = ' for files in "{}"'.format( location_context.ToString( CG.client_controller.services_manager.GetName ) )
                     
                 
             
@@ -1242,11 +1243,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     return
                     
                 
-                source = ClientMigration.MigrationSourceHTA( HG.client_controller, self._source_archive_path, location_context, desired_hash_type, hashes, tag_filter )
+                source = ClientMigration.MigrationSourceHTA( CG.client_controller, self._source_archive_path, location_context, desired_hash_type, hashes, tag_filter )
                 
             else:
                 
-                source = ClientMigration.MigrationSourceTagServiceMappings( HG.client_controller, source_service_key, location_context, desired_hash_type, hashes, tag_filter, content_statuses )
+                source = ClientMigration.MigrationSourceTagServiceMappings( CG.client_controller, source_service_key, location_context, desired_hash_type, hashes, tag_filter, content_statuses )
                 
             
         else:
@@ -1262,13 +1263,13 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 content_action = HC.CONTENT_UPDATE_ADD
                 
-                destination = ClientMigration.MigrationDestinationHTPA( HG.client_controller, self._dest_archive_path, content_type )
+                destination = ClientMigration.MigrationDestinationHTPA( CG.client_controller, self._dest_archive_path, content_type )
                 
             else:
                 
                 content_action = self._migration_action.GetValue()
                 
-                destination = ClientMigration.MigrationDestinationTagServicePairs( HG.client_controller, destination_service_key, content_action, content_type )
+                destination = ClientMigration.MigrationDestinationTagServicePairs( CG.client_controller, destination_service_key, content_action, content_type )
                 
             
             left_tag_pair_filter = self._migration_source_left_tag_pair_filter.GetValue()
@@ -1295,11 +1296,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     return
                     
                 
-                source = ClientMigration.MigrationSourceHTPA( HG.client_controller, self._source_archive_path, left_tag_pair_filter, right_tag_pair_filter )
+                source = ClientMigration.MigrationSourceHTPA( CG.client_controller, self._source_archive_path, left_tag_pair_filter, right_tag_pair_filter )
                 
             else:
                 
-                source = ClientMigration.MigrationSourceTagServicePairs( HG.client_controller, source_service_key, content_type, left_tag_pair_filter, right_tag_pair_filter, content_statuses )
+                source = ClientMigration.MigrationSourceTagServicePairs( CG.client_controller, source_service_key, content_type, left_tag_pair_filter, right_tag_pair_filter, content_statuses )
                 
             
         
@@ -1315,7 +1316,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if result == QW.QDialog.Accepted:
             
-            if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+            if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                 
                 do_it = True
                 
@@ -1330,9 +1331,9 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             if do_it:
                 
-                migration_job = ClientMigration.MigrationJob( HG.client_controller, title, source, destination )
+                migration_job = ClientMigration.MigrationJob( CG.client_controller, title, source, destination )
                 
-                HG.client_controller.CallToThread( migration_job.Run )
+                CG.client_controller.CallToThread( migration_job.Run )
                 
             
         
@@ -1525,7 +1526,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         else:
             
-            destination_service = HG.client_controller.services_manager.GetService( destination )
+            destination_service = CG.client_controller.services_manager.GetService( destination )
             
             destination_service_type = destination_service.GetServiceType()
             
@@ -1637,7 +1638,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._migration_source_archive_path_button.hide()
             self._migration_source_hash_type_st.hide()
             
-            source_service = HG.client_controller.services_manager.GetService( source )
+            source_service = CG.client_controller.services_manager.GetService( source )
             
             source_service_type = source_service.GetServiceType()
             
@@ -1664,7 +1665,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source.clear()
         self._migration_destination.clear()
         
-        for service in HG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
+        for service in CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ):
             
             self._migration_source.addItem( service.GetName(), service.GetServiceKey() )
             self._migration_destination.addItem( service.GetName(), service.GetServiceKey() )
@@ -1751,7 +1752,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._select_from_list = QW.QCheckBox( self )
         
-        if HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             self._select_from_list.setChecked( True )
             
@@ -2186,11 +2187,11 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _Paste( self ):
         
-        if HG.client_controller.ClipboardHasImage():
+        if CG.client_controller.ClipboardHasImage():
             
             try:
                 
-                qt_image = HG.client_controller.GetClipboardImage()
+                qt_image = CG.client_controller.GetClipboardImage()
                 
                 payload_description = 'clipboard image data'
                 payload = ClientSerialisable.LoadFromQtImage( qt_image )
@@ -2206,7 +2207,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                raw_text = HG.client_controller.GetClipboardText()
+                raw_text = CG.client_controller.GetClipboardText()
                 
                 payload_description = 'clipboard text data'
                 payload = HydrusCompression.CompressStringToBytes( raw_text )
@@ -2399,7 +2400,7 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
             copy_text = str( first_row_value )
             
         
-        HG.client_controller.pub( 'clipboard', 'text', copy_text )
+        CG.client_controller.pub( 'clipboard', 'text', copy_text )
         
     
 class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
@@ -2499,7 +2500,7 @@ class ReviewFileHistory( ClientGUIScrolledPanels.ReviewPanel ):
             
             try:
                 
-                file_history = HG.client_controller.Read( 'file_history', num_steps, file_search_context = file_search_context, job_status = job_status )
+                file_history = CG.client_controller.Read( 'file_history', num_steps, file_search_context = file_search_context, job_status = job_status )
                 
             except HydrusExceptions.DBException as e:
                 
@@ -2634,7 +2635,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         page_key = HydrusData.GenerateKey()
         
-        default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+        default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
         file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context )
         
@@ -2727,7 +2728,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._RefreshWorkDue()
         
-        HG.client_controller.sub( self, '_RefreshWorkDue', 'notify_files_maintenance_done' )
+        CG.client_controller.sub( self, '_RefreshWorkDue', 'notify_files_maintenance_done' )
         
     
     def _AddJob( self ):
@@ -2751,7 +2752,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            HG.client_controller.files_maintenance_manager.ScheduleJobHashIds( hash_ids, job_type )
+            CG.client_controller.files_maintenance_manager.ScheduleJobHashIds( hash_ids, job_type )
             
             return True
             
@@ -2816,7 +2817,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             
             for job_type in job_types:
                 
-                HG.client_controller.files_maintenance_manager.CancelJobs( job_type )
+                CG.client_controller.files_maintenance_manager.CancelJobs( job_type )
                 
             
             return True
@@ -2834,7 +2835,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _DoAllWork( self ):
         
-        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.ForceMaintenance )
+        CG.client_controller.CallToThread( CG.client_controller.files_maintenance_manager.ForceMaintenance )
         
     
     def _DoWork( self ):
@@ -2846,14 +2847,14 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
             return
             
         
-        HG.client_controller.CallToThread( HG.client_controller.files_maintenance_manager.ForceMaintenance, mandated_job_types = job_types )
+        CG.client_controller.CallToThread( CG.client_controller.files_maintenance_manager.ForceMaintenance, mandated_job_types = job_types )
         
     
     def _RefreshWorkDue( self ):
         
         def work_callable():
             
-            job_types_to_counts = HG.client_controller.Read( 'file_maintenance_get_job_counts' )
+            job_types_to_counts = CG.client_controller.Read( 'file_maintenance_get_job_counts' )
             
             return job_types_to_counts
             
@@ -2889,7 +2890,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            query_hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, apply_implicit_limit = False )
+            query_hash_ids = CG.client_controller.Read( 'file_query_ids', file_search_context, apply_implicit_limit = False )
             
             return query_hash_ids
             
@@ -2929,7 +2930,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            query_hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, apply_implicit_limit = False )
+            query_hash_ids = CG.client_controller.Read( 'file_query_ids', file_search_context, apply_implicit_limit = False )
             
             return query_hash_ids
             
@@ -2956,7 +2957,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            query_hash_ids = HG.client_controller.Read( 'file_query_ids', file_search_context, apply_implicit_limit = False )
+            query_hash_ids = CG.client_controller.Read( 'file_query_ids', file_search_context, apply_implicit_limit = False )
             
             return query_hash_ids
             
@@ -3157,7 +3158,7 @@ class ReviewHowBonedAmI( ClientGUIScrolledPanels.ReviewPanel ):
         
         def work_callable():
             
-            boned_stats = HG.client_controller.Read( 'boned_stats', file_search_context = file_search_context, job_status = job_status )
+            boned_stats = CG.client_controller.Read( 'boned_stats', file_search_context = file_search_context, job_status = job_status )
             
             return boned_stats
             
@@ -3667,9 +3668,9 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             self._AddPathsToList( paths )
             
         
-        HG.client_controller.gui.RegisterUIUpdateWindow( self )
+        CG.client_controller.gui.RegisterUIUpdateWindow( self )
         
-        HG.client_controller.CallToThreadLongRunning( self.THREADParseImportablePaths, self._unparsed_paths_queue, self._currently_parsing, self._work_to_do, self._parsed_path_queue, self._progress_updater, self._pause_event, self._cancel_event )
+        CG.client_controller.CallToThreadLongRunning( self.THREADParseImportablePaths, self._unparsed_paths_queue, self._currently_parsing, self._work_to_do, self._parsed_path_queue, self._progress_updater, self._pause_event, self._cancel_event )
         
     
     def _AddPathsToList( self, paths ):
@@ -3710,7 +3711,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     delete_after_success = self._delete_after_success.isChecked()
                     
-                    HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
+                    CG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
                     
                     self._OKParent()
                     
@@ -3745,7 +3746,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             delete_after_success = self._delete_after_success.isChecked()
             
-            HG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
+            CG.client_controller.pub( 'new_hdd_import', paths, file_import_options, metadata_routers, paths_to_additional_service_keys_to_tags, delete_after_success )
             
         
         self._OKParent()
@@ -3982,7 +3983,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
             
             # first we'll flesh out unparsed_paths with anything new to look at
             
-            do_human_sort = HG.client_controller.new_options.GetBoolean( 'do_human_sort_on_hdd_file_import_paths' )
+            do_human_sort = CG.client_controller.new_options.GetBoolean( 'do_human_sort_on_hdd_file_import_paths' )
             
             while not unparsed_paths_queue.empty():
                 

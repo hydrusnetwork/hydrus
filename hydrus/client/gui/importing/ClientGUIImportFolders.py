@@ -3,12 +3,11 @@ import os
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFileSeedCache
@@ -206,7 +205,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._publish_files_to_popup_button = QW.QCheckBox( self._folder_box )
         self._publish_files_to_page = QW.QCheckBox( self._folder_box )
         
-        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._folder_box, HG.client_controller, self._import_folder.GetFileSeedCache, file_seed_cache_set_callable = self._import_folder.SetFileSeedCache )
+        self._file_seed_cache_button = ClientGUIFileSeedCache.FileSeedCacheButton( self._folder_box, CG.client_controller, self._import_folder.GetFileSeedCache, file_seed_cache_set_callable = self._import_folder.SetFileSeedCache )
         
         #
         
@@ -268,7 +267,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         #
         
@@ -311,7 +310,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             self._location_failed.SetPath( action_locations[ CC.STATUS_ERROR ] )
             
         
-        good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in list(tag_service_keys_to_filename_tagging_options.items()) if HG.client_controller.services_manager.ServiceExists( service_key ) }
+        good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in list(tag_service_keys_to_filename_tagging_options.items()) if CG.client_controller.services_manager.ServiceExists( service_key ) }
         
         self._filename_tagging_options.AddDatas( list(good_tag_service_keys_to_filename_tagging_options.items()) )
         
@@ -476,7 +475,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             ClientGUIDialogsMessage.ShowWarning( self, f'The path you have entered--"{path}"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
             
         
-        if HC.BASE_DIR.startswith( path ) or HG.client_controller.GetDBDir().startswith( path ):
+        if HC.BASE_DIR.startswith( path ) or CG.client_controller.GetDBDir().startswith( path ):
             
             raise HydrusExceptions.VetoException( 'You cannot set an import path that includes your install or database directory!' )
             
@@ -546,7 +545,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( service_key, filename_tagging_options ) = data
         
-        name = HG.client_controller.services_manager.GetName( service_key )
+        name = CG.client_controller.services_manager.GetName( service_key )
         
         display_tuple = ( name, )
         sort_tuple = ( name, )

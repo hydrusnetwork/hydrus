@@ -6,6 +6,7 @@ import urllib.parse
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusExceptions
 
+from hydrus.client import ClientGlobals as CG
 def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
     
     version = 0
@@ -323,7 +324,7 @@ def GetSearchURLs( url ):
     
     try:
         
-        normalised_url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
         search_urls.add( normalised_url )
         
@@ -423,7 +424,7 @@ def NormaliseAndFilterAssociableURLs( urls ):
         
         try:
             
-            url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+            url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
             
         except HydrusExceptions.URLClassException:
             
@@ -433,7 +434,7 @@ def NormaliseAndFilterAssociableURLs( urls ):
         normalised_urls.add( url )
         
     
-    associable_urls = { url for url in normalised_urls if HG.client_controller.network_engine.domain_manager.ShouldAssociateURLWithFiles( url ) }
+    associable_urls = { url for url in normalised_urls if CG.client_controller.network_engine.domain_manager.ShouldAssociateURLWithFiles( url ) }
     
     return associable_urls
     

@@ -13,6 +13,7 @@ from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -412,7 +413,7 @@ class ListAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._service_key = service_key
-        self._service = HG.client_controller.services_manager.GetService( self._service_key )
+        self._service = CG.client_controller.services_manager.GetService( self._service_key )
         self._accounts = accounts
         
         self._accounts_box = ClientGUICommon.StaticBox( self, 'accounts' )
@@ -494,7 +495,7 @@ class ReviewAccountsPanel( QW.QWidget ):
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
-        self._service = HG.client_controller.services_manager.GetService( self._service_key )
+        self._service = CG.client_controller.services_manager.GetService( self._service_key )
         self._account_identifiers = account_identifiers
         
         self._done_first_fetch = False
@@ -623,7 +624,7 @@ class ReviewAccountsPanel( QW.QWidget ):
             
             account_keys_text = os.linesep.join( ( account_key.hex() for account_key in checked_account_keys ) )
             
-            HG.client_controller.pub( 'clipboard', 'text', account_keys_text )
+            CG.client_controller.pub( 'clipboard', 'text', account_keys_text )
             
         
     
@@ -874,7 +875,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
         self._service_key = service_key
-        self._service = HG.client_controller.services_manager.GetService( service_key )
+        self._service = CG.client_controller.services_manager.GetService( service_key )
         self._subject_identifiers = subject_identifiers
         self._account_types = []
         

@@ -18,6 +18,7 @@ from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientVideoHandling
 from hydrus.client.caches import ClientCachesBase
@@ -107,7 +108,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         self._this_is_for_metadata_alone = this_is_for_metadata_alone
         
-        HG.client_controller.CallToThread( self._Initialise )
+        CG.client_controller.CallToThread( self._Initialise )
 
 
     def GetNumPyImage(self):
@@ -240,7 +241,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
     def _Initialise( self ):
         
         # do this here so we are off the main thread and can wait
-        client_files_manager = HG.client_controller.client_files_manager
+        client_files_manager = CG.client_controller.client_files_manager
         
         self._path = client_files_manager.GetFilePath( self._hash, self._mime )
         
@@ -277,8 +278,8 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
             
             HydrusData.ShowText( m )
             
-            HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
-            HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+            CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_INTEGRITY_DATA_TRY_URL_ELSE_REMOVE_RECORD )
+            CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
             '''
             
             if not self._render_failed:
@@ -299,7 +300,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                     
                     HydrusData.ShowText( m )
                     
-                    HG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    CG.client_controller.Write( 'file_maintenance_add_jobs_hashes', { self._hash }, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
                     
                 
             
@@ -387,7 +388,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         data = numpy_image.data
         
-        qt_image = HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, depth * 8, data )
+        qt_image = CG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, depth * 8, data )
         
         # ok this stuff was originally for image ICC, as loaded using PIL's image.info dict
         # ultimately I figured out how to do the conversion with PIL itself, which was more universal
@@ -453,7 +454,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                 
                 data = numpy_image.data
                 
-                return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, depth * 8, data )
+                return CG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, depth * 8, data )
                 
             except Exception as e:
                 
@@ -529,7 +530,7 @@ class RasterContainer( object ):
         hash = self._media.GetHash()
         mime = self._media.GetMime()
         
-        client_files_manager = HG.client_controller.client_files_manager
+        client_files_manager = CG.client_controller.client_files_manager
         
         self._path = client_files_manager.GetFilePath( hash, mime )
         
@@ -570,7 +571,7 @@ class RasterContainerVideo( RasterContainer ):
         
         ( x, y ) = self._target_resolution
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         video_buffer_size = new_options.GetInteger( 'video_buffer_size' )
         
@@ -622,7 +623,7 @@ class RasterContainerVideo( RasterContainer ):
         self._rendered_first_frame = False
         self._ideal_next_frame = 0
         
-        HG.client_controller.CallToThread( self.THREADRender )
+        CG.client_controller.CallToThread( self.THREADRender )
         
     
     def _HasFrame( self, index ):
@@ -1108,14 +1109,14 @@ class HydrusBitmap( ClientCachesBase.CacheableObject ):
         
         ( width, height ) = self._size
         
-        return HG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, self._depth * 8, self._GetData() )
+        return CG.client_controller.bitmap_manager.GetQtImageFromBuffer( width, height, self._depth * 8, self._GetData() )
         
     
     def GetQtPixmap( self ) -> QG.QPixmap:
         
         ( width, height ) = self._size
         
-        return HG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, self._depth * 8, self._GetData() )
+        return CG.client_controller.bitmap_manager.GetQtPixmapFromBuffer( width, height, self._depth * 8, self._GetData() )
         
     
     def GetEstimatedMemoryFootprint( self ):

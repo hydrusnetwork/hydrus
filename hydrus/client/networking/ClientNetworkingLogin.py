@@ -13,6 +13,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client import ClientThreading
@@ -959,7 +960,7 @@ class LoginProcessDomain( LoginProcess ):
         
         job_status.SetStatusTitle( 'Logging in ' + login_domain )
         
-        HG.client_controller.pub( 'message', job_status )
+        CG.client_controller.pub( 'message', job_status )
         
         HydrusData.Print( 'Starting login for ' + login_domain )
         

@@ -16,6 +16,7 @@ from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientFiles
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
 from hydrus.client import ClientParsing
 from hydrus.client import ClientRendering
@@ -472,7 +473,7 @@ class ThumbnailCache( object ):
                     
                     bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
                     thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
-                    thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+                    thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
                     
                     ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
                     
@@ -563,7 +564,7 @@ class ThumbnailCache( object ):
         
         bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
         thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
-        thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+        thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
         
         ( expected_width, expected_height ) = HydrusImageHandling.GetThumbnailResolution( ( media_width, media_height ), bounding_dimensions, thumbnail_scale_type, thumbnail_dpr_percent )
         
@@ -635,7 +636,7 @@ class ThumbnailCache( object ):
             job_status.SetStatusText( message )
             job_status.SetFiles( [ hash ], 'broken thumbnail' )
             
-            HG.client_controller.pub( 'message', job_status )
+            CG.client_controller.pub( 'message', job_status )
             
         
     
@@ -751,7 +752,7 @@ class ThumbnailCache( object ):
         locations_manager = media.GetLocationsManager()
         
         we_have_file = locations_manager.IsLocal()
-        we_should_have_thumb = not locations_manager.GetCurrent().isdisjoint( HG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
+        we_should_have_thumb = not locations_manager.GetCurrent().isdisjoint( CG.client_controller.services_manager.GetServiceKeys( ( HC.FILE_REPOSITORY, ) ) )
         we_have_blurhash = media.GetFileInfoManager().blurhash is not None
         
         return we_have_file or we_should_have_thumb or we_have_blurhash
@@ -792,7 +793,7 @@ class ThumbnailCache( object ):
             
             bounding_dimensions = self._controller.options[ 'thumbnail_dimensions' ]
             thumbnail_scale_type = self._controller.new_options.GetInteger( 'thumbnail_scale_type' )
-            thumbnail_dpr_percent = HG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
+            thumbnail_dpr_percent = CG.client_controller.new_options.GetInteger( 'thumbnail_dpr_percent' )
             
             for ( mime, thumbnail_path ) in HydrusFileHandling.mimes_to_default_thumbnail_paths.items():
                 
@@ -1037,7 +1038,7 @@ class ThumbnailCache( object ):
             with self._lock:
                 
                 # got more important work or no work to do
-                if len( self._waterfall_queue ) > 0 or len( self._delayed_regeneration_queue ) == 0 or HG.client_controller.CurrentlyPubSubbing():
+                if len( self._waterfall_queue ) > 0 or len( self._delayed_regeneration_queue ) == 0 or CG.client_controller.CurrentlyPubSubbing():
                     
                     continue
                     

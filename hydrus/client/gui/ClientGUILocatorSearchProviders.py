@@ -1,8 +1,10 @@
 from hydrus.client.gui.QLocator import QAbstractLocatorSearchProvider, QCalculatorSearchProvider, QLocatorSearchResult
-from hydrus.core import HydrusGlobals as HG
-from qtpy import QtWidgets as QW
+
 from html import escape
 
+from qtpy import QtWidgets as QW
+
+from hydrus.client import ClientGlobals as CG
 
 def highlight_result_text( result_text: str, query_text: str ):
 
@@ -67,7 +69,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
 
         if page:
 
-            HG.client_controller.gui._notebook.ShowPage( page )
+            CG.client_controller.gui._notebook.ShowPage( page )
             
             self.result_ids_to_pages = {}
 
@@ -77,12 +79,12 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
         
         self.result_ids_to_pages = {}
         
-        if not HG.client_controller.gui or not HG.client_controller.gui._notebook:
+        if not CG.client_controller.gui or not CG.client_controller.gui._notebook:
             
             return
             
         
-        tab_widget = HG.client_controller.gui._notebook
+        tab_widget = CG.client_controller.gui._notebook
         
         # helper function to traverse tab tree and generate entries
         def get_child_tabs( tab_widget: QW.QTabWidget, parent_name: str ) -> list:
@@ -177,7 +179,7 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
 
     def processQuery( self, query: str, context, jobID: int ):
         
-        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             return
             
@@ -188,11 +190,11 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
             
         self.result_ids_to_pages = {}
         
-        if not HG.client_controller.gui or not HG.client_controller.gui._menubar:
+        if not CG.client_controller.gui or not CG.client_controller.gui._menubar:
             
             return
             
-        menubar = HG.client_controller.gui._menubar
+        menubar = CG.client_controller.gui._menubar
         
         # helper function to traverse menu and generate entries
         # TODO: need to filter out menu items not suitable for display in locator
@@ -298,7 +300,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
 
     def processQuery( self, query: str, context, jobID: int ):
         
-        if not HG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
             return
             
@@ -310,11 +312,11 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
         self.result_ids_to_pages = {}
         self.menu = None
         
-        if not HG.client_controller.gui or not HG.client_controller.gui._notebook:
+        if not CG.client_controller.gui or not CG.client_controller.gui._notebook:
             
             return
             
-        media_page = HG.client_controller.gui._notebook.GetCurrentMediaPage()
+        media_page = CG.client_controller.gui._notebook.GetCurrentMediaPage()
         
         if not media_page or not media_page._media_panel:
             

@@ -2,7 +2,6 @@ import collections
 import os
 import random
 import threading
-import time
 import typing
 
 from qtpy import QtCore as QC
@@ -11,7 +10,6 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -20,6 +18,7 @@ from hydrus.core.networking import HydrusNetwork
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
 from hydrus.client import ClientDuplicates
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientParsing
 from hydrus.client import ClientPaths
@@ -153,7 +152,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
                 predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = predicates ), )
                 
             
-            HG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
+            CG.client_controller.pub( 'enter_predicates', self._page_key, predicates )
             
             return True
             
@@ -224,7 +223,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
         
         if p is not None:
             
-            HG.client_controller.pub( 'enter_predicates', self._page_key, p, permit_remove = permit_remove, permit_add = permit_add )
+            CG.client_controller.pub( 'enter_predicates', self._page_key, p, permit_remove = permit_remove, permit_add = permit_add )
             
         
     
@@ -532,8 +531,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         file_search_context_1 = management_controller.GetVariable( 'file_search_context_1' )
         file_search_context_2 = management_controller.GetVariable( 'file_search_context_2' )
         
-        file_search_context_1.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
-        file_search_context_2.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        file_search_context_1.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
+        file_search_context_2.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
         if self._management_controller.HasVariable( 'synchronised' ):
             
@@ -706,7 +705,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     
     def _EditMergeOptions( self, duplicate_type ):
         
-        new_options = HG.client_controller.new_options
+        new_options = CG.client_controller.new_options
         
         duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( duplicate_type )
         
@@ -820,7 +819,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         def thread_do_it( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ):
             
-            potential_duplicates_count = HG.client_controller.Read( 'potential_duplicates_count', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+            potential_duplicates_count = CG.client_controller.Read( 'potential_duplicates_count', file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
             
             QP.CallAfter( qt_code, potential_duplicates_count )
             
@@ -835,7 +834,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             
             ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData()
             
-            HG.client_controller.CallToThread( thread_do_it, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
+            CG.client_controller.CallToThread( thread_do_it, file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
             
         
     
@@ -1535,13 +1534,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if files_finished:
             
-            pretty_files_paused = HG.client_controller.new_options.GetString( 'stop_character' )
+            pretty_files_paused = CG.client_controller.new_options.GetString( 'stop_character' )
             
             sort_files_paused = -1
             
         elif files_paused:
             
-            pretty_files_paused = HG.client_controller.new_options.GetString( 'pause_character' )
+            pretty_files_paused = CG.client_controller.new_options.GetString( 'pause_character' )
             
             sort_files_paused = 0
             
@@ -1557,13 +1556,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if gallery_finished:
             
-            pretty_gallery_paused = HG.client_controller.new_options.GetString( 'stop_character' )
+            pretty_gallery_paused = CG.client_controller.new_options.GetString( 'stop_character' )
             
             sort_gallery_paused = -1
             
         elif gallery_paused:
             
-            pretty_gallery_paused = HG.client_controller.new_options.GetString( 'pause_character' )
+            pretty_gallery_paused = CG.client_controller.new_options.GetString( 'pause_character' )
             
             sort_gallery_paused = 0
             
@@ -1604,7 +1603,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             text = os.linesep.join( ( gallery_importer.GetQueryText() for gallery_importer in gallery_importers ) )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -1741,7 +1740,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     
                     if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
                         
-                        HG.client_controller.pub( 'message', job_status )
+                        CG.client_controller.pub( 'message', job_status )
                         
                         have_published_job_status = True
                         
@@ -1751,7 +1750,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                         return all_media_results
                         
                     
-                    block_of_media_results = HG.client_controller.Read( 'media_results', block_of_hashes, sorted = True )
+                    block_of_media_results = CG.client_controller.Read( 'media_results', block_of_hashes, sorted = True )
                     
                     all_media_results.extend( block_of_media_results )
                     
@@ -1841,7 +1840,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         results = self._multiple_gallery_import.PendQueries( queries )
         
-        if len( results ) > 0 and self._highlighted_gallery_import is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
+        if len( results ) > 0 and self._highlighted_gallery_import is None and CG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
             
             first_result = results[ 0 ]
             
@@ -2020,7 +2019,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, HG.client_controller, file_seed_cache )
+        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, CG.client_controller, file_seed_cache )
         
         frame.SetPanel( panel )
         
@@ -2088,7 +2087,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, HG.client_controller, read_only, can_generate_more_pages, 'search', gallery_seed_log )
+        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, CG.client_controller, read_only, can_generate_more_pages, 'search', gallery_seed_log )
         
         frame.SetPanel( panel )
         
@@ -2213,7 +2212,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         new_query = self._multiple_gallery_import.PendSubscriptionGapDownloader( gug_key_and_name, query_text, file_import_options, tag_import_options, note_import_options, file_limit )
         
-        if new_query is not None and self._highlighted_gallery_import is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
+        if new_query is not None and self._highlighted_gallery_import is None and CG.client_controller.new_options.GetBoolean( 'highlight_new_query' ):
             
             self._HighlightGalleryImport( new_query )
             
@@ -2336,7 +2335,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._UpdateImportStatus()
         
-        HG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
+        CG.client_controller.sub( self, '_ClearExistingHighlightAndPanel', 'clear_multiwatcher_highlights' )
         
         self._import_options_button.fileImportOptionsChanged.connect( self._OptionsUpdated )
         self._import_options_button.noteImportOptionsChanged.connect( self._OptionsUpdated )
@@ -2369,7 +2368,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
             
         
-        if first_result is not None and self._highlighted_watcher is None and HG.client_controller.new_options.GetBoolean( 'highlight_new_watcher' ):
+        if first_result is not None and self._highlighted_watcher is None and CG.client_controller.new_options.GetBoolean( 'highlight_new_watcher' ):
             
             self._HighlightWatcher( first_result )
             
@@ -2494,7 +2493,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if files_paused:
             
-            pretty_files_paused = HG.client_controller.new_options.GetString( 'pause_character' )
+            pretty_files_paused = CG.client_controller.new_options.GetString( 'pause_character' )
             
         else:
             
@@ -2506,13 +2505,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if checking_dead:
             
-            pretty_checking_paused = HG.client_controller.new_options.GetString( 'stop_character' )
+            pretty_checking_paused = CG.client_controller.new_options.GetString( 'stop_character' )
             
             sort_checking_paused = -1
             
         elif checking_paused:
             
-            pretty_checking_paused = HG.client_controller.new_options.GetString( 'pause_character' )
+            pretty_checking_paused = CG.client_controller.new_options.GetString( 'pause_character' )
             
             sort_checking_paused = 0
             
@@ -2571,7 +2570,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             text = os.linesep.join( ( watcher.GetSubject() for watcher in watchers ) )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -2583,7 +2582,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             text = os.linesep.join( ( watcher.GetURL() for watcher in watchers ) )
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -2740,7 +2739,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     
                     if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
                         
-                        HG.client_controller.pub( 'message', job_status )
+                        CG.client_controller.pub( 'message', job_status )
                         
                         have_published_job_status = True
                         
@@ -2750,7 +2749,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                         return all_media_results
                         
                     
-                    block_of_media_results = HG.client_controller.Read( 'media_results', block_of_hashes, sorted = True )
+                    block_of_media_results = CG.client_controller.Read( 'media_results', block_of_hashes, sorted = True )
                     
                     all_media_results.extend( block_of_media_results )
                     
@@ -3010,7 +3009,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, HG.client_controller, file_seed_cache )
+        panel = ClientGUIFileSeedCache.EditFileSeedCachePanel( frame, CG.client_controller, file_seed_cache )
         
         frame.SetPanel( panel )
         
@@ -3078,7 +3077,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, HG.client_controller, read_only, can_generate_more_pages, 'check', gallery_seed_log )
+        panel = ClientGUIGallerySeedLog.EditGallerySeedLogPanel( frame, CG.client_controller, read_only, can_generate_more_pages, 'check', gallery_seed_log )
         
         frame.SetPanel( panel )
         
@@ -4373,7 +4372,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         account_key = self._current_petition.GetPetitionerAccount().GetAccountKey()
         
-        HG.client_controller.pub( 'clipboard', 'text', account_key.hex() )
+        CG.client_controller.pub( 'clipboard', 'text', account_key.hex() )
         
     
     def _DenySelected( self ):
@@ -4575,7 +4574,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                     response = service.Request( HC.GET, 'petitions_summary', { 'content_type' : content_type, 'status' : status, 'num' : num_to_fetch, 'subject_account_key' : subject_account_key } )
                     
                 
-                HG.client_controller.CallBlockingToQt( self, qt_set_petitions_summary, response[ 'petitions_summary' ] )
+                CG.client_controller.CallBlockingToQt( self, qt_set_petitions_summary, response[ 'petitions_summary' ] )
                 
             except HydrusExceptions.NotFoundException:
                 
@@ -4585,11 +4584,11 @@ class ManagementPanelPetitions( ManagementPanel ):
                 
                 job_status.FinishAndDismiss( 5 )
                 
-                HG.client_controller.pub( 'message', job_status )
+                CG.client_controller.pub( 'message', job_status )
                 
             finally:
                 
-                HG.client_controller.CallBlockingToQt( self, qt_done )
+                CG.client_controller.CallBlockingToQt( self, qt_done )
                 
             
         
@@ -4847,7 +4846,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if len( self._petition_headers_we_are_fetching ) > 0:
             
-            HG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
+            CG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
             
         
         self._HighlightAPetitionIfNeeded()
@@ -4980,7 +4979,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._HighlightAPetitionIfNeeded()
         
-        HG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
+        CG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
         
     
     def _UpdateAccountKey( self ):
@@ -5175,13 +5174,13 @@ class ManagementPanelPetitions( ManagementPanel ):
                         
                         tag = copyable_items[0]
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'copy {}'.format( tag ), 'Copy this tag.', HG.client_controller.pub, 'clipboard', 'text', tag )
+                        ClientGUIMenus.AppendMenuItem( menu, 'copy {}'.format( tag ), 'Copy this tag.', CG.client_controller.pub, 'clipboard', 'text', tag )
                         
                     else:
                         
                         text = os.linesep.join( copyable_items )
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'copy {} tags'.format( HydrusData.ToHumanInt( len( copyable_items ) ) ), 'Copy this tag.', HG.client_controller.pub, 'clipboard', 'text', text )
+                        ClientGUIMenus.AppendMenuItem( menu, 'copy {} tags'.format( HydrusData.ToHumanInt( len( copyable_items ) ) ), 'Copy this tag.', CG.client_controller.pub, 'clipboard', 'text', text )
                         
                     
                 
@@ -5194,7 +5193,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         ManagementPanel.PageShown( self )
         
-        HG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
+        CG.client_controller.CallToThread( self.THREADPetitionFetcherAndUploader, self._petition_fetcher_and_uploader_work_lock, self._service )
         
     
     def ProcessCurrentPetition( self ):
@@ -5248,11 +5247,11 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             if len( self._petition_headers_we_are_fetching ) > 0:
                 
-                if HG.client_controller.PageAliveAndNotClosed( self._page_key ):
+                if CG.client_controller.PageAliveAndNotClosed( self._page_key ):
                     
                     fetch_petition_header = self._petition_headers_we_are_fetching[0]
                     
-                elif HG.client_controller.PageDestroyed( self._page_key ):
+                elif CG.client_controller.PageDestroyed( self._page_key ):
                     
                     self._petition_headers_we_are_fetching = []
                     
@@ -5371,7 +5370,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                 fetch_petition_header: typing.Optional[ HydrusNetwork.PetitionHeader ] = None
                 outgoing_petition: typing.Optional[ HydrusNetwork.Petition ] = None
                 
-                ( fetch_petition_header, outgoing_petition ) = HG.client_controller.CallBlockingToQt( self, qt_get_work )
+                ( fetch_petition_header, outgoing_petition ) = CG.client_controller.CallBlockingToQt( self, qt_get_work )
                 
                 if fetch_petition_header is None and outgoing_petition is None:
                     
@@ -5393,18 +5392,18 @@ class ManagementPanelPetitions( ManagementPanel ):
                         
                         petition = response[ 'petition' ]
                         
-                        HG.client_controller.CallBlockingToQt( self, qt_petition_fetched, petition )
+                        CG.client_controller.CallBlockingToQt( self, qt_petition_fetched, petition )
                         
                     except HydrusExceptions.NotFoundException:
                         
-                        HG.client_controller.CallBlockingToQt( self, qt_petition_fetch_404, fetch_petition_header )
+                        CG.client_controller.CallBlockingToQt( self, qt_petition_fetch_404, fetch_petition_header )
                         
                     except Exception as e:
                         
                         HydrusData.ShowText( 'Failed to fetch a petition!' )
                         HydrusData.ShowException( e )
                         
-                        HG.client_controller.CallBlockingToQt( self, qt_petition_fetch_failed, fetch_petition_header )
+                        CG.client_controller.CallBlockingToQt( self, qt_petition_fetch_failed, fetch_petition_header )
                         
                     
                 
@@ -5428,7 +5427,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                                 
                                 if HydrusTime.TimeHasPassed( time_started + 3 ):
                                     
-                                    HG.client_controller.pub( 'message', job_status )
+                                    CG.client_controller.pub( 'message', job_status )
                                     
                                 
                                 ( i_paused, should_quit ) = job_status.WaitIfNeeded()
@@ -5444,7 +5443,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                                 
                                 if len( content_updates ) > 0:
                                     
-                                    HG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service.GetServiceKey(), content_updates ) )
+                                    CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service.GetServiceKey(), content_updates ) )
                                     
                                 
                                 job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
@@ -5456,14 +5455,14 @@ class ManagementPanelPetitions( ManagementPanel ):
                             job_status.FinishAndDismiss()
                             
                         
-                        HG.client_controller.CallBlockingToQt( self, qt_petition_cleared, outgoing_petition )
+                        CG.client_controller.CallBlockingToQt( self, qt_petition_cleared, outgoing_petition )
                         
                     except Exception as e:
                         
                         HydrusData.ShowText( 'Failed to upload a petition!' )
                         HydrusData.ShowException( e )
                         
-                        HG.client_controller.CallBlockingToQt( self, qt_petition_clear_failed, outgoing_petition )
+                        CG.client_controller.CallBlockingToQt( self, qt_petition_clear_failed, outgoing_petition )
                         
                     
                 
@@ -5481,7 +5480,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         file_search_context = self._management_controller.GetVariable( 'file_search_context' )
         
-        file_search_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        file_search_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
         self._search_enabled = self._management_controller.GetVariable( 'search_enabled' )
         
@@ -5572,7 +5571,7 @@ class ManagementPanelQuery( ManagementPanel ):
             
             file_search_context = self._management_controller.GetVariable( 'file_search_context' )
             
-            file_search_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+            file_search_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
             
             tag_service_key = file_search_context.GetTagContext().service_key
             
@@ -5802,7 +5801,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         file_search_context = self._management_controller.GetVariable( 'file_search_context' )
         
-        file_search_context.FixMissingServices( HG.client_controller.services_manager.FilterValidServiceKeys )
+        file_search_context.FixMissingServices( CG.client_controller.services_manager.FilterValidServiceKeys )
         
         initial_predicates = file_search_context.GetPredicates()
         
@@ -5828,7 +5827,7 @@ class ManagementPanelQuery( ManagementPanel ):
         
         QUERY_CHUNK_SIZE = 256
         
-        HG.client_controller.file_viewing_stats_manager.Flush()
+        CG.client_controller.file_viewing_stats_manager.Flush()
         
         query_hash_ids = controller.Read( 'file_query_ids', file_search_context, job_status = query_job_status, limit_sort_by = sort_by )
         

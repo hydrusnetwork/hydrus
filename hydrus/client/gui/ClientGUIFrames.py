@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
 
@@ -15,9 +16,9 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         if key_type == 'registration': title = 'Registration Tokens'
         elif key_type == 'access': title = 'Access Keys'
         
-        tlw = HG.client_controller.GetMainTLW()
+        tlw = CG.client_controller.GetMainTLW()
         
-        ClientGUITopLevelWindows.Frame.__init__( self, tlw, HG.client_controller.PrepStringForDisplay( title ) )
+        ClientGUITopLevelWindows.Frame.__init__( self, tlw, CG.client_controller.PrepStringForDisplay( title ) )
         
         self._key_type = key_type
         self._keys = keys

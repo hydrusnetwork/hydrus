@@ -17,8 +17,10 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusProfiling
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtInit
 
 isValid = QtInit.isValid
@@ -171,7 +173,7 @@ class DirPickerCtrl( QW.QWidget ):
         
         kwargs = {}
         
-        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
             # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
             kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
@@ -258,7 +260,7 @@ class FilePickerCtrl( QW.QWidget ):
         
         kwargs = {}
         
-        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
             # careful here, QW.QFileDialog.Options doesn't exist on PyQt6
             kwargs[ 'options' ] = QW.QFileDialog.Option.DontUseNativeDialog
@@ -333,6 +335,7 @@ class TabBar( QW.QTabBar ):
         
         self._last_clicked_tab_index = -1
         self._last_clicked_global_pos = None
+        self._last_clicked_timestamp_ms = 0
         
     
     def AddSupplementaryTabBarDropTarget( self, drop_target ):
@@ -345,6 +348,8 @@ class TabBar( QW.QTabBar ):
         self._last_clicked_tab_index = -1
         
         self._last_clicked_global_pos = None
+        
+        self._last_clicked_timestamp_ms = 0
         
     
     def event( self, event ):
@@ -366,6 +371,8 @@ class TabBar( QW.QTabBar ):
             self._last_clicked_tab_index = index
             
             self._last_clicked_global_pos = event.globalPosition().toPoint()
+            
+            self._last_clicked_timestamp_ms = HydrusTime.GetNowMS()
             
         
         QW.QTabBar.mousePressEvent( self, event )
@@ -446,11 +453,11 @@ class TabBar( QW.QTabBar ):
                 
                 if shift_down:
                     
-                    do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_with_shift' )
+                    do_navigate = CG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_with_shift' )
                     
                 else:
                     
-                    do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_normally' )
+                    do_navigate = CG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_normally' )
                     
                 
                 if do_navigate:
@@ -467,7 +474,7 @@ class TabBar( QW.QTabBar ):
     
     def lastClickedTabInfo( self ):
         
-        return ( self._last_clicked_tab_index, self._last_clicked_global_pos )
+        return ( self._last_clicked_tab_index, self._last_clicked_global_pos, self._last_clicked_timestamp_ms )
         
     
     def dropEvent( self, event ):
@@ -486,7 +493,7 @@ class TabBar( QW.QTabBar ):
         
         try:
             
-            if HG.client_controller.new_options.GetBoolean( 'wheel_scrolls_tab_bar' ):
+            if CG.client_controller.new_options.GetBoolean( 'wheel_scrolls_tab_bar' ):
                 
                 children = self.children()
                 
@@ -599,9 +606,13 @@ class TabWidgetWithDnD( QW.QTabWidget ):
     
     def mouseMoveEvent( self, e ):
         
-        if self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) ):
+        mouse_is_over_actual_page = self.currentWidget() and self.currentWidget().rect().contains( self.currentWidget().mapFromGlobal( self.mapToGlobal( e.position().toPoint() ) ) )
+        
+        if mouse_is_over_actual_page or CG.client_controller.new_options.GetBoolean( 'disable_page_tab_dnd' ):
             
             QW.QTabWidget.mouseMoveEvent( self, e )
+            
+            return
             
         
         if e.buttons() != QC.Qt.LeftButton:
@@ -623,16 +634,19 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        ( clicked_tab_index, clicked_global_pos ) = self._tab_bar.lastClickedTabInfo()
+        ( clicked_tab_index, clicked_global_pos, clicked_timestamp_ms ) = self._tab_bar.lastClickedTabInfo()
         
         if clicked_tab_index == -1:
             
             return
             
         
-        if e.globalPosition().toPoint() == clicked_global_pos:
+        # I used to do manhattanlength stuff, but tbh this works better
+        # delta_pos = e.globalPosition().toPoint() - clicked_global_pos
+        
+        if not HydrusTime.TimeHasPassedMS( clicked_timestamp_ms + 100 ):
             
-            # don't start a drag until movement
+            # don't start a drag until decent movement
             
             return
             
@@ -697,11 +711,11 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
             if shift_down:
                 
-                do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_with_shift' )
+                do_navigate = CG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_with_shift' )
                 
             else:
                 
-                do_navigate = HG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_normally' )
+                do_navigate = CG.client_controller.new_options.GetBoolean( 'page_drag_change_tab_normally' )
                 
             
             if do_navigate:
@@ -768,7 +782,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             return
             
         
-        ( source_page_index, source_page_click_global_pos ) = source_tab_bar.lastClickedTabInfo()
+        ( source_page_index, source_page_click_global_pos, source_page_clicked_timestamp_ms ) = source_tab_bar.lastClickedTabInfo()
         
         source_tab_bar.clearLastClickedTabInfo()
         
@@ -870,7 +884,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
             
             follow_dropped_page = not shift_down
 
-            new_options = HG.client_controller.new_options
+            new_options = CG.client_controller.new_options
             
             if shift_down:
                 
@@ -898,7 +912,7 @@ class TabWidgetWithDnD( QW.QTabWidget ):
                     page_key = source_notebook.GetPageKey()
                     
                 
-                CallAfter( HG.client_controller.gui.ShowPage, page_key )
+                CallAfter( CG.client_controller.gui.ShowPage, page_key )
                 
             
         
@@ -1240,7 +1254,7 @@ def ToKeySequence( modifiers, key ):
         
     
 
-def AddShortcut( widget, modifier, key, callable, *args ):
+def AddShortcut( widget, modifier, key, func: typing.Callable, *args ):
     
     shortcut = QW.QShortcut( widget )
     
@@ -1248,8 +1262,9 @@ def AddShortcut( widget, modifier, key, callable, *args ):
     
     shortcut.setContext( QC.Qt.WidgetWithChildrenShortcut )
     
-    shortcut.activated.connect( lambda: callable( *args ) )
+    shortcut.activated.connect( lambda: func( *args ) )
     
+
 def GetBackgroundColour( widget ):
     
     return widget.palette().color( QG.QPalette.Window )
@@ -2054,7 +2069,7 @@ class DirDialog( QW.QFileDialog ):
         
         self.setOption( QW.QFileDialog.ShowDirsOnly, True )
         
-        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
             self.setOption( QW.QFileDialog.DontUseNativeDialog, True )
             
@@ -2122,7 +2137,7 @@ class FileDialog( QW.QFileDialog ):
             self.setNameFilter( wildcard )
             
         
-        if HG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
+        if CG.client_controller.new_options.GetBoolean( 'use_qt_file_dialogs' ):
             
             self.setOption( QW.QFileDialog.DontUseNativeDialog, True )
             

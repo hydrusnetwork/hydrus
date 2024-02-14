@@ -8,6 +8,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -105,7 +106,7 @@ def run_auto_yes_no_gubbins( dlg: QW.QDialog, time_to_fire, original_title, acti
     
     while not HydrusTime.TimeHasPassed( time_to_fire ):
         
-        job = HG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no title set', qt_set_title )
+        job = CG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no title set', qt_set_title )
         
         if job.IsDead(): # window closed
             
@@ -115,7 +116,7 @@ def run_auto_yes_no_gubbins( dlg: QW.QDialog, time_to_fire, original_title, acti
         time.sleep( 1 )
         
     
-    job = HG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no fire', qt_fire_button )
+    job = CG.client_controller.CallLaterQtSafe( dlg, 0.0, 'dialog auto yes/no fire', qt_fire_button )
     
 
 def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label = 'no', auto_yes_time = None, auto_no_time = None, check_for_cancelled = False ):
@@ -130,11 +131,11 @@ def GetYesNo( win, message, title = 'Are you sure?', yes_label = 'yes', no_label
             
             if auto_yes_time is not None:
                 
-                HG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_yes_time, dlg.windowTitle(), 'auto-yes', QW.QDialog.Accepted )
+                CG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_yes_time, dlg.windowTitle(), 'auto-yes', QW.QDialog.Accepted )
                 
             elif auto_no_time is not None:
                 
-                HG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_no_time, dlg.windowTitle(), 'auto-no', QW.QDialog.Rejected )
+                CG.client_controller.CallToThread( run_auto_yes_no_gubbins, dlg, HydrusTime.GetNow() + auto_no_time, dlg.windowTitle(), 'auto-no', QW.QDialog.Rejected )
                 
             
         
@@ -244,7 +245,7 @@ def SelectServiceKey( service_types = None, service_keys = None, unallowed = Non
     
     if service_keys is None:
         
-        services = HG.client_controller.services_manager.GetServices( service_types )
+        services = CG.client_controller.services_manager.GetServices( service_types )
         
         service_keys = [ service.GetServiceKey() for service in services ]
         
@@ -268,13 +269,13 @@ def SelectServiceKey( service_types = None, service_keys = None, unallowed = Non
         
     else:
         
-        services = { HG.client_controller.services_manager.GetService( service_key ) for service_key in service_keys }
+        services = { CG.client_controller.services_manager.GetService( service_key ) for service_key in service_keys }
         
         choice_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
         try:
             
-            tlw = HG.client_controller.GetMainTLW()
+            tlw = CG.client_controller.GetMainTLW()
             
             service_key = SelectFromList( tlw, message, choice_tuples )
             

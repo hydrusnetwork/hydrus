@@ -9,8 +9,8 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMaster
@@ -219,7 +219,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         
         self.ClearCache()
         
-        HG.client_controller.frame_splash_status.SetSubtext( 'reading local file data' )
+        CG.client_controller.frame_splash_status.SetSubtext( 'reading local file data' )
         
         local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
         
@@ -228,7 +228,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         
         for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( local_hash_ids, BLOCK_SIZE ) ):
             
-            HG.client_controller.frame_splash_status.SetSubtext( 'caching local file data {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) ) )
+            CG.client_controller.frame_splash_status.SetSubtext( 'caching local file data {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) ) )
             
             self.AddHashIdsToCache( block_of_hash_ids )
             

@@ -12,6 +12,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogs
@@ -51,7 +52,7 @@ def FilterSuggestedTagsForMedia( tags: typing.Sequence[ str ], medias: typing.Co
     # then we could also filter out worse/better siblings of the same count
     
     # this is a sync way for now:
-    # db_tags_to_ideals_and_parents = HG.client_controller.Read( 'tag_display_decorators', service_key, tags_to_lookup )
+    # db_tags_to_ideals_and_parents = CG.client_controller.Read( 'tag_display_decorators', service_key, tags_to_lookup )
     
     for ( tag, count ) in current_tags_to_count.items():
         
@@ -73,7 +74,7 @@ class ListBoxTagsSuggestionsFavourites( ClientGUIListBoxes.ListBoxTagsStrings ):
         
         self._activate_callable = activate_callable
         
-        width = HG.client_controller.new_options.GetInteger( 'suggested_tags_width' )
+        width = CG.client_controller.new_options.GetInteger( 'suggested_tags_width' )
         
         if width is not None:
             
@@ -124,7 +125,7 @@ class ListBoxTagsSuggestionsRelated( ClientGUIListBoxes.ListBoxTagsPredicates ):
         
         self._activate_callable = activate_callable
         
-        width = HG.client_controller.new_options.GetInteger( 'suggested_tags_width' )
+        width = CG.client_controller.new_options.GetInteger( 'suggested_tags_width' )
         
         self.setMinimumWidth( width )
         
@@ -192,9 +193,9 @@ class FavouritesTagsPanel( QW.QWidget ):
     
     def _UpdateTagDisplay( self ):
         
-        favourites = list( HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key ) )
+        favourites = list( CG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key ) )
         
-        ClientTagSorting.SortTags( HG.client_controller.new_options.GetDefaultTagSort(), favourites )
+        ClientTagSorting.SortTags( CG.client_controller.new_options.GetDefaultTagSort(), favourites )
         
         tags = FilterSuggestedTagsForMedia( favourites, self._media, self._service_key )
         
@@ -231,7 +232,7 @@ class RecentTagsPanel( QW.QWidget ):
         
         self._last_fetched_tags = []
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
         vbox = QP.VBoxLayout()
         
@@ -271,12 +272,12 @@ class RecentTagsPanel( QW.QWidget ):
                     
                 
             
-            recent_tags = HG.client_controller.Read( 'recent_tags', service_key )
+            recent_tags = CG.client_controller.Read( 'recent_tags', service_key )
             
             QP.CallAfter( qt_code, recent_tags )
             
         
-        HG.client_controller.CallToThread( do_it, self._service_key )
+        CG.client_controller.CallToThread( do_it, self._service_key )
         
     
     def _UpdateTagDisplay( self ):
@@ -294,7 +295,7 @@ class RecentTagsPanel( QW.QWidget ):
         
         if result == QW.QDialog.Accepted:
             
-            HG.client_controller.Write( 'push_recent_tags', self._service_key, None )
+            CG.client_controller.Write( 'push_recent_tags', self._service_key, None )
             
             self._last_fetched_tags = []
             
@@ -343,7 +344,7 @@ class RelatedTagsPanel( QW.QWidget ):
         
         self._selected_tags = set()
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
         vbox = QP.VBoxLayout()
         
@@ -369,7 +370,7 @@ class RelatedTagsPanel( QW.QWidget ):
         self._button_3.setMinimumWidth( 30 )
         self._button_3.setToolTip( tt )
         
-        if HG.client_controller.services_manager.GetServiceType( self._service_key ) == HC.LOCAL_TAG:
+        if CG.client_controller.services_manager.GetServiceType( self._service_key ) == HC.LOCAL_TAG:
             
             self._just_do_local_files.setVisible( False )
             
@@ -434,11 +435,11 @@ class RelatedTagsPanel( QW.QWidget ):
             
             start_time = HydrusTime.GetNowPrecise()
             
-            concurrence_threshold = HG.client_controller.new_options.GetInteger( 'related_tags_concurrence_threshold_percent' ) / 100
+            concurrence_threshold = CG.client_controller.new_options.GetInteger( 'related_tags_concurrence_threshold_percent' ) / 100
             search_tag_slices_weight_dict = { ':' : 1.0, '' : 1.0 }
             result_tag_slices_weight_dict = { ':' : 1.0, '' : 1.0 }
             
-            ( related_tags_search_tag_slices_weight_percent, related_tags_result_tag_slices_weight_percent ) = HG.client_controller.new_options.GetRelatedTagsTagSliceWeights()
+            ( related_tags_search_tag_slices_weight_percent, related_tags_result_tag_slices_weight_percent ) = CG.client_controller.new_options.GetRelatedTagsTagSliceWeights()
             
             for ( tag_slice, weight_percent ) in related_tags_search_tag_slices_weight_percent:
                 
@@ -466,7 +467,7 @@ class RelatedTagsPanel( QW.QWidget ):
                 result_tag_slices_weight_dict[ tag_slice ] = weight_percent / 100
                 
             
-            ( num_done, num_to_do, num_skipped, predicates ) = HG.client_controller.Read(
+            ( num_done, num_to_do, num_skipped, predicates ) = CG.client_controller.Read(
                 'related_tags',
                 file_service_key,
                 tag_service_key,
@@ -520,7 +521,7 @@ class RelatedTagsPanel( QW.QWidget ):
         
         tag_service_key = self._service_key
         
-        HG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, search_tags, other_tags_to_exclude )
+        CG.client_controller.CallToThread( do_it, file_service_key, tag_service_key, search_tags, other_tags_to_exclude )
         
     
     def _UpdateTagDisplay( self ):
@@ -648,7 +649,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
                     self._script_choice.addItem( script.GetName(), script )
                     
                 
-                new_options = HG.client_controller.new_options
+                new_options = CG.client_controller.new_options
                 
                 favourite_file_lookup_script = new_options.GetNoneableString( 'favourite_file_lookup_script' )
                 
@@ -665,12 +666,12 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
                 self._fetch_button.setEnabled( True )
                 
             
-            scripts = HG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
+            scripts = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_PARSE_ROOT_FILE_LOOKUP )
             
             QP.CallAfter( qt_code )
             
         
-        HG.client_controller.CallToThread( do_it )
+        CG.client_controller.CallToThread( do_it )
         
     
     def _SetTags( self, tags ):
@@ -729,7 +730,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
         
         self._SetTags( [] )
         
-        HG.client_controller.CallToThread( self.THREADFetchTags, script, job_status, file_identifier )
+        CG.client_controller.CallToThread( self.THREADFetchTags, script, job_status, file_identifier )
         
     
     def MediaUpdated( self ):
@@ -792,7 +793,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         self._service_key = service_key
         self._media = media
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
         layout_mode = self._new_options.GetNoneableString( 'suggested_tags_layout' )
         
@@ -813,7 +814,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         self._favourite_tags = None
         
-        favourites = HG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key )
+        favourites = CG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key )
         
         if len( favourites ) > 0:
             

@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.metadata import ClientContentUpdates
 
@@ -61,7 +62,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         HydrusData.DebugPrint( text )
         
-        HG.client_controller.pub( 'message', job_status )
+        CG.client_controller.pub( 'message', job_status )
         
     except:
         
@@ -194,7 +195,7 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
     HydrusData.DebugPrint( text )
     
-    HG.client_controller.pub( 'message', job_status )
+    CG.client_controller.pub( 'message', job_status )
     
     if do_wait:
         
@@ -211,12 +212,12 @@ def ShowTextClient( text ):
     
     HydrusData.Print( text )
     
-    HG.client_controller.pub( 'message', job_status )
+    CG.client_controller.pub( 'message', job_status )
     
 
 def ToHumanBytes( size ):
     
-    sig_figs = HG.client_controller.new_options.GetInteger( 'human_bytes_sig_figs' )
+    sig_figs = CG.client_controller.new_options.GetInteger( 'human_bytes_sig_figs' )
     
     return HydrusData.BaseToHumanBytes( size, sig_figs = sig_figs )
     

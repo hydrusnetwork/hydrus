@@ -7,6 +7,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
@@ -125,7 +126,7 @@ class ColourPickerButton( QW.QPushButton ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except Exception as e:
             
@@ -190,7 +191,7 @@ class ColourPickerButton( QW.QPushButton ):
         
         hex_string = self.GetColour().name( QG.QColor.HexRgb )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'copy ' + hex_string + ' to the clipboard', 'Copy the current colour to the clipboard.', HG.client_controller.pub, 'clipboard', 'text', hex_string )
+        ClientGUIMenus.AppendMenuItem( menu, 'copy ' + hex_string + ' to the clipboard', 'Copy the current colour to the clipboard.', CG.client_controller.pub, 'clipboard', 'text', hex_string )
         ClientGUIMenus.AppendMenuItem( menu, 'import a hex colour from the clipboard', 'Look at the clipboard for a colour in the format #FF0000, and set the colour.', self._ImportHexFromClipboard )
         
         CGC.core().PopupMenu( self, menu )

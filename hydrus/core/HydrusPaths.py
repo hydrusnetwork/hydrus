@@ -203,10 +203,10 @@ def ElideFilenameOrDirectorySafely( name: str, num_characters_used_in_other_comp
     
     # most OSes cannot handle a filename or dirname with more than 255 characters
     # Windows cannot handle a _total_ pathname more than 260
-    # to be safe and deal with surprise extensions like (11) or .txt sidecars, we use 240
+    # to be safe and deal with surprise extensions like (11) or .txt sidecars, we use 220
     # moreover, unicode paths are encoded to bytes, so we have to count differently
     
-    MAX_PATH_LENGTH = 240
+    MAX_PATH_LENGTH = 220
     
     num_characters_available = MAX_PATH_LENGTH
     

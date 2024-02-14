@@ -10,6 +10,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.importing import ClientImportControl
 from hydrus.client.importing import ClientImporting
@@ -42,7 +43,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._highlighted_watcher_url = None
         
-        self._checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
+        self._checker_options = CG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
         
         self._file_import_options = FileImportOptions.FileImportOptions()
         self._file_import_options.SetIsDefault( True )
@@ -193,7 +194,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
+                checker_options = CG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
                 
                 file_import_options = FileImportOptions.FileImportOptions()
                 file_import_options.SetIsDefault( True )
@@ -242,7 +243,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             return None
             
         
-        url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+        url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
         with self._lock:
             
@@ -614,7 +615,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             self._page_key = page_key
             
             # set a 2s period so the page value/range is breddy snappy
-            self._watchers_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), 2.0, self.REPEATINGWorkOnWatchers )
+            self._watchers_repeating_job = CG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), 2.0, self.REPEATINGWorkOnWatchers )
             
             for watcher in self._watchers:
                 
@@ -669,7 +670,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
                 
                 self._last_pubbed_value_range = current_value_range
                 
-                HG.client_controller.pub( 'refresh_page_name', self._page_key )
+                CG.client_controller.pub( 'refresh_page_name', self._page_key )
                 
             
         
@@ -699,7 +700,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         self._external_filterable_tags = set()
         self._external_additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
         
-        self._checker_options = HG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
+        self._checker_options = CG.client_controller.new_options.GetDefaultWatcherCheckerOptions()
         
         self._file_import_options = FileImportOptions.FileImportOptions()
         self._file_import_options.SetIsDefault( True )
@@ -746,7 +747,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         self._last_serialisable_change_timestamp = 0
         
-        HG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
+        CG.client_controller.sub( self, 'NotifyFileSeedsUpdated', 'file_seed_cache_file_seeds_updated' )
         
     
     def _CheckerNetworkJobPresentationContextFactory( self, network_job ):
@@ -845,7 +846,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
         except HydrusExceptions.NetworkException as e:
             
-            delay = HG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
+            delay = CG.client_controller.new_options.GetInteger( 'downloader_network_error_delay' )
             
             self._DelayWork( delay, str( e ) )
             
@@ -1761,7 +1762,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                url = HG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -1795,8 +1796,8 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             self._UpdateFileVelocityStatus()
             
-            self._files_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles )
-            self._checker_repeating_job = HG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnChecker )
+            self._files_repeating_job = CG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnFiles )
+            self._checker_repeating_job = CG.client_controller.CallRepeating( ClientImporting.GetRepeatingJobInitialDelay(), ClientImporting.REPEATING_JOB_TYPICAL_PERIOD, self.REPEATINGWorkOnChecker )
             
             self._files_repeating_job.SetThreadSlotType( 'watcher_files' )
             self._checker_repeating_job.SetThreadSlotType( 'watcher_check' )
@@ -1871,7 +1872,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                     
                     self._WorkOnFiles()
                     
-                    HG.client_controller.WaitUntilViewFree()
+                    CG.client_controller.WaitUntilViewFree()
                     
                     self._SerialisableChangeMade()
                     
@@ -1920,7 +1921,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
                 raise HydrusExceptions.VetoException( 'paused' )
                 
             
-            if HG.client_controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ):
+            if CG.client_controller.new_options.GetBoolean( 'pause_all_watcher_checkers' ):
                 
                 raise HydrusExceptions.VetoException( 'all checkers are paused! network->pause to resume!' )
                 

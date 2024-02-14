@@ -9,10 +9,11 @@ from hydrus.core import HydrusThreading
 from hydrus.client.metadata import ClientContentUpdates
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 
 def DAEMONCheckExportFolders():
     
-    controller = HG.client_controller
+    controller = CG.client_controller
     
     if not controller.new_options.GetBoolean( 'pause_export_folders_sync' ):
         
@@ -42,7 +43,7 @@ def DAEMONCheckExportFolders():
     
 def DAEMONCheckImportFolders():
     
-    controller = HG.client_controller
+    controller = CG.client_controller
     
     if not controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
         
@@ -75,7 +76,7 @@ def DAEMONMaintainTrash():
     # TODO: Looking at it, this whole thing is whack
     # rewrite it to be a database command that returns 'more work to do' and then just spam it until done
     
-    controller = HG.client_controller
+    controller = CG.client_controller
     
     if HC.options[ 'trash_max_size' ] is not None:
         

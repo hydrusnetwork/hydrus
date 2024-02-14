@@ -10,6 +10,7 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.networking import ClientNetworkingContexts
 
 class NetworkBandwidthManagerTrackerContainer( HydrusSerialisable.SerialisableBaseNamed ):
@@ -613,19 +614,19 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
                 
                 timestamps_dict = self._last_pages_gallery_query_timestamps
                 
-                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_pages' )
+                delay = CG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_pages' )
                 
             elif query_type == 'subscription':
                 
                 timestamps_dict = self._last_subscriptions_gallery_query_timestamps
                 
-                delay = HG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_subscriptions' )
+                delay = CG.client_controller.new_options.GetInteger( 'gallery_page_wait_period_subscriptions' )
                 
             elif query_type == 'watcher':
                 
                 timestamps_dict = self._last_watchers_query_timestamps
                 
-                delay = HG.client_controller.new_options.GetInteger( 'watcher_page_wait_period' )
+                delay = CG.client_controller.new_options.GetInteger( 'watcher_page_wait_period' )
                 
             else:
                 

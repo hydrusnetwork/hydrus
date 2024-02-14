@@ -14,6 +14,7 @@ from hydrus.core.files.images import HydrusImageMetadata
 from hydrus.core.files.images import HydrusImageOpening
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
@@ -41,7 +42,7 @@ def GetDuplicateComparisonScore( shown_media, comparison_media ):
 
 def GetDuplicateComparisonStatements( shown_media, comparison_media ):
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     duplicate_comparison_score_higher_jpeg_quality = new_options.GetInteger( 'duplicate_comparison_score_higher_jpeg_quality' )
     duplicate_comparison_score_much_higher_jpeg_quality = new_options.GetInteger( 'duplicate_comparison_score_much_higher_jpeg_quality' )
@@ -424,7 +425,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if s_hash not in hashes_to_jpeg_quality:
             
-            path = HG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
+            path = CG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
             
             try:
                 
@@ -442,7 +443,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if c_hash not in hashes_to_jpeg_quality:
             
-            path = HG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
+            path = CG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
             
             try:
                 
@@ -606,9 +607,9 @@ class DuplicatesManager( object ):
                 self._refresh_maintenance_numbers = False
                 self._currently_refreshing_maintenance_numbers = True
                 
-                HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+                CG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
                 
-                HG.client_controller.CallToThread( self.THREADRefreshMaintenanceNumbers )
+                CG.client_controller.CallToThread( self.THREADRefreshMaintenanceNumbers )
                 
             
             return ( self._similar_files_maintenance_status, self._currently_refreshing_maintenance_numbers, self._currently_doing_potentials_search )
@@ -621,13 +622,13 @@ class DuplicatesManager( object ):
             
             self._refresh_maintenance_numbers = True
             
-            HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+            CG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
             
         
     
     def NotifyNewPotentialsSearchNumbers( self ):
         
-        HG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
+        CG.client_controller.pub( 'new_similar_files_potentials_search_numbers' )
         
     
     def StartPotentialsSearch( self ):
@@ -641,7 +642,7 @@ class DuplicatesManager( object ):
             
             self._currently_doing_potentials_search = True
             
-            HG.client_controller.CallToThreadLongRunning( self.THREADSearchPotentials )
+            CG.client_controller.CallToThreadLongRunning( self.THREADSearchPotentials )
             
         
     
@@ -649,7 +650,7 @@ class DuplicatesManager( object ):
         
         try:
             
-            similar_files_maintenance_status = HG.client_controller.Read( 'similar_files_maintenance_status' )
+            similar_files_maintenance_status = CG.client_controller.Read( 'similar_files_maintenance_status' )
             
             with self._lock:
                 
@@ -659,7 +660,7 @@ class DuplicatesManager( object ):
                     
                     self._refresh_maintenance_numbers = False
                     
-                    HG.client_controller.CallToThread( self.THREADRefreshMaintenanceNumbers )
+                    CG.client_controller.CallToThread( self.THREADRefreshMaintenanceNumbers )
                     
                 else:
                     
@@ -667,13 +668,13 @@ class DuplicatesManager( object ):
                     self._refresh_maintenance_numbers = False
                     
                 
-                HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+                CG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
                 
             
         except:
             
             self._currently_refreshing_maintenance_numbers = False
-            HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+            CG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
             
             raise
             
@@ -683,7 +684,7 @@ class DuplicatesManager( object ):
         
         try:
             
-            search_distance = HG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
             
             with self._lock:
                 
@@ -708,27 +709,27 @@ class DuplicatesManager( object ):
             
             num_searched_estimate = num_searched
             
-            HG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
+            CG.client_controller.pub( 'new_similar_files_maintenance_numbers' )
             
             job_status = ClientThreading.JobStatus( cancellable = True )
             
             job_status.SetStatusTitle( 'searching for potential duplicates' )
             
-            HG.client_controller.pub( 'message', job_status )
+            CG.client_controller.pub( 'message', job_status )
             
             still_work_to_do = True
             
             while still_work_to_do:
                 
-                search_distance = HG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+                search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
                 
                 start_time = HydrusTime.GetNowPrecise()
                 
-                work_time_ms = HG.client_controller.new_options.GetInteger( 'potential_duplicates_search_work_time_ms' )
+                work_time_ms = CG.client_controller.new_options.GetInteger( 'potential_duplicates_search_work_time_ms' )
                 
                 work_time = work_time_ms / 1000
                 
-                ( still_work_to_do, num_done ) = HG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_status = job_status, work_time_float = work_time )
+                ( still_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = HC.MAINTENANCE_FORCED, job_status = job_status, work_time_float = work_time )
                 
                 time_it_took = HydrusTime.GetNowPrecise() - start_time
                 
@@ -736,7 +737,7 @@ class DuplicatesManager( object ):
                 
                 if num_searched_estimate > total_num_files:
                     
-                    similar_files_maintenance_status = HG.client_controller.Read( 'similar_files_maintenance_status' )
+                    similar_files_maintenance_status = CG.client_controller.Read( 'similar_files_maintenance_status' )
                     
                     if similar_files_maintenance_status is None:
                         
@@ -762,7 +763,7 @@ class DuplicatesManager( object ):
                     break
                     
                 
-                rest_ratio = HG.client_controller.new_options.GetInteger( 'potential_duplicates_search_rest_percentage' ) / 100
+                rest_ratio = CG.client_controller.new_options.GetInteger( 'potential_duplicates_search_rest_percentage' ) / 100
                 
                 reasonable_work_time = min( 5 * work_time, time_it_took )
                 
@@ -848,9 +849,9 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     
     def _GetSerialisableInfo( self ):
         
-        if HG.client_controller.IsBooted():
+        if CG.client_controller.IsBooted():
             
-            services_manager = HG.client_controller.services_manager
+            services_manager = CG.client_controller.services_manager
             
             self._tag_service_actions = [ ( service_key, action, tag_filter ) for ( service_key, action, tag_filter ) in self._tag_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in HC.REAL_TAG_SERVICES ]
             self._rating_service_actions = [ ( service_key, action ) for ( service_key, action ) in self._rating_service_actions if services_manager.ServiceExists( service_key ) and services_manager.GetServiceType( service_key ) in HC.RATINGS_SERVICES ]
@@ -1095,7 +1096,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         for ( service_key, action, tag_filter ) in self._tag_service_actions:
             
@@ -1427,7 +1428,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                local_file_service_keys = HG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
+                local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 
                 deletee_service_keys = media.GetLocationsManager().GetCurrent().intersection( local_file_service_keys )
                 

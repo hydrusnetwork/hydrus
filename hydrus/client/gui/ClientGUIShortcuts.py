@@ -9,13 +9,12 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientData
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import QtPorting as QP
 
 SHORTCUT_TYPE_KEYBOARD_CHARACTER = 0
 SHORTCUT_TYPE_MOUSE = 1
@@ -1218,7 +1217,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
             # this never stored mouse actions, so skip
             
-            services_manager = HG.client_controller.services_manager
+            services_manager = CG.client_controller.services_manager
             
             for ( modifier, key, ( serialisable_service_key, data ) ) in serialisable_keyboard_actions:
                 
@@ -1601,7 +1600,7 @@ class ShortcutsHandler( QC.QObject ):
             self._parent_currently_activated = True
             
         
-        self._activating_wait_job = HG.client_controller.CallLater( 0.2, do_it )
+        self._activating_wait_job = CG.client_controller.CallLater( 0.2, do_it )
         
     
     def FrameDeactivated( self ):

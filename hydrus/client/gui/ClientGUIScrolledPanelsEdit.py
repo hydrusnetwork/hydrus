@@ -16,11 +16,11 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDuplicates
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -298,7 +298,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 json_string = note_import_options.DumpToString()
                 
-                HG.client_controller.pub( 'clipboard', 'text', json_string )
+                CG.client_controller.pub( 'clipboard', 'text', json_string )
                 
             
         
@@ -319,7 +319,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 json_string = tag_import_options.DumpToString()
                 
-                HG.client_controller.pub( 'clipboard', 'text', json_string )
+                CG.client_controller.pub( 'clipboard', 'text', json_string )
                 
             
         
@@ -491,7 +491,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -561,7 +561,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._default_reason = default_reason
         
-        local_file_service_domains = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        local_file_service_domains = list( CG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
         
         if suggested_file_service_key is None:
             
@@ -588,9 +588,9 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         selection_success = False
         
-        if HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ):
+        if CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ):
             
-            last_advanced_file_deletion_special_action = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
+            last_advanced_file_deletion_special_action = CG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
             
             selection_success = self._TryToSelectAction( last_advanced_file_deletion_special_action )
             
@@ -617,9 +617,9 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             permitted_reason_choices.append( ( default_reason, default_reason ) )
             
         
-        if HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
+        if CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
             
-            last_advanced_file_deletion_reason = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_reason' )
+            last_advanced_file_deletion_reason = CG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_reason' )
             
         else:
             
@@ -635,7 +635,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             selection_index = None # text or custom
             
         
-        for ( i, s ) in enumerate( HG.client_controller.new_options.GetStringList( 'advanced_file_deletion_reasons' ) ):
+        for ( i, s ) in enumerate( CG.client_controller.new_options.GetStringList( 'advanced_file_deletion_reasons' ) ):
             
             if self._existing_shared_file_deletion_reason is not None and s == self._existing_shared_file_deletion_reason and not existing_reason_was_in_list:
                 
@@ -701,7 +701,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_description.hide()
             
         
-        if not HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
+        if not CG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
             self._reason_panel.hide()
             self._reason_panel.setEnabled( False )
@@ -739,7 +739,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _FilterForDeleteLock( self, media, suggested_file_service_key: bytes ):
         
-        service = HG.client_controller.services_manager.GetService( suggested_file_service_key )
+        service = CG.client_controller.services_manager.GetService( suggested_file_service_key )
         
         if service.GetServiceType() in HC.LOCAL_FILE_SERVICES:
             
@@ -813,11 +813,11 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _InitialisePermittedActionChoices( self ):
         
-        we_are_advanced_delete_dialog = HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' )
+        we_are_advanced_delete_dialog = CG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' )
         
         possible_file_service_keys = []
         
-        local_file_service_domains = list( HG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        local_file_service_domains = list( CG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
         local_file_service_domain_keys = { service.GetServiceKey() for service in local_file_service_domains }
         
         possible_file_service_keys.extend( ( ( lfs.GetServiceKey(), lfs.GetServiceKey() ) for lfs in local_file_service_domains ) )
@@ -834,7 +834,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             possible_file_service_keys.append( ( CC.LOCAL_UPDATE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY ) )
             
         
-        possible_file_service_keys.extend( ( ( rfs.GetServiceKey(), rfs.GetServiceKey() ) for rfs in HG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) ) )
+        possible_file_service_keys.extend( ( ( rfs.GetServiceKey(), rfs.GetServiceKey() ) for rfs in CG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, ) ) ) )
         
         keys_to_hashes = { ( selection_file_service_key, deletee_file_service_key ) : [ m.GetHash() for m in self._media if selection_file_service_key in m.GetLocationsManager().GetCurrent() ] for ( selection_file_service_key, deletee_file_service_key ) in possible_file_service_keys }
         
@@ -860,7 +860,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( selection_file_service_key, deletee_file_service_key ) = fsk
             
-            deletee_service = HG.client_controller.services_manager.GetService( deletee_file_service_key )
+            deletee_service = CG.client_controller.services_manager.GetService( deletee_file_service_key )
             
             deletee_service_type = deletee_service.GetServiceType()
             
@@ -1009,7 +1009,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             self._question_is_already_resolved = True
             
         
-        if HG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
+        if CG.client_controller.new_options.GetBoolean( 'use_advanced_file_deletion_dialog' ):
             
             hashes = [ m.GetHash() for m in self._media if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in m.GetLocationsManager().GetCurrent() ]
             
@@ -1162,7 +1162,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            previous_last_advanced_file_deletion_special_action = HG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
+            previous_last_advanced_file_deletion_special_action = CG.client_controller.new_options.GetNoneableString( 'last_advanced_file_deletion_special_action' )
             
             # if there is nothing to do but physically delete, then we don't want to overwrite an existing 'use service' setting
             # HACKMODE ALERT. len() == 64 is a stupid test for 'looks like a service key mate'
@@ -1174,12 +1174,12 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             last_advanced_file_deletion_special_action = file_service_key
             
         
-        if save_action and HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ):
+        if save_action and CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_special_action' ):
             
-            HG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_special_action', last_advanced_file_deletion_special_action )
+            CG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_special_action', last_advanced_file_deletion_special_action )
             
         
-        if save_reason and HG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
+        if save_reason and CG.client_controller.new_options.GetBoolean( 'remember_last_advanced_file_deletion_reason' ):
             
             reasons_ok = self._reason_radio.isVisible() and self._reason_radio.isEnabled()
             
@@ -1196,7 +1196,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     last_advanced_file_deletion_reason = reason
                     
                 
-                HG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_reason', last_advanced_file_deletion_reason )
+                CG.client_controller.new_options.SetNoneableString( 'last_advanced_file_deletion_reason', last_advanced_file_deletion_reason )
                 
             
         
@@ -1300,7 +1300,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         sync_notes_action = duplicate_content_merge_options.GetSyncNotesAction()
         self._sync_note_import_options = duplicate_content_merge_options.GetSyncNoteImportOptions()
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         self._service_keys_to_tag_options = { service_key : ( action, tag_filter ) for ( service_key, action, tag_filter ) in tag_service_options if services_manager.ServiceExists( service_key ) }
         
@@ -1372,7 +1372,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
     
     def _AddRating( self ):
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         choice_tuples = []
         
@@ -1450,7 +1450,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
     
     def _AddTag( self ):
         
-        services_manager = HG.client_controller.services_manager
+        services_manager = CG.client_controller.services_manager
         
         choice_tuples = []
         
@@ -1514,7 +1514,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                 
-                namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+                namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
                 
                 panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
                 
@@ -1540,7 +1540,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         try:
             
-            service = HG.client_controller.services_manager.GetService( service_key )
+            service = CG.client_controller.services_manager.GetService( service_key )
             
             service_name = service.GetName()
             
@@ -1575,7 +1575,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         try:
             
-            service_name = HG.client_controller.services_manager.GetName( service_key )
+            service_name = CG.client_controller.services_manager.GetName( service_key )
             
         except HydrusExceptions.DataMissing:
             
@@ -1648,7 +1648,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
             if self._duplicate_action == HC.DUPLICATE_BETTER:
                 
-                service = HG.client_controller.services_manager.GetService( service_key )
+                service = CG.client_controller.services_manager.GetService( service_key )
                 
                 service_type = service.GetServiceType()
                 
@@ -1721,7 +1721,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit which tags will be merged' ) as dlg_3:
                 
-                namespaces = HG.client_controller.network_engine.domain_manager.GetParserNamespaces()
+                namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
                 
                 panel = ClientGUITags.EditTagFilterPanel( dlg_3, tag_filter, namespaces = namespaces )
                 
@@ -1968,13 +1968,13 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         ClientGUIFunctions.SetFocusLater( first_panel )
         
-        if HG.client_controller.new_options.GetBoolean( 'start_note_editing_at_end' ):
+        if CG.client_controller.new_options.GetBoolean( 'start_note_editing_at_end' ):
             
-            HG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to end', first_panel.moveCursor, QG.QTextCursor.End )
+            CG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to end', first_panel.moveCursor, QG.QTextCursor.End )
             
         else:
             
-            HG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to start', first_panel.moveCursor, QG.QTextCursor.Start )
+            CG.client_controller.CallAfterQtSafe( first_panel, 'moving cursor to start', first_panel.moveCursor, QG.QTextCursor.Start )
             
         
         #
@@ -2037,7 +2037,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         ClientGUIFunctions.SetFocusLater( control )
         
-        HG.client_controller.CallAfterQtSafe( control, 'moving cursor to end', control.moveCursor, QG.QTextCursor.End )
+        CG.client_controller.CallAfterQtSafe( control, 'moving cursor to end', control.moveCursor, QG.QTextCursor.End )
         
         self._UpdateButtons()
         
@@ -2048,14 +2048,14 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         text = json.dumps( names_to_notes )
         
-        HG.client_controller.pub( 'clipboard', 'text', text )
+        CG.client_controller.pub( 'clipboard', 'text', text )
         
     
     def _Paste( self ):
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -2561,7 +2561,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         try:
             
-            pretty_name = HG.client_controller.services_manager.GetName( file_service_key )
+            pretty_name = CG.client_controller.services_manager.GetName( file_service_key )
             
         except HydrusExceptions.DataMissing:
             
@@ -2599,7 +2599,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         text = json.dumps( list_of_timestamp_data.GetSerialisableTuple() )
         
-        HG.client_controller.pub( 'clipboard', 'text', text )
+        CG.client_controller.pub( 'clipboard', 'text', text )
         
     
     def _AddDomainModifiedTimestamp( self ):
@@ -2881,7 +2881,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         try:
             
-            raw_text = HG.client_controller.GetClipboardText()
+            raw_text = CG.client_controller.GetClipboardText()
             
         except HydrusExceptions.DataMissing as e:
             
@@ -3308,7 +3308,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preview_start_paused = QW.QCheckBox( self )
         self._preview_start_with_embed = QW.QCheckBox( self )
         
-        advanced_mode = HG.client_controller.new_options.GetBoolean( 'advanced_mode' )
+        advanced_mode = CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
         for action in possible_show_actions:
             

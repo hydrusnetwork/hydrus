@@ -13,6 +13,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -1285,7 +1286,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _CopyData( self ):
         
-        HG.client_controller.pub( 'clipboard', 'text', self._downloaded_data )
+        CG.client_controller.pub( 'clipboard', 'text', self._downloaded_data )
         
     
 class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
@@ -1657,12 +1658,12 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 bandwidth_manager = ClientNetworkingBandwidth.NetworkBandwidthManager()
                 session_manager = ClientNetworkingSessions.NetworkSessionManager()
-                domain_manager = HG.client_controller.network_engine.domain_manager.Duplicate() # keep custom headers from current domain stuff
+                domain_manager = CG.client_controller.network_engine.domain_manager.Duplicate() # keep custom headers from current domain stuff
                 login_manager = ClientNetworkingLogin.NetworkLoginManager()
                 
-                network_engine = ClientNetworking.NetworkEngine( HG.client_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
+                network_engine = ClientNetworking.NetworkEngine( CG.client_controller, bandwidth_manager, session_manager, domain_manager, login_manager )
                 
-                HG.client_controller.CallToThreadLongRunning( network_engine.MainLoop )
+                CG.client_controller.CallToThreadLongRunning( network_engine.MainLoop )
                 
                 network_context = ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( domain )
                 
@@ -1754,7 +1755,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._currently_testing = True
         
-        HG.client_controller.CallToThread( do_it, login_script, self._test_domain, self._test_credentials, network_job_presentation_context_factory )
+        CG.client_controller.CallToThread( do_it, login_script, self._test_domain, self._test_credentials, network_job_presentation_context_factory )
         
     
     def _EditExampleDomainsInfo( self ):

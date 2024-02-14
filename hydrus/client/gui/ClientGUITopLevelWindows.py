@@ -4,10 +4,8 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
@@ -81,7 +79,7 @@ def GetSafeSize( tlw: QW.QWidget, min_size: QC.QSize, gravity ) -> QC.QSize:
         # so borrow main gui's
         if frame_padding.isEmpty():
             
-            main_gui = HG.client_controller.gui
+            main_gui = CG.client_controller.gui
             
             if main_gui is not None and QP.isValid( main_gui ) and not main_gui.isFullScreen():
                 
@@ -139,7 +137,7 @@ def GetSafeSize( tlw: QW.QWidget, min_size: QC.QSize, gravity ) -> QC.QSize:
     
 def ExpandTLWIfPossible( tlw: QW.QWidget, frame_key, desired_size_delta: QC.QSize ):
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -188,7 +186,7 @@ def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
         return
         
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -220,7 +218,7 @@ def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
 def SetInitialTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     ( remember_size, remember_position, last_size, last_position, default_gravity, default_position, maximised, fullscreen ) = new_options.GetFrameLocation( frame_key )
     
@@ -382,11 +380,11 @@ class NewDialog( QP.Dialog ):
         
         self.setWindowTitle( title )
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
         
-        HG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetIdleTimer()
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -595,11 +593,11 @@ class Frame( QW.QWidget ):
         
         self.setAttribute( QC.Qt.WA_DeleteOnClose )
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
         
-        HG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetIdleTimer()
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
@@ -622,13 +620,13 @@ class MainFrame( QW.QMainWindow ):
         
         self.setWindowTitle( title )
         
-        self._new_options = HG.client_controller.new_options
+        self._new_options = CG.client_controller.new_options
         
-        self.setWindowIcon( QG.QIcon( HG.client_controller.frame_icon_pixmap ) )
+        self.setWindowIcon( QG.QIcon( CG.client_controller.frame_icon_pixmap ) )
         
         self._widget_event_filter = QP.WidgetEventFilter( self )
         
-        HG.client_controller.ResetIdleTimer()
+        CG.client_controller.ResetIdleTimer()
         
     
     def CleanBeforeDestroy( self ):
@@ -659,13 +657,13 @@ class FrameThatResizes( Frame ):
         MainFrame.CleanBeforeDestroy( self )
         
         # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        HG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
         
     
     def EventSizeAndPositionChanged( self, event ):
         
         # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        HG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
         
         return True # was: event.ignore()
         
@@ -690,13 +688,13 @@ class MainFrameThatResizes( MainFrame ):
         MainFrame.CleanBeforeDestroy( self )
         
         # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        HG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
         
     
     def EventSizeAndPositionChanged( self, event ):
         
         # maximise sends a pre-maximise size event that poisons last_size if this is immediate
-        HG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
+        CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )
 
         return True # was: event.ignore()
         

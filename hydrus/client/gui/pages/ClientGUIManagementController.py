@@ -7,6 +7,7 @@ from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
@@ -31,7 +32,7 @@ MANAGEMENT_TYPE_PAGE_OF_PAGES = 10
 
 def CreateManagementController( page_name, management_type ):
     
-    new_options = HG.client_controller.new_options
+    new_options = CG.client_controller.new_options
     
     management_controller = ManagementController( page_name )
     
@@ -50,7 +51,7 @@ def CreateManagementControllerDuplicateFilter(
     
     if location_context is None:
         
-        location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+        location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
         
     
     if initial_predicates is None:
@@ -67,7 +68,7 @@ def CreateManagementControllerDuplicateFilter(
     
     file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = initial_predicates )
     
-    synchronised = HG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
+    synchronised = CG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
     management_controller.SetVariable( 'synchronised', synchronised )
     
@@ -87,7 +88,7 @@ def CreateManagementControllerImportGallery( page_name = None ):
         page_name = 'gallery'
         
     
-    gug_key_and_name = HG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
+    gug_key_and_name = CG.client_controller.network_engine.domain_manager.GetDefaultGUGKeyAndName()
     
     multiple_gallery_import = ClientImportGallery.MultipleGalleryImport( gug_key_and_name = gug_key_and_name )
     
@@ -102,7 +103,7 @@ def CreateManagementControllerImportSimpleDownloader():
     
     simple_downloader_import = ClientImportSimpleURLs.SimpleDownloaderImport()
     
-    formula_name = HG.client_controller.new_options.GetString( 'favourite_simple_downloader_formula' )
+    formula_name = CG.client_controller.new_options.GetString( 'favourite_simple_downloader_formula' )
     
     simple_downloader_import.SetFormulaName( formula_name )
     
@@ -158,7 +159,7 @@ def CreateManagementControllerImportURLs( page_name = None ):
 
 def CreateManagementControllerPetitions( petition_service_key ):
     
-    petition_service = HG.client_controller.services_manager.GetService( petition_service_key )
+    petition_service = CG.client_controller.services_manager.GetService( petition_service_key )
     
     page_name = petition_service.GetName() + ' petitions'
     
@@ -180,7 +181,7 @@ def CreateManagementControllerQuery( page_name, file_search_context: ClientSearc
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_QUERY )
     
-    synchronised = HG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
+    synchronised = CG.client_controller.new_options.GetBoolean( 'default_search_synchronised' )
     
     management_controller.SetVariable( 'file_search_context', file_search_context )
     management_controller.SetVariable( 'search_enabled', search_enabled )
@@ -519,7 +520,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
                 
                 variables[ 'dupe_search_type' ] = value
                 
-                default_location_context = HG.client_controller.new_options.GetDefaultLocalLocationContext()
+                default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
                 
                 file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_EVERYTHING ) ] )
                 
@@ -644,7 +645,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                petition_service = HG.client_controller.services_manager.GetService( petition_service_key )
+                petition_service = CG.client_controller.services_manager.GetService( petition_service_key )
                 
                 petition_service_type = petition_service.GetServiceType()
                 

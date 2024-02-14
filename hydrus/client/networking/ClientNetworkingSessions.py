@@ -9,6 +9,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingFunctions
 
@@ -191,8 +192,8 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         self._ReinitialiseProxies()
         
-        HG.client_controller.sub( self, 'ReinitialiseProxies', 'notify_new_options' )
-        HG.client_controller.sub( self, 'MaintainConnectionPools', 'memory_maintenance_pulse' )
+        CG.client_controller.sub( self, 'ReinitialiseProxies', 'notify_new_options' )
+        CG.client_controller.sub( self, 'MaintainConnectionPools', 'memory_maintenance_pulse' )
         
     
     def _GetSerialisableInfo( self ):
@@ -244,9 +245,9 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
         
         self._proxies_dict = {}
         
-        http_proxy = HG.client_controller.new_options.GetNoneableString( 'http_proxy' )
-        https_proxy = HG.client_controller.new_options.GetNoneableString( 'https_proxy' )
-        no_proxy = HG.client_controller.new_options.GetNoneableString( 'no_proxy' )
+        http_proxy = CG.client_controller.new_options.GetNoneableString( 'http_proxy' )
+        https_proxy = CG.client_controller.new_options.GetNoneableString( 'https_proxy' )
+        no_proxy = CG.client_controller.new_options.GetNoneableString( 'no_proxy' )
         
         if http_proxy is not None:
             
@@ -353,7 +354,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
                 session.verify = False
                 
             
-            if not HG.client_controller.new_options.GetBoolean( 'verify_regular_https' ):
+            if not CG.client_controller.new_options.GetBoolean( 'verify_regular_https' ):
                 
                 session.verify = False
                 

@@ -15,6 +15,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
@@ -72,11 +73,11 @@ class PopupMessage( PopupWindow ):
         font.setBold( True )
         self._title.setFont( font )
         
-        popup_message_character_width = HG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
+        popup_message_character_width = CG.client_controller.new_options.GetInteger( 'popup_message_character_width' )
         
         popup_char_width = ClientGUIFunctions.ConvertTextToPixelWidth( self._title, popup_message_character_width )
         
-        if HG.client_controller.new_options.GetBoolean( 'popup_message_force_min_width' ):
+        if CG.client_controller.new_options.GetBoolean( 'popup_message_force_min_width' ):
             
             self.setFixedWidth( popup_char_width )
             
@@ -272,7 +273,7 @@ class PopupMessage( PopupWindow ):
         
         full_text = info + os.linesep + trace
         
-        HG.client_controller.pub( 'clipboard', 'text', full_text )
+        CG.client_controller.pub( 'clipboard', 'text', full_text )
         
     
     def CopyToClipboard( self ):
@@ -283,7 +284,7 @@ class PopupMessage( PopupWindow ):
             
             ( title, text ) = result
             
-            HG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', text )
             
         
     
@@ -315,7 +316,7 @@ class PopupMessage( PopupWindow ):
             
             def work_callable():
                 
-                presented_hashes = HG.client_controller.Read( 'filter_hashes', location_context, hashes )
+                presented_hashes = CG.client_controller.Read( 'filter_hashes', location_context, hashes )
                 
                 return presented_hashes
                 
@@ -334,7 +335,7 @@ class PopupMessage( PopupWindow ):
                 
                 if len( presented_hashes ) > 0:
                     
-                    HG.client_controller.pub( 'new_page_query', location_context, initial_hashes = presented_hashes, page_name = attached_files_label )
+                    CG.client_controller.pub( 'new_page_query', location_context, initial_hashes = presented_hashes, page_name = attached_files_label )
                     
                 
                 self._show_files_button.setEnabled( True )
@@ -838,7 +839,7 @@ class PopupMessageManager( QW.QFrame ):
         
         parent.installEventFilter( self )
         
-        HG.client_controller.sub( self, 'AddMessage', 'message' )
+        CG.client_controller.sub( self, 'AddMessage', 'message' )
         
         self._old_excepthook = sys.excepthook
         self._old_show_exception = HydrusData.ShowException
@@ -854,14 +855,14 @@ class PopupMessageManager( QW.QFrame ):
         
         job_status.SetStatusText( 'initialising popup message manager' + HC.UNICODE_ELLIPSIS )
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.25, 'repeating popup message update', self.REPEATINGUpdate )
+        self._update_job = CG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.25, 'repeating popup message update', self.REPEATINGUpdate )
         
         self._summary_bar.dismissAll.connect( self.DismissAll )
         self._summary_bar.expandCollapse.connect( self.ExpandCollapse )
         
-        HG.client_controller.CallLaterQtSafe( self, 0.5, 'initialise message', self.AddMessage, job_status )
+        CG.client_controller.CallLaterQtSafe( self, 0.5, 'initialise message', self.AddMessage, job_status )
         
-        HG.client_controller.CallLaterQtSafe( self, 1.0, 'delete initial message', job_status.FinishAndDismiss )
+        CG.client_controller.CallLaterQtSafe( self, 1.0, 'delete initial message', job_status.FinishAndDismiss )
         
     
     def _CheckPending( self ):
@@ -1023,7 +1024,7 @@ class PopupMessageManager( QW.QFrame ):
             return False
             
         
-        if HG.client_controller.new_options.GetBoolean( 'freeze_message_manager_when_mouse_on_other_monitor' ):
+        if CG.client_controller.new_options.GetBoolean( 'freeze_message_manager_when_mouse_on_other_monitor' ):
             
             on_my_monitor = ClientGUIFunctions.MouseIsOnMyDisplay( main_gui )
             
@@ -1033,7 +1034,7 @@ class PopupMessageManager( QW.QFrame ):
                 
             
         
-        if HG.client_controller.new_options.GetBoolean( 'freeze_message_manager_when_main_gui_minimised' ):
+        if CG.client_controller.new_options.GetBoolean( 'freeze_message_manager_when_main_gui_minimised' ):
             
             main_gui_up = not main_gui.isMinimized()
             
@@ -1300,7 +1301,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         self._message_pubbed = False
         
-        self._update_job = HG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, 'repeating popup dialog update', self.REPEATINGUpdate )
+        self._update_job = CG.client_controller.CallRepeatingQtSafe( self, 0.25, 0.5, 'repeating popup dialog update', self.REPEATINGUpdate )
         
     
     def CleanBeforeDestroy( self ):
@@ -1354,7 +1355,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         if not self._message_pubbed:
             
-            HG.client_controller.pub( 'message', self._job_status )
+            CG.client_controller.pub( 'message', self._job_status )
             
             self._message_pubbed = True
             
