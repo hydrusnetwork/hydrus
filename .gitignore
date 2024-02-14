@@ -82,3 +82,5 @@ venv.bak/
 # docs builds
 /site/
 /help/
+
+.DS_Store
