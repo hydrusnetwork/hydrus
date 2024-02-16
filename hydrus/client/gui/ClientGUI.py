@@ -3274,7 +3274,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         label = 'minimise to system tray'
         
-        if not HC.PLATFORM_WINDOWS:
+        if not HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS:
             
             label += ' (may be buggy/crashy!)'
             
@@ -6792,7 +6792,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def _UpdateSystemTrayIcon( self, currently_booting = False ):
         
-        if not ClientGUISystemTray.SystemTrayAvailable() or ( not HC.PLATFORM_WINDOWS and not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
+        if not ClientGUISystemTray.SystemTrayAvailable() or ( not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS) and not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) ):
             
             return
             
