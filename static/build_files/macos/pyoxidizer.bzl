@@ -1,5 +1,5 @@
 def make_dist():
-    return default_python_distribution( python_version = "3.9" )
+    return default_python_distribution( python_version = "3.10" )
 
 def make_packaging_policy(dist):
     policy = dist.make_python_packaging_policy()

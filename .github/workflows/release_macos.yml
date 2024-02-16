@@ -25,7 +25,7 @@ jobs:
           mkdocs build -d help
       -
         name: Install PyOxidizer
-        run: python3 -m pip install pyoxidizer==0.22.0
+        run: python3 -m pip install pyoxidizer==0.24.0
       -
         name: Download ffmpeg
         uses: carlosperate/download-file-action@v2
