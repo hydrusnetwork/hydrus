@@ -3274,7 +3274,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         label = 'minimise to system tray'
         
-        if not HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS:
+        if not (HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS):
             
             label += ' (may be buggy/crashy!)'
             
