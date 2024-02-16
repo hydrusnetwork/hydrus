@@ -69,14 +69,14 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     
     return menu_item
     
-def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
+def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.MenuRole = None, **kwargs ):
     
     menu_item = QW.QAction( menu )
     
-    #if HC.PLATFORM_MACOS:
+    if HC.PLATFORM_MACOS:
         
-    #    menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
-        
+        menu_item.setMenuRole( role if role is not None else QW.QAction.MenuRole.NoRole )
+    
     
     SetMenuTexts( menu_item, label, description )
     
