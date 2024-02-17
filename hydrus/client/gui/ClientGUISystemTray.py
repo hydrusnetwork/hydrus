@@ -179,7 +179,7 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
     
     def _WasActivated( self, activation_reason ):
         
-        if not QP.isValid( self ):
+        if not QP.isValid( self ) or HC.PLATFORM_MACOS:
             
             return
             

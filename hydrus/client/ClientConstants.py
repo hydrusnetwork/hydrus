@@ -618,7 +618,7 @@ class GlobalIcons( object ):
     
     def _Initialise( self ):
                 
-        self.hydrus = QG.QIcon( os.path.join( HC.STATIC_DIR, 'hydrus_black.svg' ) )
+        self.hydrus = QG.QIcon( os.path.join( HC.STATIC_DIR, 'hydrus_black_square.svg' ) )
         self.github = QG.QIcon( os.path.join( HC.STATIC_DIR, 'github.svg' ) )
         self.twitter = QG.QIcon( os.path.join( HC.STATIC_DIR, 'twitter.svg' ) )
         self.tumblr = QG.QIcon( os.path.join( HC.STATIC_DIR, 'tumblr.svg' ) )

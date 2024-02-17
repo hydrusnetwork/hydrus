@@ -272,7 +272,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_reason' ] = True
         self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_special_action' ] = False
         
-        self._dictionary[ 'booleans' ][ 'do_macos_debug_dialog_menus' ] = True
+        self._dictionary[ 'booleans' ][ 'do_macos_debug_dialog_menus' ] = False
         
         self._dictionary[ 'booleans' ][ 'save_default_tag_service_tab_on_change' ] = True
         

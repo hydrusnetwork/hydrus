@@ -28,11 +28,6 @@ def AppendMenuIconItem( menu: QW.QMenu, label: str, description: str, icon: QG.Q
     
     menu_item = QW.QAction( menu )
     
-    if HC.PLATFORM_MACOS:
-        
-        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
-        
-    
     SetMenuTexts( menu_item, label, description )
     
     menu_item.setIcon( icon )
@@ -53,11 +48,6 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     
     menu_item = QW.QAction( menu )
     
-    if HC.PLATFORM_MACOS:
-        
-        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
-        
-    
     SetMenuTexts( menu_item, label, description )
     
     menu_item.setCheckable( True )
@@ -69,14 +59,14 @@ def AppendMenuCheckItem( menu, label, description, initial_value, callable, *arg
     
     return menu_item
     
-def AppendMenuItem( menu, label, description, callable, *args, **kwargs ):
+def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.MenuRole = None, **kwargs ):
     
     menu_item = QW.QAction( menu )
     
     if HC.PLATFORM_MACOS:
         
-        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
-        
+        menu_item.setMenuRole( role if role is not None else QW.QAction.MenuRole.NoRole )
+    
     
     SetMenuTexts( menu_item, label, description )
     
@@ -105,11 +95,6 @@ def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
         
     
     menu_item = QW.QAction( menu )
-
-    if HC.PLATFORM_MACOS:
-        
-        menu_item.setMenuRole( QW.QAction.ApplicationSpecificRole )
-        
     
     SetMenuTexts( menu_item, label, description )
     
