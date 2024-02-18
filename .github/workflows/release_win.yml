@@ -74,34 +74,9 @@ jobs:
         name: Compress Client
         run: |
           cd .\dist
-          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract.zip 'Hydrus Network'
+          7z.exe a -tzip -mm=Deflate -mx=5 Windows-Extract.zip 'Hydrus Network'
           cd ..
       -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Windows-Install
-          path: dist\HydrusInstaller.exe
-          if-no-files-found: error
-          retention-days: 2
-      -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Windows-Extract
-          path: Windows-Extract.zip
-          if-no-files-found: error
-          retention-days: 2
-
-  create-release:
-    name: Upload to Release
-    runs-on: ubuntu-20.04
-    needs: [build-windows]
-    steps:
-      -
-        name: Get Artifacts
-        uses: actions/download-artifact@v3
-      - 
         name: Extract Version Metadata
         id: meta
         run: |
@@ -111,8 +86,8 @@ jobs:
         name: Rename Files
         run: |
           mkdir windows
-          mv Windows-Install/HydrusInstaller.exe    Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
-          mv Windows-Extract/Windows-Extract.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
+          mv dist\HydrusInstaller.exe    Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
+          mv dist\Windows-Extract.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
       - 
         name: Upload Files
         uses: softprops/action-gh-release@v1

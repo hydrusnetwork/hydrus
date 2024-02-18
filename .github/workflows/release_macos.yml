@@ -66,23 +66,6 @@ jobs:
           hdiutil create "$temp_dmg" -ov -volname "HydrusNetwork" -fs HFS+ -format UDZO -srcfolder "$GITHUB_WORKSPACE/build/$(head -n 1 triple.txt)/release"
           mv "$temp_dmg" HydrusNetwork.dmg
       -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: MacOS-DMG
-          path: HydrusNetwork.dmg
-          if-no-files-found: error
-          retention-days: 2
-
-  create-release:
-    name: Upload to Release
-    runs-on: ubuntu-20.04
-    needs: [build-macos]
-    steps:
-      -
-        name: Get Artifacts
-        uses: actions/download-artifact@v3
-      - 
         name: Extract Version Metadata
         id: meta
         run: |
@@ -91,7 +74,7 @@ jobs:
       - 
         name: Rename Files
         run: |
-          mv MacOS-DMG/HydrusNetwork.dmg          Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
+          mv HydrusNetwork.dmg Hydrus.Network.${{ env.version_short }}.-.macOS.-.App.dmg
       - 
         name: Upload Files
         uses: softprops/action-gh-release@v1
