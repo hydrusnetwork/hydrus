@@ -80,14 +80,13 @@ jobs:
         name: Extract Version Metadata
         id: meta
         run: |
-          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
-          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
+          echo "version=${{ github.ref_name }}" >> %GITHUB_ENV%
+          echo "version_short=%version:~1%" >> %GITHUB_ENV%
       - 
         name: Rename Files
         run: |
-          mkdir windows
-          mv dist\HydrusInstaller.exe    Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
-          mv dist\Windows-Extract.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
+          move dist\HydrusInstaller.exe Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
+          move dist\Windows-Extract.zip Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
       - 
         name: Upload Files
         uses: softprops/action-gh-release@v1
