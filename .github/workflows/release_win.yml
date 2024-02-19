@@ -10,12 +10,12 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: hydrus
       -
         name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           architecture: x64
@@ -28,12 +28,7 @@ jobs:
         working-directory: hydrus
       -
         name: Download mpv-dev
-        uses: carlosperate/download-file-action@v2
-        id: download_mpv
-        with:
-            file-url: 'https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z'
-            file-name: 'mpv-dev-x86_64.7z'
-            location: '.'
+        run: Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z" -OutFile "mpv-dev-x86_64.7z"
       -
         name: Process mpv-dev
         run: |
@@ -41,12 +36,7 @@ jobs:
           move mpv\libmpv-2.dll hydrus\mpv-2.dll
       -
         name: Download ffmpeg
-        uses: carlosperate/download-file-action@v2
-        id: download_ffmpeg
-        with:
-          file-url: 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z'
-          file-name: 'ffmpeg-release-full.7z'
-          location: '.'
+        run: Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z" -OutFile "ffmpeg-release-full.7z"
       -
         name: Process ffmpeg
         run: |
@@ -80,8 +70,9 @@ jobs:
         name: Extract Version Metadata
         id: meta
         run: |
-          echo "version=${{ github.ref_name }}" >> %GITHUB_ENV%
-          echo "version_short=%version:~1%" >> %GITHUB_ENV%
+          echo "version=${{ github.ref_name }}" >> $env:GITHUB_ENV
+          $vs = "${{ env.version }}".Substring(1)
+          echo "version_short=$vs" >> $env:GITHUB_ENV
       - 
         name: Rename Files
         run: |

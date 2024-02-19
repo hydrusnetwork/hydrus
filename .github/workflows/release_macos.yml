@@ -10,10 +10,10 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       -
         name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
       -
@@ -28,12 +28,7 @@ jobs:
         run: python3 -m pip install pyoxidizer==0.24.0
       -
         name: Download ffmpeg
-        uses: carlosperate/download-file-action@v2
-        id: download_ffmpeg
-        with:
-          file-url: 'https://evermeet.cx/ffmpeg/getrelease/ffmpeg/7z'
-          file-name: 'ffmpeg-macos.7z'
-          location: '.'
+        run: curl -o ffmpeg-macos.7z https://evermeet.cx/ffmpeg/getrelease/ffmpeg/7z
       -
         name: Process ffmpeg
         run: |
