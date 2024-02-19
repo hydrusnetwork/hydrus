@@ -28,7 +28,9 @@ jobs:
         run: python3 -m pip install pyoxidizer==0.24.0
       -
         name: Download ffmpeg
-        run: curl -o ffmpeg-macos.7z https://evermeet.cx/ffmpeg/getrelease/ffmpeg/7z
+        run: |
+          cd $GITHUB_WORKSPACE
+          curl -o ffmpeg-macos.7z https://evermeet.cx/ffmpeg/getrelease/ffmpeg/7z
       -
         name: Process ffmpeg
         run: |
