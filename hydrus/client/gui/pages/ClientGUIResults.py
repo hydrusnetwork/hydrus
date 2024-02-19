@@ -54,6 +54,9 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
+# TODO: gate this based on PLATFORM_MACOS
+from hydrus.client import ClientMacIntegration
+
 FRAME_DURATION_60FPS = 1.0 / 60
 
 class ThumbnailWaitingToBeDrawn( object ):
@@ -1303,6 +1306,27 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 
             
         
+    def _MacQuicklook( self ):
+        
+        if self._HasFocusSingleton():
+            
+            focused_singleton = self._GetFocusSingleton()
+            
+            if focused_singleton.GetLocationsManager().IsLocal():
+                
+                hash = focused_singleton.GetHash()
+                mime = focused_singleton.GetMime()
+                
+                client_files_manager = CG.client_controller.client_files_manager
+                
+                path = client_files_manager.GetFilePath( hash, mime )
+                
+                #self._SetFocusedMedia( None )
+                
+                ClientMacIntegration.show_quicklook_for_path( path )
+                
+                self.setFocus( QC.Qt.OtherFocusReason )
+                
     
     def _OpenKnownURL( self ):
         
@@ -2552,6 +2576,10 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             elif action == CAC.SIMPLE_LAUNCH_THE_ARCHIVE_DELETE_FILTER:
                 
                 self._ArchiveDeleteFilter()
+                
+            elif action == CAC.SIMPLE_MAC_QUICKLOOK:
+                
+                self._MacQuicklook()
                 
             else:
                 
