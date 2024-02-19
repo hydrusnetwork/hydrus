@@ -70,10 +70,9 @@ jobs:
         name: Extract Version Metadata
         id: meta
         run: |
-          echo "version=${{ github.ref_name }}" >> $env:GITHUB_ENV
-          $vs = "${{ env.version }}".Substring(1)
-          echo "version_short=$vs" >> $env:GITHUB_ENV
-      - 
+          $vs = "${{ github.ref_name }}".Substring(1)
+          echo "version_short=$vs" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+      -
         name: Rename Files
         run: |
           move dist\HydrusInstaller.exe Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
