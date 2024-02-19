@@ -10,12 +10,12 @@ jobs:
     steps:
       -
         name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           path: hydrus
       -
         name: Setup Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           architecture: x64
@@ -28,12 +28,7 @@ jobs:
         working-directory: hydrus
       -
         name: Download mpv-dev
-        uses: carlosperate/download-file-action@v2
-        id: download_mpv
-        with:
-            file-url: 'https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z'
-            file-name: 'mpv-dev-x86_64.7z'
-            location: '.'
+        run: Invoke-WebRequest -Uri "https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20230212-git-a40958c.7z" -OutFile "mpv-dev-x86_64.7z" -Headers @{ "User-Agent" = "LetMeIn" }
       -
         name: Process mpv-dev
         run: |
@@ -41,12 +36,7 @@ jobs:
           move mpv\libmpv-2.dll hydrus\mpv-2.dll
       -
         name: Download ffmpeg
-        uses: carlosperate/download-file-action@v2
-        id: download_ffmpeg
-        with:
-          file-url: 'https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z'
-          file-name: 'ffmpeg-release-full.7z'
-          location: '.'
+        run: Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full.7z" -OutFile "ffmpeg-release-full.7z"
       -
         name: Process ffmpeg
         run: |
@@ -74,45 +64,19 @@ jobs:
         name: Compress Client
         run: |
           cd .\dist
-          7z.exe a -tzip -mm=Deflate -mx=5 ..\Windows-Extract.zip 'Hydrus Network'
+          7z.exe a -tzip -mm=Deflate -mx=5 Windows-Extract.zip 'Hydrus Network'
           cd ..
       -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Windows-Install
-          path: dist\HydrusInstaller.exe
-          if-no-files-found: error
-          retention-days: 2
-      -
-        name: Upload a Build Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: Windows-Extract
-          path: Windows-Extract.zip
-          if-no-files-found: error
-          retention-days: 2
-
-  create-release:
-    name: Upload to Release
-    runs-on: ubuntu-20.04
-    needs: [build-windows]
-    steps:
-      -
-        name: Get Artifacts
-        uses: actions/download-artifact@v3
-      - 
         name: Extract Version Metadata
         id: meta
         run: |
-          echo "version=${GITHUB_REF##*/}" >> $GITHUB_ENV
-          echo "version_short=${GITHUB_REF##*/v}" >> $GITHUB_ENV
-      - 
+          $vs = "${{ github.ref_name }}".Substring(1)
+          echo "version_short=$vs" | Out-File -FilePath $Env:GITHUB_ENV -Encoding utf8 -Append
+      -
         name: Rename Files
         run: |
-          mkdir windows
-          mv Windows-Install/HydrusInstaller.exe    Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
-          mv Windows-Extract/Windows-Extract.zip  Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
+          move dist\HydrusInstaller.exe Hydrus.Network.${{ env.version_short }}.-.Windows.-.Installer.exe
+          move dist\Windows-Extract.zip Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
       - 
         name: Upload Files
         uses: softprops/action-gh-release@v1
