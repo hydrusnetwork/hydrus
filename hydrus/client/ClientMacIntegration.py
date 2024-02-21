@@ -10,7 +10,6 @@ from Quartz import QLPreviewPanel
 
 QLPreviewPanelDataSource = objc.protocolNamed('QLPreviewPanelDataSource')
 
-
 class HydrusDataSource(NSObject, protocols=[QLPreviewPanelDataSource]):
     def initWithCurrentlyLooking_(self, currently_showing):
         self = objc.super(HydrusDataSource, self).init()

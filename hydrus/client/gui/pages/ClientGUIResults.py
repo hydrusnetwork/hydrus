@@ -54,8 +54,10 @@ from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 from hydrus.client.search import ClientSearch
 
-# TODO: gate this based on PLATFORM_MACOS
-from hydrus.client import ClientMacIntegration
+if HC.PLATFORM_MACOS:
+    
+    from hydrus.client import ClientMacIntegration
+    
 
 FRAME_DURATION_60FPS = 1.0 / 60
 
@@ -1308,7 +1310,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
     def _MacQuicklook( self ):
         
-        if self._HasFocusSingleton():
+        if HC.PLATFORM_MACOS and self._HasFocusSingleton():
             
             focused_singleton = self._GetFocusSingleton()
             
@@ -1324,8 +1326,6 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                 #self._SetFocusedMedia( None )
                 
                 ClientMacIntegration.show_quicklook_for_path( path )
-                
-                self.setFocus( QC.Qt.OtherFocusReason )
                 
     
     def _OpenKnownURL( self ):
