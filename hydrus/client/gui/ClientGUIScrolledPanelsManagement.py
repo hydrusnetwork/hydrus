@@ -1353,6 +1353,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
+            self._disable_get_safe_position_test = QW.QCheckBox( self._misc_panel )
+            self._disable_get_safe_position_test.setToolTip( 'If your windows keep getting \'rescued\' despite being in a good location, try this.' )
+            
             self._frame_locations = ClientGUIListCtrl.BetterListCtrl( frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, data_to_tuples_func = lambda x: (self._GetPrettyFrameLocationInfo( x ), self._GetPrettyFrameLocationInfo( x )), activation_callback = self.EditFrameLocations )
             
             self._frame_locations_edit_button = QW.QPushButton( 'edit', frame_locations_panel )
@@ -1385,6 +1388,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._do_macos_debug_dialog_menus.setChecked( self._new_options.GetBoolean( 'do_macos_debug_dialog_menus' ) )
             
             self._use_qt_file_dialogs.setChecked( self._new_options.GetBoolean( 'use_qt_file_dialogs' ) )
+            
+            self._disable_get_safe_position_test.setChecked( self._new_options.GetBoolean( 'disable_get_safe_position_test' ) )
             
             for ( name, info ) in self._new_options.GetFrameLocations():
                 
@@ -1427,7 +1432,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += os.linesep
             text += 'This is an advanced control. If you aren\'t confident of what you are doing here, come back later!'
             
-            frame_locations_panel.Add( QW.QLabel( text, frame_locations_panel ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            st = ClientGUICommon.BetterStaticText( frame_locations_panel, label = text )
+            st.setWordWrap( True )
+            
+            frame_locations_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'BUGFIX: Disable off-screen window rescue: ', self._disable_get_safe_position_test ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            frame_locations_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             frame_locations_panel.Add( self._frame_locations, CC.FLAGS_EXPAND_BOTH_WAYS )
             frame_locations_panel.Add( self._frame_locations_edit_button, CC.FLAGS_ON_RIGHT )
             
@@ -1511,6 +1527,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'secret_discord_dnd_fix', self._secret_discord_dnd_fix.isChecked() )
             self._new_options.SetBoolean( 'do_macos_debug_dialog_menus', self._do_macos_debug_dialog_menus.isChecked() )
             self._new_options.SetBoolean( 'use_qt_file_dialogs', self._use_qt_file_dialogs.isChecked() )
+            
+            self._new_options.SetBoolean( 'disable_get_safe_position_test', self._disable_get_safe_position_test.isChecked() )
             
             for listctrl_list in self._frame_locations.GetData():
                 

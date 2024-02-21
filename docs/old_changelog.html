@@ -35,6 +35,47 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_563"><a href="#version_563">version 563</a></h2>
+                    <ul>
+                        <li><h3>macOS improvements</h3></li>
+                        <li>Thanks to a user, we have multiple improvements for macOS!</li>
+                        <li>There is a new icon for the macOS .app build of hydrus</li>
+                        <li>The macOS app will now appear as "Hydrus" in the menu bar instead of "Hydrus Network"</li>
+                        <li>- Use the native global menu bar on macOS and some Linux desktop environments</li>
+                        <li>- "options" will now appear as "Preferences..." and be under the Hydrus menu on macOS</li>
+                        <li>- "exit" will now appear as "Quit Hydrus" and be under the Hydrus menu on macOS</li>
+                        <li>"exit and force shutdown maintenance", "restart", and "shortcuts" will now be under the Hydrus menu on macOS</li>
+                        <li>The hydrus system tray icon is now enabled for macOS and "minimise to system tray" will be in the Hydrus menu when in advanced mode</li>
+                        <li>macOS debug dialog menus are now disabled by default</li>
+                        <li>The macOS build of hydrus now uses pyoxidizer 0.24.0 and Python 3.10</li>
+                        <li>The command palette and hyperlinks colors in the default Qt stylesheet now use palette based colors that should change based on the Qt style</li>
+                        <li>one thing hydev did: on macOS, Cmd+W _should_ now close any dialog or non-main-gui window, just like the Escape key</li>
+                        <li><h3>shortcuts</h3></li>
+                        <li>by default, Alt+Home/End/Left/Right now does the new thumbnail rearranging. **assuming they do not conflict with an existing mapping, all users will recieve this on update**</li>
+                        <li>by default, the shortcuts system now converts all non-number 'numpad' inputs (e.g. 'numpad Home', 'numpad Return', 'numpad Left') to just be normal inputs. a bunch of different keyboards have whack numpad assignments for non-numpad keys, so if it isn't a number, let's not, by default, make a fuss over the distinction. you can return to the old behaviour by unchecking the new checkbox under _file->shortcuts_</li>
+                        <li>the default shortcuts now no longer spam numpad variants anywhere. existing users can delete the surplus mappings (under 'thumbnails' and maybe some of the 'media' sets) if they like</li>
+                        <li><h3>some UI QoL</h3></li>
+                        <li>the _tag service_ menu button that appears in the autocomplete panel and sometimes some other places in advanced mode now shows a proper check mark in its menu beside its current value</li>
+                        <li>the _location context_ menu button on the other side of an autocomplete panel and some other places also now shows a check mark in its menu beside its current value</li>
+                        <li>the `OR` button on search autocomplete that creates new OR predicates now inherits the current file search domain. it was previously defaulting at all times to the fallback file domain and 'all known tags'</li>
+                        <li>the current search predicates list also now inherits the file search domain when you edit an OR predicate currently in use, same deal</li>
+                        <li>removed the 'favourites' submenu from the taglist menu when no tags are selected</li>
+                        <li>in any import context, the file log's arrow menu now supports deleting all the 'unknown' (outstanding, unstarted) items or setting them all to 'skipped'. the 'abort imports' button (with the stop icon) in HDD and urls import pages is removed</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed yet another dumb problem with the datetime control's paste button--although the paste was now 'working' on the UI side, the control wasn't saving that result on dialog ok. the fixes both the datetime button and the modified/file service time multi-column list editing</li>
+                        <li>a core asynchronous thread-checking timer in the program has been rewritten from a 20ms-resolution busy-wait to a <1ms proper wait/notify system. a bunch of stuff that works in a thread is now much faster to recognise that blocking UI work is done, and it is more thread-polite about how it does it!</li>
+                        <li>in the `setup_venv` scripts, if it needs to delete an old venv directory but fails to do so, the script now dumps out with an error saying 'hey, you probably have it open in a terminal/IDE, please close that and try again'. previously, it would just charge on and produce an odd file permission error as, e.g., the new venv setup tried to overwrite the in-use python exe</li>
+                        <li>added a `help->debug->gui->isolate existing mpv widgets` command to force regeneration of mpv windows and help test-out/hack-fix various 'every other of my mpv views has no audio' and 'my mpv loses xxx property after a system sleep/wake cycle' problems. if I've been working with you on this stuff, please give it a go and let me know if new mpv window creation is good or what!</li>
+                        <li>added a `BUGFIX: Disable off-screen window rescue` checkbox to `options->gui` that stops windows that think they are spawning off-screen from repositioning to a known safe screen. several Qt versions have had trouble with enumerating all the screens in a multiple monitor setup and thus the safe coordinate space, so if you have been hit by false positives here, you can now turn it off! (issue #1511)</li>
+                        <li>fixed another couple instances of error texts with empty formatting braces `{}`</li>
+                        <li><h3>tag repository</h3></li>
+                        <li>mapping petitions fetched from the server will now max out at 500k mapping rows or 10k unique tags or ten seconds of construction time. we had a 250k-unique-tag petition this last week and it broke something, so I'm slapping a bunch of safety rails on. let me know if these are too strict, too liberal, or if it messes with the fetch workflow at all--I don't _think_ it will, but we'll see</li>
+                        <li><h3>build stuff</h3></li>
+                        <li>now they have had time to breathe, I optimised the recently split Github build scripts. the 'send to an ubuntu runner and then upload' step is now removed from all three, so they are natively uploaded in the first runner step. it works just a little nicer and faster now, although it did require learning how to truncate and export a variable to the Github Environment Variables file in Powershell, aiiieeeee</li>
+                        <li>also, Github is moving from Node 16 to Node 20 soon, and I have moved two of the four actions we rely on to their newer v20 versions. a third action should be ready to update next week, and another, a general download file function, I have replaced with curl (for macOS) and Powershell's magical Invoke-WebRequest adventure</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_562"><a href="#version_562">version 562</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

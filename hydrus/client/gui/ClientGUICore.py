@@ -51,19 +51,17 @@ class GUICore( QC.QObject ):
         return self._menu_open
         
     
-    def PopupMenu( self, window: QW.QWidget, menu: QW.QMenu ):
+    def PopupMenu( self, widget: QW.QWidget, menu: QW.QMenu ):
         
-        if HC.PLATFORM_MACOS and window.window().isModal():
+        if HC.PLATFORM_MACOS and widget.window().isModal():
             
             # Ok, seems like Big Sur can't do menus at the moment lmao. it shows the menu but the mouse can't interact with it
-            
-            from hydrus.core import HydrusGlobals as HG
             
             if CG.client_controller.new_options.GetBoolean( 'do_macos_debug_dialog_menus' ):
                 
                 from hydrus.client.gui import ClientGUICoreMenuDebug
                 
-                ClientGUICoreMenuDebug.ShowMenuDialog( window, menu )
+                ClientGUICoreMenuDebug.ShowMenuDialog( widget, menu )
                 
                 ClientGUIMenus.DestroyMenu( menu )
                 

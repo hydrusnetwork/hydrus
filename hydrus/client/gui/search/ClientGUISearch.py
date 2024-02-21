@@ -57,7 +57,7 @@ FLESH_OUT_SYSTEM_PRED_TYPES = {
     ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS
 }
 
-def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearch.Predicate ] ) -> typing.List[ ClientSearch.Predicate ]:
+def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSearch.Predicate ], empty_file_search_context: typing.Optional[ ClientSearch.FileSearchContext ] = None ) -> typing.List[ ClientSearch.Predicate ]:
     
     ( editable_predicates, only_invertible_predicates, non_editable_predicates ) = GetEditablePredicates( predicates )
     
@@ -86,7 +86,7 @@ def EditPredicates( widget: QW.QWidget, predicates: typing.Collection[ ClientSea
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( window, title ) as dlg:
             
-            panel = EditPredicatesPanel( dlg, predicates )
+            panel = EditPredicatesPanel( dlg, predicates, empty_file_search_context = empty_file_search_context )
             
             dlg.SetPanel( panel )
             
@@ -189,7 +189,7 @@ def GetEditablePredicates( predicates: typing.Collection[ ClientSearch.Predicate
     
 class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, predicates: typing.Collection[ ClientSearch.Predicate ] ):
+    def __init__( self, parent, predicates: typing.Collection[ ClientSearch.Predicate ], empty_file_search_context: typing.Optional[ ClientSearch.FileSearchContext ] = None ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -223,7 +223,7 @@ class EditPredicatesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if predicate_type == ClientSearch.PREDICATE_TYPE_OR_CONTAINER:
                 
-                self._editable_pred_panels.append( ClientGUIPredicatesOR.ORPredicateControl( self, predicate ) )
+                self._editable_pred_panels.append( ClientGUIPredicatesOR.ORPredicateControl( self, predicate, empty_file_search_context = empty_file_search_context ) )
                 
             elif predicate_type in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
                 
@@ -998,7 +998,7 @@ class TagContextButton( ClientGUICommon.BetterButton ):
             
             tag_context = ClientSearch.TagContext( service_key = service.GetServiceKey() )
             
-            ClientGUIMenus.AppendMenuItem( menu, service.GetName(), 'Change the current tag domain to {}.'.format( service.GetName() ), self.SetValue, tag_context )
+            ClientGUIMenus.AppendMenuCheckItem( menu, service.GetName(), 'Change the current tag domain to {}.'.format( service.GetName() ), tag_context == self._tag_context, self.SetValue, tag_context )
             
             last_seen_service_type = service.GetServiceType()
             

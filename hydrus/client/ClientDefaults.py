@@ -566,15 +566,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_CLOSE_MEDIA_VIEWER ) 
     )
     media_viewer.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_CLOSE_MEDIA_VIEWER ) 
-    )
-    media_viewer.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_CLOSE_MEDIA_VIEWER ) 
-    )
-    media_viewer.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_CLOSE_MEDIA_VIEWER ) 
     )
     media_viewer.SetCommand(
@@ -617,15 +609,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_LAUNCH_MEDIA_VIEWER ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ENTER, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_LAUNCH_MEDIA_VIEWER ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_LAUNCH_MEDIA_VIEWER ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RETURN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_LAUNCH_MEDIA_VIEWER ) 
     )
     
@@ -639,15 +623,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_HOME, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_HOME, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_HOME, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_HOME, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_HOME, CAC.SELECTION_STATUS_SHIFT ) ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_HOME, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_HOME, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
     
@@ -656,15 +632,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_END, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_END, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_END, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_END, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_END, CAC.SELECTION_STATUS_SHIFT ) ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_END, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_END, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
     
@@ -673,15 +641,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_LEFT, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_LEFT, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_LEFT, CAC.SELECTION_STATUS_SHIFT ) ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_LEFT, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
     
@@ -690,15 +650,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_RIGHT, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_RIGHT, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_RIGHT, CAC.SELECTION_STATUS_SHIFT ) ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_RIGHT, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
     
@@ -707,15 +659,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_UP, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_UP, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_UP, CAC.SELECTION_STATUS_SHIFT ) ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_UP, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
     
@@ -724,15 +668,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_DOWN, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_DOWN, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_DOWN, CAC.SELECTION_STATUS_SHIFT ) ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_DOWN, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
     
@@ -741,15 +677,7 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_UP, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_UP, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_UP, CAC.SELECTION_STATUS_SHIFT ) ) 
-    )
-    thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_UP, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_UP, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
     
@@ -758,16 +686,25 @@ def GetDefaultShortcuts():
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_DOWN, CAC.SELECTION_STATUS_NORMAL ) ) 
     )
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_DOWN, CAC.SELECTION_STATUS_NORMAL ) ) 
-    )
-    thumbnails.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
         CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_DOWN, CAC.SELECTION_STATUS_SHIFT ) ) 
     )
+    
     thumbnails.SetCommand(
-        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_PAGE_DOWN, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_KEYPAD, ClientGUIShortcuts.SHORTCUT_MODIFIER_SHIFT ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS, simple_data = ( CAC.MOVE_PAGE_DOWN, CAC.SELECTION_STATUS_SHIFT ) ) 
+        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_HOME, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT ] ),
+        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_HOME ) ) 
+    )
+    thumbnails.SetCommand(
+        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_END, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT ] ),
+        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_END ) ) 
+    )
+    thumbnails.SetCommand(
+        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_LEFT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT ] ),
+        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_LEFT ) ) 
+    )
+    thumbnails.SetCommand(
+        ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_RIGHT, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_ALT ] ),
+        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_REARRANGE_THUMBNAILS, ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, CAC.MOVE_RIGHT ) ) 
     )
     
     from hydrus.client.media import ClientMediaFileFilter

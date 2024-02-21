@@ -226,6 +226,7 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
     num_deleted = file_seed_cache.GetFileSeedCount( CC.STATUS_DELETED )
     num_errors = file_seed_cache.GetFileSeedCount( CC.STATUS_ERROR )
     num_skipped = file_seed_cache.GetFileSeedCount( CC.STATUS_SKIPPED )
+    num_unknown = file_seed_cache.GetFileSeedCount( CC.STATUS_UNKNOWN )
     
     if num_errors > 0:
         
@@ -269,11 +270,23 @@ def PopulateFileSeedCacheMenu( win: QW.QWidget, menu: QW.QMenu, file_seed_cache:
         ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'skipped\' file import items from the queue'.format( HydrusData.ToHumanInt( num_skipped ) ), 'Tell this log to clear out skipped files, reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_SKIPPED, ) )
         
     
+    if num_unknown > 0:
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'delete {} \'unknown\' (i.e. unstarted) file import items from the queue'.format( HydrusData.ToHumanInt( num_unknown ) ), 'Tell this log to clear out any items that have not yet been started (or have been restarted and not yet worked on), reducing the size of the queue.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_UNKNOWN, ) )
+        
+    
     if len( file_seed_cache ) > 0:
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'delete everything from the queue', 'Tell this log to clear out everything, resetting the queue to empty.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_DELETED, CC.STATUS_ERROR, CC.STATUS_VETOED, CC.STATUS_SKIPPED, CC.STATUS_SUCCESSFUL_AND_CHILD_FILES ) )
+        ClientGUIMenus.AppendMenuItem( menu, f'delete everything ({HydrusData.ToHumanInt( len( file_seed_cache ) )} items) from the queue', 'Tell this log to clear out everything, resetting the queue to empty.', ClearFileSeeds, win, file_seed_cache, ( CC.STATUS_UNKNOWN, CC.STATUS_SUCCESSFUL_AND_NEW, CC.STATUS_SUCCESSFUL_BUT_REDUNDANT, CC.STATUS_DELETED, CC.STATUS_ERROR, CC.STATUS_VETOED, CC.STATUS_SKIPPED, CC.STATUS_SUCCESSFUL_AND_CHILD_FILES ) )
+        
+    
+    if num_unknown > 0:
+        
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuItem( menu, 'set {} \'unknown\' (i.e. unstarted) file import items to \'skipped\''.format( HydrusData.ToHumanInt( num_unknown ) ), 'Tell this log to skip any outstanding items in the queue.', file_seed_cache.SetStatusToStatus, CC.STATUS_UNKNOWN, CC.STATUS_SKIPPED )
         
     
     ClientGUIMenus.AppendSeparator( menu )

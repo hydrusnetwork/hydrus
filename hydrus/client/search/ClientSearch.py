@@ -1022,6 +1022,7 @@ class FileSystemPredicates( object ):
     
     def MustNotBeLocal( self ): return self._not_local
     
+
 SEARCH_TYPE_AND = 0
 SEARCH_TYPE_OR = 1
 

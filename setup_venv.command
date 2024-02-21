@@ -44,6 +44,11 @@ else
     read -r
 fi
 
+if [ -d "venv" ]; then
+    echo "It looks like the venv directory did not delete correctly. Do you have it activated in a terminal or IDE anywhere? Please close that and try this again!"
+    exit 1
+fi
+
 echo "--------"
 echo "If your macOS is old, or you are on >=Python 3.11, do the advanced install. Let hydev know what works for you."
 echo

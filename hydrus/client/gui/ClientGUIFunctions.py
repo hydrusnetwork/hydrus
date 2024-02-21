@@ -260,7 +260,7 @@ def GetLighterDarkerColour( colour, intensity = 3 ):
         return colour.lighter( qt_intensity )
         
     
-def GetMouseScreen():
+def GetMouseScreen() -> typing.Optional[ QG.QScreen ]:
     
     return QW.QApplication.screenAt( QG.QCursor.pos() )
     
@@ -360,6 +360,12 @@ def MouseIsOnMyDisplay( window ):
     window_screen = window_handle.screen()
     
     mouse_screen = GetMouseScreen()
+    
+    # something's busted!
+    if mouse_screen is None:
+        
+        return True
+        
     
     return mouse_screen is window_screen
     

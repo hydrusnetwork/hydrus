@@ -3237,6 +3237,25 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
         self._NotifyFileSeedsUpdated( updated_file_seeds )
         
     
+    def SetStatusToStatus( self, old_status, new_status ):
+        
+        with self._lock:
+            
+            file_seeds = self._GetFileSeeds( old_status )
+            
+            for file_seed in file_seeds:
+                
+                file_seed.SetStatus( new_status )
+                
+            
+            self._FixStatusesToFileSeeds( file_seeds )
+            
+            self._SetStatusDirty()
+            
+        
+        self._NotifyFileSeedsUpdated( file_seeds )
+        
+    
     def WorkToDo( self ):
         
         with self._lock:

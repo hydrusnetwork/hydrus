@@ -360,9 +360,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             if num_files_allowed_to_see != num_files_asked_for:
                 
-                error_text = 'You do not seem to have access to all those files! You asked to see {} files, but you were only authorised to see {} of them!'
-                
-                error_text = error_text.format( HydrusData.ToHumanInt( num_files_asked_for ), HydrusData.ToHumanInt( num_files_allowed_to_see ) )
+                error_text = f'You do not seem to have access to all those files! You asked to see {HydrusData.ToHumanInt( num_files_asked_for )} files, but you were only authorised to see {HydrusData.ToHumanInt( num_files_allowed_to_see )} of them!'
                 
                 raise HydrusExceptions.InsufficientCredentialsException( error_text )
                 
