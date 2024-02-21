@@ -954,7 +954,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_PETITION, hashes, reason = reason ) ]
                     
-                    content_update_packages = [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( deletee_file_service_key, content_updates ) ]
+                    content_update_packages = [ ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( deletee_file_service_key, content_updates ) ]
                     
                     hashes_physically_deleted = []
                     
