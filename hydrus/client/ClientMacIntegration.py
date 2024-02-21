@@ -10,9 +10,9 @@ from Quartz import QLPreviewPanel
 
 QLPreviewPanelDataSource = objc.protocolNamed('QLPreviewPanelDataSource')
 
-class HydrusDataSource(NSObject, protocols=[QLPreviewPanelDataSource]):
+class HydrusQLDataSource(NSObject, protocols=[QLPreviewPanelDataSource]):
     def initWithCurrentlyLooking_(self, currently_showing):
-        self = objc.super(HydrusDataSource, self).init()
+        self = objc.super(HydrusQLDataSource, self).init()
         if self is None: return None
 
         self.currently_showing = currently_showing
@@ -27,7 +27,7 @@ class HydrusDataSource(NSObject, protocols=[QLPreviewPanelDataSource]):
 
 def show_quicklook_for_path( path ):
     
-    hydrus_data_source = HydrusDataSource.alloc().initWithCurrentlyLooking_(path)
+    hydrus_data_source = HydrusQLDataSource.alloc().initWithCurrentlyLooking_(path)
 
     panel = QLPreviewPanel.sharedPreviewPanel()
     panel.setDataSource_(hydrus_data_source)
