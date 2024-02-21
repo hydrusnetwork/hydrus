@@ -5,7 +5,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.client import ClientGlobals as CG
 
 import objc
-from Cocoa import NSObject, NSURL
+from Foundation import NSObject, NSURL
 from Quartz import QLPreviewPanel
 
 QLPreviewPanelDataSource = objc.protocolNamed('QLPreviewPanelDataSource')
