@@ -15,12 +15,20 @@ FUZZY_PADDING = 10
 
 def GetSafePosition( position: QC.QPoint, frame_key ):
     
+    if CG.client_controller.new_options.GetBoolean( 'disable_get_safe_position_test' ):
+        
+        return ( position, None )
+        
+    
     # some window managers size the windows just off screen to cut off borders
     # so choose a test position that's a little more lenient
     
     fuzzy_point = QC.QPoint( FUZZY_PADDING, FUZZY_PADDING )
     
     test_position = position + fuzzy_point
+    
+    # note that some version of Qt cannot figure this out, they just deliver None for a particular monitor!
+    # https://github.com/hydrusnetwork/hydrus/issues/1511
     
     screen = QW.QApplication.screenAt( test_position )
     
@@ -550,13 +558,16 @@ class NewDialog( QP.Dialog ):
     
     def keyPressEvent( self, event ):
         
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
         current_focus = QW.QApplication.focusWidget()
         
         event_from_us = current_focus is not None and ClientGUIFunctions.IsQtAncestor( current_focus, self )
         
-        if event_from_us and key == QC.Qt.Key_Escape:
+        shortcut = ClientGUIShortcuts.ConvertKeyEventToShortcut( event )
+        
+        escape_shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_ESCAPE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
+        command_w_shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'W' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] )
+        
+        if event_from_us and ( shortcut == escape_shortcut or ( HC.PLATFORM_MACOS and shortcut == command_w_shortcut ) ):
             
             self._TryEndModal( QW.QDialog.Rejected )
             

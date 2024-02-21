@@ -38,7 +38,7 @@ SHORTCUT_MODIFIER_ALT = 1
 SHORTCUT_MODIFIER_SHIFT = 2
 SHORTCUT_MODIFIER_KEYPAD = 3
 SHORTCUT_MODIFIER_GROUP_SWITCH = 4
-SHORTCUT_MODIFIER_META = 5 # This is 'Control' in macOS, which is for system level stuff. They use 'Command' for Control stuff, which is helpfully mapped to Control in Qt. Just name nonsense
+SHORTCUT_MODIFIER_META = 5 # This is 'Control' in macOS, which is for system level stuff. They use 'Command/Cmd' for Ctrl stuff, which is helpfully mapped to Ctrl in Qt, so you usually don't have to change anything. Just name nonsense
 
 SHORTCUT_KEY_SPECIAL_SPACE = 0
 SHORTCUT_KEY_SPECIAL_BACKSPACE = 1
@@ -500,6 +500,7 @@ def ConvertQtKeyToShortcutKey( key_qt ):
             
         
     
+
 def ConvertKeyEventToShortcut( event ):
     
     key_qt = event.key()
@@ -537,7 +538,22 @@ def ConvertKeyEventToShortcut( event ):
         
         if event.modifiers() & QC.Qt.KeypadModifier:
             
-            modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
+            do_it = True
+            
+            if CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' ):
+                
+                it_is_a_number = ord( '0' ) <= key_ord <= ord( '9' )
+                
+                if not it_is_a_number:
+                    
+                    do_it = False
+                    
+                
+            
+            if do_it:
+                
+                modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
+                
             
         
         shortcut_press_type = SHORTCUT_PRESS_TYPE_PRESS
@@ -700,11 +716,6 @@ def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
         if event.modifiers() & QC.Qt.GroupSwitchModifier:
             
             modifiers.append( SHORTCUT_MODIFIER_GROUP_SWITCH )
-            
-        
-        if event.modifiers() & QC.Qt.KeypadModifier:
-            
-            modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
             
         
         shortcut = Shortcut( SHORTCUT_TYPE_MOUSE, key, shortcut_press_type, modifiers )
@@ -1164,6 +1175,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         raise HydrusExceptions.VetoException( 'Sorry, cannot increment that shortcut!' )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT ] = Shortcut
 
 class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
@@ -1274,7 +1286,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def DeleteShortcut( self, shortcut ):
+    def DeleteShortcut( self, shortcut: Shortcut ):
         
         if shortcut in self._shortcuts_to_commands:
             
@@ -1282,7 +1294,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def GetCommand( self, shortcut ):
+    def GetCommand( self, shortcut: Shortcut ):
         
         if shortcut in self._shortcuts_to_commands:
             
@@ -1314,7 +1326,12 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
         return list( self )
         
     
-    def SetCommand( self, shortcut, command ):
+    def HasCommand( self, shortcut: Shortcut ):
+        
+        return self.GetCommand( shortcut ) is not None
+        
+    
+    def SetCommand( self, shortcut: Shortcut, command: CAC.ApplicationCommand ):
         
         self._shortcuts_to_commands[ shortcut ] = command
         

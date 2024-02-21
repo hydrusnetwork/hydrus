@@ -446,14 +446,16 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         # but I also don't want a hang, as we have seen with some GUI async job that got fired on shutdown and it seems some event queue was halted or deadlocked
         # so, we'll give it 16ms to work, then we'll start testing for shutdown hang
         
+        done_event = job_status.GetDoneEvent()
+        
         while not job_status.IsDone():
+            
+            done_event.wait( 1.0 )
             
             if HG.model_shutdown or not self._qt_app_running:
                 
                 raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
                 
-            
-            time.sleep( 0.02 )
             
         
         if job_status.HasVariable( 'result' ):

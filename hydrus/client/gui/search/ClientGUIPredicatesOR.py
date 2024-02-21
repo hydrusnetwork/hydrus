@@ -20,7 +20,7 @@ from hydrus.client.search import ClientSearch
 
 class ORPredicateControl( QW.QWidget ):
     
-    def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate ):
+    def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate, empty_file_search_context: typing.Optional[ ClientSearch.FileSearchContext ] = None ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -31,13 +31,24 @@ class ORPredicateControl( QW.QWidget ):
             raise Exception( 'Launched an ORPredicateControl without an OR Pred!' )
             
         
-        predicates = predicate.GetValue()
-        
         page_key = HydrusData.GenerateKey()
         
-        location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
+        predicates = predicate.GetValue()
         
-        file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = predicates )
+        if empty_file_search_context is None:
+            
+            location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
+            
+            file_search_context = ClientSearch.FileSearchContext( location_context = location_context, predicates = predicates )
+            
+        else:
+            
+            empty_file_search_context = empty_file_search_context.Duplicate()
+            
+            empty_file_search_context.SetPredicates( predicates )
+            
+            file_search_context = empty_file_search_context
+            
         
         self._search_control = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self, page_key, file_search_context, hide_favourites_edit_actions = True )
         

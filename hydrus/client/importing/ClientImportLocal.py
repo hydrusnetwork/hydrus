@@ -368,32 +368,6 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def AbortImport( self, do_delete = False ):
-        
-        if do_delete:
-            
-            self._file_seed_cache.RemoveFileSeedsByStatus( ( CC.STATUS_UNKNOWN, ) )
-            
-        else:
-            
-            file_seeds = self._file_seed_cache.GetFileSeeds( CC.STATUS_UNKNOWN )
-            
-            for file_seed in file_seeds:
-                
-                file_seed.SetStatus( CC.STATUS_SKIPPED, note = 'import abandoned by user' )
-                
-            
-            self._file_seed_cache.NotifyFileSeedsUpdated( file_seeds )
-            
-        
-        with self._lock:
-            
-            self._files_status = 'aborted'
-            
-            self._SerialisableChangeMade()
-            
-        
-    
     def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
         
         with self._lock:

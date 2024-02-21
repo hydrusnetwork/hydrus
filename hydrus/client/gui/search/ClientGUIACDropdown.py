@@ -1832,8 +1832,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_context.service_key )
         
-        self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
-        
         self._location_context_button.SetAllKnownFilesAllowed( allow_all_known_files, True )
         
         #
@@ -1913,7 +1911,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._dropdown_window.setLayout( vbox )
         
-        self._predicates_listbox.listBoxChanged.connect( self._SignalNewSearchState )
+        self._predicates_listbox.listBoxChanged.connect( self._NotifyPredicatesBoxChanged )
         
         self._include_current_tags.valueChanged.connect( self._IncludeCurrentChanged )
         self._include_pending_tags.valueChanged.connect( self._IncludePendingChanged )
@@ -2016,7 +2014,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         try:
             
-            predicates = ClientGUISearch.EditPredicates( self, predicates )
+            empty_file_search_context = self._file_search_context.Duplicate()
+            
+            empty_file_search_context.SetPredicates( [] )
+            
+            predicates = ClientGUISearch.EditPredicates( self, predicates, empty_file_search_context = empty_file_search_context )
             
         except HydrusExceptions.CancelledException:
             
@@ -2352,14 +2354,19 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _SetupTopListBox( self ):
         
-        self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key )
+        self._predicates_listbox = ListBoxTagsActiveSearchPredicates( self, self._page_key, self._file_search_context )
         
         QP.AddToLayout( self._main_vbox, self._predicates_listbox, CC.FLAGS_EXPAND_BOTH_WAYS_SHY )
         
     
-    def _SignalNewSearchState( self ):
+    def _NotifyPredicatesBoxChanged( self ):
         
         self._file_search_context.SetPredicates( self._predicates_listbox.GetPredicates() )
+        
+        self._SignalNewSearchState()
+        
+    
+    def _SignalNewSearchState( self ):
         
         file_search_context = self._file_search_context.Duplicate()
         
@@ -2477,16 +2484,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def GetFileSearchContext( self ) -> ClientSearch.FileSearchContext:
         
-        fsc = self._file_search_context.Duplicate()
-        
-        fsc.SetPredicates( self._predicates_listbox.GetPredicates() )
-        
-        return fsc
+        return self._file_search_context.Duplicate()
         
     
     def GetPredicates( self ) -> typing.Set[ ClientSearch.Predicate ]:
         
-        return self._predicates_listbox.GetPredicates()
+        return self._file_search_context.GetPredicates()
         
     
     def IsSynchronised( self ):
@@ -2540,7 +2543,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         self._file_search_context = file_search_context.Duplicate()
         
-        self._predicates_listbox.SetPredicates( self._file_search_context.GetPredicates() )
+        self._predicates_listbox.SetFileSearchContext( self._file_search_context )
         
         self._SetLocationContext( self._file_search_context.GetLocationContext() )
         self._SetTagService( self._file_search_context.GetTagContext().service_key )
@@ -2583,18 +2586,17 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
 class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
-    def __init__( self, parent: AutoCompleteDropdownTagsRead, page_key, initial_predicates = None ):
-        
-        if initial_predicates is None:
-            
-            initial_predicates = []
-            
+    def __init__( self, parent: AutoCompleteDropdownTagsRead, page_key, file_search_context: ClientSearch.FileSearchContext ):
         
         ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, height_num_chars = 6 )
         
         self._my_ac_parent = parent
         
         self._page_key = page_key
+        
+        self._file_search_context = file_search_context
+        
+        initial_predicates = self._file_search_context.GetPredicates()
         
         if len( initial_predicates ) > 0:
             
@@ -2682,7 +2684,11 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         
         try:
             
-            edited_predicates = set( ClientGUISearch.EditPredicates( self, predicates ) )
+            empty_file_search_context = self._file_search_context.Duplicate()
+            
+            empty_file_search_context.SetPredicates( [] )
+            
+            edited_predicates = set( ClientGUISearch.EditPredicates( self, predicates, empty_file_search_context = empty_file_search_context ) )
             
         except HydrusExceptions.CancelledException:
             
@@ -2815,9 +2821,13 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
             
         
     
-    def SetPredicates( self, predicates ):
+    def SetFileSearchContext( self, file_search_context: ClientSearch.FileSearchContext ):
         
         self._Clear()
+        
+        self._file_search_context = file_search_context
+        
+        predicates = self._file_search_context.GetPredicates()
         
         terms = [ self._GenerateTermFromPredicate( predicate ) for predicate in predicates ]
         
@@ -2828,6 +2838,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
         self._DataHasChanged()
         
     
+
 class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     
     nullEntered = QC.Signal()

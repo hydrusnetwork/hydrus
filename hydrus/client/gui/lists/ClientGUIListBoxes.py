@@ -3372,45 +3372,48 @@ class ListBoxTags( ListBox ):
         to_add = set( selected_actual_tags ).difference( favourite_tags )
         to_remove = set( selected_actual_tags ).intersection( favourite_tags )
         
-        favourites_menu = ClientGUIMenus.GenerateMenu( menu )
-        
-        if len( to_add ) > 0:
+        if len( to_add ) + len( to_remove ) > 0:
             
-            if len( to_add ) == 1:
-                
-                tag = list( to_add )[0]
-                
-                label = f'Add "{tag}" to favourites'
-                
-            else:
-                
-                label = f'Add {HydrusData.ToHumanInt( len( to_add ) )} selected tags to favourites'
-                
+            favourites_menu = ClientGUIMenus.GenerateMenu( menu )
             
-            description = 'Add these tags to the favourites list.'
-            
-            ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, add_favourite_tags, to_add )
-            
-        
-        if len( to_remove ) > 0:
-            
-            if len( to_remove ) == 1:
+            if len( to_add ) > 0:
                 
-                tag = list( to_remove )[0]
+                if len( to_add ) == 1:
+                    
+                    tag = list( to_add )[0]
+                    
+                    label = f'Add "{tag}" to favourites'
+                    
+                else:
+                    
+                    label = f'Add {HydrusData.ToHumanInt( len( to_add ) )} selected tags to favourites'
+                    
                 
-                label = f'Remove "{tag}" from favourites'
+                description = 'Add these tags to the favourites list.'
                 
-            else:
-                
-                label = f'Remove {HydrusData.ToHumanInt( len( to_remove ) )} selected tags from favourites'
+                ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, add_favourite_tags, to_add )
                 
             
-            description = 'Add these tags to the favourites list.'
+            if len( to_remove ) > 0:
+                
+                if len( to_remove ) == 1:
+                    
+                    tag = list( to_remove )[0]
+                    
+                    label = f'Remove "{tag}" from favourites'
+                    
+                else:
+                    
+                    label = f'Remove {HydrusData.ToHumanInt( len( to_remove ) )} selected tags from favourites'
+                    
+                
+                description = 'Add these tags to the favourites list.'
+                
+                ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, remove_favourite_tags, to_remove )
+                
             
-            ClientGUIMenus.AppendMenuItem( favourites_menu, label, description, remove_favourite_tags, to_remove )
+            ClientGUIMenus.AppendMenu( menu, favourites_menu, 'favourites' )
             
-        
-        ClientGUIMenus.AppendMenu( menu, favourites_menu, 'favourites' )
         
         #
         

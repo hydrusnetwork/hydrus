@@ -1177,9 +1177,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play imports' )
         
-        self._abort_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().stop, self.Abort )
-        self._abort_button.setToolTip( 'abort imports' )
-        
         self._hdd_import: ClientImportLocal.HDDImport = self._management_controller.GetVariable( 'hdd_import' )
         
         file_import_options = self._hdd_import.GetFileImportOptions()
@@ -1202,7 +1199,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         QP.AddToLayout( hbox, self._current_action, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._abort_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self._import_queue_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -1240,8 +1236,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         
         self._current_action.setText( current_action )
         
-        self._abort_button.setEnabled( self._hdd_import.GetFileSeedCache().WorkToDo() )
-        
     
     def CheckAbleToClose( self ):
         
@@ -1249,34 +1243,6 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
             
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
             
-    def Abort( self ):
-        
-        if not self._hdd_import.GetFileSeedCache().WorkToDo():
-            
-            return
-            
-        
-        text = 'Stop the import here? You can either set the remainder of the queue to "skipped" or delete them.'
-        
-        yes_tuples = []
-        
-        yes_tuples.append( ( 'set to skipped', 'skip' ) )
-        yes_tuples.append( ( 'delete them', 'delete' ) )
-        
-        try:
-            
-            result = ClientGUIDialogsQuick.GetYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' )
-            
-        except HydrusExceptions.CancelledException:
-            
-            return
-            
-        
-        do_delete = result == 'delete'
-        
-        self._hdd_import.AbortImport( do_delete = do_delete )
-        
-        self._UpdateImportStatus()
         
     
     def Pause( self ):
@@ -3711,9 +3677,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
         self._pause_button.setToolTip( 'pause/play files' )
         
-        self._abort_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().stop, self.Abort )
-        self._abort_button.setToolTip( 'abort files' )
-        
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
         
         self._urls_import: ClientImportSimpleURLs.URLsImport = self._management_controller.GetVariable( 'urls_import' )
@@ -3751,7 +3714,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._pause_button, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( hbox, self._abort_button, CC.FLAGS_ON_RIGHT )
 
         self._import_queue_panel.Add( hbox, CC.FLAGS_ON_RIGHT )
         self._import_queue_panel.Add( self._file_seed_cache_control, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3847,8 +3809,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             self._gallery_download_control.SetNetworkJob( gallery_network_job )
             
         
-        self._abort_button.setEnabled( self._urls_import.GetFileSeedCache().WorkToDo() )
-        
     
     def CheckAbleToClose( self ):
         
@@ -3856,35 +3816,6 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             
             raise HydrusExceptions.VetoException( 'This page is still importing.' )
             
-        
-    def Abort( self ):
-        
-        if not self._urls_import.GetFileSeedCache().WorkToDo():
-            
-            return
-            
-        
-        text = 'Stop the import here? You can either set the remainder of the queue to "skipped" or delete them.'
-        
-        yes_tuples = []
-        
-        yes_tuples.append( ( 'set to skipped', 'skip' ) )
-        yes_tuples.append( ( 'delete them', 'delete' ) )
-        
-        try:
-            
-            result = ClientGUIDialogsQuick.GetYesYesNo( self, text, yes_tuples = yes_tuples, no_label = 'forget it' )
-            
-        except HydrusExceptions.CancelledException:
-            
-            return
-            
-        
-        do_delete = result == 'delete'
-        
-        self._urls_import.AbortImport( do_delete = do_delete )
-        
-        self._UpdateImportStatus()
         
     
     def Pause( self ):

@@ -586,7 +586,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 except HydrusExceptions.DataMissing:
                     
-                    ClientGUIDialogsMessage.ShowCritical( self, 'Important Error!', 'Some data for this query, "{}" was missing! This should have been dealt with when the dialog launched, so something is very wrong! Please exit the manage subscriptions dialog immediately, pause your subs, and contact hydrus dev!' )
+                    ClientGUIDialogsMessage.ShowCritical( self, 'Important Error!', f'Some data for this query, "{old_query_header.GetQueryText()}" was missing! This should have been dealt with when the dialog launched, so something is very wrong! Please exit the manage subscriptions dialog immediately, pause your subs, and contact hydrus dev!' )
                     
                     return
                     

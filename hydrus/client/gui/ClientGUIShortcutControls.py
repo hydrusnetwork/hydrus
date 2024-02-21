@@ -28,22 +28,25 @@ def ManageShortcuts( win: QW.QWidget ):
     shortcuts_manager = ClientGUIShortcuts.shortcuts_manager()
     
     call_mouse_buttons_primary_secondary = CG.client_controller.new_options.GetBoolean( 'call_mouse_buttons_primary_secondary' )
+    shortcuts_merge_non_number_numpad = CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' )
     
     all_shortcuts = shortcuts_manager.GetShortcutSets()
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, 'manage shortcuts' ) as dlg:
         
-        panel = EditShortcutsPanel( dlg, call_mouse_buttons_primary_secondary, all_shortcuts )
+        panel = EditShortcutsPanel( dlg, call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad, all_shortcuts )
         
         dlg.SetPanel( panel )
         
         if dlg.exec() == QW.QDialog.Accepted:
             
-            ( call_mouse_buttons_primary_secondary, shortcut_sets ) = panel.GetValue()
+            ( call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad, shortcut_sets ) = panel.GetValue()
             
             CG.client_controller.new_options.SetBoolean( 'call_mouse_buttons_primary_secondary', call_mouse_buttons_primary_secondary )
             
             ClientGUIShortcuts.SetMouseLabels( call_mouse_buttons_primary_secondary )
+            
+            CG.client_controller.new_options.SetBoolean( 'shortcuts_merge_non_number_numpad', shortcuts_merge_non_number_numpad )
             
             dupe_shortcut_sets = [ shortcut_set.Duplicate() for shortcut_set in shortcut_sets ]
             
@@ -360,7 +363,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent, call_mouse_buttons_primary_secondary, all_shortcuts ):
+    def __init__( self, parent, call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad, all_shortcuts ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
@@ -369,6 +372,9 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._call_mouse_buttons_primary_secondary = QW.QCheckBox( self )
         self._call_mouse_buttons_primary_secondary.setToolTip( 'Useful if you swap your buttons around.' )
+        
+        self._shortcuts_merge_non_number_numpad = QW.QCheckBox( self )
+        self._shortcuts_merge_non_number_numpad.setToolTip( 'This means a "numpad" variant of Return/Home/Arrow etc.. is just counted as a normal one. Helps clear up a bunch of annoying keyboard mappings.' )
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
@@ -397,6 +403,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._call_mouse_buttons_primary_secondary.setChecked( call_mouse_buttons_primary_secondary )
+        self._shortcuts_merge_non_number_numpad.setChecked( shortcuts_merge_non_number_numpad )
         
         reserved_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
         custom_shortcuts = [ shortcuts for shortcuts in all_shortcuts if shortcuts.GetName() not in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES ]
@@ -420,6 +427,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
+        rows.append( ( 'Treat all non-number numpad inputs as "normal": ', self._shortcuts_merge_non_number_numpad ) )
         rows.append( ( 'Replace "left/right"-click with "primary/secondary": ', self._call_mouse_buttons_primary_secondary ) )
         
         mouse_gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -463,6 +471,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
         self._call_mouse_buttons_primary_secondary.clicked.connect( self._UpdateMouseLabels )
+        self._shortcuts_merge_non_number_numpad.clicked.connect( self._TempSaveNumpadMerge )
         
     
     def _Add( self ):
@@ -640,6 +649,15 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
     
+    def _TempSaveNumpadMerge( self ):
+        
+        # this is dumb, but we do want the behaviour to change instantly so this dialog reflects it, so there we go
+        
+        shortcuts_merge_non_number_numpad = self._shortcuts_merge_non_number_numpad.isChecked()
+        
+        CG.client_controller.new_options.SetBoolean( 'shortcuts_merge_non_number_numpad', shortcuts_merge_non_number_numpad )
+        
+    
     def _UpdateMouseLabels( self ):
         
         swap_labels = self._call_mouse_buttons_primary_secondary.isChecked()
@@ -647,16 +665,17 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIShortcuts.SetMouseLabels( swap_labels )
         
     
-    def GetValue( self ) -> typing.List[ ClientGUIShortcuts.ShortcutSet ]:
+    def GetValue( self ) -> typing.Tuple[ bool, bool, typing.List[ ClientGUIShortcuts.ShortcutSet ] ]:
         
         call_mouse_buttons_primary_secondary = self._call_mouse_buttons_primary_secondary.isChecked()
+        shortcuts_merge_non_number_numpad = self._shortcuts_merge_non_number_numpad.isChecked()
         
         shortcut_sets = []
         
         shortcut_sets.extend( self._reserved_shortcuts.GetData() )
         shortcut_sets.extend( self._custom_shortcuts.GetData() )
         
-        return ( call_mouse_buttons_primary_secondary, shortcut_sets )
+        return ( call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad, shortcut_sets )
         
     
 class ShortcutWidget( QW.QWidget ):

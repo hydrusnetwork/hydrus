@@ -3000,13 +3000,20 @@ class DB( HydrusDB.HydrusDB ):
     
     def _RepositoryGetMappingPetition( self, service_id, petitioner_account_id, reason_id ) -> HydrusNetwork.Petition:
         
+        # we had a user petition 250k 'hash:abcdef...' tags with the same reason, and it overloaded the petition system trying to present them all
+        MAX_MAPPINGS_PER_PETITION = 500000
+        MAX_UNIQUE_TAG_IDS_PER_PETITION = 10000
+        TIME_ALLOWED = 10
+        
+        time_started = HydrusTime.GetNowFloat()
+        
         ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = GenerateRepositoryMappingsTableNames( service_id )
         
         petitioner_account = self._GetAccount( service_id, petitioner_account_id )
         
         reason = self._GetReason( reason_id )
         
-        tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._Execute( f'SELECT service_tag_id, service_hash_id FROM {petitioned_mappings_table_name} WHERE account_id = ? AND reason_id = ?;', ( petitioner_account_id, reason_id ) ) )
+        tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._Execute( f'SELECT service_tag_id, service_hash_id FROM {petitioned_mappings_table_name} WHERE account_id = ? AND reason_id = ? LIMIT;', ( petitioner_account_id, reason_id, MAX_MAPPINGS_PER_PETITION ) ) )
         
         if len( tag_ids_to_hash_ids ) == 0:
             
@@ -3015,9 +3022,10 @@ class DB( HydrusDB.HydrusDB ):
         
         contents = []
         
-        petition_pairs = list( tag_ids_to_hash_ids.items() )
+        # if this is a giganto petition, let's serve the large-count tags first
+        petition_pairs = sorted( tag_ids_to_hash_ids.items(), key = lambda t_and_h: len( t_and_h[1] ), reverse = True )
         
-        for ( service_tag_id, service_hash_ids ) in HydrusData.IterateListRandomlyAndFast( petition_pairs ):
+        for ( service_tag_id, service_hash_ids ) in petition_pairs[ : MAX_UNIQUE_TAG_IDS_PER_PETITION ]:
             
             master_tag_id = self._RepositoryGetMasterTagId( service_id, service_tag_id )
             
@@ -3030,6 +3038,11 @@ class DB( HydrusDB.HydrusDB ):
             content = HydrusNetwork.Content( HC.CONTENT_TYPE_MAPPINGS, ( tag, hashes ) )
             
             contents.append( content )
+            
+            if HydrusTime.TimeHasPassedFloat( time_started + TIME_ALLOWED ):
+                
+                break
+                
             
         
         action = HC.CONTENT_UPDATE_PETITION

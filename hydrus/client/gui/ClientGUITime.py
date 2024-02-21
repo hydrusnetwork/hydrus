@@ -682,6 +682,9 @@ class DateTimesCtrl( QW.QWidget ):
         datetime_value_range.AddValueQtDateTime( QC.QDateTime.currentDateTime() )
         
         self._original_datetime_value_range = datetime_value_range
+        self._current_datetime_value_range = self._original_datetime_value_range
+        
+        self._we_have_initialised_with_setvalue = False
         
         self._none_time = QW.QCheckBox( self )
         
@@ -858,7 +861,7 @@ class DateTimesCtrl( QW.QWidget ):
                 qt_datetime = QC.QDateTime.fromMSecsSinceEpoch( timestamp_ms, QC.QTimeZone.systemTimeZone() )
                 
             
-            datetime_value_range = self._original_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
+            datetime_value_range = self._current_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
             
         except Exception as e:
             
@@ -891,7 +894,7 @@ class DateTimesCtrl( QW.QWidget ):
         
         if self._none_time.isChecked():
             
-            return self._original_datetime_value_range.DuplicateWithNewQtDateTime( None )
+            return self._current_datetime_value_range.DuplicateWithNewQtDateTime( None )
             
         
         qt_date = self._date.selectedDate()
@@ -907,7 +910,7 @@ class DateTimesCtrl( QW.QWidget ):
             qt_datetime = now
             
         
-        datetime_value_range = self._original_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
+        datetime_value_range = self._current_datetime_value_range.DuplicateWithNewQtDateTime( qt_datetime )
         
         datetime_value_range.SetStepMS( int( self._step.GetValue() * 1000 ) )
         
@@ -926,7 +929,14 @@ class DateTimesCtrl( QW.QWidget ):
             return
             
         
-        self._original_datetime_value_range = datetime_value_range
+        if not self._we_have_initialised_with_setvalue:
+            
+            self._original_datetime_value_range = datetime_value_range
+            
+            self._we_have_initialised_with_setvalue = True
+            
+        
+        self._current_datetime_value_range = datetime_value_range
         
         value_to_set_visually = datetime_value_range.GetBestVisualValue()
         

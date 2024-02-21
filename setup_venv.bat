@@ -52,6 +52,16 @@ IF EXIST "venv\" (
 
 )
 
+IF EXIST "venv\" (
+
+    SET /P gumpf="It looks like the venv directory did not delete correctly. Do you have it activated in a terminal or IDE anywhere? Please close that and try this again!"
+
+    popd
+
+    EXIT /B 1
+
+)
+
 :questions
 
 ECHO --------

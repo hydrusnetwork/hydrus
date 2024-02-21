@@ -44,6 +44,11 @@ else
     read -r
 fi
 
+if [ -d "venv" ]; then
+    echo "It looks like the venv directory did not delete correctly. Do you have it activated in a terminal or IDE anywhere? Please close that and try this again!"
+    exit 1
+fi
+
 echo "--------"
 echo "Users on older OSes or Python >=3.11 need the advanced install."
 echo
