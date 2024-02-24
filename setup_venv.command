@@ -245,6 +245,8 @@ elif [ "$install_type" = "a" ]; then
     fi
 fi
 
+python -m pip install -r static/requirements/advanced/requirements/requirements_macos.txt
+
 deactivate
 
 echo "--------"
