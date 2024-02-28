@@ -759,6 +759,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         d[ 'status' ] = self.status
         d[ 'note' ] = self.note
         
+        hash = self.GetHash()
+        
+        d[ 'hash' ] = hash.hex() if hash is not None else hash
+        
         return d
         
     

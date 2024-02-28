@@ -70,7 +70,7 @@ There are three ways a file can be related to another in the current duplicates 
 
 You can customise the shortcuts under _file->shortcuts->duplicate_filter_. The defaults are:
 
-*   Left-click or space: **this is better, delete the other**.
+*   Left-click: **this is better, delete the other**.
     
 *   Right-click: **they are related alternates**.
     

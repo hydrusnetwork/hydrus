@@ -143,6 +143,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'show_related_tags' ] = True
         self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
         
+        self._dictionary[ 'booleans' ][ 'use_native_menubar' ] = HC.PLATFORM_MACOS
+        
         self._dictionary[ 'booleans' ][ 'shortcuts_merge_non_number_numpad' ] = True
         
         self._dictionary[ 'booleans' ][ 'disable_get_safe_position_test' ] = False

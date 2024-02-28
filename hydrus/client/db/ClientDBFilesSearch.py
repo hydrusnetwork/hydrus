@@ -114,38 +114,24 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
         files_info_predicates.append( 'has_audio = {}'.format( int( has_audio ) ) )
         
     
-    if 'min_width' in simple_preds:
+    if ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH in simple_preds:
         
-        files_info_predicates.append( 'width > ' + str( simple_preds[ 'min_width' ] ) )
+        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH ]
         
-    if 'width' in simple_preds:
-        
-        files_info_predicates.append( 'width = ' + str( simple_preds[ 'width' ] ) )
-        
-    if 'not_width' in simple_preds:
-        
-        files_info_predicates.append( 'width != ' + str( simple_preds[ 'not_width' ] ) )
-        
-    if 'max_width' in simple_preds:
-        
-        files_info_predicates.append( 'width < ' + str( simple_preds[ 'max_width' ] ) )
+        for number_test in number_tests:
+            
+            files_info_predicates.extend( number_test.GetSQLitePredicates( 'width' ) )
+            
         
     
-    if 'min_height' in simple_preds:
+    if ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT in simple_preds:
         
-        files_info_predicates.append( 'height > ' + str( simple_preds[ 'min_height' ] ) )
+        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT ]
         
-    if 'height' in simple_preds:
-        
-        files_info_predicates.append( 'height = ' + str( simple_preds[ 'height' ] ) )
-        
-    if 'not_height' in simple_preds:
-        
-        files_info_predicates.append( 'height != ' + str( simple_preds[ 'not_height' ] ) )
-        
-    if 'max_height' in simple_preds:
-        
-        files_info_predicates.append( 'height < ' + str( simple_preds[ 'max_height' ] ) )
+        for number_test in number_tests:
+            
+            files_info_predicates.extend( number_test.GetSQLitePredicates( 'height' ) )
+            
         
     
     if 'min_num_pixels' in simple_preds:
@@ -190,125 +176,44 @@ def GetFilesInfoPredicates( system_predicates: ClientSearch.FileSystemPredicates
         files_info_predicates.append( '( width * 1.0 ) / height < ' + str( float( ratio_width ) ) + ' / ' + str( ratio_height ) )
         
     
-    if 'min_num_words' in simple_preds: files_info_predicates.append( 'num_words > ' + str( simple_preds[ 'min_num_words' ] ) )
-    if 'num_words' in simple_preds:
+    if ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS in simple_preds:
         
-        num_words = simple_preds[ 'num_words' ]
+        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS ]
         
-        if num_words == 0: files_info_predicates.append( '( num_words IS NULL OR num_words = 0 )' )
-        else: files_info_predicates.append( 'num_words = ' + str( num_words ) )
-        
-    if 'not_num_words' in simple_preds:
-        
-        num_words = simple_preds[ 'not_num_words' ]
-        
-        files_info_predicates.append( '( num_words IS NULL OR num_words != {} )'.format( num_words ) )
-        
-    if 'max_num_words' in simple_preds:
-        
-        max_num_words = simple_preds[ 'max_num_words' ]
-        
-        if max_num_words == 0: files_info_predicates.append( 'num_words < ' + str( max_num_words ) )
-        else: files_info_predicates.append( '( num_words < ' + str( max_num_words ) + ' OR num_words IS NULL )' )
+        for number_test in number_tests:
+            
+            files_info_predicates.extend( number_test.GetSQLitePredicates( 'num_words' ) )
+            
         
     
-    if 'min_duration' in simple_preds: files_info_predicates.append( 'duration > ' + str( simple_preds[ 'min_duration' ] ) )
-    if 'duration' in simple_preds:
+    if ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION in simple_preds:
         
-        duration = simple_preds[ 'duration' ]
+        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION ]
         
-        if duration == 0:
+        for number_test in number_tests:
             
-            files_info_predicates.append( '( duration = 0 OR duration IS NULL )' )
+            files_info_predicates.extend( number_test.GetSQLitePredicates( 'duration' ) )
             
-        else:
-            
-            files_info_predicates.append( 'duration = ' + str( duration ) )
-            
-        
-    if 'not_duration' in simple_preds:
-        
-        duration = simple_preds[ 'not_duration' ]
-        
-        files_info_predicates.append( '( duration IS NULL OR duration != {} )'.format( duration ) )
-        
-    if 'max_duration' in simple_preds:
-        
-        max_duration = simple_preds[ 'max_duration' ]
-        
-        if max_duration == 0: files_info_predicates.append( 'duration < ' + str( max_duration ) )
-        else: files_info_predicates.append( '( duration < ' + str( max_duration ) + ' OR duration IS NULL )' )
         
     
-    if 'min_framerate' in simple_preds or 'framerate' in simple_preds or 'max_framerate' in simple_preds or 'not_framerate' in simple_preds:
+    if ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE in simple_preds:
         
-        if 'not_framerate' in simple_preds:
-            
-            pred = '( duration IS NULL OR num_frames = 0 OR ( duration IS NOT NULL AND duration != 0 AND num_frames != 0 AND num_frames IS NOT NULL AND {} ) )'
-            
-            min_framerate_sql = simple_preds[ 'not_framerate' ] * 0.95
-            max_framerate_sql = simple_preds[ 'not_framerate' ] * 1.05
-            
-            pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) NOT BETWEEN {} AND {}'.format( min_framerate_sql, max_framerate_sql ) )
-            
-        else:
-            
-            min_framerate_sql = None
-            max_framerate_sql = None
-            
-            pred = '( duration IS NOT NULL AND duration != 0 AND num_frames != 0 AND num_frames IS NOT NULL AND {} )'
-            
-            if 'min_framerate' in simple_preds:
-                
-                min_framerate_sql = simple_preds[ 'min_framerate' ] * 1.05
-                
-            if 'framerate' in simple_preds:
-                
-                min_framerate_sql = simple_preds[ 'framerate' ] * 0.95
-                max_framerate_sql = simple_preds[ 'framerate' ] * 1.05
-                
-            if 'max_framerate' in simple_preds:
-                
-                max_framerate_sql = simple_preds[ 'max_framerate' ] * 0.95
-                
-            
-            if min_framerate_sql is None:
-                
-                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) < {}'.format( max_framerate_sql ) )
-                
-            elif max_framerate_sql is None:
-                
-                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) > {}'.format( min_framerate_sql ) )
-                
-            else:
-                
-                pred = pred.format( '( num_frames * 1.0 ) / ( duration / 1000.0 ) BETWEEN {} AND {}'.format( min_framerate_sql, max_framerate_sql ) )
-                
-            
+        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE ]
         
-        files_info_predicates.append( pred )
+        for number_test in number_tests:
+            
+            files_info_predicates.extend( number_test.GetSQLitePredicates( '( num_frames * 1.0 ) / ( duration / 1000.0 )' ) )
+            
         
     
-    if 'min_num_frames' in simple_preds: files_info_predicates.append( 'num_frames > ' + str( simple_preds[ 'min_num_frames' ] ) )
-    if 'num_frames' in simple_preds:
+    if ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES in simple_preds:
         
-        num_frames = simple_preds[ 'num_frames' ]
+        number_tests: typing.List[ ClientSearch.NumberTest ] = simple_preds[ ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES ]
         
-        if num_frames == 0: files_info_predicates.append( '( num_frames IS NULL OR num_frames = 0 )' )
-        else: files_info_predicates.append( 'num_frames = ' + str( num_frames ) )
-        
-    if 'not_num_frames' in simple_preds:
-        
-        num_frames = simple_preds[ 'not_num_frames' ]
-        
-        files_info_predicates.append( '( num_frames IS NULL OR num_frames != {} )'.format( num_frames ) )
-        
-    if 'max_num_frames' in simple_preds:
-        
-        max_num_frames = simple_preds[ 'max_num_frames' ]
-        
-        if max_num_frames == 0: files_info_predicates.append( 'num_frames < ' + str( max_num_frames ) )
-        else: files_info_predicates.append( '( num_frames < ' + str( max_num_frames ) + ' OR num_frames IS NULL )' )
+        for number_test in number_tests:
+            
+            files_info_predicates.extend( number_test.GetSQLitePredicates( 'num_frames' ) )
+            
         
     
     return files_info_predicates
@@ -926,33 +831,15 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         simple_preds = system_predicates.GetSimpleInfo()
         
-        min_num_notes = None
-        max_num_notes = None
+        number_tests = simple_preds.get( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, [] )
         
-        if 'num_notes' in simple_preds:
-            
-            min_num_notes = simple_preds[ 'num_notes' ]
-            max_num_notes = min_num_notes
-            
-        else:
-            
-            if 'min_num_notes' in simple_preds:
-                
-                min_num_notes = simple_preds[ 'min_num_notes' ] + 1
-                
-            if 'max_num_notes' in simple_preds:
-                
-                max_num_notes = simple_preds[ 'max_num_notes' ] - 1
-                
-            
-        
-        if min_num_notes is not None or max_num_notes is not None:
+        if len( number_tests ) > 0:
             
             with self._MakeTemporaryIntegerTable( query_hash_ids, 'hash_id' ) as temp_table_name:
                 
                 self._AnalyzeTempTable( temp_table_name )
                 
-                num_notes_hash_ids = self.modules_notes_map.GetHashIdsFromNumNotes( min_num_notes, max_num_notes, temp_table_name, job_status = job_status )
+                num_notes_hash_ids = self.modules_notes_map.GetHashIdsFromNumNotes( number_tests, query_hash_ids, temp_table_name, job_status = job_status )
                 
                 query_hash_ids = intersection_update_qhi( query_hash_ids, num_notes_hash_ids )
                 
@@ -2175,7 +2062,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         
         #
         
-        num_urls_tests = system_predicates.GetNumURLsNumberTests()
+        num_urls_tests = simple_preds.get( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, [] )
         
         if len( num_urls_tests ) > 0:
             

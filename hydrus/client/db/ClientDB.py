@@ -10140,6 +10140,126 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 563:
+            
+            from hydrus.client.gui import ClientGUIShortcuts
+            from hydrus.client import ClientApplicationCommand as CAC
+            
+            try:
+                
+                space_shortcut = ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_SPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] )
+                pause_play_command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_PAUSE_PLAY_MEDIA )
+                
+                archive_keep = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_ARCHIVE_DELETE_FILTER_KEEP )
+                this_is_better = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_THIS_IS_BETTER_AND_DELETE_OTHER )
+                
+                media_viewer_shortcuts_set: ClientGUIShortcuts.ShortcutSet = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, 'media_viewer' )
+                
+                we_mapped_space = False
+                we_undid_filter = False
+                
+                if not media_viewer_shortcuts_set.HasCommand( space_shortcut ):
+                    
+                    media_viewer_shortcuts_set.SetCommand( space_shortcut, pause_play_command )
+                    
+                    self.modules_serialisable.SetJSONDump( media_viewer_shortcuts_set )
+                    
+                    we_mapped_space = True
+                    
+                
+                if media_viewer_shortcuts_set.GetCommand( space_shortcut ) == pause_play_command:
+                    
+                    # ok, user has not set something different by themselves, let's set them up
+                    
+                    archive_delete_filter_shortcuts_set: ClientGUIShortcuts.ShortcutSet = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, 'archive_delete_filter' )
+                    
+                    if archive_delete_filter_shortcuts_set.GetCommand( space_shortcut ) == archive_keep:
+                        
+                        archive_delete_filter_shortcuts_set.DeleteShortcut( space_shortcut )
+                        
+                        self.modules_serialisable.SetJSONDump( archive_delete_filter_shortcuts_set )
+                        
+                        we_undid_filter = True
+                        
+                    
+                    duplicate_filter_shortcuts_set: ClientGUIShortcuts.ShortcutSet = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, 'duplicate_filter' )
+                    
+                    if duplicate_filter_shortcuts_set.GetCommand( space_shortcut ) == this_is_better:
+                        
+                        duplicate_filter_shortcuts_set.DeleteShortcut( space_shortcut )
+                        
+                        self.modules_serialisable.SetJSONDump( duplicate_filter_shortcuts_set )
+                        
+                        we_undid_filter = True
+                        
+                    
+                
+                if we_mapped_space or we_undid_filter:
+                    
+                    message = 'Hey, I shuffled around what Space does in the media viewer.'
+                    
+                    if we_undid_filter:
+                        
+                        message += ' It looks like you had default mappings, so I have removed Space from the archive/delete and duplicate filters.'
+                        
+                    
+                    if we_mapped_space:
+                        
+                        message += ' Space now does pause/play media for you.'
+                        
+                    else:
+                        
+                        message += ' Space now only does pause/play media for you.'
+                        
+                    
+                    message += ' If you actually liked how it was before, sorry, please hit up _file->shortcuts_ to fix it back!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some shortcuts failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            if HC.PLATFORM_MACOS:
+                
+                try:
+                    
+                    thumbnails_shortcuts_set: ClientGUIShortcuts.ShortcutSet = self.modules_serialisable.GetJSONDumpNamed( HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET, 'thumbnails' )
+                    
+                    jobs = [
+                        (
+                            ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_SPECIAL, ClientGUIShortcuts.SHORTCUT_KEY_SPECIAL_SPACE, ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [] ),
+                            CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MAC_QUICKLOOK ) 
+                        )
+                    ]
+                    
+                    for ( shortcut, command ) in jobs:
+                        
+                        if not thumbnails_shortcuts_set.HasCommand( shortcut ):
+                            
+                            thumbnails_shortcuts_set.SetCommand( shortcut, command )
+                            
+                        
+                    
+                    self.modules_serialisable.SetJSONDump( thumbnails_shortcuts_set )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to update some shortcuts failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

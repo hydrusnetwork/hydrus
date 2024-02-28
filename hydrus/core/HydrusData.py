@@ -93,7 +93,16 @@ def CleanRunningFile( db_path, instance ):
 # TODO: remove all the 'Convert' from these
 def ConvertFloatToPercentage( f ):
     
-    return '{:.1f}%'.format( f * 100 )
+    percent = f * 100
+    
+    if percent == int( percent ):
+        
+        return f'{int( percent )}%'
+        
+    else:
+        
+        return f'{percent:.1f}%'
+        
     
 def ConvertIntToPixels( i ):
     

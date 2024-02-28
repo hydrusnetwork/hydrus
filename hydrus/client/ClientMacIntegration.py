@@ -1,5 +1,8 @@
+# noinspection PyUnresolvedReferences
 import objc
+# noinspection PyUnresolvedReferences
 from Foundation import NSObject, NSURL
+# noinspection PyUnresolvedReferences
 from Quartz import QLPreviewPanel
 
 QLPreviewPanelDataSource = objc.protocolNamed('QLPreviewPanelDataSource')

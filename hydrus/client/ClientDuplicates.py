@@ -340,7 +340,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if s_has_audio:
 
-            audio_statement = 'has audio, the other does not'
+            audio_statement = 'this has audio, the other does not'
             score = duplicate_comparison_score_has_audio
 
         else:
@@ -506,7 +506,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if s_has_transparency:
             
-            transparency_statement = 'has transparency, the other is opaque'
+            transparency_statement = 'this has transparency, the other is opaque'
             
         else:
             
@@ -523,7 +523,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if s_has_exif:
             
-            exif_statement = 'has exif data, the other does not'
+            exif_statement = 'this has exif data, the other does not'
             
         else:
             
@@ -540,7 +540,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if s_has_human_readable_embedded_metadata:
             
-            embedded_metadata_statement = 'has embedded metadata, the other does not'
+            embedded_metadata_statement = 'this has embedded metadata, the other does not'
             
         else:
             
@@ -557,7 +557,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         if s_has_icc:
             
-            icc_statement = 'has icc profile, the other does not'
+            icc_statement = 'this has icc profile, the other does not'
             
         else:
             

@@ -1331,6 +1331,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             tt = 'Many buttons that produce menus when clicked are also "scrollable", so if you wheel your mouse over them, the selection will scroll through the underlying menu. If this is annoying for you, turn it off here!'
             self._menu_choice_buttons_can_mouse_scroll.setToolTip( tt )
             
+            self._use_native_menubar = QW.QCheckBox( self._misc_panel )
+            tt = 'macOS and some Linux allows to embed the main GUI menubar into the OS. This can be buggy! Requires restart.'
+            self._use_native_menubar.setToolTip( tt )
+            
             self._human_bytes_sig_figs = ClientGUICommon.BetterSpinBox( self._misc_panel, min = 1, max = 6 )
             self._human_bytes_sig_figs.setToolTip( 'When the program presents a bytes size above 1KB, like 21.3KB or 4.11GB, how many total digits do we want in the number? 2 or 3 is best.')
             
@@ -1374,6 +1378,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._always_show_iso_time.setChecked( self._new_options.GetBoolean( 'always_show_iso_time' ) )
             
             self._menu_choice_buttons_can_mouse_scroll.setChecked( self._new_options.GetBoolean( 'menu_choice_buttons_can_mouse_scroll' ) )
+            
+            self._use_native_menubar.setChecked( self._new_options.GetBoolean( 'use_native_menubar' ) )
             
             self._human_bytes_sig_figs.setValue( self._new_options.GetInteger( 'human_bytes_sig_figs' ) )
             
@@ -1419,6 +1425,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Copy temp files for drag-and-drop (works for <=25, <200MB file DnDs--fixes Discord!): ', self._discord_dnd_fix ) )
             rows.append( ( 'Drag-and-drop export filename pattern: ', self._discord_dnd_filename_pattern ) )
             rows.append( ( '', self._export_pattern_button ) )
+            rows.append( ( 'Use Native MenuBar (if available): ', self._use_native_menubar ) )
             rows.append( ( 'EXPERIMENTAL: Bytes strings >1KB pseudo significant figures: ', self._human_bytes_sig_figs ) )
             rows.append( ( 'EXPERIMENTAL BUGFIX: Secret discord file drag-and-drop fix: ', self._secret_discord_dnd_fix ) )
             rows.append( ( 'BUGFIX: If on macOS, show dialog menus in a debug menu: ', self._do_macos_debug_dialog_menus ) )
@@ -1508,6 +1515,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'always_show_iso_time', self._always_show_iso_time.isChecked() )
             self._new_options.SetBoolean( 'menu_choice_buttons_can_mouse_scroll', self._menu_choice_buttons_can_mouse_scroll.isChecked() )
+            self._new_options.SetBoolean( 'use_native_menubar', self._use_native_menubar.isChecked() )
             
             self._new_options.SetInteger( 'human_bytes_sig_figs', self._human_bytes_sig_figs.value() )
             

@@ -8,6 +8,7 @@ from hydrus.core import HydrusDB
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
+from hydrus.client.search import ClientSearch
 
 class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
     
@@ -59,7 +60,17 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         return self._STS( self._ExecuteCancellable( 'SELECT hash_id FROM file_notes CROSS JOIN {} USING ( hash_id ) WHERE name_id = ?;'.format( hash_ids_table_name ), ( label_id, ), cancelled_hook ) )
         
     
-    def GetHashIdsFromNumNotes( self, min_num_notes: typing.Optional[ int ], max_num_notes: typing.Optional[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+    def GetHashIdsFromNumNotes( self, number_tests: typing.List[ ClientSearch.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):
+        
+        result_hash_ids = set( hash_ids )
+        
+        specific_number_tests = [ number_test for number_test in number_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
+        
+        megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_number_tests )
+        
+        is_zero = True in ( number_test.IsZero() for number_test in number_tests )
+        is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )
+        wants_zero = True in ( number_test.WantsZero() for number_test in number_tests )
         
         cancelled_hook = None
         
@@ -68,50 +79,41 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
             cancelled_hook = job_status.IsCancelled
             
         
-        has_notes = max_num_notes is None and min_num_notes == 1
-        not_has_notes = ( min_num_notes is None or min_num_notes == 0 ) and max_num_notes is not None and max_num_notes == 0
+        nonzero_hash_ids = set()
         
-        if has_notes:
+        if is_zero or is_anything_but_zero or wants_zero:
             
-            hash_ids = self.GetHashIdsThatHaveNotes( hash_ids_table_name, job_status = job_status )
+            nonzero_hash_ids = self.GetHashIdsThatHaveNotes( hash_ids_table_name, job_status = job_status )
             
-        elif not_has_notes:
+            if is_zero:
+                
+                result_hash_ids.difference_update( nonzero_hash_ids )
+                
             
-            hash_ids = self.GetHashIdsThatDoNotHaveNotes( hash_ids_table_name, job_status = job_status )
+            if is_anything_but_zero:
+                
+                result_hash_ids.intersection_update( nonzero_hash_ids )
+                
             
-        else:
-            
-            include_zero_count_hash_ids = False
-            
-            if min_num_notes is None:
-                
-                filt = lambda c: c <= max_num_notes
-                
-                include_zero_count_hash_ids = True
-                
-            elif max_num_notes is None:
-                
-                filt = lambda c: min_num_notes <= c
-                
-            else:
-                
-                filt = lambda c: min_num_notes <= c <= max_num_notes
-                
+        
+        if len( specific_number_tests ) > 0:
             
             # temp hashes to notes
             query = 'SELECT hash_id, COUNT( * ) FROM {} CROSS JOIN file_notes USING ( hash_id ) GROUP BY hash_id;'.format( hash_ids_table_name )
             
-            hash_ids = { hash_id for ( hash_id, count ) in self._ExecuteCancellable( query, (), cancelled_hook ) if filt( count ) }
+            good_url_count_hash_ids = { hash_id for ( hash_id, count ) in self._ExecuteCancellable( query, (), cancelled_hook ) if megalambda( count ) }
             
-            if include_zero_count_hash_ids:
+            if wants_zero:
                 
-                zero_hash_ids = self.GetHashIdsThatDoNotHaveNotes( hash_ids_table_name, job_status = job_status )
+                zero_hash_ids = result_hash_ids.difference( nonzero_hash_ids )
                 
-                hash_ids.update( zero_hash_ids )
+                good_url_count_hash_ids.update( zero_hash_ids )
                 
+            
+            result_hash_ids.intersection_update( good_url_count_hash_ids )
             
         
-        return hash_ids
+        return result_hash_ids
         
     
     def GetHashIdsThatDoNotHaveNotes( self, hash_ids_table_name: str, job_status: typing.Optional[ ClientThreading.JobStatus ] = None ):

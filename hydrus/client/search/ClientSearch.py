@@ -289,31 +289,53 @@ def SubtagIsEmpty( search_text: str ):
 NUMBER_TEST_OPERATOR_LESS_THAN = 0
 NUMBER_TEST_OPERATOR_GREATER_THAN = 1
 NUMBER_TEST_OPERATOR_EQUAL = 2
-NUMBER_TEST_OPERATOR_APPROXIMATE = 3
+NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT = 3
 NUMBER_TEST_OPERATOR_NOT_EQUAL = 4
+NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE = 5
 
 number_test_operator_to_str_lookup = {
     NUMBER_TEST_OPERATOR_LESS_THAN : '<',
     NUMBER_TEST_OPERATOR_GREATER_THAN : '>',
     NUMBER_TEST_OPERATOR_EQUAL : '=',
-    NUMBER_TEST_OPERATOR_APPROXIMATE : HC.UNICODE_APPROX_EQUAL,
-    NUMBER_TEST_OPERATOR_NOT_EQUAL : HC.UNICODE_NOT_EQUAL
+    NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT : HC.UNICODE_APPROX_EQUAL,
+    NUMBER_TEST_OPERATOR_NOT_EQUAL : HC.UNICODE_NOT_EQUAL,
+    NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE : HC.UNICODE_APPROX_EQUAL
 }
 
-number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() }
+number_test_str_to_operator_lookup = { value : key for ( key, value ) in number_test_operator_to_str_lookup.items() if key != NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE }
 
 class NumberTest( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST
     SERIALISABLE_NAME = 'Number Test'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self, operator = NUMBER_TEST_OPERATOR_EQUAL, value = 1 ):
+    def __init__( self, operator = NUMBER_TEST_OPERATOR_EQUAL, value = 1, extra_value = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
+        if operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT and value == 0:
+            
+            operator = NUMBER_TEST_OPERATOR_EQUAL
+            extra_value = None
+            
+        
         self.operator = operator
         self.value = value
+        
+        if extra_value is None:
+            
+            if self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+                
+                extra_value = 0.15
+                
+            elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
+                
+                extra_value = 1
+                
+            
+        
+        self.extra_value = extra_value
         
     
     def __eq__( self, other ):
@@ -328,49 +350,127 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        return ( self.operator, self.value ).__hash__()
+        return ( self.operator, self.value, self.extra_value ).__hash__()
         
     
     def __repr__( self ):
         
-        return '{} {}'.format( number_test_operator_to_str_lookup[ self.operator ], self.value )
+        return self.ToString()
         
     
     def _GetSerialisableInfo( self ):
         
-        return ( self.operator, self.value )
+        return ( self.operator, self.value, self.extra_value )
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        ( self.operator, self.value ) = serialisable_info
+        ( self.operator, self.value, self.extra_value ) = serialisable_info
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            ( operator, value ) = old_serialisable_info
+            
+            if operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+                
+                extra_value = 0.15
+                
+            else:
+                
+                extra_value = None
+                
+            
+            new_serialisable_info = ( operator, value, extra_value )
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def GetLambda( self ):
         
         if self.operator == NUMBER_TEST_OPERATOR_LESS_THAN:
             
-            return lambda x: x < self.value
+            return lambda x: x is not None and x < self.value
             
         elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
             
-            return lambda x: x > self.value
+            return lambda x: x is not None and x > self.value
             
         elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
             
-            return lambda x: x == self.value
+            if self.value == 0:
+                
+                return lambda x: x is None or x == self.value
+                
+            else:
+                
+                return lambda x: x == self.value
+                
             
-        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE:
+        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
             
-            lower = self.value * 0.85
-            upper = self.value * 1.15
+            lower = self.value * ( 1 - self.extra_value )
+            upper = self.value * ( 1 + self.extra_value )
             
-            return lambda x: lower < x < upper
+            return lambda x: x is not None and lower < x < upper
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
+            
+            lower = self.value - self.extra_value
+            upper = self.value + self.extra_value
+            
+            return lambda x: x is not None and lower < x < upper
             
         elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
             
-            return lambda x: x != self.value
+            return lambda x: x is not None and x != self.value
             
+        
+    
+    def GetSQLitePredicates( self, variable_name ):
+        
+        if self.operator == NUMBER_TEST_OPERATOR_LESS_THAN:
+            
+            return [ f'{variable_name} < {self.value}' ]
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
+            
+            return [ f'{variable_name} > {self.value}' ]
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
+            
+            if self.value == 0:
+                
+                return [ f'({variable_name} IS NULL OR {variable_name} = {self.value})' ]
+                
+            else:
+                
+                return [ f'{variable_name} = {self.value}' ]
+                
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+            
+            lower = self.value * ( 1 - self.extra_value )
+            upper = self.value * ( 1 + self.extra_value )
+            
+            return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
+            
+            lower = self.value - self.extra_value
+            upper = self.value + self.extra_value
+            
+            return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
+            
+            return [ f'{variable_name} != {self.value}' ]
+            
+        
+        return []
         
     
     def IsAnythingButZero( self ):
@@ -384,6 +484,27 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         less_than_one = self.operator == NUMBER_TEST_OPERATOR_LESS_THAN and self.value == 1
         
         return actually_zero or less_than_one
+        
+    
+    def ToString( self, absolute_number_renderer: typing.Optional[ typing.Callable ] = None ) -> str:
+        
+        if absolute_number_renderer is None:
+            
+            absolute_number_renderer = HydrusData.ToHumanInt
+            
+        
+        result = f'{number_test_operator_to_str_lookup[ self.operator ]} {absolute_number_renderer( self.value )}'
+        
+        if self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
+            
+            result += f' {HC.UNICODE_PLUS_OR_MINUS}{HydrusData.ConvertFloatToPercentage(self.extra_value)}'
+            
+        elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
+            
+            result += f' {HC.UNICODE_PLUS_OR_MINUS}{absolute_number_renderer(self.extra_value)}'
+            
+        
+        return result
         
     
     def WantsZero( self ):
@@ -407,6 +528,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         return lambda x: False not in ( lamb( x ) for lamb in lambdas )
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_NUMBER_TEST ] = NumberTest
 
 class FileSystemPredicates( object ):
@@ -453,6 +575,30 @@ class FileSystemPredicates( object ):
             if predicate_type == PREDICATE_TYPE_SYSTEM_ARCHIVE: self._archive = True
             if predicate_type == PREDICATE_TYPE_SYSTEM_LOCAL: self._local = True
             if predicate_type == PREDICATE_TYPE_SYSTEM_NOT_LOCAL: self._not_local = True
+            
+            for number_test_predicate_type in [
+                PREDICATE_TYPE_SYSTEM_WIDTH,
+                PREDICATE_TYPE_SYSTEM_HEIGHT,
+                PREDICATE_TYPE_SYSTEM_NUM_NOTES,
+                PREDICATE_TYPE_SYSTEM_NUM_WORDS,
+                PREDICATE_TYPE_SYSTEM_NUM_URLS,
+                PREDICATE_TYPE_SYSTEM_NUM_FRAMES,
+                PREDICATE_TYPE_SYSTEM_DURATION,
+                PREDICATE_TYPE_SYSTEM_FRAMERATE
+            ]:
+                
+                if predicate_type == number_test_predicate_type:
+                    
+                    if number_test_predicate_type not in self._common_info:
+                        
+                        self._common_info[ number_test_predicate_type ] = []
+                        
+                    
+                    number_test = value
+                    
+                    self._common_info[ number_test_predicate_type ].append( number_test )
+                    
+                
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:
                 
@@ -608,58 +754,9 @@ class FileSystemPredicates( object ):
                 self._common_info[ 'mimes' ] = ConvertSummaryFiletypesToSpecific( summary_mimes )
                 
             
-            if predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
+            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
                 
-                ( operator, duration ) = value
-                
-                if operator == '<': self._common_info[ 'max_duration' ] = duration
-                elif operator == '>': self._common_info[ 'min_duration' ] = duration
-                elif operator == '=': self._common_info[ 'duration' ] = duration
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_duration' ] = duration
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    if duration == 0:
-                        
-                        self._common_info[ 'duration' ] = 0
-                        
-                    else:
-                        
-                        self._common_info[ 'min_duration' ] = int( duration * 0.85 )
-                        self._common_info[ 'max_duration' ] = int( duration * 1.15 )
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
-                
-                ( operator, framerate ) = value
-                
-                if operator == '<': self._common_info[ 'max_framerate' ] = framerate
-                elif operator == '>': self._common_info[ 'min_framerate' ] = framerate
-                elif operator == '=': self._common_info[ 'framerate' ] = framerate
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_framerate' ] = framerate
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
-                
-                ( operator, num_frames ) = value
-                
-                if operator == '<': self._common_info[ 'max_num_frames' ] = num_frames
-                elif operator == '>': self._common_info[ 'min_num_frames' ] = num_frames
-                elif operator == '=': self._common_info[ 'num_frames' ] = num_frames
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_num_frames' ] = num_frames
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    if num_frames == 0:
-                        
-                        self._common_info[ 'num_frames' ] = 0
-                        
-                    else:
-                        
-                        self._common_info[ 'min_num_frames' ] = int( num_frames * 0.85 )
-                        self._common_info[ 'max_num_frames' ] = int( num_frames * 1.15 )
-                        
-                    
+                self._num_tags_predicates.append( predicate )
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_RATING:
@@ -710,16 +807,6 @@ class FileSystemPredicates( object ):
                     
                 
             
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_TAGS:
-                
-                self._num_tags_predicates.append( predicate.Duplicate() )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
-                
-                self._num_urls_predicates.append( predicate.Duplicate() )
-                
-            
             if predicate_type == PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER:
                 
                 ( namespace, operator, num ) = value
@@ -730,25 +817,6 @@ class FileSystemPredicates( object ):
                     
                     self._common_info[ 'min_tag_as_number' ] = ( namespace, int( num * 0.85 ) )
                     self._common_info[ 'max_tag_as_number' ] = ( namespace, int( num * 1.15 ) )
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
-                
-                ( operator, width ) = value
-                
-                if operator == '<': self._common_info[ 'max_width' ] = width
-                elif operator == '>': self._common_info[ 'min_width' ] = width
-                elif operator == '=': self._common_info[ 'width' ] = width
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_width' ] = width
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    if width == 0: self._common_info[ 'width' ] = 0
-                    else:
-                        
-                        self._common_info[ 'min_width' ] = int( width * 0.85 )
-                        self._common_info[ 'max_width' ] = int( width * 1.15 )
-                        
                     
                 
             
@@ -767,37 +835,6 @@ class FileSystemPredicates( object ):
                     self._common_info[ 'min_num_pixels' ] = int( num_pixels * 0.85 )
                     self._common_info[ 'max_num_pixels' ] = int( num_pixels * 1.15 )
                     
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
-                
-                ( operator, height ) = value
-                
-                if operator == '<': self._common_info[ 'max_height' ] = height
-                elif operator == '>': self._common_info[ 'min_height' ] = height
-                elif operator == '=': self._common_info[ 'height' ] = height
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_height' ] = height
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    if height == 0:
-                        
-                        self._common_info[ 'height' ] = 0
-                        
-                    else:
-                        
-                        self._common_info[ 'min_height' ] = int( height * 0.85 )
-                        self._common_info[ 'max_height' ] = int( height * 1.15 )
-                        
-                    
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_NOTES:
-                
-                ( operator, num_notes ) = value
-                
-                if operator == '<': self._common_info[ 'max_num_notes' ] = num_notes
-                elif operator == '>': self._common_info[ 'min_num_notes' ] = num_notes
-                elif operator == '=': self._common_info[ 'num_notes' ] = num_notes
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME:
@@ -819,25 +856,6 @@ class FileSystemPredicates( object ):
                     
                 
                 self._common_info[ label ].add( name )
-                
-            
-            if predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
-                
-                ( operator, num_words ) = value
-                
-                if operator == '<': self._common_info[ 'max_num_words' ] = num_words
-                elif operator == '>': self._common_info[ 'min_num_words' ] = num_words
-                elif operator == '=': self._common_info[ 'num_words' ] = num_words
-                elif operator == HC.UNICODE_NOT_EQUAL: self._common_info[ 'not_num_words' ] = num_words
-                elif operator == HC.UNICODE_APPROX_EQUAL:
-                    
-                    if num_words == 0: self._common_info[ 'num_words' ] = 0
-                    else:
-                        
-                        self._common_info[ 'min_num_words' ] = int( num_words * 0.85 )
-                        self._common_info[ 'max_num_words' ] = int( num_words * 1.15 )
-                        
-                    
                 
             
             if predicate_type == PREDICATE_TYPE_SYSTEM_LIMIT:
@@ -951,22 +969,6 @@ class FileSystemPredicates( object ):
             
         
         return namespaces_to_tests
-        
-    
-    def GetNumURLsNumberTests( self ) -> typing.List[ NumberTest ]:
-        
-        tests = []
-        
-        for predicate in self._num_urls_predicates:
-            
-            ( operator, value ) = predicate.GetValue()
-            
-            test = NumberTest.STATICCreateFromCharacters( operator, value )
-            
-            tests.append( test )
-            
-        
-        return tests
         
     
     def GetRatingsPredicates( self ):
@@ -1695,7 +1697,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_PREDICATE
     SERIALISABLE_NAME = 'File Search Predicate'
-    SERIALISABLE_VERSION = 7
+    SERIALISABLE_VERSION = 8
     
     def __init__(
         self,
@@ -1845,6 +1847,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             serialisable_value = HydrusSerialisable.SerialisableList( or_predicates ).GetSerialisableTuple()
             
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
+            
+            number_test: NumberTest = self._value
+            
+            serialisable_value = number_test.GetSerialisableTuple()
+            
         else:
             
             serialisable_value = self._value
@@ -1917,6 +1925,12 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             serialisable_or_predicates = serialisable_value
             
             self._value = tuple( sorted( HydrusSerialisable.CreateFromSerialisableTuple( serialisable_or_predicates ), key = lambda p: HydrusTags.ConvertTagToSortable( p.ToString() ) ) )
+            
+        elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
+            
+            serialisable_number_test = serialisable_value
+            
+            self._value = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_number_test )
             
         else:
             
@@ -2077,6 +2091,36 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             return ( 7, new_serialisable_info )
             
         
+        if version == 7:
+            
+            ( predicate_type, serialisable_value, inclusive ) = old_serialisable_info
+            
+            if predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
+                
+                ( operator, value ) = serialisable_value
+                
+                number_test = NumberTest.STATICCreateFromCharacters( operator, value )
+                
+                if predicate_type in ( PREDICATE_TYPE_SYSTEM_FRAMERATE, PREDICATE_TYPE_SYSTEM_DURATION ):
+                    
+                    if operator == '=':
+                        
+                        number_test = NumberTest( operator = NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = value, extra_value = 0.05 )
+                        
+                    elif operator == HC.UNICODE_NOT_EQUAL:
+                        
+                        number_test = NumberTest( operator = NUMBER_TEST_OPERATOR_LESS_THAN, value = value )
+                        
+                    
+                
+                serialisable_value = number_test.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( predicate_type, serialisable_value, inclusive )
+            
+            return ( 8, new_serialisable_info )
+            
+        
     
     def GetCopy( self ):
         
@@ -2198,17 +2242,15 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
         elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION ):
             
-            ( operator, value ) = self._value
-            
-            number_test = NumberTest.STATICCreateFromCharacters( operator, value )
+            number_test: NumberTest = self._value
             
             if number_test.IsZero():
                 
-                return Predicate( self._predicate_type, ( '>', 0 ) )
+                return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '>', 0 ) )
                 
             elif number_test.IsAnythingButZero():
                 
-                return Predicate( self._predicate_type, ( '=', 0 ) )
+                return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '=', 0 ) )
                 
             else:
                 
@@ -2457,18 +2499,31 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_URLS: base = 'urls'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NOTES: base = 'notes'
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS: base = 'file relationships'
-            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES ):
+            elif self._predicate_type in ( PREDICATE_TYPE_SYSTEM_WIDTH, PREDICATE_TYPE_SYSTEM_HEIGHT, PREDICATE_TYPE_SYSTEM_NUM_NOTES, PREDICATE_TYPE_SYSTEM_NUM_WORDS, PREDICATE_TYPE_SYSTEM_NUM_URLS, PREDICATE_TYPE_SYSTEM_NUM_FRAMES, PREDICATE_TYPE_SYSTEM_DURATION, PREDICATE_TYPE_SYSTEM_FRAMERATE ):
                 
                 has_phrase = None
                 not_has_phrase = None
+                absolute_number_renderer = None
                 
                 if self._predicate_type == PREDICATE_TYPE_SYSTEM_WIDTH:
                     
                     base = 'width'
+                    has_phrase = ': has width'
+                    not_has_phrase = ': no width'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HEIGHT:
                     
                     base = 'height'
+                    has_phrase = ': has height'
+                    not_has_phrase = ': no height'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
+                    
+                    absolute_number_renderer = lambda s: f'{HydrusData.ToHumanInt(s)}fps'
+                    
+                    base = 'framerate'
+                    has_phrase = ': has framerate'
+                    not_has_phrase = ': no framerate'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_NOTES:
                     
@@ -2476,17 +2531,17 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     has_phrase = ': has notes'
                     not_has_phrase = ': no notes'
                     
-                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
-                    
-                    base = 'number of urls'
-                    has_phrase = ': has urls'
-                    not_has_phrase = ': no urls'
-                    
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_WORDS:
                     
                     base = 'number of words'
                     has_phrase = ': has words'
                     not_has_phrase = ': no words'
+                    
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_URLS:
+                    
+                    base = 'number of urls'
+                    has_phrase = ': has urls'
+                    not_has_phrase = ': no urls'
                     
                 elif self._predicate_type == PREDICATE_TYPE_SYSTEM_NUM_FRAMES:
                     
@@ -2494,56 +2549,31 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     has_phrase = ': has frames'
                     not_has_phrase = ': no frames'
                     
+                elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
+                    
+                    absolute_number_renderer = HydrusTime.MillisecondsDurationToPrettyTime
+                    
+                    base = 'duration'
+                    has_phrase = ': has duration'
+                    not_has_phrase = ': no duration'
+                    
                 
                 if self._value is not None:
                     
-                    ( operator, value ) = self._value
+                    number_test: NumberTest = self._value
                     
-                    if operator == '>' and value == 0 and has_phrase is not None:
-                        
-                        base += has_phrase
-                        
-                    elif ( ( operator == '=' and value == 0 ) or ( operator == '<' and value == 1 ) ) and not_has_phrase is not None:
+                    if number_test.IsZero() and not_has_phrase is not None:
                         
                         base += not_has_phrase
                         
-                    else:
+                    elif number_test.IsAnythingButZero() and has_phrase is not None:
                         
-                        base += ' {} {}'.format( operator, HydrusData.ToHumanInt( value ) )
-                        
-                    
-                
-            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_DURATION:
-                
-                base = 'duration'
-                
-                if self._value is not None:
-                    
-                    ( operator, value ) = self._value
-                    
-                    if operator == '>' and value == 0:
-                        
-                        base = 'has duration'
-                        
-                    elif operator == '=' and value == 0:
-                        
-                        base = 'no duration'
+                        base += has_phrase
                         
                     else:
                         
-                        base += ' {} {}'.format( operator, HydrusTime.MillisecondsDurationToPrettyTime( value ) )
+                        base += f' {number_test.ToString( absolute_number_renderer = absolute_number_renderer )}'
                         
-                    
-                
-            elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FRAMERATE:
-                
-                base = 'framerate'
-                
-                if self._value is not None:
-                    
-                    ( operator, value ) = self._value
-                    
-                    base += ' {} {}fps'.format( operator, HydrusData.ToHumanInt( value ) )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_HAS_NOTE_NAME:

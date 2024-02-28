@@ -97,7 +97,7 @@ Lets say you just downloaded a good thread, or perhaps you just imported an old 
 
 Select some thumbnails, and either choose _filter->archive/delete_ from the right-click menu or hit F12. You will see them in a special version of the media viewer, with the following default controls:
 
-*   ++left-button++, ++space++, or ++f7++: **keep and archive the file, move on**
+*   ++left-button++ or ++f7++: **keep and archive the file, move on**
 *   ++right-button++ or ++delete++: **delete the file, move on**
 *   ++up++: **Skip this file, move on**
 *   ++middle-button++ or ++backspace++: **I didn't mean that, go back one**

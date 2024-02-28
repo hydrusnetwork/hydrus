@@ -37,6 +37,9 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     *   _This release has always been a little buggy. Many macOS users are having better success [running from source](running_from_source.md)._
 
 === "Linux"
+    
+    !!! warning "Wayland"
+        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. [Running from source](running_from_source.md) may improve the situation, but some of these issues seem to be intractable for now. X11 is much happier with hydrus. 
 
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
     *   If you have problems running the Ubuntu build, users with some python experience generally find running from source works well.

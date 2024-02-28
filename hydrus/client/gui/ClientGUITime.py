@@ -20,6 +20,7 @@ from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.importing.options import ClientImportOptions
 
 def QDateTimeToPrettyString( dt: typing.Optional[ QC.QDateTime ], include_milliseconds = False ):
@@ -1482,6 +1483,39 @@ class TimestampDataStubCtrl( QW.QWidget ):
     def SetValue( self, timestamp_data_stub: ClientTime.TimestampData ):
         
         self._SetValue( timestamp_data_stub )
+        
+    
+
+class NumberTestWidgetDuration( ClientGUIControls.NumberTestWidget ):
+    
+    def _GenerateAbsoluteValueWidget( self, max: int ):
+        
+        return TimeDeltaCtrl( self, min = 0, minutes = True, seconds = True, milliseconds = True )
+        
+    
+    def _GenerateValueWidget( self, max: int ):
+        
+        return TimeDeltaCtrl( self, min = 0, days = False, hours = True, minutes = True, seconds = True, milliseconds = True )
+        
+    
+    def _GetAbsoluteValue( self ):
+        
+        return HydrusTime.MillisecondiseS( self._absolute_plus_or_minus.GetValue() )
+        
+    
+    def _SetAbsoluteValue( self, value ):
+        
+        return self._absolute_plus_or_minus.SetValue( HydrusTime.SecondiseMS( value ) )
+        
+    
+    def _GetSubValue( self ) -> int:
+        
+        return HydrusTime.MillisecondiseS( self._value.GetValue() )
+        
+    
+    def _SetSubValue( self, value ):
+        
+        return self._value.SetValue( HydrusTime.SecondiseMS( value ) )
         
     
 

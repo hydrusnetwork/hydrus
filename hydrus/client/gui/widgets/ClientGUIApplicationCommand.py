@@ -571,7 +571,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         action = self._simple_actions.GetValue()
         
-        self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_REARRANGE_THUMBNAILS )
+        self._thumbnail_rearrange_panel.setVisible( action == CAC.SIMPLE_REARRANGE_THUMBNAILS )
         self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_SHOW_DUPLICATES )
         self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
         self._thumbnail_move_panel.setVisible( action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS )

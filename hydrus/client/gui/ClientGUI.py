@@ -749,19 +749,21 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'Pillow: {}'.format( PIL.__version__ ) )
         library_version_lines.append( 'Pillow-HEIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
         
+        qt_string = 'Qt: Unknown'
+        
         if QtInit.WE_ARE_QT5:
             
             if QtInit.WE_ARE_PYSIDE:
                 
                 import PySide2
                 
-                library_version_lines.append( 'Qt: PySide2 {}'.format( PySide2.__version__ ) )
+                qt_string = 'Qt: PySide2 {}'.format( PySide2.__version__ )
                 
             elif QtInit.WE_ARE_PYQT:
                 
                 from PyQt5.Qt import PYQT_VERSION_STR # pylint: disable=E0401,E0611
                 
-                library_version_lines.append( 'Qt: PyQt5 {}'.format( PYQT_VERSION_STR ) )
+                qt_string = 'Qt: PyQt5 {}'.format( PYQT_VERSION_STR )
                 
             
         elif QtInit.WE_ARE_QT6:
@@ -770,15 +772,27 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 import PySide6
                 
-                library_version_lines.append( 'Qt: PySide6 {}'.format( PySide6.__version__ ) )
+                qt_string = 'Qt: PySide6 {}'.format( PySide6.__version__ )
                 
             elif QtInit.WE_ARE_PYQT:
                 
                 from PyQt6.QtCore import PYQT_VERSION_STR # pylint: disable=E0401,E0611
                 
-                library_version_lines.append( 'Qt: PyQt6 {}'.format( PYQT_VERSION_STR ) )
+                qt_string = 'Qt: PyQt6 {}'.format( PYQT_VERSION_STR )
                 
             
+        
+        try:
+            
+            # note this is the actual platformName. if you call this on the App instance(), I think you get what might have been changed by a launch parameter
+            qt_string += f' ({QG.QGuiApplication.platformName()})'
+            
+        except:
+            
+            qt_string += f' (unknown platform)'
+            
+        
+        library_version_lines.append( qt_string )
         
         library_version_lines.append( 'QtCharts ok: {}'.format( ClientGUICharts.QT_CHARTS_OK ) )
         
@@ -2254,12 +2268,17 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _InitialiseMenubar( self ):
         
-        self._menubar = QW.QMenuBar( )
+        self._menubar = QW.QMenuBar()
+        
+        use_native_menubar = CG.client_controller.new_options.GetBoolean( 'use_native_menubar' )
+        
+        self._menubar.setNativeMenuBar( use_native_menubar )
         
         if not self._menubar.isNativeMenuBar():
             
             self._menubar.setParent( self )
-                
+            
+        
         self._menu_updater_file = self._InitialiseMenubarGetMenuUpdaterFile()
         self._menu_updater_database = self._InitialiseMenubarGetMenuUpdaterDatabase()
         self._menu_updater_network = self._InitialiseMenubarGetMenuUpdaterNetwork()

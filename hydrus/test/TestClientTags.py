@@ -1734,7 +1734,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( '<', 200 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 200 ) )
         
         self.assertEqual( p.ToString(), 'system:duration < 200 milliseconds' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1848,7 +1848,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 2000 ) )
         
         self.assertEqual( p.ToString(), 'system:height < 2,000' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1914,13 +1914,13 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( '<', 5 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 5 ) )
         
         self.assertEqual( p.ToString(), 'system:number of urls < 5' )
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( '<', 5000 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 5000 ) )
         
         self.assertEqual( p.ToString(), 'system:number of words < 5,000' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -1964,7 +1964,7 @@ class TestTagObjects( unittest.TestCase ):
         self.assertEqual( p.GetNamespace(), 'system' )
         self.assertEqual( p.GetTextsAndNamespaces( render_for_user ), [ ( p.ToString(), 'namespace', p.GetNamespace() ) ] )
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( '=', 1920 ) )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ClientSearch.NumberTest.STATICCreateFromCharacters( '=', 1920 ) )
         
         self.assertEqual( p.ToString(), 'system:width = 1,920' )
         self.assertEqual( p.GetNamespace(), 'system' )
@@ -2008,7 +2008,7 @@ class TestTagObjects( unittest.TestCase ):
         
         #
         
-        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( '<', 2000 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'blue eyes' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' ) ] )
+        p = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_OR_CONTAINER, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 2000 ) ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'blue eyes' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, 'character:samus aran' ) ] )
         
         self.assertEqual( p.ToString(), 'blue eyes OR character:samus aran OR system:height < 2,000' )
         self.assertEqual( p.GetNamespace(), '' )
@@ -2042,10 +2042,10 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:archive', "system:archive " ),
             ( 'system:archive', "system:archived " ),
             ( 'system:archive', "system:archived" ),
-            ( 'system:has duration', "system:has duration" ),
-            ( 'system:has duration', "system:has_duration" ),
-            ( 'system:no duration', "   system:no_duration" ),
-            ( 'system:no duration', "system:no duration" ),
+            ( 'system:duration: has duration', "system:has duration" ),
+            ( 'system:duration: has duration', "system:has_duration" ),
+            ( 'system:duration: no duration', "   system:no_duration" ),
+            ( 'system:duration: no duration', "system:no duration" ),
             ( 'system:is the best quality file of its duplicate group', "system:is the best quality file  of its group" ),
             ( 'system:is not the best quality file of its duplicate group', "system:isn't the best quality file of its duplicate group" ),
             ( 'system:is not the best quality file of its duplicate group', 'system:is not the best quality file of its duplicate group' ),
@@ -2143,7 +2143,7 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:import time: on the day of 2020-01-03', "system:import time: the day of 2020-01-03" ),
             ( 'system:import time: around 7 days ago', "system:date imported around 7 days ago" ),
             ( 'system:duration < 5.0 seconds', "system:duration < 5 seconds" ),
-            ( f'system:duration {HC.UNICODE_APPROX_EQUAL} 11.0 seconds', "system:duration ~= 5 sec 6000 msecs" ),
+            ( f'system:duration {HC.UNICODE_APPROX_EQUAL} 11.0 seconds {HC.UNICODE_PLUS_OR_MINUS}15%', "system:duration ~= 5 sec 6000 msecs" ),
             ( 'system:duration > 3 milliseconds', "system:duration > 3 milliseconds" ),
             ( 'system:is pending to my files', "system:file service is pending to my files" ),
             ( 'system:is pending to my files', "system:file service is pending to MY FILES" ),

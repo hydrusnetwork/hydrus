@@ -57,7 +57,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         return hash_ids
         
     
-    def GetHashIdsFromCountTests( self, num_urls_tests: typing.List[ ClientSearch.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str ):
+    def GetHashIdsFromCountTests( self, number_tests: typing.List[ ClientSearch.NumberTest ], hash_ids: typing.Collection[ int ], hash_ids_table_name: str ):
         
         # we'll have to natural join 'urls' or 'urls-class-map-cache' or whatever when we add a proper filter to this guy
         
@@ -72,13 +72,13 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         
         result_hash_ids = set( hash_ids )
         
-        specific_num_urls_tests = [ number_test for number_test in num_urls_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
+        specific_number_tests = [ number_test for number_test in number_tests if not ( number_test.IsZero() or number_test.IsAnythingButZero() ) ]
         
-        megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_num_urls_tests )
+        megalambda = ClientSearch.NumberTest.STATICCreateMegaLambda( specific_number_tests )
         
-        is_zero = True in ( number_test.IsZero() for number_test in num_urls_tests )
-        is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in num_urls_tests )
-        wants_zero = True in ( number_test.WantsZero() for number_test in num_urls_tests )
+        is_zero = True in ( number_test.IsZero() for number_test in number_tests )
+        is_anything_but_zero = True in ( number_test.IsAnythingButZero() for number_test in number_tests )
+        wants_zero = True in ( number_test.WantsZero() for number_test in number_tests )
         
         if is_zero or is_anything_but_zero or wants_zero:
             
@@ -97,7 +97,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
                 
             
         
-        if len( specific_num_urls_tests ) > 0:
+        if len( specific_number_tests ) > 0:
             
             select = f'SELECT hash_id, COUNT( url_id ) FROM {table_join} GROUP BY hash_id;'
             

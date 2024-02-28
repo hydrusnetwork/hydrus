@@ -813,38 +813,29 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        choices = [ '<', HC.UNICODE_APPROX_EQUAL, '=', HC.UNICODE_NOT_EQUAL, '>' ]
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._sign = QP.RadioBox( self, choices = choices )
-        
-        self._duration_s = ClientGUICommon.BetterSpinBox( self, max=3599, width = 60 )
-        self._duration_ms = ClientGUICommon.BetterSpinBox( self, max=999, width = 60 )
+        self._number_test = ClientGUITime.NumberTestWidgetDuration( self, allowed_operators = allowed_operators, appropriate_absolute_plus_or_minus_default = 30000, appropriate_percentage_plus_or_minus_default = 5 )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, ms ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        s = ms // 1000
-        
-        ms = ms % 1000
-        
-        self._sign.SetStringSelection( sign )
-        
-        self._duration_s.setValue( s )
-        self._duration_ms.setValue( ms )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:duration'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._duration_s, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'s'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._duration_ms, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'ms'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -853,19 +844,21 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '>'
-        duration = 0
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 0 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( sign, duration ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ( self._sign.GetStringSelection(), self._duration_s.value() * 1000 + self._duration_ms.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, number_test ), )
         
         return predicates
         
     
+
 class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
     
     def __init__( self, parent, predicate ):
@@ -1079,51 +1072,47 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        choices = [ '<', '=', HC.UNICODE_NOT_EQUAL, '>' ]
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._sign = QP.RadioBox( self, choices = choices )
-        
-        self._framerate = ClientGUICommon.BetterSpinBox( self, min = 1, max = 3600, width = 60 )
+        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, unit_string = 'fps', appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 5 )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, framerate ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
-        self._framerate.setValue( framerate )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:framerate' ), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._framerate, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'fps' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText( 'All framerate searches are +/- 5%. Exactly searching for 29.97 is not currently possible.' ), CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        self.setLayout( vbox )
+        self.setLayout( hbox )
         
     
     def GetDefaultPredicate( self ):
         
-        sign = '='
-        framerate = 60
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT, value = 60, extra_value = 0.05 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( sign, framerate ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ( self._sign.GetStringSelection(), self._framerate.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, number_test ), )
         
         return predicates
         
@@ -1262,27 +1251,31 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=',HC.UNICODE_NOT_EQUAL,'>'] )
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._height = ClientGUICommon.BetterSpinBox( self, max=200000, width = 60 )
+        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px', appropriate_absolute_plus_or_minus_default = 200 )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, height ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
-        
-        self._height.setValue( height )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:height'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._height, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1291,15 +1284,16 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '='
-        height = 1080
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_EQUAL, value = 1080 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( sign, height ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ( self._sign.GetStringSelection(), self._height.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, number_test ), )
         
         return predicates
         
@@ -1761,28 +1755,31 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        choices = [ '<', HC.UNICODE_APPROX_EQUAL, '=', HC.UNICODE_NOT_EQUAL, '>' ]
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._sign = QP.RadioBox( self, choices = choices )
-        
-        self._num_frames = ClientGUICommon.BetterSpinBox( self, min = 0, max = 1000000, width = 80 )
+        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, appropriate_absolute_plus_or_minus_default = 300 )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, num_frames ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
-        self._num_frames.setValue( num_frames )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:number of frames' ), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._num_frames, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1791,15 +1788,16 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '>'
-        num_frames = 600
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 600 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ( sign, num_frames ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ( self._sign.GetStringSelection(), self._num_frames.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, number_test ), )
         
         return predicates
         
@@ -1895,27 +1893,29 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices = [ '<', '=', '>' ] )
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._num_notes = ClientGUICommon.BetterSpinBox( self, max = 256, width = 60 )
+        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, num_notes ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
-        
-        self._num_notes.setValue( num_notes )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of notes'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._num_notes, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self,'system:number of notes' ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1924,15 +1924,16 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '='
-        num_notes = 1
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_EQUAL, value = 2 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( sign, num_notes ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, ( self._sign.GetStringSelection(), self._num_notes.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_NOTES, number_test ), )
         
         return predicates
         
@@ -1944,27 +1945,29 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<','=',HC.UNICODE_NOT_EQUAL,'>'] )
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._num_urls = ClientGUICommon.BetterSpinBox( self, max=1000000, width = 60 )
+        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, num_urls ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
-        
-        self._num_urls.setValue( num_urls )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self,'system:number of urls' ), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._num_urls, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -1973,15 +1976,16 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '>'
-        num_urls = 0
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN, value = 0 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( sign, num_urls ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, ( self._sign.GetStringSelection(), self._num_urls.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_URLS, number_test ), )
         
         return predicates
         
@@ -1993,27 +1997,31 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=',HC.UNICODE_NOT_EQUAL,'>'] )
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._num_words = ClientGUICommon.BetterSpinBox( self, max=1000000, width = 60 )
+        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, max = 100000000, appropriate_absolute_plus_or_minus_default = 5000 )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, num_words ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
-        
-        self._num_words.setValue( num_words )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:number of words'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._num_words, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -2022,15 +2030,16 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '<'
-        num_words = 30000
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN, value = 30000 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( sign, num_words ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ( self._sign.GetStringSelection(), self._num_words.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, number_test ), )
         
         return predicates
         
@@ -2483,27 +2492,31 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=',HC.UNICODE_NOT_EQUAL,'>'] )
+        allowed_operators = [
+            ClientSearch.NUMBER_TEST_OPERATOR_LESS_THAN,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE,
+            ClientSearch.NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT,
+            ClientSearch.NUMBER_TEST_OPERATOR_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_NOT_EQUAL,
+            ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
+        ]
         
-        self._width = ClientGUICommon.BetterSpinBox( self, max=200000, width = 60 )
+        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px',  appropriate_absolute_plus_or_minus_default = 200 )
         
         #
         
         predicate = self._GetPredicateToInitialisePanelWith( predicate )
         
-        ( sign, width ) = predicate.GetValue()
+        number_test = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
-        
-        self._width.setValue( width )
+        self._number_test.SetValue( number_test )
         
         #
         
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:width'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._sign, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._width, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._number_test, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
@@ -2512,15 +2525,16 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
-        sign = '='
-        width = 1920
+        number_test = ClientSearch.NumberTest( operator = ClientSearch.NUMBER_TEST_OPERATOR_EQUAL, value = 1920 )
         
-        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( sign, width ) )
+        return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, number_test )
         
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ( self._sign.GetStringSelection(), self._width.value() ) ), )
+        number_test = self._number_test.GetValue()
+        
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, number_test ), )
         
         return predicates
         
