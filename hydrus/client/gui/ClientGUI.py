@@ -2268,15 +2268,24 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _InitialiseMenubar( self ):
         
-        self._menubar = QW.QMenuBar()
-        
         use_native_menubar = CG.client_controller.new_options.GetBoolean( 'use_native_menubar' )
         
-        self._menubar.setNativeMenuBar( use_native_menubar )
-        
-        if not self._menubar.isNativeMenuBar():
+        if use_native_menubar:
             
-            self._menubar.setParent( self )
+            self._menubar = QW.QMenuBar()
+            
+            self._menubar.setNativeMenuBar( True )
+            
+            if not self._menubar.isNativeMenuBar():
+                
+                self._menubar.setParent( self )
+                
+            
+        else:
+            
+            self._menubar = QW.QMenuBar( self )
+            
+            self._menubar.setNativeMenuBar( False )
             
         
         self._menu_updater_file = self._InitialiseMenubarGetMenuUpdaterFile()
