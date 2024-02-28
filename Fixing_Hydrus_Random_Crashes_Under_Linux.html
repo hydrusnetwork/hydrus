@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.10">
+      <meta name="generator" content="mkdocs-1.5.3, mkdocs-material-9.5.11">
     
     
       
@@ -2089,13 +2089,13 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#why_does_everything_become_clunky_for_a_bit_if_i_have_tuned_all_of_the_above_settings" class="md-nav__link">
+  <a href="#why_does_everything_become_clunky_for_a_bit_if_i_have_tuned_all_of_the_above_settings_especially_if_i_try_to_do_something_on_the_system_that_isnt_hydrus" class="md-nav__link">
     <span class="md-ellipsis">
-      Why does everything become clunky for a bit if I have tuned all of the above settings?
+      Why does everything become clunky for a bit if I have tuned all of the above settings? (especially if I try to do something on the system that isn't hydrus)
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Why does everything become clunky for a bit if I have tuned all of the above settings?">
+    <nav class="md-nav" aria-label="Why does everything become clunky for a bit if I have tuned all of the above settings? (especially if I try to do something on the system that isn't hydrus)">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -2109,6 +2109,15 @@
         
       </ul>
     </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#virtual_memory_under_linux_5_phenomenal_cosmic_power_itty_bitty_living_space" class="md-nav__link">
+    <span class="md-ellipsis">
+      Virtual Memory Under Linux 5: Phenomenal Cosmic Power; Itty bitty living space
+    </span>
+  </a>
   
 </li>
       
@@ -2180,7 +2189,9 @@ The watermark's name is <code>vm.min_free_kbytes</code>, it is the number of kil
 <h4 id="what_about_swappiness">What about swappiness?<a class="headerlink" href="#what_about_swappiness" title="Permanent link">&para;</a></h4>
 <p>Swapiness is a setting you might have seen, but it only determines Linux's desire to spend a little bit of time moving memory you haven't touched in a while out of real memory and into virtual memory, it will not prevent the OOM condition it just determines how much time to use for moving things into swap.</p>
 <h2 id="why_does_my_linux_system_studder_or_become_unresponsive_when_hydrus_has_been_running_a_while">Why does my Linux system studder or become unresponsive when hydrus has been running a while?<a class="headerlink" href="#why_does_my_linux_system_studder_or_become_unresponsive_when_hydrus_has_been_running_a_while" title="Permanent link">&para;</a></h2>
-<p>You are running out of pages because Linux releases I/O buffer pages only when a file is closed. Thus the OS is waiting for you to hit the watermark(as described in "why is hydrus crashing") to start freeing pages, which causes the chug.  When contents is written from memory to disk the page is retained so that if you reread that part of the disk the OS does not need to access disk it just pulls it from the much faster memory.  This is usually a good thing, but Hydrus does not close database files so it eats up pages over time.  This is really good for hydrus but sucks for the responsiveness of other apps, and will cause hydrus to consume pages after doing a lengthy operation in anticipation of needing them again, even when it is thereafter idle.  You need to set <code>vm.dirtytime_expire_seconds</code> to a lower value.</p>
+<p>You are running out of pages because Linux releases I/O buffer pages only when a file is closed, OR memory fragmentation in Hydrus is high because you have a big session weight or had a big I/O spike. Thus the OS is waiting for you to hit the watermark(as described in "why is hydrus crashing") to start freeing pages, which causes the chug.</p>
+<p>When contents is written from memory to disk the page is retained so that if you reread that part of the disk the OS does not need to access disk it just pulls it from the much faster memory.  This is usually a good thing, but Hydrus makes many small writes to files you probably wont be asking for again soon it eats up pages over time.  </p>
+<p>Hydrus also holds the database open and red/wrires new areas to it often even if it will not acess those parts again for ages.  It tends to accumulate lots of I/O cache for these small pages it will not be interested in. This is really good for hydrus (because it will over time have the root of the most important indexes in memory) but sucks for the responsiveness of other apps, and will cause hydrus to consume pages after doing a lengthy operation in anticipation of needing them again, even when it is thereafter idle.  You need to set <code>vm.dirtytime_expire_seconds</code> to a lower value.</p>
 <blockquote>
 <p><code>vm.dirtytime_expire_seconds</code>
 When a lazytime inode is constantly having its pages dirtied, the inode with
@@ -2193,22 +2204,34 @@ And, it is also used as the interval to wakeup dirtytime writeback thread.</p>
 </blockquote>
 <p>On many distros this happens only once every 12 hours, try setting it close to every one hour or 2.  This will cause the OS to drop pages that were written over 1-2 hours ago.  Returning them to the free store for use by other programs.</p>
 <p>https://www.kernel.org/doc/Documentation/sysctl/vm.txt</p>
-<h2 id="why_does_everything_become_clunky_for_a_bit_if_i_have_tuned_all_of_the_above_settings">Why does everything become clunky for a bit if I have tuned all of the above settings?<a class="headerlink" href="#why_does_everything_become_clunky_for_a_bit_if_i_have_tuned_all_of_the_above_settings" title="Permanent link">&para;</a></h2>
-<p>The kernel launches a process called <code>kswapd</code> to swap and reclaim memory pages, its behaviour is goverened by the following two values</p>
+<h2 id="why_does_everything_become_clunky_for_a_bit_if_i_have_tuned_all_of_the_above_settings_especially_if_i_try_to_do_something_on_the_system_that_isnt_hydrus">Why does everything become clunky for a bit if I have tuned all of the above settings? (especially if I try to do something on the system that isn't hydrus)<a class="headerlink" href="#why_does_everything_become_clunky_for_a_bit_if_i_have_tuned_all_of_the_above_settings_especially_if_i_try_to_do_something_on_the_system_that_isnt_hydrus" title="Permanent link">&para;</a></h2>
+<p>The kernel launches a process called <code>kswapd</code> to swap and reclaim memory pages, after hydrus has used pages they need to be returned to the OS (unless fragmentation is preventing this).  The OS needs to scan for pages allocated to programs which are not in use, it doens't do this all the time because holding the required locks would have a serious performance impact.  The behaviour of <code>kswapd</code> is goverened by several important values.  If you are using a classic system with a reasonably sized amount of memoery and a swapfile you should tune these.  If you are using memory compression (or should be using memory compression because you have a cheap system) read this whole document for info specific to that configuration.</p>
 <ul>
 <li>
-<p><code>vm.vfs_cache_pressure</code> The tendancy for the kernel to reclaim I/O cache for files and directories. Default=100, set to 110 to bias the kernel into reclaiming I/O pages over keeping them at a "fair rate" compared to other pages.  Hydrus tends to write a lot of files and then ignore them for a long time, so its a good idea to prefer freeing pages for infrequent I/O.
-<strong>Note</strong>: Increasing <code>vfs_cache_pressure</code> significantly beyond 100 may have negative performance impact. Reclaim code needs to take various locks to find freeable directory and inode objects. With <code>vfs_cache_pressure=1000</code>, it will look for ten times more freeable objects than there are.</p>
+<p><code>vm.watermark_scale_factor</code>
+This factor controls the aggressiveness of kswapd. It defines the amount of memory left in a node/system before kswapd is woken up and how much memory needs to be free before kswapd goes back to sleep. The unit is in fractions of 10,000. The default value of 10 means the distances between watermarks are 0.1% of the available memory in the node/system. The maximum value is 1000, or 10% of memory. A high rate of threads entering direct reclaim (allocstall) or kswapd going to sleep prematurely (kswapd_low_wmark_hit_quickly) can indicate that the number of free pages kswapd maintains for latency reasons is too small for the allocation bursts occurring in the system. This knob can then be used to tune kswapd aggressiveness accordingly.</p>
 </li>
 <li>
-<p><code>watermark_scale_factor</code>
-This factor controls the aggressiveness of kswapd. It defines the amount of memory left in a node/system before kswapd is woken up and how much memory needs to be free before kswapd goes back to sleep. The unit is in fractions of 10,000. The default value of 10 means the distances between watermarks are 0.1% of the available memory in the node/system. The maximum value is 1000, or 10% of memory. A high rate of threads entering direct reclaim (allocstall) or kswapd going to sleep prematurely (kswapd_low_wmark_hit_quickly) can indicate that the number of free pages kswapd maintains for latency reasons is too small for the allocation bursts occurring in the system. This knob can then be used to tune kswapd aggressiveness accordingly.</p>
+<p><code>vm.watermark_boost_factor</code>: If memory fragmentation is high raise the scale factor to look for reclaimable/swappable pages more agressively.</p>
 </li>
 </ul>
 <p>I like to keep <code>watermark_scale_factor</code> at 70 (70/10,000)=0.7%, so kswapd will run until at least 0.7% of system memory has been reclaimed.
 i.e. If 32GiB (real and virt) of memory, it will try to keep at least 0.224 GiB immediately available.</p>
+<ul>
+<li><code>vm.dirty_ratio</code>: The absolute maximum number of un-synced memory(as a percentage of available memory) that the system will buffer before blocking writing processes.  This <strong>protects you against OOM, but does not keep your system responsive</strong>.</li>
+<li>
+<p><strong>Note</strong>: A default installation of Ubuntu sets this way too high (60%) as it does not expect your workload to just be hammering possibly slow disks with written pages. <strong>Even with memory overcomitting this can make you OOM</strong>, because you will run out of real memory before the system pauses the program that is writing so hard.  A more reasonable value is 10 (10%)</p>
+</li>
+<li>
+<p><code>vm.dirty_background_ratio</code>: How many the number of unsynced pages that can exist before the system starts comitting them in the background.  If this is set too low the system will constantly spend cycles trying to write out dirty pages.  If it is set too high it will be way to lazy.  I like to set it to 8.</p>
+</li>
+<li>
+<p><code>vm.vfs_cache_pressure</code> The tendancy for the kernel to reclaim I/O cache for files and directories.  This is less important than the other values, but hydrus opens and closes lots of file handles so you may want to boost it a bit higher than default. Default=100, set to 110 to bias the kernel into reclaiming I/O pages over keeping them at a "fair rate" compared to other pages.  Hydrus tends to write a lot of files and then ignore them for a long time, so its a good idea to prefer freeing pages for infrequent I/O.
+<strong>Note</strong>: Increasing <code>vfs_cache_pressure</code> significantly beyond 100 may have negative performance impact. Reclaim code needs to take various locks to find freeable directory and inode objects. With <code>vfs_cache_pressure=1000</code>, it will look for ten times more freeable objects than there are.</p>
+</li>
+</ul>
 <h3 id="virtual_memory_under_linux_4_unleash_the_memory">Virtual Memory Under Linux 4: Unleash the memory<a class="headerlink" href="#virtual_memory_under_linux_4_unleash_the_memory" title="Permanent link">&para;</a></h3>
-<p>An example /etc/sysctl.conf section for virtual memory settings.</p>
+<p>An example <code>/etc/sysctl.conf</code> section for virtual memory settings.</p>
 <div class="highlight"><pre><span></span><code><span class="c1">########</span>
 <span class="c1"># virtual memory</span>
 <span class="c1">########</span>
@@ -2234,6 +2257,48 @@ i.e. If 32GiB (real and virt) of memory, it will try to keep at least 0.224 GiB 
 <span class="c1">#Don&#39;t set this value much over 100 or the kernel will spend all its time reclaiming I/O pages</span>
 <span class="na">vm.vfs_cache_pressure</span><span class="o">=</span><span class="s">110</span>
 </code></pre></div>
+<h2 id="virtual_memory_under_linux_5_phenomenal_cosmic_power_itty_bitty_living_space">Virtual Memory Under Linux 5: Phenomenal Cosmic Power; Itty bitty living space<a class="headerlink" href="#virtual_memory_under_linux_5_phenomenal_cosmic_power_itty_bitty_living_space" title="Permanent link">&para;</a></h2>
+<p>Are you trying to <strong>run hydrus on a 200 dollar miniPC</strong>, this is suprisingly doable, but you will need to really understand what you are tuning.</p>
+<p>To start lets explain memory tiers.  As memory moves further away from the CPU it becomes slower.  Memory close to the CPU is volatile, which means if you remove power from it, it disappears forever.  Conversely disk is called non-volatile memory, or persistant storage.  We want to get files written to non-volatile storage, and we don't want to have to compete to read non-volatile storage, we would also prefer to not have to compete for writing, butthis is harder.</p>
+<p>The most straight forward way of doing this is to seperate where hydrus writes its SQLITE database(index) files, from where it writes the imported files.  But we can make a more flexible setup that will also keep our system responsive, we just need to make sure that the system writes to the fastest possible place first.  So let's illustrate the options.</p>
+<pre class="mermaid"><code>  graph
+  direction LR
+  CPU--&gt;RAM;
+  RAM--&gt;ZRAM;
+  ZRAM--&gt;SSD;
+  SSD--&gt;HDD;
+  subgraph Non-Volatile
+      SSD;
+      HDD;
+  end</code></pre>
+<ol>
+<li><strong>RAM</strong>: Information must be in RAM for it to be operated on</li>
+<li><strong>ZRAM</strong>: A compressed area of RAM that cannot be directly accessed.  Like a zip file but in memory.  Or for the more technical, like a compressed ramdisk.</li>
+<li><strong>SSD</strong>: Fast non-volatile storage,good for random access about 100-1000x slower than RAM.</li>
+<li><strong>HDD</strong>: Slow non-volatile storage good for random access.  About 10000x slowee than RAM.</li>
+<li><strong>Tape</strong>(Not shown): Slow archival storage or backup. surprisingly fast actually but can only be accessed sequentially.</li>
+</ol>
+<p>The objective is to make the most of our limited hardware so we definitely want to go through zram first.  Depending on your configuration you might have a bulk storage (NAS) downstream that you can write the files to, if all of your storage is in the same tower as you are running hydrus, then make sure the SQLITE .db files are on an SSD volume.</p>
+<p>Next you should enable <a href="https://wiki.archlinux.org/title/Zram">ZRAM</a> devices (<strong><strong>Not to be confused with ZWAP</strong></strong>). A ZRAM device is a compressed swapfile that lives in RAM.</p>
+<p>ZRAM can drastically improve performance, and RAM capacity. Experimentally, a 1.7GB partition usually shrinks to around 740MiB.  Depending on your system ZRAM may generate several partitions. The author asked for 4x2GB=8GIB partitions, hence the cited ratio.</p>
+<p><strong>ZRAM must be created every boot as RAM-disks are lost when power is removed</strong>
+Install a zram generator as part of your startup process.  If you still do not have enough swap, you can still create a swapfile.  RAM can be configured to use a partition as fallback, but not a file.  However you can enable a standard swapfile as described in the prior section.  ZRAM generators usually create ZRAM partitions with the highest priority (lowest priority number) so ZRAM will fill up first, before normal disk swaping.</p>
+<p>To check your swap configuration
+<div class="highlight"><pre><span></span><code>swapon<span class="w"> </span><span class="c1">#no argument</span>
+cat<span class="w"> </span>/proc/swapinfo
+</code></pre></div></p>
+<p>To make maximum use of your swap make sure to <strong><strong>SET THE FOLLOWING VM SETTINGS</strong></strong></p>
+<div class="highlight"><pre><span></span><code><span class="c1">#disable IO clustering we are writing to memroy which is super fast</span>
+<span class="c1">#IF YOU DO NOT DO THIS YOUR SYSTEM WILL HITCH as it tries to lock multiple RAM pages.  This would be desirable on non-volatile storages but is actually bad on RAM.</span>
+vm.page-cluster<span class="o">=</span><span class="m">0</span>
+
+<span class="c1">#Tell the system that it costs almost as much to swap as to write out dirty pages. But bias it very slightly to completing writes.  This is ideal since hydrus tends to hammer the system with writes, and we want to use ZRAM to eat spikes, but also want the system to slightly prefer writing dirty pages</span>
+vm.swappiness<span class="o">=</span><span class="m">99</span>
+</code></pre></div>
+<hr />
+<p>The above is good for most users.  If however you also need to speed up your storage due to a high number of applications on your network using it you may wish to install cache, provided you have at least one or two avialable SSD slots, and the writing pattern is many small random writes.</p>
+<p>You should never create a write cache without knowing what you are doing. You need two SSDs to crosscheck eachother, and ideally ressilant server SSDs with large capacitors that ensure all content is always written.  If you go with a commercial storage solution they will probably check this already, and give you a nice interface for just inserting and assigning SSD cache.</p>
+<p>You can also create a cach manually wit the <strong>Logical Volume</strong> using the LVM.  If you do this you can group together storage volumes.  In particular you can put a <a href="https://access.redhat.com/documentation/en-us/red_hat_enterprise_linux/6/html/logical_volume_manager_administration/lvm_cache_volume_creation">read or write cache</a> with an SSD in front of slower HDD. </p>
 
 
 
@@ -2254,7 +2319,7 @@ i.e. If 32GiB (real and virt) of memory, it will try to keep at least 0.224 GiB 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">December 23, 2021</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">February 28, 2024</span>
   </span>
 
     

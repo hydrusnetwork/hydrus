@@ -35,6 +35,42 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_564"><a href="#version_564">version 564</a></h2>
+                    <ul>
+                        <li><h3>more macOS work</h3></li>
+                        <li><h3>thanks to a user, we have more macOS features</h3></li>
+                        <li>macOS users get a new shortcut action, default Space, that uses Quick Look to preview a thumbnail like you can in Finder. **all existing users will get the new shortcut!**</li>
+                        <li>the hydrus .app now has the version number in Get Info</li>
+                        <li>**macOS users who run from source should rebuild their venvs this week!** if you don't, then trying this new Quick Look feature will just give you an error notification</li>
+                        <li><h3>new fuzzy operator math in system predicates</h3></li>
+                        <li>the system predicates for width, height, num_notes, num_words, num_urls, num_frames, duration, and framerate now support two different kinds of approximate equals, ≈: absolute (±x), and percentage (±x%). previously, the ≈ secretly just did ±15% in all cases (issue #1468)</li>
+                        <li>all `system:framerate=x` searches are now converted to `±5%`, which is what they were behind the scenes. `!=` framerate stuff is no longer supported, so if you happened to use it, it is now converted to `<` just as a valid fallback</li>
+                        <li>`system:duration` gets the same thing, `±5%`. it wasn't doing this behind the scenes before, but it should have been!</li>
+                        <li>`system:duration` also now allows hours and minutes input, if you need longer!</li>
+                        <li>for now, the parsing system is not updated to specify the % or absolute ± values. it will remain the same as the old system, with ±15% as the default for a `~=` input</li>
+                        <li>there's still a little borked logic in these combined types. if you search `< 3 URLs`, that will return files with 0 URLs, and same for `num_notes`, but if you search `< 200px width` or any of the others I changed this week, that won't return a PDF that has no width (although it will return a damaged file that reports 0 width specifically). I am going to think about this, since there isn't an easy one-size-fits-all-solution to marry what is technically correct with what is actually convenient. I'll probably add a checkbox that says whether to include 'Null' values or not and default that True/False depending on the situation; let me know what you think!</li>
+                        <li><h3>misc</h3></li>
+                        <li>I have taken out Space as the default for archive/delete filter 'keep' and duplicate filter 'this is better, delete other'. Space is now exclusively, by default, media pause/play. **I am going to set this to existing users too, deleting/overwriting what Space does for you, if you are still set to the defaults**</li>
+                        <li>integer percentages are now rendered without the trailing `.0`. `15%`, not `15.0%`</li>
+                        <li>when you 'open externally', 'open in web browser', or 'open path' from a thumbnail, the preview viewer now pauses rather than clears completely</li>
+                        <li>fixed the edit shortcut panel ALWAYS showing the new (home/end/left/right/to focus) dropdown for thumbnail dropdown, arrgh</li>
+                        <li>I fixed a stupid typo that was breaking file repository file deletes</li>
+                        <li>`help->about` now shows the Qt platformName</li>
+                        <li>added a note about bad Wayland support to the Linux 'installing' help document</li>
+                        <li>the guy who wrote the `Fixing_Hydrus_Random_Crashes_Under_Linux` document has updated it with new information, particularly related to running hydrus fast using virtual memory on small, underpowered computers</li>
+                        <li><h3>client api</h3></li>
+                        <li>thanks to a user, the undocumented API call that returns info on importer pages now includes the sha256 file hash in each import object Object</li>
+                        <li>although it is a tiny change, let's nonetheless update the Client API version to 61</li>
+                        <li><h3>boring predicate overhaul work</h3></li>
+                        <li>updated the `NumberTest` object to hold specific percentage and absolute ± values</li>
+                        <li>updated the `NumberTest` object to render itself to any number format, for instance pixels vs kilobytes vs a time delta</li>
+                        <li>updated the `Predicate` object for system preds width, height, num_notes, num_words, num_urls, num_frames, duration, and framerate to store their operator and value as a `NumberTest`, and updated predicate string rendering, parsing, editing, database-level predicate handling</li>
+                        <li>wrote new widgets to edit `NumberTest`s of various sorts and spammed them to these (operator, value) system predicate UI panels. we are finally clearing out some 8+-year-old jank here</li>
+                        <li>rewrote the `num_notes` database search logic to use `NumberTest`s</li>
+                        <li>the system preds for height, width, and framerate now say 'has x' and 'no x' when set to `>0` or `=0`, although what these really mean is not perfectly defined</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_563"><a href="#version_563">version 563</a></h2>
                     <ul>
                         <li><h3>macOS improvements</h3></li>
