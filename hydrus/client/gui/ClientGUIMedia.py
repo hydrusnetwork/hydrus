@@ -134,6 +134,7 @@ def CopyMediaURLs( medias ):
     
     CG.client_controller.pub( 'clipboard', 'text', urls_string )
     
+
 def CopyMediaURLClassURLs( medias, url_class ):
     
     urls = set()

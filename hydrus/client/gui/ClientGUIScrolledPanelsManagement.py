@@ -3243,7 +3243,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._tag_sort_panel = ClientGUICommon.StaticBox( self, 'tag sort' )
             
-            self._default_tag_sort = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort(), show_siblings = True )
+            self._default_tag_sort_search_page = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE ) )
+            self._default_tag_sort_search_page_manage_tags = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ), show_siblings = True )
+            self._default_tag_sort_media_viewer = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER ) )
+            self._default_tag_sort_media_viewer_manage_tags = ClientGUITagSorting.TagSortControl( self._tag_sort_panel, self._new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ), show_siblings = True )
             
             self._file_sort_panel = ClientGUICommon.StaticBox( self, 'file sort' )
             
@@ -3298,7 +3301,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
-            rows.append( ( 'Default tag sort: ', self._default_tag_sort ) )
+            rows.append( ( 'Default tag sort in search pages: ', self._default_tag_sort_search_page ) )
+            rows.append( ( 'Default tag sort in search page manage tags dialogs: ', self._default_tag_sort_search_page_manage_tags ) )
+            rows.append( ( 'Default tag sort in the media viewer: ', self._default_tag_sort_media_viewer ) )
+            rows.append( ( 'Default tag sort in media viewer manage tags dialogs: ', self._default_tag_sort_media_viewer_manage_tags ) )
             
             gridbox = ClientGUICommon.WrapInGrid( self._tag_sort_panel, rows )
             
@@ -3347,7 +3353,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            self._new_options.SetDefaultTagSort( self._default_tag_sort.GetValue() )
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE, self._default_tag_sort_search_page.GetValue() )
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS, self._default_tag_sort_search_page_manage_tags.GetValue() )
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER, self._default_tag_sort_media_viewer.GetValue() )
+            self._new_options.SetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS, self._default_tag_sort_media_viewer_manage_tags.GetValue() )
             
             self._new_options.SetDefaultSort( self._default_media_sort.GetSort() )
             self._new_options.SetFallbackSort( self._fallback_media_sort.GetSort() )
@@ -4201,6 +4210,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_namespaces = QW.QCheckBox( render_panel )
             self._show_number_namespaces = QW.QCheckBox( render_panel )
             self._show_number_namespaces.setToolTip( 'This lets unnamespaced "16:9" show as that, not hiding the "16".' )
+            self._show_subtag_number_namespaces = QW.QCheckBox( render_panel )
+            self._show_subtag_number_namespaces.setToolTip( 'This lets unnamespaced "page:3" show as that, not hiding the "page" where it can get mixed with chapter etc...' )
             self._namespace_connector = QW.QLineEdit( render_panel )
             self._sibling_connector = QW.QLineEdit( render_panel )
             
@@ -4236,6 +4247,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_namespaces.setChecked( new_options.GetBoolean( 'show_namespaces' ) )
             self._show_number_namespaces.setChecked( new_options.GetBoolean( 'show_number_namespaces' ) )
+            self._show_subtag_number_namespaces.setChecked( new_options.GetBoolean( 'show_subtag_number_namespaces' ) )
             self._namespace_connector.setText( new_options.GetString( 'namespace_connector' ) )
             self._replace_tag_underscores_with_spaces.setChecked( new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ) )
             self._sibling_connector.setText( new_options.GetString( 'sibling_connector' ) )
@@ -4278,6 +4290,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Show namespaces: ', self._show_namespaces ) )
             rows.append( ( 'Unless namespace is a number: ', self._show_number_namespaces ) )
+            rows.append( ( 'Unless subtag is a number: ', self._show_subtag_number_namespaces ) )
             rows.append( ( 'If shown, namespace connecting string: ', self._namespace_connector ) )
             rows.append( ( 'Sibling connecting string: ', self._sibling_connector ) )
             rows.append( ( 'Fade the colour of the sibling connector string on Qt6: ', self._fade_sibling_connector ) )
@@ -4378,6 +4391,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def _NamespacesUpdated( self ):
             
             self._show_number_namespaces.setEnabled( not self._show_namespaces.isChecked() )
+            self._show_subtag_number_namespaces.setEnabled( not self._show_namespaces.isChecked() )
             
         
         def UpdateOptions( self ):
@@ -4388,6 +4402,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetBoolean( 'show_namespaces', self._show_namespaces.isChecked() )
             self._new_options.SetBoolean( 'show_number_namespaces', self._show_number_namespaces.isChecked() )
+            self._new_options.SetBoolean( 'show_subtag_number_namespaces', self._show_subtag_number_namespaces.isChecked() )
             self._new_options.SetString( 'namespace_connector', self._namespace_connector.text() )
             self._new_options.SetBoolean( 'replace_tag_underscores_with_spaces', self._replace_tag_underscores_with_spaces.isChecked() )
             self._new_options.SetString( 'sibling_connector', self._sibling_connector.text() )
@@ -4771,7 +4786,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             ( tag_slice, weight ) = tag_slice_and_weight
             
-            pretty_tag_slice = HydrusTags.ConvertTagSliceToString( tag_slice )
+            pretty_tag_slice = HydrusTags.ConvertTagSliceToPrettyString( tag_slice )
             sort_tag_slice = pretty_tag_slice
             
             pretty_weight = HydrusData.ToHumanInt( weight ) + '%'

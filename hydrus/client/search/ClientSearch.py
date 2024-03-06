@@ -2244,18 +2244,19 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
             
             number_test: NumberTest = self._value
             
-            if number_test.IsZero():
+            if number_test is not None:
                 
-                return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '>', 0 ) )
+                if number_test.IsZero():
+                    
+                    return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '>', 0 ) )
+                    
+                elif number_test.IsAnythingButZero():
+                    
+                    return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '=', 0 ) )
+                    
                 
-            elif number_test.IsAnythingButZero():
-                
-                return Predicate( self._predicate_type, NumberTest.STATICCreateFromCharacters( '=', 0 ) )
-                
-            else:
-                
-                return None
-                
+            
+            return None
             
         elif self._predicate_type == PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_KING:
             

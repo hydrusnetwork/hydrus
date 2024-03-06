@@ -162,6 +162,7 @@ SIMPLE_MOVE_THUMBNAIL_FOCUS = 148
 SIMPLE_SELECT_FILES = 149
 SIMPLE_REARRANGE_THUMBNAILS = 150
 SIMPLE_MAC_QUICKLOOK = 151
+SIMPLE_COPY_URLS = 152
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -348,7 +349,8 @@ simple_enum_to_str_lookup = {
     SIMPLE_MOVE_THUMBNAIL_FOCUS : 'move the thumbnail focus',
     SIMPLE_SELECT_FILES : 'select files',
     SIMPLE_REARRANGE_THUMBNAILS : 'move thumbnails',
-    SIMPLE_MAC_QUICKLOOK : 'open quick look for selected file (macOS only)'
+    SIMPLE_MAC_QUICKLOOK : 'open quick look for selected file (macOS only)',
+    SIMPLE_COPY_URLS : 'copy file known urls'
     }
 
 legacy_simple_str_to_enum_lookup = {

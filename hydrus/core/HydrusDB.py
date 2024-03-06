@@ -79,12 +79,14 @@ def ReadLargeIdQueryInSeparateChunks( cursor, select_statement, chunk_size ):
         num_to_do = 0
         
     
+    i = 0
     num_done = 0
     
     while num_done < num_to_do:
         
-        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' WHERE job_id BETWEEN ? AND ?;', ( num_done, num_done + chunk_size - 1 ) ) ]
+        chunk = [ temp_id for ( temp_id, ) in cursor.execute( 'SELECT temp_id FROM ' + table_name + ' WHERE job_id BETWEEN ? AND ?;', ( i, i + ( chunk_size - 1 ) ) ) ]
         
+        i += chunk_size
         num_done += len( chunk )
         
         yield ( chunk, num_done, num_to_do )

@@ -80,6 +80,18 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._forced_note_name_panel = ClientGUICommon.StaticBox( self, 'name' )
+        
+        self._forced_note_name = ClientGUICommon.NoneableTextCtrl( self._forced_note_name_panel, message = 'Forced Note Name: ', none_phrase = 'use "name: text" format' )
+        tt = 'Normally, the sidecar exporter is at this stage expecting notes in the format "name: text". If you only have the text, you can force the name here. This is only useful if you are parsing one note through here, or you will get all sorts of renaming conflicts.'
+        self._forced_note_name.setToolTip( tt )
+        
+        self._forced_note_name.SetValue( None )
+        
+        self._forced_note_name_panel.Add( self._forced_note_name, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
         self._timestamp_data_stub_panel = ClientGUICommon.StaticBox( self, 'timestamp type' )
         
         self._timestamp_data_stub = ClientGUITime.TimestampDataStubCtrl( self._timestamp_data_stub_panel )
@@ -123,6 +135,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, self._change_type_button, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._service_selection_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._forced_note_name_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._timestamp_data_stub_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._sidecar_help_button, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._nested_object_names_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -186,7 +199,11 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             exporter.SetServiceKey( self._service_key )
             
-        elif isinstance( exporter, ( ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ) ):
+        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes ):
+            
+            exporter.SetForcedName( self._forced_note_name.GetValue() )
+            
+        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ):
             
             pass
             
@@ -261,7 +278,9 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes:
             
-            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes()
+            forced_name = self._forced_note_name.GetValue()
+            
+            exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes( forced_name = forced_name )
             
         elif self._current_exporter_class == ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT:
             
@@ -315,6 +334,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._nested_object_names_panel.setVisible( False )
         self._txt_separator_panel.setVisible( False )
         self._sidecar_panel.setVisible( False )
+        self._forced_note_name_panel.setVisible( False )
         self._timestamp_data_stub_panel.setVisible( False )
         
         if isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterSidecar ):
@@ -347,7 +367,13 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
                 ClientGUIDialogsMessage.ShowWarning( self, message )
                 
             
-        elif isinstance( exporter, ( ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ) ):
+        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes ):
+            
+            self._forced_note_name.SetValue( exporter.GetForcedName() )
+            
+            self._forced_note_name_panel.setVisible( True )
+            
+        elif isinstance( exporter, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs ):
             
             pass
             

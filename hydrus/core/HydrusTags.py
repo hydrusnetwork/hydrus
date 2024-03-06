@@ -282,7 +282,7 @@ def CombineTag( namespace, subtag ):
         
     
 
-def ConvertTagSliceToString( tag_slice ):
+def ConvertTagSliceToPrettyString( tag_slice ):
     
     if tag_slice == '':
         
@@ -684,7 +684,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                rows = [ 'Added rule: {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToString( slice ) ) for ( slice, rule ) in new_rules ]
+                rows = [ 'Added rule: {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToPrettyString( slice ) ) for ( slice, rule ) in new_rules ]
                 
                 summary_components.append( os.linesep.join( rows ) )
                 
@@ -698,7 +698,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                rows = [ 'Flipped rule: to {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToString( slice ) ) for ( slice, rule ) in changed_rules ]
+                rows = [ 'Flipped rule: to {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToPrettyString( slice ) ) for ( slice, rule ) in changed_rules ]
                 
                 summary_components.append( os.linesep.join( rows ) )
                 
@@ -712,7 +712,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                rows = [ 'Deleted rule: {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToString( slice ) ) for ( slice, rule ) in deleted_rules ]
+                rows = [ 'Deleted rule: {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToPrettyString( slice ) ) for ( slice, rule ) in deleted_rules ]
                 
                 summary_components.append( os.linesep.join( rows ) )
                 
@@ -795,7 +795,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        text = 'blacklisting on ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
+                        text = 'blacklisting on ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in blacklist ) )
                         
                     
                 
@@ -807,7 +807,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        text += ' except ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in whitelist ) )
                         
                     
                 
@@ -856,7 +856,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        text = 'all but ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) ) + ' allowed'
+                        text = 'all but ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in blacklist ) ) + ' allowed'
                         
                     
                 
@@ -868,7 +868,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        text += ' except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        text += ' except ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in whitelist ) )
                         
                     
                 
@@ -917,7 +917,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        text = 'only ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        text = 'only ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in whitelist ) )
                         
                     
                 elif set( blacklist ) == { '' }:
@@ -930,7 +930,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     elif len( whitelist ) > 0:
                         
-                        text += ' and ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        text += ' and ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in whitelist ) )
                         
                     
                 elif set( blacklist ) == { ':' }:
@@ -943,7 +943,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     elif len( whitelist ) > 0:
                         
-                        text += ' and ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) )
+                        text += ' and ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in whitelist ) )
                         
                     
                 else:
@@ -954,7 +954,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     else:
                         
-                        text = 'all tags except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in blacklist ) )
+                        text = 'all tags except ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in blacklist ) )
                         
                     
                     if len( whitelist ) > self.WOAH_TOO_MANY_RULES_THRESHOLD:
@@ -963,7 +963,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                         
                     elif len( whitelist ) > 0:
                         
-                        text += ' (except ' + ', '.join( ( ConvertTagSliceToString( tag_slice ) for tag_slice in whitelist ) ) + ')'
+                        text += ' (except ' + ', '.join( ( ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in whitelist ) ) + ')'
                         
                     
                 

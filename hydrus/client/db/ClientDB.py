@@ -10260,6 +10260,123 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 564:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'gelbooru 0.2.0 file page parser',
+                    'gelbooru 0.2.5 file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                def ask_what_to_do_concatenated_urls():
+                    
+                    message = 'Hey, some parsers have been adding extra invalid URL strings when a booru file has multiple URLs. The file would get [ A, B, C, "A B C" ]. There have been other related instances of this over time, too. Do you want me to go through your known URLs and delete anything that looks like a bunch of URLs joined up by spaces? I recommend YES, but if you have been storing weird content in your URL storage on purpose, say NO.'
+                    
+                    from hydrus.client.gui import ClientGUIDialogsQuick
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Fix broken URLs?', yes_label = 'do it', no_label = 'do not do it, I intentionally store whitespace-separated URLs in my URL store!', auto_yes_time = 600 )
+                    
+                    return result == QW.QDialog.Accepted
+                    
+                
+                do_url_fix = self._controller.CallBlockingToQt( None, ask_what_to_do_concatenated_urls )
+                
+                if do_url_fix:
+                    
+                    bad_url_ids = set()
+                    
+                    import re
+                    
+                    regex_pattern = 'http\S+\s+http'
+                    
+                    CHUNK_SIZE = 10000
+                    
+                    self._controller.frame_splash_status.SetSubtext( 'setting up url scan' )
+                    
+                    for ( chunk_of_url_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, f'SELECT url_id FROM urls;', CHUNK_SIZE ):
+                        
+                        num_string = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                        
+                        self._controller.frame_splash_status.SetSubtext( f'bad url scan - {num_string} - bad urls: {HydrusData.ToHumanInt(len( bad_url_ids))}' )
+                        
+                        for url_id in chunk_of_url_ids:
+                            
+                            ( url, ) = self._Execute( 'SELECT url from urls WHERE url_id = ?;', ( url_id, ) ).fetchone()
+                            
+                            if re.search( regex_pattern, url ) is not None:
+                                
+                                bad_url_ids.add( url_id )
+                                
+                            
+                        
+                    
+                    self._controller.frame_splash_status.SetSubtext( f'bad url scan - done! - bad urls: {HydrusData.ToHumanInt(len( bad_url_ids))}' )
+                    
+                    if len( bad_url_ids ) > 0:
+                        
+                        def ask_what_to_do_delete_urls():
+                            
+                            message = f'I found {HydrusData.ToHumanInt(len(bad_url_ids))} bad URLs. I am going to delete them now, ok?'
+                            
+                            from hydrus.client.gui import ClientGUIDialogsQuick
+                            
+                            result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Delete broken URLs?', yes_label = 'do it', no_label = 'no, that sounds like way way way too many, I will talk to hydev', auto_yes_time = 600 )
+                            
+                            return result == QW.QDialog.Accepted
+                            
+                        
+                        do_url_delete = self._controller.CallBlockingToQt( None, ask_what_to_do_delete_urls )
+                        
+                        if do_url_delete:
+                            
+                            self._ExecuteMany( 'DELETE FROM urls WHERE url_id = ?;', ( ( url_id, ) for url_id in bad_url_ids ) )
+                            self._ExecuteMany( 'DELETE FROM url_map WHERE url_id = ?;', ( ( url_id, ) for url_id in bad_url_ids ) )
+                            
+                            self.pub_initial_message( f'Deleted {HydrusData.ToHumanInt(len(bad_url_ids))} bad URLs on update!' )
+                            
+                        
+                    else:
+                        
+                        self.pub_initial_message( 'I did not find any bad URLs in the update, no worries!' )
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to scan for bad URLs failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

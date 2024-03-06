@@ -2437,6 +2437,11 @@ class ListBoxTags( ListBox ):
                 
             
         
+        if '' in copyable_tag_strings:
+            
+            copyable_tag_strings.remove( '' )
+            
+        
         return copyable_tag_strings
         
     
@@ -2758,8 +2763,6 @@ class ListBoxTags( ListBox ):
             return
             
         
-        sub_selection_string = None
-        
         selected_actual_tags = self._GetTagsFromTerms( self._selected_terms )
         
         menu = ClientGUIMenus.GenerateMenu( self )
@@ -2804,34 +2807,39 @@ class ListBoxTags( ListBox ):
         selected_copyable_tag_strings = self._GetCopyableTagStrings( COPY_SELECTED_TAGS )
         selected_copyable_subtag_strings = self._GetCopyableTagStrings( COPY_SELECTED_SUBTAGS )
         
-        if len( selected_copyable_tag_strings ) == 1:
-            
-            ( selection_string, ) = selected_copyable_tag_strings
-            
-        else:
-            
-            selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
-            
-        
         if len( selected_copyable_tag_strings ) > 0:
             
-            ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
-            
-            if len( selected_copyable_subtag_strings ) == 1:
+            if len( selected_copyable_tag_strings ) == 1:
                 
-                # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
-                if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
-                    
-                    ( sub_selection_string, ) = selected_copyable_subtag_strings
-                    
-                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
-                    
+                ( selection_string, ) = selected_copyable_tag_strings
                 
             else:
                 
-                sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
+                selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
                 
-                ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+            
+            ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
+            
+            sub_selection_string = None
+            
+            if len( selected_copyable_subtag_strings ) > 0:
+                
+                if len( selected_copyable_subtag_strings ) == 1:
+                    
+                    # this does a quick test for 'are we selecting a namespaced tags' that also allows for having both 'samus aran' and 'character:samus aran'
+                    if set( selected_copyable_subtag_strings ) != set( selected_copyable_tag_strings ):
+                        
+                        ( sub_selection_string, ) = selected_copyable_subtag_strings
+                        
+                        ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtag to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                        
+                    
+                else:
+                    
+                    sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
+                    
+                    ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
+                    
                 
             
             if self._HasCounts():
@@ -3972,7 +3980,7 @@ class ListBoxTagsStringsAddRemove( ListBoxTagsStrings ):
     
 class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
     
-    def __init__( self, parent, tag_display_type, service_key = None, include_counts = True ):
+    def __init__( self, parent: QW.QWidget, tag_display_type: int, tag_presentation_location: int, service_key = None, include_counts = True ):
         
         if service_key is None:
             
@@ -3981,7 +3989,9 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         
         ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, tag_display_type = tag_display_type, height_num_chars = 24 )
         
-        self._tag_sort = CG.client_controller.new_options.GetDefaultTagSort()
+        self._tag_presentation_location = tag_presentation_location
+        
+        self._tag_sort = CG.client_controller.new_options.GetDefaultTagSort( self._tag_presentation_location )
         
         self._last_media_results = set()
         
@@ -4395,18 +4405,21 @@ class ListBoxTagsMedia( ListBoxTagsDisplayCapable ):
         self.SetTagsByMediaResults( self._last_media_results )
         
     
+
 class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
     
-    def __init__( self, parent, title, show_siblings_sort = False ):
+    def __init__( self, parent, title, tag_presentation_location: int, show_siblings_sort = False ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, title )
         
         self._original_title = title
         
+        self._tag_presentation_location = tag_presentation_location
+        
         self._tags_box = None
         
         # make this its own panel
-        self._tag_sort = ClientGUITagSorting.TagSortControl( self, CG.client_controller.new_options.GetDefaultTagSort(), show_siblings = show_siblings_sort )
+        self._tag_sort = ClientGUITagSorting.TagSortControl( self, CG.client_controller.new_options.GetDefaultTagSort( self._tag_presentation_location ), show_siblings = show_siblings_sort )
         
         self._tag_sort.valueChanged.connect( self.EventSort )
         
@@ -4465,7 +4478,7 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
     def __init__( self, parent, canvas_key ):
         
-        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, include_counts = False )
+        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, CC.TAG_PRESENTATION_MEDIA_VIEWER, include_counts = False )
         
         self._canvas_key = canvas_key
         
@@ -4479,9 +4492,9 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
 class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     
-    def __init__( self, parent, enter_func, delete_func ):
+    def __init__( self, parent, tag_presentation_location, enter_func, delete_func ):
         
-        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, include_counts = True )
+        ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_STORAGE, tag_presentation_location, include_counts = True )
         
         self._enter_func = enter_func
         self._delete_func = delete_func

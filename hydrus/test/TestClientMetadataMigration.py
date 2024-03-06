@@ -731,6 +731,27 @@ class TestSingleFileMetadataExporters( unittest.TestCase ):
         
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
+        #
+        
+        forced_name = 'aaaa'
+        notes = [ 'this is a test note without a name' ]
+        
+        exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes( forced_name = forced_name )
+        
+        HG.test_controller.SetRead( 'media_result', HF.GetFakeMediaResult( hash ) )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        exporter.Export( hash, notes )
+        
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_NOTES, HC.CONTENT_UPDATE_SET, ( hash, forced_name, notes[0] ) ) ]
+        
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_NOTES_SERVICE_KEY, content_updates )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+        
     
     def test_media_urls( self ):
         

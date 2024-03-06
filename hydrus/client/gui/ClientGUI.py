@@ -784,8 +784,17 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         try:
             
-            # note this is the actual platformName. if you call this on the App instance(), I think you get what might have been changed by a launch parameter
-            qt_string += f' ({QG.QGuiApplication.platformName()})'
+            actual_platform_name = QG.QGuiApplication.platformName()
+            running_platform_name = QW.QApplication.instance().platformName()
+            
+            if actual_platform_name != running_platform_name:
+                
+                qt_string += f' (actual {actual_platform_name}, set-to {running_platform_name})'
+                
+            else:
+                
+                qt_string += f' ({actual_platform_name})'
+                
             
         except:
             

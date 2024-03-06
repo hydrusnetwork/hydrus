@@ -130,6 +130,7 @@ class EditSidecarDetailsPanel( ClientGUICommon.StaticBox ):
 
 SEPARATOR_NEWLINE = 0
 SEPARATOR_CUSTOM = 1
+SEPARATOR_FOUR_PIPES = 2
 
 class EditSidecarTXTSeparator( ClientGUICommon.StaticBox ):
     
@@ -140,9 +141,10 @@ class EditSidecarTXTSeparator( ClientGUICommon.StaticBox ):
         self._choice = ClientGUICommon.BetterChoice( self )
         
         self._choice.addItem( 'newline', SEPARATOR_NEWLINE )
+        self._choice.addItem( 'four pipes (||||)', SEPARATOR_FOUR_PIPES )
         self._choice.addItem( 'custom text', SEPARATOR_CUSTOM )
         
-        tt = 'You can separate the "rows" of tags by something other than newlines if you like. If you have/want a CSV list, try a separator of "," or ", ".'
+        tt = 'You can separate the "rows" of tags by something other than newlines if you like. If you are parsing multiple multi-line notes, try separating them by four pipes, ||||. If you have/want a CSV list, try a separator of "," or ", ".'
         
         self._choice.setToolTip( tt )
         
@@ -175,6 +177,10 @@ class EditSidecarTXTSeparator( ClientGUICommon.StaticBox ):
             
             return '\n'
             
+        elif value == SEPARATOR_FOUR_PIPES:
+            
+            return '||||'
+            
         else:
             
             return self._custom_input.text()
@@ -186,6 +192,10 @@ class EditSidecarTXTSeparator( ClientGUICommon.StaticBox ):
         if value == '\n':
             
             self._choice.SetValue( SEPARATOR_NEWLINE )
+            
+        elif value == '||||':
+            
+            self._choice.SetValue( SEPARATOR_FOUR_PIPES )
             
         else:
             

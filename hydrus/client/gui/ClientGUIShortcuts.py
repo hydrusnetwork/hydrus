@@ -310,7 +310,8 @@ SHORTCUTS_MEDIA_ACTIONS = [
     CAC.SIMPLE_DUPLICATE_MEDIA_SET_SAME_QUALITY,
     CAC.SIMPLE_DUPLICATE_MEDIA_SET_POTENTIAL,
     CAC.SIMPLE_SHOW_DUPLICATES,
-    CAC.SIMPLE_OPEN_KNOWN_URL
+    CAC.SIMPLE_OPEN_KNOWN_URL,
+    CAC.SIMPLE_COPY_URLS
 ]
 
 SHORTCUTS_MEDIA_VIEWER_ACTIONS = [
@@ -1044,6 +1045,30 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         return self
         
     
+    def GetSearchShortcuts( self ) -> typing.Set[ "Shortcut" ]:
+        
+        search_shortcuts = { self }
+        
+        if CG.client_controller.new_options.GetBoolean( 'shortcuts_merge_non_number_numpad' ):
+            
+            it_is_a_number = ord( '0' ) <= self.shortcut_key <= ord( '9' )
+            
+            if not it_is_a_number:
+                
+                numpad_alternate = self.Duplicate()
+                
+                if SHORTCUT_MODIFIER_KEYPAD not in numpad_alternate.modifiers:
+                    
+                    numpad_alternate.modifiers.append( SHORTCUT_MODIFIER_KEYPAD )
+                    
+                    search_shortcuts.add( numpad_alternate )
+                    
+                
+            
+        
+        return search_shortcuts
+        
+    
     def GetShortcutType( self ):
         
         return self.shortcut_type
@@ -1296,14 +1321,15 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetCommand( self, shortcut: Shortcut ):
         
-        if shortcut in self._shortcuts_to_commands:
+        for s in shortcut.GetSearchShortcuts():
             
-            return self._shortcuts_to_commands[ shortcut ]
+            if s in self._shortcuts_to_commands:
+                
+                return self._shortcuts_to_commands[ s ]
+                
             
-        else:
-            
-            return None
-            
+        
+        return None
         
     
     def GetShortcuts( self, simple_action: int ):

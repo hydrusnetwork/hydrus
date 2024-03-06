@@ -91,7 +91,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
     
     def GetCopyableText( self, with_counts: bool = False ) -> str:
         
-        return HydrusTags.ConvertTagSliceToString( self._tag_slice )
+        return self._tag_slice
         
     
     def GetSearchPredicates( self ) -> typing.List[ ClientSearch.Predicate ]:
@@ -101,7 +101,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
     
     def GetRowsOfPresentationTextsWithNamespaces( self, render_for_user: bool, sibling_decoration_allowed: bool, sibling_connector_string: str, sibling_connector_namespace: typing.Optional[ str ], parent_decoration_allowed: bool, show_parent_rows: bool ) -> typing.List[ typing.List[ typing.Tuple[ str, str, str ] ] ]:
         
-        presentation_text = self.GetCopyableText()
+        presentation_text = HydrusTags.ConvertTagSliceToPrettyString( self._tag_slice )
         
         if self._tag_slice in ( '', ':' ):
             
@@ -125,6 +125,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
         return self._tag_slice
         
     
+
 class ListBoxItemNamespaceColour( ListBoxItem ):
     
     def __init__( self, namespace: str, colour: typing.Tuple[ int, int, int ] ):
@@ -144,15 +145,15 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
         
         if self._namespace is None:
             
-            return HydrusTags.ConvertTagSliceToString( ':' )
+            return HydrusTags.ConvertTagSliceToPrettyString( ':' )
             
         elif self._namespace == '':
             
-            return HydrusTags.ConvertTagSliceToString( '' )
+            return HydrusTags.ConvertTagSliceToPrettyString( '' )
             
         else:
             
-            return HydrusTags.ConvertTagSliceToString( '{}:'.format( self._namespace ) )
+            return HydrusTags.ConvertTagSliceToPrettyString( '{}:'.format( self._namespace ) )
             
         
     

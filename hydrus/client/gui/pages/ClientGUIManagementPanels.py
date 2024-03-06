@@ -127,7 +127,7 @@ class ListBoxTagsMediaManagementPanel( ClientGUIListBoxes.ListBoxTagsMedia ):
     
     def __init__( self, parent, management_controller: ClientGUIManagementController.ManagementController, page_key, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST, tag_autocomplete: typing.Optional[ ClientGUIACDropdown.AutoCompleteDropdownTagsRead ] = None ):
         
-        ClientGUIListBoxes.ListBoxTagsMedia.__init__( self, parent, tag_display_type, include_counts = True )
+        ClientGUIListBoxes.ListBoxTagsMedia.__init__( self, parent, tag_display_type, CC.TAG_PRESENTATION_SEARCH_PAGE, include_counts = True )
         
         self._management_controller = management_controller
         self._minimum_height_num_chars = 15
@@ -297,7 +297,7 @@ class ManagementPanel( QW.QScrollArea ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer, tag_display_type = ClientTags.TAG_DISPLAY_SELECTION_LIST ):
         
-        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags', CC.TAG_PRESENTATION_SEARCH_PAGE )
         
         self._current_selection_tags_list = ListBoxTagsMediaManagementPanel( self._current_selection_tags_box, self._management_controller, self._page_key, tag_display_type = tag_display_type )
         
@@ -5485,7 +5485,7 @@ class ManagementPanelQuery( ManagementPanel ):
     
     def _MakeCurrentSelectionTagsBox( self, sizer ):
         
-        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags' )
+        self._current_selection_tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'selection tags', CC.TAG_PRESENTATION_SEARCH_PAGE )
         
         if self._search_enabled:
             

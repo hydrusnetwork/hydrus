@@ -19,7 +19,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS
     SERIALISABLE_NAME = 'Client Options'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__( self ):
         
@@ -162,6 +162,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'show_namespaces' ] = True
         self._dictionary[ 'booleans' ][ 'show_number_namespaces' ] = True
+        self._dictionary[ 'booleans' ][ 'show_subtag_number_namespaces' ] = True
         self._dictionary[ 'booleans' ][ 'replace_tag_underscores_with_spaces' ] = False
         
         self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True
@@ -879,7 +880,12 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         from hydrus.client.metadata import ClientTagSorting
         
-        self._dictionary[ 'default_tag_sort' ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+        self._dictionary[ 'default_tag_sorts' ] = HydrusSerialisable.SerialisableDictionary()
+        
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+        self._dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
         
         #
         
@@ -1085,6 +1091,31 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            serialisable_dictionary = old_serialisable_info
+            
+            loaded_dictionary = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_dictionary )
+            
+            if 'default_tag_sort' in loaded_dictionary:
+                
+                from hydrus.client.metadata import ClientTagSorting
+                
+                loaded_dictionary[ 'default_tag_sorts' ] = HydrusSerialisable.SerialisableDictionary()
+                
+                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE ] = loaded_dictionary[ 'default_tag_sort' ]
+                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                loaded_dictionary[ 'default_tag_sorts' ][ CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ] = ClientTagSorting.TagSort.STATICGetTextASCDefault()
+                
+                del loaded_dictionary[ 'default_tag_sort' ]
+                
+            
+            new_serialisable_info = loaded_dictionary.GetSerialisableTuple()
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def ClearCustomDefaultSystemPredicates( self, predicate_type = None, comparable_predicate = None ):
         
@@ -1271,11 +1302,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetDefaultTagSort( self ):
+    def GetDefaultTagSort( self, tag_presentation_location: int ):
         
         with self._lock:
             
-            return self._dictionary[ 'default_tag_sort' ]
+            return self._dictionary[ 'default_tag_sorts' ][ tag_presentation_location ]
             
         
     
@@ -1831,11 +1862,11 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetDefaultTagSort( self, tag_sort ):
+    def SetDefaultTagSort( self, tag_presentation_location, tag_sort ):
         
         with self._lock:
             
-            self._dictionary[ 'default_tag_sort' ] = tag_sort
+            self._dictionary[ 'default_tag_sorts' ][ tag_presentation_location ] = tag_sort
             
         
     

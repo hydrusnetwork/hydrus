@@ -520,6 +520,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
+        tag_presentation_location = CC.TAG_PRESENTATION_SEARCH_PAGE
+        
         new_options = CG.client_controller.new_options
         
         self._media_to_paths = {}
@@ -528,11 +530,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._last_phrase_used = ''
         self._last_dir_used = ''
         
-        self._tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'files\' tags' )
+        self._tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'files\' tags', tag_presentation_location )
         
         services_manager = CG.client_controller.services_manager
         
-        t = ClientGUIListBoxes.ListBoxTagsMedia( self._tags_box, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, include_counts = True )
+        t = ClientGUIListBoxes.ListBoxTagsMedia( self._tags_box, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_presentation_location, include_counts = True )
         
         self._tags_box.SetTagsBox( t )
         

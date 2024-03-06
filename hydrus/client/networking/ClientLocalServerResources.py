@@ -4159,7 +4159,11 @@ class HydrusResourceClientAPIRestrictedManageDatabaseGetClientOptions( HydrusRes
             },
             'default_namespace_sorts' : [ sort.ToDictForAPI() for sort in new_options.GetDefaultNamespaceSorts() ],
             'default_sort' : new_options.GetDefaultSort().ToDictForAPI(),
-            'default_tag_sort' : new_options.GetDefaultTagSort().ToDictForAPI(),
+            'default_tag_sort' : new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE ).ToDictForAPI(),
+            'default_tag_sort_search_page' : new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE ).ToDictForAPI(),
+            'default_tag_sort_search_page_manage_tags' : new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS ).ToDictForAPI(),
+            'default_tag_sort_media_viewer' : new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER ).ToDictForAPI(),
+            'default_tag_sort_media_vewier_manage_tags' : new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS ).ToDictForAPI(),
             'fallback_sort' : new_options.GetFallbackSort().ToDictForAPI(),
             'suggested_tags_favourites' : new_options.GetAllSuggestedTagsFavourites(),
             'default_local_location_context' : new_options.GetDefaultLocalLocationContext().ToDictForAPI()

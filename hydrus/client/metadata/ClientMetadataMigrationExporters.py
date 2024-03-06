@@ -67,22 +67,38 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_EXPORTER_MEDIA_NOTES
     SERIALISABLE_NAME = 'Metadata Single File Exporter Media Notes'
-    SERIALISABLE_VERSION = 1
+    SERIALISABLE_VERSION = 2
     
-    def __init__( self ):
+    def __init__( self, forced_name = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         SingleFileMetadataExporterMedia.__init__( self )
         
+        self._forced_name = forced_name
+        
     
     def _GetSerialisableInfo( self ):
         
-        return list()
+        return self._forced_name
         
     
     def _InitialiseFromSerialisableInfo( self, serialisable_info ):
         
-        gumpf = serialisable_info
+        self._forced_name = serialisable_info
+        
+    
+    def _UpdateSerialisableInfo( self, version, old_serialisable_info ):
+        
+        if version == 1:
+            
+            gumpf = old_serialisable_info
+            
+            forced_name = None
+            
+            new_serialisable_info = forced_name
+            
+            return ( 2, new_serialisable_info )
+            
         
     
     def Export( self, hash: bytes, rows: typing.Collection[ str ] ):
@@ -96,12 +112,20 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
         
         for row in rows:
             
-            if ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING not in row:
+            if self._forced_name is None:
                 
-                continue
+                if ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING not in row:
+                    
+                    continue
+                    
                 
-            
-            ( name, text ) = row.split( ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING, 1 )
+                ( name, text ) = row.split( ClientMetadataMigrationCore.NOTE_CONNECTOR_STRING, 1 )
+                
+            else:
+                
+                name = self._forced_name
+                text = row
+                
             
             if name == '' or text == '':
                 
@@ -137,6 +161,16 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
         ]
         
         return examples
+        
+    
+    def GetForcedName( self ) -> typing.Optional[ str ]:
+        
+        return self._forced_name
+        
+    
+    def SetForcedName( self, forced_name: typing.Optional[ str ] ):
+        
+        self._forced_name = forced_name
         
     
     def ToString( self ) -> str:

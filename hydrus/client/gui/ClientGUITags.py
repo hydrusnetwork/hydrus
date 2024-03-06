@@ -783,6 +783,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._show_all_panels_button, CC.FLAGS_ON_RIGHT )
+        
+        label = 'Click the "(un)namespaced" checkboxes to allow/disallow those tags.\nType "namespace:" to manually input a namespace that is not in the list.'
+        st = ClientGUICommon.BetterStaticText( self, label = label )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
         QP.AddToLayout( vbox, self._notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, self._redundant_st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._current_filter_st, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -852,13 +859,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if len( already_blocked ) == 1:
                     
-                    message = f'{HydrusTags.ConvertTagSliceToString( already_blocked[0] )} is already blocked by a broader rule!'
+                    message = f'{HydrusTags.ConvertTagSliceToPrettyString( already_blocked[0] )} is already blocked by a broader rule!'
                     
                 else:
                     
                     separator = '\n' if len( already_blocked ) < 5 else ', '
                     
-                    message = 'The tags\n\n' + separator.join( [ HydrusTags.ConvertTagSliceToString( tag_slice ) for tag_slice in already_blocked ] ) + '\n\nare already blocked by a broader rule!'
+                    message = 'The tags\n\n' + separator.join( [ HydrusTags.ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in already_blocked ] ) + '\n\nare already blocked by a broader rule!'
                     
                 
                 self._ShowRedundantError( message )
@@ -895,19 +902,22 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if len( already_permitted ) == 1:
                     
-                    message = f'{HydrusTags.ConvertTagSliceToString( to_add[0] )} is already permitted by a broader rule!'
+                    message = f'{HydrusTags.ConvertTagSliceToPrettyString( to_add[0] )} is already permitted by a broader rule!'
                     
                 else:
                     
                     separator = '\n' if len( already_permitted ) < 5 else ', '
                     
-                    message = 'The tags\n\n' + separator.join( [ HydrusTags.ConvertTagSliceToString( tag_slice ) for tag_slice in already_permitted ] ) + '\n\nare already permitted by a broader rule!'
+                    message = 'The tags\n\n' + separator.join( [ HydrusTags.ConvertTagSliceToPrettyString( tag_slice ) for tag_slice in already_permitted ] ) + '\n\nare already permitted by a broader rule!'
                     
                 
                 self._ShowRedundantError( message )
                 
             
-            self._advanced_whitelist.AddTagSlices( tag_slices )
+            tag_slices_to_actually_add = [ tag_slice for tag_slice in tag_slices if tag_slice not in ( '', ':' ) ]
+            
+            # we don't say 'except for' for (un)namespaced
+            self._advanced_whitelist.AddTagSlices( tag_slices_to_actually_add )
             
         
         self._UpdateStatus()
@@ -1225,14 +1235,18 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _InitBlacklistPanel( self ):
         
-        blacklist_panel = QW.QWidget( self._notebook )
+        blacklist_overpanel = QW.QWidget( self._notebook )
         
         #
         
-        self._simple_blacklist_error_st = ClientGUICommon.BetterStaticText( blacklist_panel )
+        self._simple_blacklist_error_st = ClientGUICommon.BetterStaticText( blacklist_overpanel )
         self._simple_blacklist_error_st.setVisible( False )
         
-        self._simple_blacklist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
+        #
+        
+        self._simple_blacklist_panel = ClientGUICommon.StaticBox( blacklist_overpanel, 'exclude these' )
+        
+        self._simple_blacklist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         
         self._simple_blacklist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_blacklist_global_checkboxes.Append( 'namespaced tags', ':' )
@@ -1241,7 +1255,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_blacklist_global_checkboxes.setFixedHeight( h )
         
-        self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( blacklist_panel )
+        self._simple_blacklist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         
         for namespace in self._namespaces:
             
@@ -1253,12 +1267,12 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_blacklist_namespace_checkboxes.Append( namespace, namespace + ':' )
             
         
-        self._simple_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( blacklist_panel, read_only = self._read_only )
+        self._simple_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( self._simple_whitelist_panel, read_only = self._read_only )
         
-        self._simple_blacklist_input = ClientGUIControls.TextAndPasteCtrl( blacklist_panel, self._SimpleAddBlacklistMultiple, allow_empty_input = True )
+        self._simple_blacklist_input = ClientGUIControls.TextAndPasteCtrl( self._simple_whitelist_panel, self._SimpleAddBlacklistMultiple, allow_empty_input = True )
         
-        delete_blacklist_button = ClientGUICommon.BetterButton( blacklist_panel, 'remove', self._SimpleDeleteBlacklistButton )
-        blacklist_everything_button = ClientGUICommon.BetterButton( blacklist_panel, 'block everything', self._AdvancedBlacklistEverything )
+        delete_blacklist_button = ClientGUICommon.BetterButton( self._simple_whitelist_panel, 'remove', self._SimpleDeleteBlacklistButton )
+        blacklist_everything_button = ClientGUICommon.BetterButton( self._simple_whitelist_panel, 'block everything', self._AdvancedBlacklistEverything )
         
         #
         
@@ -1291,31 +1305,37 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         main_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self._simple_blacklist_panel.Add( main_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._simple_blacklist_error_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._simple_blacklist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        blacklist_panel.setLayout( vbox )
+        blacklist_overpanel.setLayout( vbox )
         
         self._simple_blacklist.tagsRemoved.connect( self._SimpleBlacklistRemoved )
         
-        return blacklist_panel
+        return blacklist_overpanel
         
     
     def _InitWhitelistPanel( self ):
         
-        whitelist_panel = QW.QWidget( self._notebook )
+        whitelist_overpanel = QW.QWidget( self._notebook )
         
         #
         
-        self._simple_whitelist_error_st = ClientGUICommon.BetterStaticText( whitelist_panel )
+        self._simple_whitelist_error_st = ClientGUICommon.BetterStaticText( whitelist_overpanel )
         self._simple_whitelist_error_st.setVisible( False )
         
-        self._simple_whitelist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
+        #
+        
+        self._simple_whitelist_panel = ClientGUICommon.StaticBox( whitelist_overpanel, 'allow these' )
+        
+        self._simple_whitelist_global_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         
         self._simple_whitelist_global_checkboxes.Append( 'unnamespaced tags', '' )
         self._simple_whitelist_global_checkboxes.Append( 'namespaced tags', ':' )
@@ -1324,7 +1344,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_whitelist_global_checkboxes.setFixedHeight( h )
         
-        self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( whitelist_panel )
+        self._simple_whitelist_namespace_checkboxes = ClientGUICommon.BetterCheckBoxList( self._simple_whitelist_panel )
         
         for namespace in self._namespaces:
             
@@ -1336,11 +1356,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._simple_whitelist_namespace_checkboxes.Append( namespace, namespace + ':' )
             
         
-        self._simple_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( whitelist_panel, read_only = self._read_only )
+        #
         
-        self._simple_whitelist_input = ClientGUIControls.TextAndPasteCtrl( whitelist_panel, self._SimpleAddWhitelistMultiple, allow_empty_input = True )
+        self._simple_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( self._simple_whitelist_panel, read_only = self._read_only )
         
-        delete_whitelist_button = ClientGUICommon.BetterButton( whitelist_panel, 'remove', self._SimpleDeleteWhitelistButton )
+        self._simple_whitelist_input = ClientGUIControls.TextAndPasteCtrl( self._simple_whitelist_panel, self._SimpleAddWhitelistMultiple, allow_empty_input = True )
+        
+        delete_whitelist_button = ClientGUICommon.BetterButton( self._simple_whitelist_panel, 'remove', self._SimpleDeleteWhitelistButton )
         
         #
         
@@ -1370,19 +1392,21 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         main_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, left_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( main_hbox, right_vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self._simple_whitelist_panel.Add( main_hbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._simple_whitelist_error_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, main_hbox, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._simple_whitelist_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        whitelist_panel.setLayout( vbox )
+        whitelist_overpanel.setLayout( vbox )
         
         self._simple_whitelist.tagsRemoved.connect( self._SimpleWhitelistRemoved )
         
-        return whitelist_panel
+        return whitelist_overpanel
         
     
     def _LoadFavourite( self ):
@@ -1451,17 +1475,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         help = 'Here you can set rules to filter tags for one purpose or another. The default is typically to permit all tags. Check the current filter summary text at the bottom-left of the panel to ensure you have your logic correct.'
         help += os.linesep * 2
-        help += 'The different tabs are multiple ways of looking at the filter--sometimes it is more useful to think about a filter as a whitelist (where only the listed contents are kept) or a blacklist (where everything _except_ the listed contents are kept), and there is also an advanced tab that lets you do a more complicated combination of the two.'
+        help += 'The whitelist/blacklist/advanced tabs are different ways of looking at the same filter, so you can choose which works best for you. Sometimes it is more useful to think about a filter as a whitelist (where only the listed contents are kept) or a blacklist (where everything _except_ the listed contents are kept), while the advanced tab lets you do a more complicated combination of the two.'
         help += os.linesep * 2
-        help += 'As well as selecting broader categories of tags with the checkboxes, you can type or paste the individual tags directly--just hit enter to add each one--and double-click an existing entry in a list to remove it.'
-        help += os.linesep * 2
-        help += 'If you wish to manually type a special tag, use these shorthands:'
-        help += os.linesep * 2
-        help += '"namespace:" - all instances of that namespace'
-        help += os.linesep
-        help += '":" - all namespaced tags'
-        help += os.linesep
-        help += '"" (i.e. an empty string) - all unnamespaced tags'
+        help += 'As well as selecting entire namespaces with the checkboxes, you can type or paste the individual tags directly--just hit enter to add each one. Double-click an existing entry in a list to remove it.'
         
         ClientGUIDialogsMessage.ShowInformation( self, help )
         
@@ -1486,7 +1502,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         for simple in ( '', ':' ):
             
-            if simple in tag_slices and simple in self._simple_whitelist.GetTagSlices():
+            if False and simple in tag_slices and simple in self._simple_whitelist.GetTagSlices():
                 
                 tag_slices.discard( simple )
                 
@@ -1925,12 +1941,13 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, location_context: ClientLocation.LocationContext, medias: typing.Collection[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: typing.Collection[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self._location_context = location_context
+        self._tag_presentation_location = tag_presentation_location
         
         self._immediate_commit = immediate_commit
         self._canvas_key = canvas_key
@@ -1969,7 +1986,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 HydrusData.ShowText( 'Opening manage tags panel on {}, {}, {}'.format( service, name, service_key.hex() ) )
                 
             
-            page = self._Panel( self._tag_services, self._location_context, service.GetServiceKey(), self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
+            page = self._Panel( self._tag_services, self._location_context, service.GetServiceKey(), self._tag_presentation_location, self._current_media, self._immediate_commit, canvas_key = self._canvas_key )
             
             self._tag_services.addTab( page, name )
             
@@ -2243,13 +2260,14 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         showNext = QC.Signal()
         valueChanged = QC.Signal()
         
-        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, media, immediate_commit, canvas_key = None ):
+        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media, immediate_commit, canvas_key = None ):
             
             QW.QWidget.__init__( self, parent )
             CAC.ApplicationCommandProcessorMixin.__init__( self )
             
             self._location_context = location_context
             self._tag_service_key = tag_service_key
+            self._tag_presentation_location = tag_presentation_location
             self._immediate_commit = immediate_commit
             self._canvas_key = canvas_key
             
@@ -2259,9 +2277,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
-            self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'tags', show_siblings_sort = True )
+            self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'tags', self._tag_presentation_location, show_siblings_sort = True )
             
-            self._tags_box = ClientGUIListBoxes.ListBoxTagsMediaTagsDialog( self._tags_box_sorter, self.EnterTags, self.RemoveTags )
+            self._tags_box = ClientGUIListBoxes.ListBoxTagsMediaTagsDialog( self._tags_box_sorter, self._tag_presentation_location, self.EnterTags, self.RemoveTags )
             
             self._tags_box_sorter.SetTagsBox( self._tags_box )
             
@@ -2332,7 +2350,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._tags_box.SetTagServiceKey( self._tag_service_key )
             
-            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, media, self.AddTags )
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._tag_presentation_location, media, self.AddTags )
             
             self.SetMedia( media )
             

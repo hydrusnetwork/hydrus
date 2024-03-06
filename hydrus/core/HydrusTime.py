@@ -451,6 +451,8 @@ def TimestampToPrettyExpires( timestamp ):
 
 def MillisecondsDurationToPrettyTime( duration_ms: typing.Optional[ int ] ) -> str:
     
+    # should this function just be merged into timedeltatoprettytimedelta or something?
+    
     if duration_ms is None or duration_ms == 0:
         
         return 'no duration'
@@ -509,7 +511,14 @@ def MillisecondsDurationToPrettyTime( duration_ms: typing.Optional[ int ] ) -> s
         
         detailed_seconds = seconds + ( duration_ms / 1000 )
         
-        detailed_seconds_result = '{:.1f} seconds'.format( detailed_seconds )
+        if int( detailed_seconds ) == detailed_seconds:
+            
+            detailed_seconds_result = f'{HydrusData.ToHumanInt( detailed_seconds )} seconds'
+            
+        else:
+            
+            detailed_seconds_result = '{:.1f} seconds'.format( detailed_seconds )
+            
         
         return detailed_seconds_result
         

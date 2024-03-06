@@ -1177,7 +1177,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             with ClientGUITopLevelWindowsPanels.DialogManage( self, title, frame_key ) as dlg:
                 
-                panel = ClientGUITags.ManageTagsPanel( dlg, self._location_context, flat_media )
+                panel = ClientGUITags.ManageTagsPanel( dlg, self._location_context, CC.TAG_PRESENTATION_SEARCH_PAGE_MANAGE_TAGS, flat_media )
                 
                 dlg.SetPanel( panel )
                 
@@ -2275,6 +2275,15 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             elif action == CAC.SIMPLE_COPY_SHA512_HASH:
                 
                 self._CopyHashesToClipboard( 'sha512' )
+                
+            elif action == CAC.SIMPLE_COPY_URLS:
+                
+                ordered_selected_media = self._GetSelectedMediaOrdered()
+                
+                if len( ordered_selected_media ) > 0:
+                    
+                    ClientGUIMedia.CopyMediaURLs( ordered_selected_media )
+                    
                 
             elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
                 

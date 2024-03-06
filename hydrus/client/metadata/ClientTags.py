@@ -33,6 +33,7 @@ def RenderNamespaceForUser( namespace ):
         return namespace
         
     
+
 def RenderTag( tag, render_for_user: bool ):
     
     if render_for_user:
@@ -55,7 +56,10 @@ def RenderTag( tag, render_for_user: bool ):
         
         if render_for_user:
             
-            if new_options.GetBoolean( 'show_namespaces' ) or ( new_options.GetBoolean( 'show_number_namespaces' ) and namespace.isdecimal() ):
+            # TODO: this is garbage. figure out a factory that does this without the options check for every tag, then update the factory on options update
+            # same with the underscore stuff above
+            
+            if new_options.GetBoolean( 'show_namespaces' ) or ( new_options.GetBoolean( 'show_number_namespaces' ) and namespace.isdecimal() ) or ( new_options.GetBoolean( 'show_subtag_number_namespaces' ) and subtag.isdecimal() ):
                 
                 connector = new_options.GetString( 'namespace_connector' )
                 
@@ -72,6 +76,7 @@ def RenderTag( tag, render_for_user: bool ):
         return namespace + connector + subtag
         
     
+
 class ServiceKeysToTags( HydrusSerialisable.SerialisableBase, collections.defaultdict ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_SERVICE_KEYS_TO_TAGS

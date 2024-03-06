@@ -171,11 +171,12 @@ class FavouritesTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, tag_presentation_location: int, media, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
+        self._tag_presentation_location = tag_presentation_location
         self._media = media
         
         vbox = QP.VBoxLayout()
@@ -195,7 +196,7 @@ class FavouritesTagsPanel( QW.QWidget ):
         
         favourites = list( CG.client_controller.new_options.GetSuggestedTagsFavourites( self._service_key ) )
         
-        ClientTagSorting.SortTags( CG.client_controller.new_options.GetDefaultTagSort(), favourites )
+        ClientTagSorting.SortTags( CG.client_controller.new_options.GetDefaultTagSort( self._tag_presentation_location ), favourites )
         
         tags = FilterSuggestedTagsForMedia( favourites, self._media, self._service_key )
         
@@ -786,11 +787,12 @@ class SuggestedTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, tag_presentation_location, media, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
+        self._tag_presentation_location = tag_presentation_location
         self._media = media
         
         self._new_options = CG.client_controller.new_options
@@ -818,7 +820,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         if len( favourites ) > 0:
             
-            self._favourite_tags = FavouritesTagsPanel( panel_parent, service_key, media, activate_callable )
+            self._favourite_tags = FavouritesTagsPanel( panel_parent, service_key, self._tag_presentation_location, media, activate_callable )
             
             self._favourite_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
             

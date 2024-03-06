@@ -582,7 +582,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         manage_tags = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, title, frame_key )
         
-        panel = ClientGUITags.ManageTagsPanel( manage_tags, self._location_context, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
+        panel = ClientGUITags.ManageTagsPanel( manage_tags, self._location_context, CC.TAG_PRESENTATION_MEDIA_VIEWER_MANAGE_TAGS, ( self._current_media, ), immediate_commit = True, canvas_key = self._canvas_key )
         
         manage_tags.SetPanel( panel )
         
@@ -955,6 +955,13 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             elif action == CAC.SIMPLE_COPY_SHA512_HASH:
                 
                 self._CopyHashToClipboard( 'sha512' )
+                
+            elif action == CAC.SIMPLE_COPY_URLS:
+                
+                if self._current_media is not None:
+                    
+                    ClientGUIMedia.CopyMediaURLs( [ self._current_media ] )
+                    
                 
             elif action == CAC.SIMPLE_DELETE_FILE:
                 
@@ -1846,7 +1853,7 @@ class CanvasWithDetails( Canvas ):
         
         tags_i_want_to_display = list( tags_i_want_to_display )
         
-        tag_sort = CG.client_controller.new_options.GetDefaultTagSort()
+        tag_sort = CG.client_controller.new_options.GetDefaultTagSort( CC.TAG_PRESENTATION_MEDIA_VIEWER )
         
         ClientTagSorting.SortTags( tag_sort, tags_i_want_to_display )
         

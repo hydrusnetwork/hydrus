@@ -2862,7 +2862,7 @@ class FilesMaintenanceManager( object ):
                                 
                                 num_bad_files += 1
                                 
-                                job_status.SetVariable( 'num_bad_files', num_bad_files + 1 )
+                                job_status.SetVariable( 'num_bad_files', num_bad_files )
                                 
                             
                         

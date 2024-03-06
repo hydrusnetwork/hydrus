@@ -95,7 +95,14 @@ class FilesStorageBaseLocation( object ):
     
     def __repr__( self ):
         
-        return f'{self.path} ({self.ideal_weight}, {self.max_num_bytes})'
+        if self.max_num_bytes is None:
+            
+            return f'{self.path} ({self.ideal_weight}, unlimited)'
+            
+        else:
+            
+            return f'{self.path} ({self.ideal_weight}, {HydrusData.ToHumanBytes( self.max_num_bytes )})'
+            
         
     
     def AbleToAcceptSubfolders( self, current_num_bytes: int, num_bytes_of_subfolder: int ):
@@ -190,12 +197,14 @@ class FilesStorageBaseLocation( object ):
         
     
     @staticmethod
-    def STATICGetIdealWeights( current_num_bytes: int, base_locations: typing.List[ "FilesStorageBaseLocation" ] ) -> typing.Dict[ "FilesStorageBaseLocation", float ]:
+    def STATICGetIdealWeights( total_num_bytes_to_hold: int, base_locations: typing.List[ "FilesStorageBaseLocation" ] ) -> typing.Dict[ "FilesStorageBaseLocation", float ]:
         
         # This is kind of tacked on logic versus the eager/able/needs/would stuff, but I'm collecting it here so at least the logic, pseudo-doubled, is in one place
-        # this is used by the 'move media files' listctrl atm, but maybe we can merge all this together sometime
+        # EDIT: I like this logic now, after some fixes and simplification, so perhaps it can be used elsewhere
         
         result = {}
+        
+        total_ideal_weight = sum( ( base_location.ideal_weight for base_location in base_locations ) )
         
         limited_locations = sorted( [ base_location for base_location in base_locations if base_location.max_num_bytes is not None ], key = lambda b_l: b_l.max_num_bytes )
         unlimited_locations = [ base_location for base_location in base_locations if base_location.max_num_bytes is None ]
@@ -204,27 +213,25 @@ class FilesStorageBaseLocation( object ):
         next_round_of_limited_locations = []
         players_eliminated = False
         
-        amount_of_normalised_weight_lost_to_bust_players = 0.0
+        remaining_total_ideal_weight = total_ideal_weight
+        remaining_normalised_weight = 1.0
         
         while len( limited_locations ) > 0:
             
-            total_ideal_weight = sum( ( base_location.ideal_weight for base_location in limited_locations ) ) + sum( ( base_location.ideal_weight for base_location in unlimited_locations ) )
-            
             limited_location_under_examination = limited_locations.pop( 0 )
             
-            normalised_weight = limited_location_under_examination.ideal_weight / total_ideal_weight
+            # of the remaining pot (remaining normalised weight), how much is our share vs remaining players (ideal weight over remaining total ideal weight)
+            normalised_weight_we_want_to_have = ( limited_location_under_examination.ideal_weight / remaining_total_ideal_weight ) * remaining_normalised_weight
+            normalised_weight_with_max_bytes = limited_location_under_examination.max_num_bytes / total_num_bytes_to_hold
             
-            max_num_bytes = limited_location_under_examination.max_num_bytes
-            
-            if normalised_weight * current_num_bytes > max_num_bytes:
+            if normalised_weight_with_max_bytes < normalised_weight_we_want_to_have:
                 
-                true_ideal_normalised_weight = max_num_bytes / current_num_bytes
+                # we can't hold all we want to, so we'll hold what we can and eliminate our part of the pot from the other players
                 
-                result[ limited_location_under_examination ] = true_ideal_normalised_weight
+                result[ limited_location_under_examination ] = normalised_weight_with_max_bytes
                 
-                amount_of_normalised_weight_lost_to_bust_players += true_ideal_normalised_weight
-                
-                current_num_bytes -= max_num_bytes
+                remaining_normalised_weight -= normalised_weight_with_max_bytes
+                remaining_total_ideal_weight -= limited_location_under_examination.ideal_weight
                 
                 players_eliminated = True
                 
@@ -237,6 +244,8 @@ class FilesStorageBaseLocation( object ):
                 
                 if players_eliminated:
                     
+                    # the pot just got bigger, so let's play another round and see if anyone else is bust
+                    
                     limited_locations = next_round_of_limited_locations
                     
                     next_round_of_limited_locations = []
@@ -244,6 +253,7 @@ class FilesStorageBaseLocation( object ):
                     
                 else:
                     
+                    # no one was eliminated (maybe there are no players left!), so it is time to distribute weight unfettered
                     unlimited_locations.extend( next_round_of_limited_locations )
                     
                 
@@ -251,11 +261,9 @@ class FilesStorageBaseLocation( object ):
         
         # ok, all the bust players have been eliminated. the remaining pot is distributed according to relative weights as normal
         
-        total_ideal_weight = sum( ( base_location.ideal_weight for base_location in unlimited_locations ) )
-        
         for base_location in unlimited_locations:
             
-            result[ base_location ] = ( base_location.ideal_weight / total_ideal_weight ) * ( 1 - amount_of_normalised_weight_lost_to_bust_players )
+            result[ base_location ] = ( base_location.ideal_weight / remaining_total_ideal_weight ) * remaining_normalised_weight
             
         
         return result
