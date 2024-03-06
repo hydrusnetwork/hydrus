@@ -10313,7 +10313,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     import re
                     
-                    regex_pattern = 'http\S+\s+http'
+                    regex_pattern = r'http\S+\s+http'
                     
                     CHUNK_SIZE = 10000
                     

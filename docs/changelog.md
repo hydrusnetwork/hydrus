@@ -43,7 +43,6 @@ title: Changelog
 * fixed some media duration 'second' components being rendered with extraneous .0, like '30.0 seconds'
 * fixed a db routine that fetches a huge table in pieces to not repeat a few rows when the ids it is fetching are non-contiguous, and to report the correct quantity of work done as a result (it was saying like 17,563/17,562)
 * the new _help->about_ Qt platformName addition will now say if the actual platformName differs from the running platformName (e.g. if it was set otherwise with a Qt launch parameter)
-* updated the builds to use `softprops/action-gh-release@ 4634c16e79c963813287e889244c50009e7f0981`, which should solve the Node16 deprecation warnings for now
 
 ### client api
 
