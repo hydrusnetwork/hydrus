@@ -35,10 +35,45 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_565"><a href="#version_565">version 565</a></h2>
+                    <ul>
+                        <li><h3>tag sorting bonanza</h3></li>
+                        <li>_options->sort/collect_ now offers four places to customise default tag sort. instead of having one default sort for everything, there's now sort for search pages, media viewers, and the manage tags dialogs launched off of them</li>
+                        <li><h3>tag filter</h3></li>
+                        <li>when you copy namespaces from the tag filter list, it now copies the actual underlying data text like `character:`, which you can paste in elsewhere, rather than the pretty `"character" tags` display text</li>
+                        <li>brushed up some of the UI and help text on the tag filter UI</li>
+                        <li>fixed a couple places where the tag copy menus were trying to let you copy an empty string, which ended up with `-invalid label-`</li>
+                        <li>fixed some extremely janked-out logic in the tag filter that was sending `(un)namespaced tags` to the 'except for these' advanced whitelist in many cases. it was technically ok, but not ideal and overall inhuman</li>
+                        <li><h3>concatenated source urls</h3></li>
+                        <li>on rule34.xxx and probably some other places, when the file has multiple source urls, the gelbooru-style parsers were pulling the urls in the format [ A, B, C, 'A B C' ], adding this weird extra string concatenation that is obviously invalid. I fixed the parsers so it won't happen again</li>
+                        <li>**on update, you are going to get a couple of yes/no dialogs asking if you want to scan for and delete existing instances of these URLs**. if you have a big client, it will take some time to do this scan. the yes/no dialogs will auto-yes after ten minutes, so if you are doing a headless update via docker or something, please be patient--it will go through</li>
+                        <li><h3>note sidecars</h3></li>
+                        <li>the note->media sidecar exporter module now has a 'forced name' input. if you want to parse a single note from a .txt or .json that doesn't have a name, you can now force it</li>
+                        <li>the sidecard txt separator dropdown in the .txt importer module now has a 'four pipes (||||)' entry in the dropdown as a quick-select beside 'newline'. four pipes is a useful separator of multi-line notes content since it almost certainly won't come up in a normal note</li>
+                        <li>some tooltips and stuff are updated around here to better explain what the hell is going on</li>
+                        <li>added a unit test to test the forced name</li>
+                        <li><h3>misc</h3></li>
+                        <li>to help the recent shortcuts change that merged `numpad` variants of + and left arrow and so on into being seen as the `unmodified` variants, if you have a saved shortcut that _is_ still the `numpad` variant, it will now match the `unmodified` input when the merge mode is on. just means you don't have to remap everything with this mode on--everything merged matches everything</li>
+                        <li>added 'copy file known urls' to the 'media' shortcut set</li>
+                        <li>I forgot to mention last week that we figured out more native global menubar tech (where the top menubar of the program will embed into your OS's top system menubar) in last week's release, for non-macOS (some versions of Linux) users. the new checkbox is under _gui->Use Native MenuBar_. it defaults to on for macOS and off for everyone else, but feel free to try it. there was a related 'my menubar is now messed up, why?' bug that hit some people in v564 that is fixed today. sorry if you got boshed by this, since it was tricky to manually fix. in future, note you can hit ctrl+p in a default client to bring up the command palette, and then you can type 'options' and can open the options that way, if your menubar isn't working!</li>
+                        <li>fixed the `ideal usage` calculation in _database->move media files_ when there are three or more competing storage locations with two or more having a max size that is exceeded by their weight, and one or more having a max size that is only exceeded by their weight a little bit. due to a mistake in how total remaining weight was calculated in the little behind the scenes elimination game here, a location in this situation was exceeding its max size amount by a multiple of `1/(1-total_normalised_weight_of_restricted_locations)`, typically +10-30%. thank you for the report here, it was interesting to figure out!</li>
+                        <li>I removed a hack that made the repositories (like the PTR) work for users running super old versions of the client. the hack has now been in place for more than a year. if you run into repository syncing problems, please update to after v511!</li>
+                        <li>fixed a dumb status line in the 'check for missing/invalid files' checker thah was double-counting bad files in the popup</li>
+                        <li>fixed some media duration 'second' components being rendered with extraneous .0, like '30.0 seconds'</li>
+                        <li>fixed right-clicking on some empty system predicates like 'system:duration' (those I overhauled the other week with NumberTests)</li>
+                        <li>fixed a db routine that fetches a huge table in pieces to not repeat a few rows when the ids it is fetching are non-contiguous, and to report the correct quantity of work done as a result (it was saying like 17,563/17,562)</li>
+                        <li>the new _help->about_ Qt platformName addition will now say if the actual platformName differs from the running platformName (e.g. if it was set otherwise with a Qt launch parameter)</li>
+                        <li>updated the builds to use `softprops/action-gh-release@ 4634c16e79c963813287e889244c50009e7f0981`, which should solve the Node16 deprecation warnings for now</li>
+                        <li><h3>client api</h3></li>
+                        <li>just a small thing, but the under-documented `/manage_database/get_client_options` call now says the four types of default tag sort. I left the old key, `default_tag_sort`, in so as not to break stuff, but it is just a copy of the `search_page` variant in the new `default_tag_sort_xxx` foursome</li>
+                        <li>client api version is now 62</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_564"><a href="#version_564">version 564</a></h2>
                     <ul>
                         <li><h3>more macOS work</h3></li>
-                        <li><h3>thanks to a user, we have more macOS features</h3></li>
+                        <li>thanks to a user, we have more macOS features:</li>
                         <li>macOS users get a new shortcut action, default Space, that uses Quick Look to preview a thumbnail like you can in Finder. **all existing users will get the new shortcut!**</li>
                         <li>the hydrus .app now has the version number in Get Info</li>
                         <li>**macOS users who run from source should rebuild their venvs this week!** if you don't, then trying this new Quick Look feature will just give you an error notification</li>
