@@ -17,20 +17,11 @@ QLabel#HydrusValid
 	color: #008000;
 }
 
-QLineEdit#HydrusValid
+QLineEdit#HydrusValid, QTextEdit#HydrusValid, QPlainTextEdit#HydrusValid
 {
 	background-color: #80ff80;
 }
 
-QTextEdit#HydrusValid
-{
-	background-color: #80ff80;
-}
-
-QPlainTextEdit#HydrusValid
-{
-	background-color: #80ff80;
-}
 
 /* Duplicates 'middle' text colour */
 
@@ -39,20 +30,11 @@ QLabel#HydrusIndeterminate
 	color: #000080;
 }
 
-QLineEdit#HydrusIndeterminate
+QLineEdit#HydrusIndeterminate, QTextEdit#HydrusIndeterminate, QPlainTextEdit#HydrusIndeterminate
 {
 	background-color: #000080;
 }
 
-QTextEdit#HydrusIndeterminate
-{
-	background-color: #000080;
-}
-
-QPlainTextEdit#HydrusIndeterminate
-{
-	background-color: #000080;
-}
 
 /* Example: This regex is invalid */
 
@@ -61,29 +43,15 @@ QLabel#HydrusInvalid
 	color: #800000;
 }
 
-QLineEdit#HydrusInvalid
+QLineEdit#HydrusInvalid, QTextEdit#HydrusInvalid, QPlainTextEdit#HydrusInvalid
 {
 	background-color: #ff8080;
 }
 
-QTextEdit#HydrusInvalid
-{
-	background-color: #ff8080;
-}
-
-QPlainTextEdit#HydrusInvalid
-{
-	background-color: #ff8080;
-}
 
 /* Example: Your files are going to be deleted! */
 
-QLabel#HydrusWarning
-{
-	color: #800000;
-}
-
-QCheckBox#HydrusWarning
+QLabel#HydrusWarning, QCheckBox#HydrusWarning
 {
 	color: #800000;
 }
