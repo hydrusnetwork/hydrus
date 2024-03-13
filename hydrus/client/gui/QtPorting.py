@@ -1,15 +1,16 @@
 #This file is licensed under the Do What the Fuck You Want To Public License aka WTFPL
 
+# hey so this file was made by prkc to bridge innumerate wx->Qt auto-conversion problems
+# I, hydev, said 'thank you very much, this is incredible work, I will slowly replace all these functions with proper Qt code within a year or so'
+# and we are, of course, now many years later
+# so, if I just got hit by a bus and you are wondering what the hell is going on here, that's what's going on here
+
 import os
 import typing
-
-import qtpy
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
-
-import math
 
 from collections import defaultdict
 
@@ -54,7 +55,7 @@ class HBoxLayout( QW.QHBoxLayout ):
     
 
 class VBoxLayout( QW.QVBoxLayout ):
-
+    
     def __init__( self, margin = 2, spacing = 2 ):
         
         QW.QVBoxLayout.__init__( self )
@@ -68,6 +69,7 @@ class VBoxLayout( QW.QVBoxLayout ):
         self.setContentsMargins( val, val, val, val )
         
     
+
 class LabelledSlider( QW.QWidget ):
     
     def __init__( self, parent = None ):
@@ -1392,6 +1394,7 @@ def Unsplit( splitter, widget ):
         widget.setVisible( False )
         
     
+
 def CenterOnWindow( parent, window ):
     
     parent_window = parent.window()
@@ -1429,13 +1432,6 @@ def ListWidgetGetStrings( widget ):
         strings.append( widget.item( i ).text() )
         
     return strings
-
-
-def ListWidgetIsSelected( widget, idx ):
-    
-    if idx == -1: return False
-    
-    return widget.item( idx ).isSelected()
 
 
 def ListWidgetSetSelection( widget, idxs ):
@@ -1509,18 +1505,6 @@ def SetStringSelection( combobox, string ):
         combobox.setCurrentIndex( index )
 
 
-def SetClientSize( widget, size ):
-    
-    if isinstance( size, tuple ):
-
-        size = QC.QSize( size[ 0 ], size[ 1 ] )
-
-    if size.width() < 0: size.setWidth( widget.width() )
-    if size.height() < 0: size.setHeight( widget.height() )
-
-    widget.resize( size )
-
-
 def SetMinClientSize( widget, size ):
     
     if isinstance( size, tuple ):
@@ -1530,22 +1514,6 @@ def SetMinClientSize( widget, size ):
     
     if size.width() >= 0: widget.setMinimumWidth( size.width() )
     if size.height() >= 0: widget.setMinimumHeight( size.height() )
-
-def WheelEventIsSynthesised( event: QG.QWheelEvent ):
-    
-    if QtInit.WE_ARE_QT5:
-    
-        return event.source() == QC.Qt.MouseEventSynthesizedBySystem
-        
-    elif QtInit.WE_ARE_QT6:
-        
-        return event.pointerType() != QG.QPointingDevice.PointerType.Generic
-        
-    else:
-        
-        return False
-        
-    
 
 class StatusBar( QW.QStatusBar ):
     
@@ -2056,7 +2024,7 @@ class PasswordEntryDialog( Dialog ):
         
 
 class DirDialog( QW.QFileDialog ):
-
+    
     def __init__( self, parent = None, message = None ):
         
         QW.QFileDialog.__init__( self, parent )

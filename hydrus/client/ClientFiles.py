@@ -1835,11 +1835,11 @@ class ClientFilesManager( object ):
                     
                     os.utime( path, ( existing_access_time, modified_timestamp ) )
                     
-                    HydrusData.Print( 'Successfully changed modified time of "{}" from {} to {}.'.format( path, HydrusTime.TimestampToPrettyTime( existing_modified_time ), HydrusTime.TimestampToPrettyTime( modified_timestamp ) ))
+                    HydrusData.Print( 'Successfully changed modified time of "{}" from {} to {}.'.format( path, HydrusTime.TimestampToPrettyTime( int( existing_modified_time ) ), HydrusTime.TimestampToPrettyTime( int( modified_timestamp ) ) ))
                     
                 except PermissionError:
                     
-                    HydrusData.Print( 'Tried to set modified time of {} to file "{}", but did not have permission!'.format( HydrusTime.TimestampToPrettyTime( modified_timestamp ), path ) )
+                    HydrusData.Print( 'Tried to set modified time of {} to file "{}", but did not have permission!'.format( HydrusTime.TimestampToPrettyTime( int( modified_timestamp ) ), path ) )
                     
                 
             

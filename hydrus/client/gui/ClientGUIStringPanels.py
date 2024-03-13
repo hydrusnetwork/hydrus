@@ -684,15 +684,6 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         string_converter = self._GetValue()
         
-        try:
-            
-            string_converter.Convert( self._example_string.text() )
-            
-        except HydrusExceptions.StringConvertException:
-            
-            raise HydrusExceptions.VetoException( 'Please enter an example text that can be converted!' )
-            
-        
         return string_converter
         
     

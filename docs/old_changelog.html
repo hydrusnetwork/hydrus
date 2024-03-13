@@ -35,6 +35,30 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_566"><a href="#version_566">version 566</a></h2>
+                    <ul>
+                        <li><h3>incremental tagging</h3></li>
+                        <li>when you boot a 'manage tags' dialog on multiple files, a new `±` button now lets you do 'incremental tagging'. this is where you, let's say for twenty files, tag them from page:1->page:20. this has been a long time in the works, but now we have thumbnail reorganisation tech, it is now sensible to do.</li>
+                        <li>the dialog lets you set a namespace (or none), start point (e.g. you can start tagging at page:19 if you are doing the second chapter etc...), the step (you can count by +2 every file, instead of +1, or even -1 to decrement), the subtag prefix (so you can say 'page:insert-4' or something), and the subtag suffix (for, say, 'page:2 (wip)')</li>
+                        <li>the last namespace is remembered between dialog opens, and if the first file in the selection has a number tag in that namespace, that is the number the 'start' will initialise with. a bit of overlap/prep may save time here!</li>
+                        <li>the prefix and suffix are remembered between dialog opens</li>
+                        <li>a status text gives you a live preview of what you will be adding and says whether any of the files already have exactly those tags or have different tags under the same namespace (which would be possible conflicts, suggesting you are not lined up correct)</li>
+                        <li><h3>misc</h3></li>
+                        <li>added import support for .docx, .xlsx, and .pptx files (the Microsoft Open XML Formats). they get icons, not much else. they are secretly zips, so **on update, you will be asked if you want to scan your existing zips for these formats**</li>
+                        <li>when you move a window to another screen in a maximised state (e.g. on Windows you can do this with win+shift+arrow), the system that remembers window coordinates will now register and save this. the 'restore' window size is preserved from whatever it was on the previous screen while the 'restore' position will try to stay the same on the new monitor (e.g. if it was at (200, 400) on the old monitor, it will try to do the same on the new) as long as the window fits, otherwise it is moved to (20,20) on the new screen</li>
+                        <li>the 'edit string converter' panel no longer requires you to enter an example text that can be converted. you can see the error on the dialog, so if you don't want to fix it, or you just need to nip in and out testing things, it is now up to you</li>
+                        <li>if the database takes a long time to update, the 'just woke up from sleep' state should no longer trigger. the system thought the long weird early delay was the computer going to sleep</li>
+                        <li>the system that gives a popup and then a dialog when you have 165+ (and then 500+ or so) pages open is now removed. this was always a wx thing primarily, and Qt is much happier about having a whole load of UI elements. the main problem here is now memory blot and UI-update lag. this is now in the user's hands alone, no more bothering from me (unless it becomes a new problem, and I'll figure out a better warning test/system)</li>
+                        <li><h3>boring code cleanup</h3></li>
+                        <li>neatened how some manage tags ui is initialised. there's a hair of a chance this fixes the 'the manage tags dialog taglist is cut off sometimes' bug</li>
+                        <li>neatened how some pending content updates are held in manage tags</li>
+                        <li>manage tags dialogs now receive their media list in the same order as the underlying thumbnail selection, ha ha ha</li>
+                        <li>untangled some of the presentation import options. stuff like 'is new or in inbox' gets slightly better description labels and cleaner actual logic code</li>
+                        <li>fixed some type issues, some typo'd pubsubs, and other misc linting</li>
+                        <li>tried last week's aborted github build update again. the build is now Node 20 compatible</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_565"><a href="#version_565">version 565</a></h2>
                     <ul>
                         <li><h3>tag sorting bonanza</h3></li>

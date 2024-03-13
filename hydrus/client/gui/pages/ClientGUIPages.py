@@ -1,5 +1,4 @@
 import collections
-import hashlib
 import os
 import typing
 
@@ -10,7 +9,6 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -3128,48 +3126,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             return current_page.NewPage( management_controller, initial_hashes = initial_hashes, forced_insertion_index = forced_insertion_index, on_deepest_notebook = on_deepest_notebook )
             
         
-        WARNING_TOTAL_PAGES = self._controller.new_options.GetInteger( 'total_pages_warning' )
-        MAX_TOTAL_PAGES = max( 500, WARNING_TOTAL_PAGES * 2 )
-        
-        (
-            total_active_page_count,
-            total_active_num_hashes,
-            total_active_num_seeds,
-            total_closed_page_count,
-            total_closed_num_hashes,
-            total_closed_num_seeds
-        ) = self._controller.gui.GetTotalPageCounts()
-        
-        if total_active_page_count + total_closed_page_count >= WARNING_TOTAL_PAGES:
-            
-            self._controller.gui.DeleteAllClosedPages()
-            
-        
-        if not HG.no_page_limit_mode:
-            
-            if total_active_page_count >= MAX_TOTAL_PAGES and not ClientGUIFunctions.DialogIsOpen():
-                
-                message = 'The client should not have more than ' + str( MAX_TOTAL_PAGES ) + ' pages open, as it leads to program instability! Are you sure you want to open more pages?'
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Too many pages!', yes_label = 'yes, and do not tell me again', no_label = 'no' )
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    HG.no_page_limit_mode = True
-                    
-                    self._controller.pub( 'notify_new_options' )
-                    
-                else:
-                    
-                    return None
-                    
-                
-            
-            if total_active_page_count == WARNING_TOTAL_PAGES:
-                
-                HydrusData.ShowText( 'You have ' + str( total_active_page_count ) + ' pages open! You can only open a few more before program stability is affected! Please close some now!' )
-                
-            
+        # the 'too many pages open' thing used to be here
         
         self._controller.ResetIdleTimer()
         self._controller.ResetPageChangeTimer()

@@ -658,7 +658,7 @@ def ConvertMouseEventToShortcut( event: QG.QMouseEvent ):
         
         angle_delta = angle_delta_point.y()
         
-        # we used to do QP.WheelEventIsSynthesised here, but it seems some normal mice produce a billion small wheel events for smoothscroll gubbins or something, lfg
+        # we used to do QP.WheelEventIsSynthesised here (event.source() == QC.Qt.MouseEventSynthesizedBySystem and event.pointerType() != QG.QPointingDevice.PointerType.Generic), but it seems some normal mice produce a billion small wheel events for smoothscroll gubbins or something, lfg
         # so let's just try this tech for everyone
         if abs( angle_delta ) < ONE_TICK_ON_A_NORMAL_MOUSE_IN_EIGHTS_OF_A_DEGREE:
             

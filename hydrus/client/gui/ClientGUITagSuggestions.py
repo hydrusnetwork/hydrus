@@ -171,13 +171,13 @@ class FavouritesTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
-    def __init__( self, parent, service_key, tag_presentation_location: int, media, activate_callable ):
+    def __init__( self, parent, service_key, tag_presentation_location: int, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._tag_presentation_location = tag_presentation_location
-        self._media = media
+        self._media = []
         
         vbox = QP.VBoxLayout()
         
@@ -224,12 +224,12 @@ class RecentTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
-        self._media = media
+        self._media = []
         
         self._last_fetched_tags = []
         
@@ -332,12 +332,12 @@ class RelatedTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
-        self._media = media
+        self._media = []
         
         self._last_fetched_predicates = []
         
@@ -591,12 +591,12 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
-    def __init__( self, parent, service_key, media, activate_callable ):
+    def __init__( self, parent, service_key, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
-        self._media = media
+        self._media = []
         self._last_fetched_tags = []
         
         self._script_choice = ClientGUICommon.BetterChoice( self )
@@ -787,13 +787,13 @@ class SuggestedTagsPanel( QW.QWidget ):
     
     mouseActivationOccurred = QC.Signal()
     
-    def __init__( self, parent, service_key, tag_presentation_location, media, activate_callable ):
+    def __init__( self, parent, service_key, tag_presentation_location, handling_one_media, activate_callable ):
         
         QW.QWidget.__init__( self, parent )
         
         self._service_key = service_key
         self._tag_presentation_location = tag_presentation_location
-        self._media = media
+        self._media = []
         
         self._new_options = CG.client_controller.new_options
         
@@ -820,7 +820,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         if len( favourites ) > 0:
             
-            self._favourite_tags = FavouritesTagsPanel( panel_parent, service_key, self._tag_presentation_location, media, activate_callable )
+            self._favourite_tags = FavouritesTagsPanel( panel_parent, service_key, self._tag_presentation_location, activate_callable )
             
             self._favourite_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
             
@@ -831,7 +831,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         if self._new_options.GetBoolean( 'show_related_tags' ):
             
-            self._related_tags = RelatedTagsPanel( panel_parent, service_key, media, activate_callable )
+            self._related_tags = RelatedTagsPanel( panel_parent, service_key, activate_callable )
             
             self._related_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
             
@@ -840,9 +840,9 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         self._file_lookup_script_tags = None
         
-        if self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) and len( media ) == 1:
+        if self._new_options.GetBoolean( 'show_file_lookup_script_tags' ) and handling_one_media:
             
-            self._file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, media, activate_callable )
+            self._file_lookup_script_tags = FileLookupScriptTagsPanel( panel_parent, service_key, activate_callable )
             
             self._file_lookup_script_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
             
@@ -853,7 +853,7 @@ class SuggestedTagsPanel( QW.QWidget ):
         
         if self._new_options.GetNoneableInteger( 'num_recent_tags' ) is not None:
             
-            self._recent_tags = RecentTagsPanel( panel_parent, service_key, media, activate_callable )
+            self._recent_tags = RecentTagsPanel( panel_parent, service_key, activate_callable )
             
             self._recent_tags.mouseActivationOccurred.connect( self.mouseActivationOccurred )
             

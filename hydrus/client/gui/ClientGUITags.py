@@ -315,6 +315,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return tag_autocomplete_options
         
     
+
 class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ):
@@ -1939,9 +1940,297 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateStatus()
         
     
+
+class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
+    
+    def __init__( self, parent: QW.QWidget, service_key: bytes, medias: typing.List[ ClientMedia.MediaSingleton ] ):
+        
+        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        
+        self._service_key = service_key
+        self._medias = medias
+        self._namespaces_to_medias_to_namespaced_subtags = collections.defaultdict( dict )
+        
+        self._service = CG.client_controller.services_manager.GetService( self._service_key )
+        
+        self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
+        
+        label = 'Here you can add numerical tags incrementally to a selection of files, for instance adding page:1 -> page:20 to twenty files.'
+        
+        self._top_st = ClientGUICommon.BetterStaticText( self, label = label )
+        self._top_st.setWordWrap( True )
+        
+        self._namespace = QW.QLineEdit( self )
+        initial_namespace = CG.client_controller.new_options.GetString( 'last_incremental_tagging_namespace' )
+        self._namespace.setText( initial_namespace )
+        
+        # let's make this dialog a reasonable landscape shape
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._namespace, 64 )
+        self._namespace.setFixedWidth( width )
+        
+        self._prefix = QW.QLineEdit( self )
+        initial_prefix = CG.client_controller.new_options.GetString( 'last_incremental_tagging_prefix' )
+        self._prefix.setText( initial_prefix )
+        
+        self._suffix = QW.QLineEdit( self )
+        initial_suffix = CG.client_controller.new_options.GetString( 'last_incremental_tagging_suffix' )
+        self._suffix.setText( initial_suffix )
+        
+        initial_start = self._GetInitialStart()
+        
+        self._start = ClientGUICommon.BetterSpinBox( self, initial = initial_start, min = -10000000, max = 10000000 )
+        tt = 'If you initialise this dialog and the first file already has that namespace, this widget will start with that version! A little overlap/prep may help here!'
+        self._start.setToolTip( tt )
+        
+        self._step = ClientGUICommon.BetterSpinBox( self, initial = 1, min = -10000, max = 10000 )
+        tt = 'This sets how much the numerical tag should increment with each iteration. Negative values are fine and will decrement.'
+        self._step.setToolTip( tt )
+        
+        label = 'initialising\n\ninitialising'
+        self._summary_st = ClientGUICommon.BetterStaticText( self, label = label )
+        self._summary_st.setWordWrap( True )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'namespace: ', self._namespace ) )
+        rows.append( ( 'start: ', self._start ) )
+        rows.append( ( 'step: ', self._step ) )
+        rows.append( ( 'prefix: ', self._prefix ) )
+        rows.append( ( 'suffix: ', self._suffix ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._top_st, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._summary_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( vbox )
+        
+        #
+        
+        self._namespace.textChanged.connect( self._UpdateNamespace )
+        self._prefix.textChanged.connect( self._UpdatePrefix )
+        self._suffix.textChanged.connect( self._UpdateSuffix )
+        self._start.valueChanged.connect( self._UpdateSummary )
+        self._step.valueChanged.connect( self._UpdateSummary )
+        
+        self._UpdateSummary()
+        
+    
+    def _GetInitialStart( self ):
+        
+        namespace = self._namespace.text()
+        
+        first_media = self._medias[0]
+        
+        medias_to_namespaced_subtags = self._GetMediasToNamespacedSubtags( namespace )
+        
+        namespaced_subtags = HydrusTags.SortNumericTags( medias_to_namespaced_subtags[ first_media ] )
+        
+        for subtag in namespaced_subtags:
+            
+            if subtag.isdecimal():
+                
+                return int( subtag )
+                
+            
+        
+        return 1
+        
+    
+    def _GetMediaAndTagPairs( self ) -> typing.List[ typing.Tuple[ ClientMedia.MediaSingleton, str ] ]:
+        
+        tag_template = self._GetTagTemplate()
+        start = self._start.value()
+        step = self._step.value()
+        prefix = self._prefix.text()
+        suffix = self._suffix.text()
+        
+        result = []
+        
+        for ( i, media ) in enumerate( self._medias ):
+            
+            number = start + i * step
+            
+            subtag = f'{prefix}{number}{suffix}'
+            
+            tag = tag_template.format( subtag )
+            
+            result.append( ( media, tag ) )
+            
+        
+        return result
+        
+    
+    def _GetMediasToNamespacedSubtags( self, namespace: str ):
+        
+        if namespace not in self._namespaces_to_medias_to_namespaced_subtags:
+            
+            medias_to_namespaced_subtags = dict()
+            
+            for media in self._medias:
+                
+                namespaced_subtags = set()
+                
+                current_and_pending_tags = media.GetTagsManager().GetCurrentAndPending( self._service_key, ClientTags.TAG_DISPLAY_STORAGE )
+                
+                for tag in current_and_pending_tags:
+                    
+                    ( n, subtag ) = HydrusTags.SplitTag( tag )
+                    
+                    if n == namespace:
+                        
+                        namespaced_subtags.add( subtag )
+                        
+                    
+                
+                medias_to_namespaced_subtags[ media ] = namespaced_subtags
+                
+            
+            self._namespaces_to_medias_to_namespaced_subtags[ namespace ] = medias_to_namespaced_subtags
+            
+        
+        return self._namespaces_to_medias_to_namespaced_subtags[ namespace ]
+        
+    
+    def _GetTagTemplate( self ):
+        
+        namespace = self._namespace.text()
+        
+        if namespace == '':
+            
+            return '{}'
+            
+        else:
+            
+            return namespace + ':{}'
+            
+        
+    
+    def _UpdateNamespace( self ):
+        
+        namespace = self._namespace.text()
+        
+        CG.client_controller.new_options.SetString( 'last_incremental_tagging_namespace', namespace )
+        
+        self._UpdateSummary()
+        
+    
+    def _UpdatePrefix( self ):
+        
+        prefix = self._prefix.text()
+        
+        CG.client_controller.new_options.SetString( 'last_incremental_tagging_prefix', prefix )
+        
+        self._UpdateSummary()
+        
+    
+    def _UpdateSuffix( self ):
+        
+        suffix = self._suffix.text()
+        
+        CG.client_controller.new_options.SetString( 'last_incremental_tagging_suffix', suffix )
+        
+        self._UpdateSummary()
+        
+    
+    def _UpdateSummary( self ):
+        
+        file_summary = f'{HydrusData.ToHumanInt(len(self._medias))} files'
+        
+        medias_and_tags = self._GetMediaAndTagPairs()
+        
+        if len( medias_and_tags ) <= 4:
+            
+            tag_summary = ', '.join( ( tag for ( media, tag ) in medias_and_tags ) )
+            
+        else:
+            
+            tag_summary = ', '.join( ( tag for ( media, tag ) in medias_and_tags[:3] ) ) + f' {HC.UNICODE_ELLIPSIS} ' + medias_and_tags[-1][1]
+            
+        
+        #
+        
+        namespace = self._namespace.text()
+        
+        medias_to_namespaced_subtags = self._GetMediasToNamespacedSubtags( namespace )
+        
+        already_count = 0
+        disagree_count = 0
+        
+        for ( media, tag ) in medias_and_tags:
+            
+            ( n, subtag ) = HydrusTags.SplitTag( tag )
+            
+            namespaced_subtags = medias_to_namespaced_subtags[ media ]
+            
+            if subtag in namespaced_subtags:
+                
+                already_count += 1
+                
+            elif len( namespaced_subtags ) > 0:
+                
+                disagree_count += 1
+                
+            
+        
+        if already_count == 0 and disagree_count == 0:
+            
+            conflict_summary = 'No conflicts, this all looks fresh!'
+            
+        elif disagree_count == 0:
+            
+            if already_count == len( self._medias ):
+                
+                conflict_summary = 'All the files already have these tags. This will make no changes.'
+                
+            else:
+                
+                conflict_summary = f'{HydrusData.ToHumanInt( already_count )} files already have these tags.'
+                
+            
+        elif already_count == 0:
+            
+            conflict_summary = f'{HydrusData.ToHumanInt( disagree_count )} files already have different tags for this namespace. Are you sure you are lined up correct?'
+            
+        else:
+            
+            conflict_summary = f'{HydrusData.ToHumanInt( already_count )} files already have these tags, and {HydrusData.ToHumanInt( disagree_count )} files already have different tags for this namespace. Are you sure you are lined up correct?'
+            
+        
+        label = f'For the {file_summary}, you are setting {tag_summary}.'
+        label += '\n' * 2
+        label += f'{conflict_summary}'
+        
+        self._summary_st.setText( label )
+        
+    
+    def GetValue( self ) -> ClientContentUpdates.ContentUpdatePackage:
+        
+        if self._i_am_local_tag_service:
+            
+            content_action = HC.CONTENT_UPDATE_ADD
+            
+        else:
+            
+            content_action = HC.CONTENT_UPDATE_PEND
+            
+        
+        medias_and_tags = self._GetMediaAndTagPairs()
+        
+        content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, { media.GetHash() } ) ) for ( media, tag ) in medias_and_tags ]
+        
+        return ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates )
+        
+    
+
 class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
     
-    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: typing.Collection[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
+    def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: typing.List[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         CAC.ApplicationCommandProcessorMixin.__init__( self )
@@ -2260,7 +2549,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         showNext = QC.Signal()
         valueChanged = QC.Signal()
         
-        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media, immediate_commit, canvas_key = None ):
+        def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media: typing.List[ ClientMedia.MediaSingleton ], immediate_commit, canvas_key = None ):
             
             QW.QWidget.__init__( self, parent )
             CAC.ApplicationCommandProcessorMixin.__init__( self )
@@ -2271,7 +2560,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._immediate_commit = immediate_commit
             self._canvas_key = canvas_key
             
-            self._groups_of_content_updates = []
+            self._pending_content_update_packages = []
             
             self._service = CG.client_controller.services_manager.GetService( self._tag_service_key )
             
@@ -2335,6 +2624,13 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 menu_items.append( ( 'normal', 'modify users who added the selected tags', 'Modify the users who added the selected tags.', self._ModifyMappers ) )
                 
             
+            self._incremental_tagging_button = ClientGUICommon.BetterButton( self._tags_box_sorter, HC.UNICODE_PLUS_OR_MINUS, self._DoIncrementalTagging )
+            self._incremental_tagging_button.setToolTip( 'Incremental Tagging' )
+            self._incremental_tagging_button.setVisible( len( media ) > 1 )
+            
+            width = ClientGUIFunctions.ConvertTextToPixelWidth( self._incremental_tagging_button, 5 )
+            self._incremental_tagging_button.setFixedWidth( width )
+            
             self._cog_button = ClientGUIMenuButton.MenuBitmapButton( self._tags_box_sorter, CC.global_pixmaps().cog, menu_items )
             
             #
@@ -2350,7 +2646,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._tags_box.SetTagServiceKey( self._tag_service_key )
             
-            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._tag_presentation_location, media, self.AddTags )
+            self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._tag_presentation_location, len( media ) == 1, self.AddTags )
             
             self.SetMedia( media )
             
@@ -2359,6 +2655,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             QP.AddToLayout( button_hbox, self._remove_tags, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
+            QP.AddToLayout( button_hbox, self._incremental_tagging_button, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( button_hbox, self._cog_button, CC.FLAGS_CENTER )
             
             self._tags_box_sorter.Add( button_hbox, CC.FLAGS_ON_RIGHT )
@@ -2401,6 +2698,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             
             tags_managers = [ m.GetTagsManager() for m in self._media ]
+            
+            # TODO: All this should be extracted to another object that does some prep work and then answers questions like 'can I add this tag?' or 'what are the human-text/content-action choices for this tag?'
+            # then we'll be able to do quick-add in other locations and so on with less hassle!
             
             currents = [ tags_manager.GetCurrent( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
             pendings = [ tags_manager.GetPending( self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE ) for tags_manager in tags_managers ]
@@ -2638,7 +2938,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             # we have an action and tags, so let's effect the content updates
             
-            content_updates_group = []
+            content_updates_for_this_call = []
             
             recent_tags = set()
             
@@ -2686,7 +2986,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                                 
                             
                         
-                        content_updates_group.extend( content_updates )
+                        content_updates_for_this_call.extend( content_updates )
                         
                     
                 
@@ -2705,17 +3005,17 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 CG.client_controller.Write( 'push_recent_tags', self._tag_service_key, recent_tags )
                 
             
-            if len( content_updates_group ) > 0:
+            if len( content_updates_for_this_call ) > 0:
+                
+                content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates_for_this_call )
                 
                 if self._immediate_commit:
-                    
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates_group )
                     
                     CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
                     
                 else:
                     
-                    self._groups_of_content_updates.append( content_updates_group )
+                    self._pending_content_update_packages.append( content_update_package )
                     
                     self._suggested_tags.MediaUpdated()
                     
@@ -2724,6 +3024,65 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._tags_box.SetTagsByMedia( self._media )
             
             self.valueChanged.emit()
+            
+        
+        def _Copy( self ):
+            
+            tags = list( self._tags_box.GetSelectedTags() )
+            
+            if len( tags ) == 0:
+                
+                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( self._media, self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
+                
+                tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
+                
+            
+            if len( tags ) > 0:
+                
+                tags = HydrusTags.SortNumericTags( tags )
+                
+                text = os.linesep.join( tags )
+                
+                CG.client_controller.pub( 'clipboard', 'text', text )
+                
+            
+        
+        def _DoIncrementalTagging( self ):
+            
+            title = 'Incremental Tagging'
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+                
+                panel = IncrementalTaggingPanel( dlg, self._tag_service_key, self._media )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    content_update_package = panel.GetValue()
+                    
+                    if content_update_package.HasContent():
+                        
+                        if self._immediate_commit:
+                            
+                            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+                            
+                        else:
+                            
+                            self._pending_content_update_packages.append( content_update_package )
+                            
+                            self.ProcessContentUpdatePackage( content_update_package )
+                            
+                        
+                    
+                
+            
+        
+        def _FlipShowDeleted( self ):
+            
+            self._show_deleted = not self._show_deleted
+            
+            self._tags_box.SetShow( 'deleted', self._show_deleted )
             
         
         def _MigrateTags( self ):
@@ -2749,34 +3108,6 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             QP.CallAfter( do_it, self._tag_service_key, hashes )
             
             self.OK()
-            
-        
-        def _Copy( self ):
-            
-            tags = list( self._tags_box.GetSelectedTags() )
-            
-            if len( tags ) == 0:
-                
-                ( current_tags_to_count, deleted_tags_to_count, pending_tags_to_count, petitioned_tags_to_count ) = ClientMedia.GetMediasTagCount( self._media, self._tag_service_key, ClientTags.TAG_DISPLAY_STORAGE )
-                
-                tags = set( current_tags_to_count.keys() ).union( pending_tags_to_count.keys() )
-                
-            
-            if len( tags ) > 0:
-                
-                tags = HydrusTags.SortNumericTags( tags )
-                
-                text = os.linesep.join( tags )
-                
-                CG.client_controller.pub( 'clipboard', 'text', text )
-                
-            
-        
-        def _FlipShowDeleted( self ):
-            
-            self._show_deleted = not self._show_deleted
-            
-            self._tags_box.SetShow( 'deleted', self._show_deleted )
             
         
         def _ModifyMappers( self ):
@@ -2901,19 +3232,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def GetContentUpdatePackages( self ):
             
-            content_update_packages = []
-            
-            for content_updates in self._groups_of_content_updates:
-                
-                if len( content_updates ) > 0:
-                    
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._tag_service_key, content_updates )
-                    
-                    content_update_packages.append( content_update_package )
-                    
-                
-            
-            return content_update_packages
+            return self._pending_content_update_packages
             
         
         def GetTagCount( self ):
@@ -2928,7 +3247,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def HasChanges( self ):
             
-            return len( self._groups_of_content_updates ) > 0
+            return len( self._pending_content_update_packages ) > 0
             
         
         def OK( self ):

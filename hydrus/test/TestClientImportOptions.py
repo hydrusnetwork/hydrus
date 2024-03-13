@@ -838,7 +838,7 @@ class TestPresentationImportOptions( unittest.TestCase ):
         presentation_import_options = PresentationImportOptions.PresentationImportOptions()
         
         presentation_import_options.SetPresentationStatus( PresentationImportOptions.PRESENTATION_STATUS_NEW_ONLY )
-        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX )
+        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX )
         presentation_import_options.SetLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) )
         
         pre_inbox_filter_expected_result = {

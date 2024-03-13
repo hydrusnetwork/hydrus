@@ -436,8 +436,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
         self._dictionary[ 'integers' ][ 'ideal_tile_dimension' ] = 768
         
-        self._dictionary[ 'integers' ][ 'total_pages_warning' ] = 165
-        
         self._dictionary[ 'integers' ][ 'wake_delay_period' ] = 15
         
         from hydrus.client.gui.canvas import ClientGUICanvasMedia
@@ -652,6 +650,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'strings' ][ 'has_duration_label' ] = ' \u23F5 '
         self._dictionary[ 'strings' ][ 'discord_dnd_filename_pattern' ] = '{hash}'
         self._dictionary[ 'strings' ][ 'default_suggested_tags_notebook_page' ] = 'related'
+        self._dictionary[ 'strings' ][ 'last_incremental_tagging_namespace' ] = 'page'
+        self._dictionary[ 'strings' ][ 'last_incremental_tagging_prefix' ] = ''
+        self._dictionary[ 'strings' ][ 'last_incremental_tagging_suffix' ] = ''
         
         self._dictionary[ 'string_list' ] = {}
         
@@ -2025,18 +2026,16 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def SetString( self, name, value ):
         
+        if value is None:
+            
+            value = ''
+            
+        
         with self._lock:
             
-            it_changed = False
-            
-            if value is not None and value != '':
+            if self._dictionary[ 'strings' ][ name ] != value:
                 
-                if self._dictionary[ 'strings' ][ name ] != value:
-                    
-                    self._dictionary[ 'strings' ][ name ] = value
-                    
-                    it_changed = True
-                    
+                self._dictionary[ 'strings' ][ name ] = value
                 
             
         

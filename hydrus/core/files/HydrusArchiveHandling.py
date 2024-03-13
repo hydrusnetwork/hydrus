@@ -289,8 +289,37 @@ def MimeFromOpenDocument( path ):
         mimetype_data = GetZipAsPath( path, 'mimetype' ).read_text()
         
         filetype = HC.mime_enum_lookup.get(mimetype_data, None)
-
+        
         return filetype if filetype in HC.OPEN_DOCUMENT_ZIPS else None
+        
+    except:
+        
+        return None
+        
+    
+
+def MimeFromMicrosoftOpenXMLDocument( path ):
+    
+    try:
+        
+        content_types = GetZipAsPath( path, '[Content_Types].xml' ).read_text()
+        
+        if 'application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml' in content_types:
+            
+            return HC.APPLICATION_MICROSOFT_OPEN_XML_DOCX
+            
+        elif 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml' in content_types:
+            
+            return HC.APPLICATION_MICROSOFT_OPEN_XML_XLSX
+            
+        elif 'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml' in content_types:
+            
+            return HC.APPLICATION_MICROSOFT_OPEN_XML_PPTX
+            
+        else:
+            
+            return None
+            
         
     except:
         

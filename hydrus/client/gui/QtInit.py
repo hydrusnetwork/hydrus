@@ -219,6 +219,7 @@ elif hasattr( qtpy, 'PYQT6' ) and qtpy.PYQT6:
             
         
         return True
+        
     
 elif qtpy.PYSIDE2:
     

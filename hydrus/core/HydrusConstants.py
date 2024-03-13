@@ -105,7 +105,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 565
+SOFTWARE_VERSION = 566
 CLIENT_API_VERSION = 62
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -741,6 +741,9 @@ APPLICATION_DJVU = 72
 APPLICATION_CBZ = 73
 ANIMATION_UGOIRA = 74
 APPLICATION_RTF = 75
+APPLICATION_MICROSOFT_OPEN_XML_DOCX = 76
+APPLICATION_MICROSOFT_OPEN_XML_XLSX = 77
+APPLICATION_MICROSOFT_OPEN_XML_PPTX = 78
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -791,6 +794,9 @@ SEARCHABLE_MIMES = {
     APPLICATION_XCF,
     APPLICATION_PROCREATE,
     APPLICATION_PDF,
+    APPLICATION_MICROSOFT_OPEN_XML_DOCX,
+    APPLICATION_MICROSOFT_OPEN_XML_XLSX,
+    APPLICATION_MICROSOFT_OPEN_XML_PPTX,
     APPLICATION_EPUB,
     APPLICATION_DJVU,
     APPLICATION_RTF,
@@ -889,6 +895,9 @@ APPLICATIONS = [
     APPLICATION_PDF,
     APPLICATION_EPUB,
     APPLICATION_DJVU,
+    APPLICATION_MICROSOFT_OPEN_XML_DOCX,
+    APPLICATION_MICROSOFT_OPEN_XML_XLSX,
+    APPLICATION_MICROSOFT_OPEN_XML_PPTX,
     APPLICATION_RTF
 ]
 
@@ -914,6 +923,9 @@ VIEWABLE_IMAGE_PROJECT_FILES = { APPLICATION_PSD, APPLICATION_KRITA }
 
 # zip files that have a `mimetype` file inside
 OPEN_DOCUMENT_ZIPS = { APPLICATION_KRITA, APPLICATION_EPUB }
+
+# zip files that have a `[Content_Types].xml` file inside
+MICROSOFT_OPEN_XML_DOCUMENT_ZIPS = { APPLICATION_MICROSOFT_OPEN_XML_DOCX, APPLICATION_MICROSOFT_OPEN_XML_XLSX, APPLICATION_MICROSOFT_OPEN_XML_PPTX }
 
 general_mimetypes_to_mime_groups = {
     GENERAL_APPLICATION : APPLICATIONS,
@@ -1029,6 +1041,9 @@ mime_enum_lookup = {
     'application/x-yaml' : APPLICATION_YAML,
     'PDF document' : APPLICATION_PDF,
     'application/pdf' : APPLICATION_PDF,
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : APPLICATION_MICROSOFT_OPEN_XML_DOCX,
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : APPLICATION_MICROSOFT_OPEN_XML_XLSX,
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation' : APPLICATION_MICROSOFT_OPEN_XML_PPTX,
     'application/epub+zip' : APPLICATION_EPUB,
     'image/vnd.djvu' : APPLICATION_DJVU,
     'image/vnd.djvu+multipage' : APPLICATION_DJVU,
@@ -1101,6 +1116,9 @@ mime_string_lookup = {
     APPLICATION_JSON : 'json',
     APPLICATION_CBOR : 'cbor',
     APPLICATION_PDF : 'pdf',
+    APPLICATION_MICROSOFT_OPEN_XML_DOCX : 'docx',
+    APPLICATION_MICROSOFT_OPEN_XML_XLSX : 'xlsx',
+    APPLICATION_MICROSOFT_OPEN_XML_PPTX : 'pptx',
     APPLICATION_EPUB : 'epub',
     APPLICATION_DJVU : 'djvu',
     APPLICATION_RTF : 'rtf',
@@ -1183,6 +1201,9 @@ mime_mimetype_string_lookup = {
     APPLICATION_JSON : 'application/json',
     APPLICATION_CBOR : 'application/cbor',
     APPLICATION_PDF : 'application/pdf',
+    APPLICATION_MICROSOFT_OPEN_XML_DOCX : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    APPLICATION_MICROSOFT_OPEN_XML_XLSX : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    APPLICATION_MICROSOFT_OPEN_XML_PPTX : 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     APPLICATION_EPUB : 'application/epub+zip',
     APPLICATION_DJVU : 'image/vnd.djvu',
     APPLICATION_RTF: 'application/rtf',
@@ -1263,6 +1284,9 @@ mime_ext_lookup = {
     APPLICATION_YAML : '.yaml',
     APPLICATION_JSON : '.json',
     APPLICATION_PDF : '.pdf',
+    APPLICATION_MICROSOFT_OPEN_XML_DOCX : '.docx',
+    APPLICATION_MICROSOFT_OPEN_XML_XLSX : '.xlsx',
+    APPLICATION_MICROSOFT_OPEN_XML_PPTX : '.pptx',
     APPLICATION_EPUB : '.epub',
     APPLICATION_DJVU : '.djvu',
     APPLICATION_RTF : '.rtf',

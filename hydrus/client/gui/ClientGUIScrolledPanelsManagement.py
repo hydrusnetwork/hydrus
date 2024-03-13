@@ -1591,12 +1591,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._notebook_tab_alignment.addItem( CC.directions_alignment_string_lookup[ value ], value )
                 
             
-            self._total_pages_warning = ClientGUICommon.BetterSpinBox( self._pages_panel, min=5, max=65565 )
-            
-            tt = 'If you have a gigantic session, or you have very page-spammy subscriptions, you can try boosting this, but be warned it may lead to resource limit crashes. The best solution to a large session is to make it smaller!'
-            
-            self._total_pages_warning.setToolTip( tt )
-            
             self._page_drop_chase_normally = QW.QCheckBox( self._pages_panel )
             self._page_drop_chase_normally.setToolTip( 'When you drop a page to a new location, should hydrus follow the page selection to the new location?' )
             self._page_drop_chase_with_shift = QW.QCheckBox( self._pages_panel )
@@ -1694,8 +1688,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._wheel_scrolls_tab_bar.setChecked( self._new_options.GetBoolean( 'wheel_scrolls_tab_bar' ) )
             
-            self._total_pages_warning.setValue( self._new_options.GetInteger( 'total_pages_warning' ) )
-            
             self._disable_page_tab_dnd.setChecked( self._new_options.GetBoolean( 'disable_page_tab_dnd' ) )
             
             self._force_hide_page_signal_on_new_page.setChecked( self._new_options.GetBoolean( 'force_hide_page_signal_on_new_page' ) )
@@ -1727,7 +1719,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Navigate tabs during drag and drop: ', self._page_drag_change_tab_normally ) )
             rows.append( ( '  With shift held down?: ', self._page_drag_change_tab_with_shift ) )
             rows.append( ( 'EXPERIMENTAL: Mouse wheel scrolls tab bar, not page selection: ', self._wheel_scrolls_tab_bar ) )
-            rows.append( ( 'Warn at this many total pages: ', self._total_pages_warning ) )
             rows.append( ( 'BUGFIX: Disable all page tab drag and drop: ', self._disable_page_tab_dnd ) )
             rows.append( ( 'BUGFIX: Force \'hide page\' signal when creating a new page: ', self._force_hide_page_signal_on_new_page ) )
             
@@ -1803,8 +1794,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'page_file_count_display', self._page_file_count_display.GetValue() )
             self._new_options.SetBoolean( 'import_page_progress_display', self._import_page_progress_display.isChecked() )
-            
-            self._new_options.SetInteger( 'total_pages_warning', self._total_pages_warning.value() )
             
             self._new_options.SetBoolean( 'disable_page_tab_dnd', self._disable_page_tab_dnd.isChecked() )
             self._new_options.SetBoolean( 'force_hide_page_signal_on_new_page', self._force_hide_page_signal_on_new_page.isChecked() )

@@ -587,6 +587,9 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         self.db = self._InitDB()
         
+        # reset after a long db update
+        self.TouchTime( 'last_sleep_check' )
+        
     
     def InitView( self ):
         

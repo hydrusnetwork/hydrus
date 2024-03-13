@@ -1166,7 +1166,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def _ManageTags( self ):
         
-        flat_media = ClientMedia.FlattenMedia( self._selected_media )
+        flat_media = ClientMedia.FlattenMedia( self._GetSelectedMediaOrdered() )
         
         if len( flat_media ) > 0:
             

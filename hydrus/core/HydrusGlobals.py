@@ -72,7 +72,6 @@ daemon_report_mode = False
 mpv_report_mode = False
 
 force_idle_mode = False
-no_page_limit_mode = False
 thumbnail_debug_mode = False
 autocomplete_delay_mode = False
 blurhash_mode = False

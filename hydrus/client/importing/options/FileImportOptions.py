@@ -196,7 +196,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
                     
                     if present_already_in_inbox_files:
                         
-                        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX )
+                        presentation_import_options.SetPresentationInbox( PresentationImportOptions.PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX )
                         
                     
                 

@@ -10377,6 +10377,42 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 565:
+            
+            def ask_what_to_do_zip_docx_scan():
+                
+                message = 'Hey, hydrus can now recognise the Microsoft document types .docx, .xlsx, and .pptx. Hydrus has thought they were zip files until now. Do you want to scan your existing zips to see if any were actually .docx etc..?'
+                
+                from hydrus.client.gui import ClientGUIDialogsQuick
+                
+                result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Find docx?', yes_label = 'yes, I might have imported some', no_label = 'no, I would not have imported anything like that', auto_yes_time = 600 )
+                
+                return result == QW.QDialog.Accepted
+                
+            
+            do_docx_scan = self._controller.CallBlockingToQt( None, ask_what_to_do_zip_docx_scan )
+            
+            if do_docx_scan:
+                
+                try:
+                    
+                    table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, 'files_info', HC.CONTENT_STATUS_CURRENT )
+                    
+                    hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM {} WHERE mime IN {};'.format( table_join, HydrusData.SplayListForDB( [ HC.APPLICATION_ZIP ] ) ) ) )
+                    
+                    self.modules_files_maintenance_queue.AddJobs( hash_ids, ClientFiles.REGENERATE_FILE_DATA_JOB_FILE_METADATA )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to schedule zip files for document scan failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

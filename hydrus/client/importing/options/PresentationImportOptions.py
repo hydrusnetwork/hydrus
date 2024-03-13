@@ -17,12 +17,12 @@ presentation_status_enum_str_lookup = {
 
 PRESENTATION_INBOX_AGNOSTIC = 0
 PRESENTATION_INBOX_REQUIRE_INBOX = 1
-PRESENTATION_INBOX_INCLUDE_INBOX = 2
+PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX = 2
 
 presentation_inbox_enum_str_lookup = {
     PRESENTATION_INBOX_AGNOSTIC : 'inbox or archive',
     PRESENTATION_INBOX_REQUIRE_INBOX : 'must be in inbox',
-    PRESENTATION_INBOX_INCLUDE_INBOX : 'or in inbox'
+    PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX : 'or in inbox'
 }
 
 class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
@@ -64,13 +64,14 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._presentation_status == PRESENTATION_STATUS_NEW_ONLY:
             
-            if status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT and self._presentation_inbox != PRESENTATION_INBOX_INCLUDE_INBOX:
+            if status != CC.STATUS_SUCCESSFUL_AND_NEW and self._presentation_inbox != PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX:
                 
-                # only want new, and this is already in db
+                # only want new, and this isn't
                 
                 return True
                 
             
+        
         
         return False
         
@@ -88,6 +89,8 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
             
             return False
             
+        
+        #
         
         if self._presentation_status == PRESENTATION_STATUS_ANY_GOOD:
             
@@ -129,7 +132,14 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
             return False
             
         
-        if self._presentation_inbox == PRESENTATION_INBOX_REQUIRE_INBOX:
+        if self._presentation_inbox == PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX:
+            
+            if inbox:
+                
+                return True
+                
+            
+        elif self._presentation_inbox == PRESENTATION_INBOX_REQUIRE_INBOX:
             
             if not inbox:
                 
@@ -141,23 +151,9 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
         
         if self._presentation_status == PRESENTATION_STATUS_NEW_ONLY:
             
-            if status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
+            if status != CC.STATUS_SUCCESSFUL_AND_NEW:
                 
-                if self._presentation_inbox == PRESENTATION_INBOX_AGNOSTIC:
-                    
-                    # only want new, and this is already in db
-                    
-                    return False
-                    
-                elif self._presentation_inbox == PRESENTATION_INBOX_INCLUDE_INBOX:
-                    
-                    if not inbox:
-                        
-                        # only want new or inbox, and this is already in db and archived
-                        
-                        return False
-                        
-                    
+                return False
                 
             
         
@@ -224,11 +220,22 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
                 summary = 'new inbox files'
                 
             
-        elif self._presentation_inbox == PRESENTATION_INBOX_INCLUDE_INBOX:
+        elif self._presentation_inbox == PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX:
             
             if self._presentation_status == PRESENTATION_STATUS_NEW_ONLY:
                 
                 summary = 'new or inbox files'
+                
+            
+        elif self._presentation_inbox == PRESENTATION_INBOX_AGNOSTIC:
+            
+            if self._presentation_status == PRESENTATION_STATUS_ANY_GOOD:
+                
+                summary = 'all files'
+                
+            elif self._presentation_status == PRESENTATION_STATUS_NEW_ONLY:
+                
+                summary = 'new files'
                 
             
         
@@ -236,7 +243,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if self._location_context.IsAllLocalFiles():
                 
-                s = 'and in trash'
+                s = 'including if trashed'
                 
             else:
                 

@@ -204,21 +204,65 @@ def SaveTLWSizeAndPosition( tlw: QW.QWidget, frame_key ):
         fullscreen = tlw.isFullScreen()
         
     
-    if not ( maximised or fullscreen ):
+    ( safe_position, position_message ) = GetSafePosition( tlw.pos(), frame_key )
+    
+    if safe_position is not None:
         
-        ( safe_position, position_message ) = GetSafePosition( tlw.pos(), frame_key )
+        worth_saving_size = True
+        worth_saving_position = True
         
-        if safe_position is not None:
+        if ( maximised or fullscreen ) and last_position is not None:
             
-            if remember_size:
+            worth_saving_size = False
+            
+            # if we saved a position when it was non-maximised, we'll want to keep that in our options
+            # UNLESS the user just transported a maximised screen from another monitor using their window manager etc...
+            # in this case, where the maximised screen just teleported across screens, we want to save the new screen for the next open
+            
+            last_position_pos = QC.QPoint( last_position[0], last_position[1] )
+            
+            tlw_screen = tlw.screen()
+            saved_position_screen = QW.QApplication.screenAt( last_position_pos )
+            
+            if tlw_screen is None:
                 
-                last_size = ( tlw.size().width(), tlw.size().height() )
+                worth_saving_position = False
                 
             
-            if remember_position:
+            if saved_position_screen == tlw_screen:
                 
-                last_position = ( safe_position.x(), safe_position.y() )
+                worth_saving_position = False
                 
+            
+            if worth_saving_position:
+                
+                # nice 'just off the corner' on current maximised screen position
+                safe_position += QC.QPoint( 20, 20 )
+                
+                if tlw_screen is not None and saved_position_screen is not None:
+                    
+                    # let's see if we can move it to the same basic position on the new monitor
+                    
+                    previous_local_screen_pos = last_position_pos - saved_position_screen.geometry().topLeft()
+                    tlw_screen_pos = previous_local_screen_pos + tlw_screen.geometry().topLeft()
+                    
+                    if tlw_screen.geometry().contains( tlw_screen_pos ) and tlw_screen.geometry().contains( tlw_screen_pos + QC.QPoint( last_size[0], last_size[1] ) ):
+                        
+                        safe_position = tlw_screen_pos
+                        
+                    
+                
+                
+            
+        
+        if remember_size and worth_saving_size:
+            
+            last_size = ( tlw.size().width(), tlw.size().height() )
+            
+        
+        if remember_position and worth_saving_position:
+            
+            last_position = ( safe_position.x(), safe_position.y() )
             
         
     
@@ -665,7 +709,7 @@ class FrameThatResizes( Frame ):
     
     def CleanBeforeDestroy( self ):
         
-        MainFrame.CleanBeforeDestroy( self )
+        Frame.CleanBeforeDestroy( self )
         
         # maximise sends a pre-maximise size event that poisons last_size if this is immediate
         CG.client_controller.CallLaterQtSafe( self, 0.1, 'save frame size and position: {}'.format( self._frame_key ), SaveTLWSizeAndPosition, self, self._frame_key )

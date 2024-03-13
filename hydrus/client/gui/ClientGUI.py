@@ -3391,7 +3391,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         debug_modes = ClientGUIMenus.GenerateMenu( debug_menu )
         
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'force idle mode', 'Make the client consider itself idle and fire all maintenance routines right now. This may hang the gui for a while.', HG.force_idle_mode, self._SwitchBoolean, 'force_idle_mode' )
-        ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'no page limit mode', 'Let the user create as many pages as they want with no warnings or prohibitions.', HG.no_page_limit_mode, self._SwitchBoolean, 'no_page_limit_mode' )
         ClientGUIMenus.AppendMenuCheckItem( debug_modes, 'thumbnail debug mode', 'Show some thumbnail debug info.', HG.thumbnail_debug_mode, self._SwitchBoolean, 'thumbnail_debug_mode' )
         ClientGUIMenus.AppendMenuItem( debug_modes, 'simulate a wake from sleep', 'Tell the controller to pretend that it just woke up from sleep.', self._controller.SimulateWakeFromSleepEvent )
         
@@ -3940,7 +3939,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         job_status.SetStatusText( 'loading account types' + HC.UNICODE_ELLIPSIS )
         
-        self._controller.pub( job_status )
+        self._controller.pub( 'message', job_status )
         
         def work_callable():
             
@@ -5586,7 +5585,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         job_status.SetStatusText( 'loading accounts' + HC.UNICODE_ELLIPSIS )
         
-        self._controller.pub( job_status )
+        self._controller.pub( 'message', job_status )
         
         def work_callable():
             
@@ -6721,10 +6720,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._controller.pub( 'wake_idle_workers' )
             self.SetStatusBarDirty()
-            
-        elif name == 'no_page_limit_mode':
-            
-            HG.no_page_limit_mode = not HG.no_page_limit_mode
             
         
     

@@ -109,7 +109,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'DELETE FROM local_hashes_cache WHERE hash_id = ?;', ( ( hash_id, ) for hash_id in hash_ids ) )
         
     
-    def GetHash( self, hash_id ) -> str:
+    def GetHash( self, hash_id ) -> bytes:
         
         self._PopulateHashIdsToHashesCache( ( hash_id, ) )
         

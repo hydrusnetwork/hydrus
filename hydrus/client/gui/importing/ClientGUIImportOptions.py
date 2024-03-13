@@ -970,7 +970,7 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
                 
                 do_it = True
                 
-                allowed_values = ( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC, PresentationImportOptions.PRESENTATION_INBOX_REQUIRE_INBOX, PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX )
+                allowed_values = ( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC, PresentationImportOptions.PRESENTATION_INBOX_REQUIRE_INBOX, PresentationImportOptions.PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX )
                 
             
         else:
@@ -981,7 +981,7 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
                 
                 allowed_values = ( PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC, PresentationImportOptions.PRESENTATION_INBOX_REQUIRE_INBOX )
                 
-                if previous_presentation_inbox == PresentationImportOptions.PRESENTATION_INBOX_INCLUDE_INBOX:
+                if previous_presentation_inbox == PresentationImportOptions.PRESENTATION_INBOX_AND_INCLUDE_ALL_INBOX:
                     
                     previous_presentation_inbox = PresentationImportOptions.PRESENTATION_INBOX_AGNOSTIC
                     

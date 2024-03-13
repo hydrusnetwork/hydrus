@@ -1356,7 +1356,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.RestartClientServerServices()
         
-        job = self.CallRepeatingQtSafe( self, 10.0, 10.0, 'repeating mouse idle check', self.CheckMouseIdle )
+        job = self.CallRepeatingQtSafe( self.gui, 10.0, 10.0, 'repeating mouse idle check', self.CheckMouseIdle )
         self._daemon_jobs[ 'check_mouse_idle' ] = job
         
         if self.db.IsFirstStart():
