@@ -1,0 +1,141 @@
+/*
+Default QSS for hydrus. This is prepended to any stylesheet loaded in hydrus.
+Copying these entries in your own stylesheets should override these settings.
+This will get more work in future.
+*/
+
+/*
+
+Here are some text and background colours
+
+*/
+
+/* Example: This regex is valid */
+
+QLabel#HydrusValid
+{
+	color: #2ed42e;
+}
+
+QLineEdit#HydrusValid, QTextEdit#HydrusValid, QPlainTextEdit#HydrusValid
+{
+	background-color: #80ff80;
+}
+
+
+/* Duplicates 'middle' text colour */
+
+QLabel#HydrusIndeterminate
+{
+	color: #8080ff;
+}
+
+QLineEdit#HydrusIndeterminate, QTextEdit#HydrusIndeterminate, QPlainTextEdit#HydrusIndeterminate
+{
+	background-color: #8080ff;
+}
+
+
+/* Example: This regex is invalid */
+
+QLabel#HydrusInvalid
+{
+	color: #ff7171;
+}
+
+QLineEdit#HydrusInvalid, QTextEdit#HydrusInvalid, QPlainTextEdit#HydrusInvalid
+{
+	background-color: #ff8080;
+}
+
+
+/* Example: Your files are going to be deleted! */
+
+QLabel#HydrusWarning, QCheckBox#HydrusWarning
+{
+	color: #ff7171;
+}
+
+/*
+
+Buttons on dialogs
+
+*/
+
+QPushButton#HydrusAccept
+{
+	color: #2ed42e;
+}
+
+QPushButton#HydrusCancel
+{
+	color: #ff7171;
+}
+
+/*
+
+This is the green/red button that switches 'include current tags' and similar states on/off
+
+*/
+
+QPushButton#HydrusOnOffButton[hydrus_on=true]
+{
+	color: #2ed42e;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false]
+{
+	color: #ff7171;
+}
+
+/*
+
+This is the Command Palette (default Ctrl+P), and specifically the background colour of the item you currently have selected.
+
+*/
+
+QLocatorResultWidget#selectedLocatorResult
+{
+	background-color: palette(highlight);
+}
+
+QLocatorResultWidget QWidget
+{
+	background: transparent;
+}
+
+
+/*
+
+Custom Controls
+
+These are drawn by hydev on a blank canvas, so they work a little different.
+
+*/
+
+/*
+
+The scanbar beneath video/audio in the media viewer.
+
+*/
+
+QWidget#HydrusAnimationBar
+{
+	qproperty-hab_border: #000000;
+	qproperty-hab_background: #606060;
+	qproperty-hab_nub: #f0f0f0;
+}
+
+
+/*
+
+And this one is odd since we are assigning a colour to <a> html richtext inside a QLabel.
+We hack it with hardcoded 'style' attribute in the html in python code.
+
+*/
+
+
+QLabel#HydrusHyperlink
+{
+	qproperty-link_color: palette(link);
+}
