@@ -79,7 +79,7 @@ jobs:
           move dist\Windows-Extract.zip Hydrus.Network.${{ env.version_short }}.-.Windows.-.Extract.only.zip
       - 
         name: Upload Files
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |

@@ -70,7 +70,7 @@ jobs:
           mv Ubuntu-Extract.tar.zst Hydrus.Network.${{ env.version_short }}.-.Linux.-.Executable.tar.zst
       - 
         name: Upload Files
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
