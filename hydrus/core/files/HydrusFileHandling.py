@@ -264,6 +264,20 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
             
         
+    elif mime == HC.APPLICATION_PPTX:
+        
+        try:
+            
+            thumbnail_numpy = HydrusOfficeOpenXMLHandling.GenerateThumbnailNumPyFromOfficePath( path, target_resolution )
+            
+        except Exception as e:
+            
+            PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
+            
+            thumb_path = os.path.join( HC.STATIC_DIR, 'pptx.png' )
+            
+            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+        
     elif mime == HC.APPLICATION_FLASH:
         
         ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
@@ -533,6 +547,29 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         try:
             
             ( num_words, ( width, height ) ) = HydrusPDFHandling.GetPDFInfo( path )
+            
+        except HydrusExceptions.LimitedSupportFileException:
+            
+            pass
+            
+        
+    elif mime == HC.APPLICATION_PPTX:
+        
+        try:
+            
+            ( num_words, ( width, height ) ) = HydrusOfficeOpenXMLHandling.GetPPTXInfo( path )
+            
+        except HydrusExceptions.LimitedSupportFileException:
+            
+            pass
+            
+        
+        
+    elif mime == HC.APPLICATION_DOCX:
+        
+        try:
+            
+            ( num_words ) = HydrusOfficeOpenXMLHandling.GetDOCXInfo( path )
             
         except HydrusExceptions.LimitedSupportFileException:
             
