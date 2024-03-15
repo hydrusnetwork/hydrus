@@ -14,7 +14,6 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAnimationHandling
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files import HydrusClipHandling
-from hydrus.core.files import HydrusDocumentHandling
 from hydrus.core.files import HydrusFlashHandling
 from hydrus.core.files import HydrusKritaHandling
 from hydrus.core.files import HydrusPDFHandling
