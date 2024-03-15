@@ -543,10 +543,6 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
         
-    elif mime == HC.APPLICATION_PDF:
-        
-        num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
-        
     elif mime == HC.APPLICATION_PSD:
         
         try:
