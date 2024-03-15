@@ -23,6 +23,7 @@ from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files import HydrusSVGHandling
 from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files import HydrusVideoHandling
+from hydrus.core.files import HydrusOfficeOpenXMLHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
@@ -75,9 +76,9 @@ for mime in HC.IMAGES:
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_UNKNOWN ] = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
 
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = os.path.join( HC.STATIC_DIR, 'pdf.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_MICROSOFT_OPEN_XML_DOCX ] = os.path.join( HC.STATIC_DIR, 'docx.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_MICROSOFT_OPEN_XML_XLSX ] = os.path.join( HC.STATIC_DIR, 'xlsx.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_MICROSOFT_OPEN_XML_PPTX ] = os.path.join( HC.STATIC_DIR, 'pptx.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOCX ] = os.path.join( HC.STATIC_DIR, 'docx.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLSX ] = os.path.join( HC.STATIC_DIR, 'xlsx.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPTX ] = os.path.join( HC.STATIC_DIR, 'pptx.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_EPUB ] = os.path.join( HC.STATIC_DIR, 'epub.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_DJVU ] = os.path.join( HC.STATIC_DIR, 'djvu.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC_DIR, 'psd.png' )
@@ -771,7 +772,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                     return opendoc_mime
                     
                 
-                microsoft_mime = HydrusArchiveHandling.MimeFromMicrosoftOpenXMLDocument( path )
+                microsoft_mime = HydrusOfficeOpenXMLHandling.MimeFromMicrosoftOpenXMLDocument( path )
                 
                 if microsoft_mime is not None:
                     
