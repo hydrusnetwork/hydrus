@@ -3,7 +3,6 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core.files.HydrusArchiveHandling import GetZipAsPath
 from hydrus.core.files.images import HydrusImageHandling
-from hydrus.core import HydrusExceptions
 
 import xml.etree.ElementTree as ET
 
@@ -41,10 +40,8 @@ def MimeFromMicrosoftOpenXMLDocument(path: str):
     except:
         
         return None
+    
 
-        
-    
-    
 def GenerateThumbnailNumPyFromOfficePath( path: str, target_resolution: typing.Tuple[ int, int ] ) -> bytes:
     
     zip_path_file_obj = GetZipAsPath( path, 'docProps/thumbnail.jpeg' ).open( 'rb' )
@@ -57,8 +54,7 @@ def GenerateThumbnailNumPyFromOfficePath( path: str, target_resolution: typing.T
     
     return numpy_image
     
-    
-    
+
 PPTX_ASSUMED_DPI = 300
 
 # https://startbigthinksmall.wordpress.com/2010/01/04/points-inches-and-emus-measuring-units-in-office-open-xml/
@@ -116,10 +112,6 @@ def GetPPTXInfo( path: str ):
     except:
         
         num_words = None
-        
-    print(width)
-    print(height)
-    print(num_words)
         
     return ( num_words, ( width, height ) )
     
