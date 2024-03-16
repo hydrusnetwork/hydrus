@@ -9,6 +9,7 @@ import warnings
 
 from PIL import ImageFile as PILImageFile
 from PIL import Image as PILImage
+from PIL import ImageOps as PILImageOps
 
 try:
     
@@ -662,4 +663,13 @@ def ResizeNumPyImage( numpy_image: numpy.array, target_resolution, forced_interp
         
     
     return cv2.resize( numpy_image, ( target_width, target_height ), interpolation = interpolation )
+    
+
+def GenerateDefaultThumbnailNumPyFromPath( path: str, target_resolution: typing.Tuple[ int, int ] ):
+        
+    thumb_image = GeneratePILImage( path )
+    
+    pil_image = PILImageOps.pad( thumb_image, target_resolution, PILImage.Resampling.LANCZOS )
+    
+    return GenerateNumPyImageFromPILImage( pil_image, strip_useless_alpha = False )
     
