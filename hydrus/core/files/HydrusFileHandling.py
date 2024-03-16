@@ -14,7 +14,6 @@ from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusAnimationHandling
 from hydrus.core.files import HydrusArchiveHandling
 from hydrus.core.files import HydrusClipHandling
-from hydrus.core.files import HydrusDocumentHandling
 from hydrus.core.files import HydrusFlashHandling
 from hydrus.core.files import HydrusKritaHandling
 from hydrus.core.files import HydrusPDFHandling
@@ -23,6 +22,7 @@ from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files import HydrusSVGHandling
 from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files import HydrusVideoHandling
+from hydrus.core.files import HydrusOfficeOpenXMLHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
@@ -75,9 +75,9 @@ for mime in HC.IMAGES:
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_UNKNOWN ] = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
 
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = os.path.join( HC.STATIC_DIR, 'pdf.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_MICROSOFT_OPEN_XML_DOCX ] = os.path.join( HC.STATIC_DIR, 'docx.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_MICROSOFT_OPEN_XML_XLSX ] = os.path.join( HC.STATIC_DIR, 'xlsx.png' )
-mimes_to_default_thumbnail_paths[ HC.APPLICATION_MICROSOFT_OPEN_XML_PPTX ] = os.path.join( HC.STATIC_DIR, 'pptx.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOCX ] = os.path.join( HC.STATIC_DIR, 'docx.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLSX ] = os.path.join( HC.STATIC_DIR, 'xlsx.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPTX ] = os.path.join( HC.STATIC_DIR, 'pptx.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_EPUB ] = os.path.join( HC.STATIC_DIR, 'epub.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_DJVU ] = os.path.join( HC.STATIC_DIR, 'djvu.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC_DIR, 'psd.png' )
@@ -89,6 +89,13 @@ mimes_to_default_thumbnail_paths[ HC.APPLICATION_XCF ] = os.path.join( HC.STATIC
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PROCREATE ] = os.path.join( HC.STATIC_DIR, 'procreate.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_RTF ] = os.path.join( HC.STATIC_DIR, 'rtf.png' )
 mimes_to_default_thumbnail_paths[ HC.IMAGE_SVG ] = os.path.join( HC.STATIC_DIR, 'svg.png' )
+
+def GenerateDefaultThumbnail( mime: int, target_resolution: typing.Tuple[ int, int ] ):
+    
+    thumb_path = mimes_to_default_thumbnail_paths[mime]
+    
+    return HydrusImageHandling.GenerateDefaultThumbnailNumPyFromPath( thumb_path, target_resolution )
+    
 
 def GenerateThumbnailBytes( path, target_resolution, mime, duration, num_frames, percentage_in = 35 ):
     
@@ -130,9 +137,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         finally:
             
@@ -153,9 +158,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'clip.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         finally:
             
@@ -171,10 +174,8 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
         except Exception as e:
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
-            
-            thumb_path = os.path.join( HC.STATIC_DIR, 'krita.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+                        
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         
     elif mime == HC.APPLICATION_PROCREATE:
@@ -191,9 +192,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'procreate.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         finally:
             
@@ -224,9 +223,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
                 
                 PrintMoreThumbErrorInfo( e, f'Secondary problem generating thumbnail for "{path}".', extra_description = extra_description )
                 
-                thumb_path = os.path.join( HC.STATIC_DIR, 'psd.png' )
-                
-                thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+                thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
                 
             finally:
                 
@@ -244,9 +241,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'svg.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         
     elif mime == HC.APPLICATION_PDF:
@@ -259,10 +254,20 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'pdf.png' )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+        
+    elif mime == HC.APPLICATION_PPTX:
+        
+        try:
             
+            thumbnail_numpy = HydrusOfficeOpenXMLHandling.GenerateThumbnailNumPyFromOfficePath( path, target_resolution )
+            
+        except Exception as e:
+            
+            PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
+            
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
         
     elif mime == HC.APPLICATION_FLASH:
         
@@ -278,9 +283,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'flash.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         finally:
             
@@ -299,9 +302,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         
     elif mime == HC.ANIMATION_UGOIRA:
@@ -322,9 +323,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'zip.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         finally:
             
@@ -379,9 +378,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
         
         if numpy_image is None:
             
-            thumb_path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
-            
-            thumbnail_numpy = HydrusImageHandling.GenerateThumbnailNumPyFromStaticImagePath( thumb_path, target_resolution, HC.IMAGE_PNG )
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
             
         else:
             
@@ -539,13 +536,32 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             pass
             
         
+    elif mime == HC.APPLICATION_PPTX:
+        
+        try:
+            
+            ( num_words, ( width, height ) ) = HydrusOfficeOpenXMLHandling.GetPPTXInfo( path )
+            
+        except HydrusExceptions.LimitedSupportFileException:
+            
+            pass
+            
+        
+        
+    elif mime == HC.APPLICATION_DOCX:
+        
+        try:
+            
+            ( num_words ) = HydrusOfficeOpenXMLHandling.GetDOCXInfo( path )
+            
+        except HydrusExceptions.LimitedSupportFileException:
+            
+            pass
+            
+        
     elif mime == HC.APPLICATION_FLASH:
         
         ( ( width, height ), duration, num_frames ) = HydrusFlashHandling.GetFlashProperties( path )
-        
-    elif mime == HC.APPLICATION_PDF:
-        
-        num_words = HydrusDocumentHandling.GetPDFNumWords( path ) # this now give None until a better solution can be found
         
     elif mime == HC.APPLICATION_PSD:
         
@@ -775,7 +791,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                     return opendoc_mime
                     
                 
-                microsoft_mime = HydrusArchiveHandling.MimeFromMicrosoftOpenXMLDocument( path )
+                microsoft_mime = HydrusOfficeOpenXMLHandling.MimeFromMicrosoftOpenXMLDocument( path )
                 
                 if microsoft_mime is not None:
                     

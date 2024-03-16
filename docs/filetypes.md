@@ -70,16 +70,16 @@ The filetype for a file can be overridden with `manage -> force filetype` in the
 
 ## Applications
 
-| Filetype | Extension | MIME type                                                                   | Thumbnails | Viewable in Hydrus | Notes                                                             |
-|----------|-----------|-----------------------------------------------------------------------------| :--------: | :----------------: | ----------------------------------------------------------------- |
-| flash    | `.swf`    | `application/x-shockwave-flash`                                             |     ✅     |         ❌         |                                                                   |
-| pdf      | `.pdf`    | `application/pdf`                                                           |     ✅     |         ❌         | 300 DPI assumed for resolution. No thumbnails for encrypted PDFs. |
-| epub     | `.epub`   | `application/epub+zip`                                                      |     ❌     |         ❌         |                                                                   |
-| djvu     | `.djvu`   | `image/vnd.djvu`                                                            |     ❌     |         ❌         |                                                                   |
-| docx     | `.docx`   | `application/vnd.openxmlformats-officedocument.wordprocessingml.document`   |     ❌     |         ❌         |                                                                   |
-| xlsx     | `.xlsx`   | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`         |     ❌     |         ❌         |                                                                   |
-| docx     | `.pptx`   | `application/vnd.openxmlformats-officedocument.presentationml.presentation` |     ❌     |         ❌         |                                                                   |
-| rtf      | `.rtf`    | `application/rtf`                                                           |     ❌     |         ❌         |                                                                   |
+| Filetype | Extension | MIME type                                                                   | Thumbnails | Viewable in Hydrus | Notes                                                                      |
+| -------- | --------- | --------------------------------------------------------------------------- | :--------: | :----------------: | -------------------------------------------------------------------------- |
+| flash    | `.swf`    | `application/x-shockwave-flash`                                             |     ✅     |         ❌         |                                                                            |
+| pdf      | `.pdf`    | `application/pdf`                                                           |     ✅     |         ❌         | 300 DPI assumed for resolution. No thumbnails for encrypted PDFs.          |
+| epub     | `.epub`   | `application/epub+zip`                                                      |     ❌     |         ❌         |                                                                            |
+| djvu     | `.djvu`   | `image/vnd.djvu`                                                            |     ❌     |         ❌         |                                                                            |
+| docx     | `.docx`   | `application/vnd.openxmlformats-officedocument.wordprocessingml.document`   |     ❌     |         ❌         |                                                                            |
+| xlsx     | `.xlsx`   | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`         |     ❌     |         ❌         |                                                                            |
+| pptx     | `.pptx`   | `application/vnd.openxmlformats-officedocument.presentationml.presentation` |     ✅     |         ❌         | 300 DPI assumed for resolution. Thumbnail only if embedded in the document |
+| rtf      | `.rtf`    | `application/rtf`                                                           |     ❌     |         ❌         |                                                                            |
 
 
 ## Image Project Files
