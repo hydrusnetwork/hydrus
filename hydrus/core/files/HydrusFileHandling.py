@@ -484,7 +484,7 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             
         except:
             
-            ( width, height ) = ( 100, 100 )
+            ( width, height ) = ( None, None )
             
         finally:
             
