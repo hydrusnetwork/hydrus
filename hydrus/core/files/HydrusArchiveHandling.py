@@ -45,6 +45,10 @@ def GetCoverPagePath( zip_handle: zipfile.ZipFile ):
     
     for path in all_file_paths:
         
+        if path.startswith('__MACOSX/'):
+                
+            continue
+        
         if '.' in path:
             
             ext_with_dot = '.' + path.split( '.' )[-1]
@@ -160,6 +164,10 @@ def ZipLooksLikeCBZ( path_to_zip ):
                 
             
             filename = zip_info.filename
+            
+            if filename.startswith('__MACOSX/'):
+                
+                continue
             
             if '/' in filename:
                 

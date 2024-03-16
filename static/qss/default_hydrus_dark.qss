@@ -14,7 +14,7 @@ Here are some text and background colours
 
 QLabel#HydrusValid
 {
-	color: #008000;
+	color: #2ed42e;
 }
 
 QLineEdit#HydrusValid, QTextEdit#HydrusValid, QPlainTextEdit#HydrusValid
@@ -27,12 +27,12 @@ QLineEdit#HydrusValid, QTextEdit#HydrusValid, QPlainTextEdit#HydrusValid
 
 QLabel#HydrusIndeterminate
 {
-	color: #000080;
+	color: #8080ff;
 }
 
 QLineEdit#HydrusIndeterminate, QTextEdit#HydrusIndeterminate, QPlainTextEdit#HydrusIndeterminate
 {
-	background-color: #000080;
+	background-color: #8080ff;
 }
 
 
@@ -40,7 +40,7 @@ QLineEdit#HydrusIndeterminate, QTextEdit#HydrusIndeterminate, QPlainTextEdit#Hyd
 
 QLabel#HydrusInvalid
 {
-	color: #800000;
+	color: #ff7171;
 }
 
 QLineEdit#HydrusInvalid, QTextEdit#HydrusInvalid, QPlainTextEdit#HydrusInvalid
@@ -53,7 +53,7 @@ QLineEdit#HydrusInvalid, QTextEdit#HydrusInvalid, QPlainTextEdit#HydrusInvalid
 
 QLabel#HydrusWarning, QCheckBox#HydrusWarning
 {
-	color: #800000;
+	color: #ff7171;
 }
 
 /*
@@ -64,12 +64,12 @@ Buttons on dialogs
 
 QPushButton#HydrusAccept
 {
-	color: #008000;
+	color: #2ed42e;
 }
 
 QPushButton#HydrusCancel
 {
-	color: #800000;
+	color: #ff7171;
 }
 
 /*
@@ -80,12 +80,12 @@ This is the green/red button that switches 'include current tags' and similar st
 
 QPushButton#HydrusOnOffButton[hydrus_on=true]
 {
-	color: #008000;
+	color: #2ed42e;
 }
 
 QPushButton#HydrusOnOffButton[hydrus_on=false]
 {
-	color: #800000;
+	color: #ff7171;
 }
 
 /*
@@ -122,8 +122,8 @@ The scanbar beneath video/audio in the media viewer.
 QWidget#HydrusAnimationBar
 {
 	qproperty-hab_border: #000000;
-	qproperty-hab_background: #f0f0f0;
-	qproperty-hab_nub: #606060;
+	qproperty-hab_background: #606060;
+	qproperty-hab_nub: #f0f0f0;
 }
 
 

@@ -66,10 +66,8 @@ def InitialiseDefaults():
         
     
     global ORIGINAL_STYLE_NAME
-    global CURRENT_STYLE_NAME
     
-    ORIGINAL_STYLE_NAME = QW.QApplication.instance().style().objectName()
-    CURRENT_STYLE_NAME = ORIGINAL_STYLE_NAME
+    ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().name()
     
     global ORIGINAL_STYLESHEET
     global CURRENT_STYLESHEET
@@ -77,31 +75,28 @@ def InitialiseDefaults():
     ORIGINAL_STYLESHEET = QW.QApplication.instance().styleSheet()
     CURRENT_STYLESHEET = ORIGINAL_STYLESHEET
     
-def SetStyleFromName( name ):
+def SetStyleFromName( name: str ):
     
-    global CURRENT_STYLE_NAME
-    
-    if name == CURRENT_STYLE_NAME:
+    current_style_name = QW.QApplication.instance().style().name()
+        
+    if name.casefold() == current_style_name.casefold():
         
         return
         
     
-    if name in GetAvailableStyles():
+    try:
         
-        try:
+        new_style = QW.QApplication.instance().setStyle( name )
+        
+        if new_style is None:
             
-            QW.QApplication.instance().setStyle( name )
-            
-            CURRENT_STYLE_NAME = name
-            
-        except Exception as e:
-            
-            raise HydrusExceptions.DataMissing( 'Style "{}" could not be generated/applied. If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it. Extra error info: {}'.format( name, e ) )
+            raise HydrusExceptions.DataMissing( 'Style "{}" does not exist! If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it.'.format( name ) )
             
         
-    else:
+    except Exception as e:
         
-        raise HydrusExceptions.DataMissing( 'Style "{}" does not exist! If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it.'.format( name ) )
+        raise HydrusExceptions.DataMissing( 'Style "{}" could not be generated/applied. If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it. Extra error info: {}'.format( name, e ) )
+            
         
     
 def SetStyleSheet( stylesheet, prepend_hydrus = True ):
