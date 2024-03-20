@@ -243,7 +243,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
             return None
             
         
-        url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
+        url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
         with self._lock:
             
@@ -1762,7 +1762,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
+                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
             except HydrusExceptions.URLClassException:
                 

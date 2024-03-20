@@ -131,7 +131,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         self.file_seed_type = file_seed_type
         self.file_seed_data = file_seed_data
-        self.file_seed_data_for_comparison = file_seed_data
         
         self.created = HydrusTime.GetNow()
         self.modified = self.created
@@ -166,7 +165,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
-        return ( self.file_seed_type, self.file_seed_data_for_comparison ).__hash__()
+        return ( self.file_seed_type, self.file_seed_data ).__hash__()
         
     
     def __ne__( self, other ):
@@ -186,7 +185,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
             urls.discard( self.file_seed_data )
-            urls.discard( self.file_seed_data_for_comparison )
             
         
         if self._referral_url is not None:
@@ -212,7 +210,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
             all_primary_urls.add( self.file_seed_data )
-            all_primary_urls.add( self.file_seed_data_for_comparison )
             
         
         if self._referral_url is not None:
@@ -887,7 +884,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            urls.append( self.file_seed_data_for_comparison )
+            urls.append( self.file_seed_data )
             
         
         if file_url is not None:
@@ -956,7 +953,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            search_urls = ClientNetworkingFunctions.GetSearchURLs( self.file_seed_data_for_comparison )
+            search_urls = ClientNetworkingFunctions.GetSearchURLs( self.file_seed_data )
             
             search_file_seeds = [ FileSeed( FILE_SEED_TYPE_URL, search_url ) for search_url in search_urls ]
             
@@ -1140,8 +1137,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                self.file_seed_data = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data, ephemeral_ok = True )
-                self.file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
+                self.file_seed_data = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
                 
             except HydrusExceptions.URLClassException:
                 
@@ -1711,7 +1707,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 if self.file_seed_type == FILE_SEED_TYPE_URL:
                     
-                    potentially_associable_urls.add( self.file_seed_data_for_comparison )
+                    potentially_associable_urls.add( self.file_seed_data )
                     
                     domain = ClientNetworkingFunctions.ConvertURLIntoDomain( self.file_seed_data )
                     

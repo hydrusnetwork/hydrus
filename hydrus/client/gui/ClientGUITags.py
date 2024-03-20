@@ -1976,10 +1976,6 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         initial_suffix = CG.client_controller.new_options.GetString( 'last_incremental_tagging_suffix' )
         self._suffix.setText( initial_suffix )
         
-        self._tag_in_reverse = QW.QCheckBox( self )
-        tt = 'Tag the last file first and work backwards, e.g. for start=1, step=1 on five files, set 5, 4, 3, 2, 1.'
-        self._tag_in_reverse.setToolTip( tt )
-        
         initial_start = self._GetInitialStart()
         
         self._start = ClientGUICommon.BetterSpinBox( self, initial = initial_start, min = -10000000, max = 10000000 )
@@ -2003,7 +1999,6 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'step: ', self._step ) )
         rows.append( ( 'prefix: ', self._prefix ) )
         rows.append( ( 'suffix: ', self._suffix ) )
-        rows.append( ( 'tag in reverse: ', self._tag_in_reverse ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
@@ -2022,7 +2017,6 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         self._suffix.textChanged.connect( self._UpdateSuffix )
         self._start.valueChanged.connect( self._UpdateSummary )
         self._step.valueChanged.connect( self._UpdateSummary )
-        self._tag_in_reverse.clicked.connect( self._UpdateSummary )
         
         self._UpdateSummary()
         
@@ -2058,14 +2052,7 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         result = []
         
-        medias = list( self._medias )
-        
-        if self._tag_in_reverse.isChecked():
-            
-            medias.reverse()
-            
-        
-        for ( i, media ) in enumerate( medias ):
+        for ( i, media ) in enumerate( self._medias ):
             
             number = start + i * step
             
@@ -2074,11 +2061,6 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             tag = tag_template.format( subtag )
             
             result.append( ( media, tag ) )
-            
-        
-        if self._tag_in_reverse.isChecked():
-            
-            result.reverse()
             
         
         return result
@@ -2168,14 +2150,7 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            if self._tag_in_reverse.isChecked():
-                
-                tag_summary = medias_and_tags[0][1] + f' {HC.UNICODE_ELLIPSIS} ' + ', '.join( ( tag for ( media, tag ) in medias_and_tags[-3:] ) )
-                
-            else:
-                
-                tag_summary = ', '.join( ( tag for ( media, tag ) in medias_and_tags[:3] ) ) + f' {HC.UNICODE_ELLIPSIS} ' + medias_and_tags[-1][1]
-                
+            tag_summary = ', '.join( ( tag for ( media, tag ) in medias_and_tags[:3] ) ) + f' {HC.UNICODE_ELLIPSIS} ' + medias_and_tags[-1][1]
             
         
         #
@@ -6406,8 +6381,6 @@ class TagSummaryGenerator( HydrusSerialisable.SerialisableBase ):
             ( namespace, subtag ) = HydrusTags.SplitTag( tag )
             
             if namespace in self._interesting_namespaces:
-                
-                subtag = ClientTags.RenderTag( subtag, render_for_user = True )
                 
                 namespaces_to_subtags[ namespace ].append( subtag )
                 

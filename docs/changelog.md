@@ -7,45 +7,6 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
-## [Version 567](https://github.com/hydrusnetwork/hydrus/releases/tag/v567)
-
-### user contributions
-
-* thanks to a user, the new docx, pptx, and xlsx support is improved, with better thumbnails (better ratio, better icon itself, and sometimes an actual preview thumbnail for pptx), better file detection (fewer false positives with stuff like ppt templates), and word count for docx and pptx. I am queueing everyone's existing docx and pptx files for a metadata rescan and thumbnail regen on update
-* thanks to a user, the cbz scanner now ignores the `__MACOSX` folder
-* thanks to a user, setting the Qt style in *options->style* should be more reliable (fixing some name case sensitivity issues)
-* thanks to a user, there's a new 'default' dark mode QSS stylesheet that has nicer valid/invalid colours. we'll build on this and try to detect dark mode better in future and auto-switch to this as the base when the application is in dark mode.
-
-### misc
-
-* added a 'tag in reverse' checkbox to the new incremental tagger panel. this simply applies the given iterator to the last file first and then works backwards, e.g. 5, 4, 3, 2, 1 for start=1, step=1 on five files
-* all _new_ system:url predicates will have slightly different (standardised) labels, and all these labels should parse correctly in the system predicate parser if you copy/paste
-* you should now be able to enter 'system:has url matching regex (regex with upper case)' and 'system:has url (url with upper case)' and it'll propage through parsing. this definitely has not™ broken any other predicate parsing. you can enter url class names with upper case if you want, but url class names should now match regardless of letter case
-* you can now open the 'extra info' button (up top of a media viewer) on a jpeg if that jpeg has no exif or other human-readable metadata (to see just the progressive and subsampling info)
-* added a new EXPERIMENTAL checkbox to _options->tag presentation_ that will replace emojis and other unicode symbol garbage with □. if you have crazy rendering for emoji stuff, try it out
-* the tag summary generators that make thumbnail banners now wash their tags through the 'render tag for user' system, which will apply this new emoji rule and 'replace underscores with spaces'
-* updated the QuickSync link to its new home at https://breadthread.duckdns.org/
-
-### URL storage/display changes
-
-* today I correct a foolish decision I made when I first implemented the hydrus downloader engine--handling and storing URLs internally as 'pretty' decoded text, rather than with the proper ugly '%20" stuff you sometimes see. this improves support for weird URLs and makes some behind the scenes things simpler. you do not need to make any changes, but there is a chance some particularly funky URLs will redownload once more if your subscription runs into them again (this change breaks some 'known url' checking logic, since what is stored is now slightly different, but this 99% doesn't affect Post URLs, so no big worries)
-* so, URLs are no longer decoded in the normalisation step. they are now saved in the file log as their proper actual 'what is sent to the server' encoded text. it will display in UI as the pretty version, but if you copy to clipboard, you get the data version--pretty much how your web browser address bar works. I have made it show 'pretty' in the file log and search log lists, 'copy url' menu labels, and hyperlink tooltips, but in the more technical 'manage GUGs' and so on, it shows the data version. let me know if I have forgotten to display them pretty anywhere!
-* when you paste a URL, some new normalisation tech tries to figure out if it is pre-encoded or not
-* there's also some GUG work. when you enter a query text like `male/female` or `blonde_hair%20blue_eyes`, some new logic tries to infer whether what you entered is encoded or not. it should handle pretty much everything well unless you have a single-tag query with a legit percent character in the middle (in which case you'll have to enter `%25` instead, but we'll see if it ever happens)
-* these changes simplify the url parsing routine, eliminating plenty of nonsense hackery I've inserted over the years to make things like `6+girls blonde_hair`/`6%2Bgirls+blonde_hair` work with a merged system. this has mostly been a delicate cleanup job; long planned, finally triggered
-
-### ephemeral URL parameters
-
-* I was going to roll out 'ephemeral token' parameters, and I basically had it done, but I realised late that I was being stupid in a brand new way, basically expanding the whitelist when turning off the blacklist was a nicer solution. I will work on this more next week, I think ultimately making it so Post URLs are not clipped of undefined parameters before they are is sent to the server, just like for Gallery URLs. I will separately introduce 'I just need to add some random hex in this parameter to tell this cache I want the original' under different tech
-* so, I did some behind the scenes URL filtering tech, and file import objects handle full and stripped down versions of Post URLs, but it doesn't do much yet
-
-### boring cleanup
-
-* I cleaned up some URL Class code
-* the URL Class has a new buddy 'Parameter' class to handle param testing
-* rewrote how the query string of a URL is deconstructed and scanned against your parameters. less chance of edge-case errors/merges and easier to expand in future
-* brushed up the URL Class unit tests to account for the above changes and added new tests for encoding, ephemeral, and default parameter values (which must have been missed a long time ago)
-
 ## [Version 566](https://github.com/hydrusnetwork/hydrus/releases/tag/v566)
 
 ### incremental tagging
@@ -445,3 +406,39 @@ title: Changelog
 * some 'number of tags' queries should be a little faster
 * the 'tag suggestions' options page has a bit of brushed up UI and some new explanation labels
 * unified the various thumbnail generation error reporting for all the different filetypes. it should also print the file's hash, too, since most of these error contexts only have a temporary path to talk about at this stage, which isn't useful after the fact
+
+## [Version 557](https://github.com/hydrusnetwork/hydrus/releases/tag/v557)
+
+### misc
+
+* optimised large tag filter edit UI. you can now paste 5,000 items into an empty tag filter blacklist in less than a second, and if you have a big tag filter, removing or adding one thing is now instant (previously, this stuff would lag 4 seconds or more, sometimes multiple minutes!!)
+* the ugoira 'num frames' counting method now discludes files ending in .js/.json, to catch future bundling of frame timings
+* the cbz scanning tech should now recognise cbzs with four or fewer pages
+* a legacy 'is this image all good?' check that happens on PIL-loading is now gone. this improves rendering for a variety of truncated files and clarifies some error messages (previously, this thing was just failing silently)
+* fixed the delete file pre-flight logic so users on the non-advanced delete dialog can now delete repository updates. previously, they saw the menu entry, but hitting it was a no-op
+
+### better hash predicate parsing
+
+* `system:hash` labels are a little different now. they'll say `system:hash (md5) is abcd...`, with the algorithm after the "hash". hash is omitted for sha256 (the hydrus default). this eases parsing
+* `system:similar to data` labels are a little different. they'll say 'distance' instead of 'max hamming', and the number and type of hashes they hold, and if they hold only pixel hashes, the distance is not stated
+* `system:hash` predicate parsing is now more flexible. you can put the hash type pretty much anywhere now.
+* `system:similar to` and `system:similar to data` predicate parsing is now more flexible. more combinations are allowed, and you can not include distance and it'll be fine
+* these three hash predicates now copy to clipboard with all their hashes explicitly enumerated, making strings that are fully parsable! this is a big step forward in a completely sealed import-export predicate parsing loop; now I have the tech set up to export a different phrase to clipboard than what you see in the label, I just need the examples of where it goes wrong. if there is a system predicate that copies to clipboard in a way that won't parse back, let me know and I'll see if I can fix it.
+* added more unit tests for this parsing
+
+### documentation and cleanup
+
+* wrote a guide on how to install 'Git for Windows' for the 'running from source' help. although most of the settings in its marathon 12-page install wizard can be left as default, the technical questions can be intimidating, so I've written them all out for a nice simple install. also brushed up some of the surrounding help here
+* added a warning to the regular 'installing and updating' help regarding the danger of test-running extract releases before updating (you can overwrite your database by accident)
+* thanks to a user, the filetypes help document is updated with Ugoira and CBZ info
+* all the 'HydrusFiletypeHandling' files are refactored to a new 'files' module. there's a bunch of them these days!
+* the hydrus.core.images module is moved beneath this 'files' module too
+* the file log list panel right-click menu now says 'open URLs'/'open files' locations' depending on whether you are looking at a URL import log or local HDD import log
+
+### client api
+
+* the `file_metadata` call now returns `filetype_forced` and, if so, also `original_mime` to talk about the new forced filetype system
+* the client api help and unit tests are updated to test this is working ok
+* fixed a typo that was causing too much work in the updated file info manager call (and was often returning 'null' results for half-cached `file_metadata` requests with `only_return_basic_information=true`)
+* thanks to a user, the `/add_urls/get_url_info` Client API call now has a cache timeout of ten minutes, and the `/add_urls/get_url_files` call now has a timeout of 30 seconds if all the files are 'already in db'. this should automatically reduce some overhead for several programs that talk to the Client API a lot about URLs
+* the client api version is now 58

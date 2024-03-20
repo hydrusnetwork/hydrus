@@ -22,7 +22,6 @@ from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUIColourPicker
-from hydrus.client.networking import ClientNetworkingFunctions
 
 def AddGridboxStretchSpacer( win: QW.QWidget, layout: QW.QGridLayout ):
     
@@ -31,7 +30,7 @@ def AddGridboxStretchSpacer( win: QW.QWidget, layout: QW.QGridLayout ):
     QP.AddToLayout( layout, widget, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
     
 
-def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, expand_single_widgets = False ):
+def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True ):
     
     gridbox = QP.GridLayout( cols = 2 )
     
@@ -119,22 +118,9 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, ex
             gridbox.next_col = 0
             
             h_policy = QW.QSizePolicy.Expanding
-            
-            if expand_single_widgets:
-                
-                v_policy = QW.QSizePolicy.Expanding
-                
-            else:
-                
-                v_policy = QW.QSizePolicy.Fixed
-                
+            v_policy = QW.QSizePolicy.Fixed
             
             control.setSizePolicy( h_policy, v_policy )
-            
-            if expand_single_widgets:
-                
-                gridbox.setRowStretch( gridbox.rowCount() - 1, 1 )
-                
             
         
     
@@ -145,7 +131,6 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, ex
     
     return gridbox
     
-
 def WrapInText( control, parent, text, object_name = None ):
     
     hbox = QP.HBoxLayout()
@@ -714,7 +699,7 @@ class BetterHyperLink( BetterStaticText ):
         
         self._url = url
         
-        self.setToolTip( ClientNetworkingFunctions.ConvertURLToHumanString( self._url ) )
+        self.setToolTip( self._url )
         
         self.setTextFormat( QC.Qt.RichText )
         self.setTextInteractionFlags( QC.Qt.LinksAccessibleByMouse | QC.Qt.LinksAccessibleByKeyboard )

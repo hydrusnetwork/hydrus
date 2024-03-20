@@ -1324,9 +1324,9 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,' url '), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'exact url:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._exact_url, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
@@ -1348,11 +1348,11 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystemSingle ):
         
         if operator:
             
-            operator_description = 'has url '
+            operator_description = 'has url: '
             
         else:
             
-            operator_description = 'does not have url '
+            operator_description = 'does not have url: '
             
         
         rule_type = 'exact_match'
@@ -1396,9 +1396,9 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,' url with domain '), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url with domain:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._domain, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
@@ -1420,11 +1420,11 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystemSingle ):
         
         if operator:
             
-            operator_description = 'has url with domain '
+            operator_description = 'has a url with domain: '
             
         else:
             
-            operator_description = 'does not have url with domain '
+            operator_description = 'does not have a url with domain: '
             
         
         rule_type = 'domain'
@@ -1466,9 +1466,9 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,' url that matches regex '), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'a url that matches this regex:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
@@ -1504,11 +1504,11 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         
         if operator:
             
-            operator_description = 'has url matching regex '
+            operator_description = 'has a url matching regex: '
             
         else:
             
-            operator_description = 'does not have url matching regex '
+            operator_description = 'does not have a url matching regex: '
             
         
         rule_type = 'regex'
@@ -1558,9 +1558,9 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'system:known url'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._operator, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,' url matching class '), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'url matching this class:'), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._url_classes, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
@@ -1580,15 +1580,22 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
         
         operator = self._operator.GetValue()
         
+        if operator:
+            
+            operator_description = 'has '
+            
+        else:
+            
+            operator_description = 'does not have '
+            
+        
         rule_type = 'url_class'
         
         url_class = self._url_classes.GetValue()
         
         rule = url_class
         
-        url_class_name = url_class.GetName()
-        
-        description = f'has url with class {url_class_name}' if operator else f'does not have url with class {url_class_name}'
+        description = operator_description + url_class.GetName() + ' url'
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) ), )
         

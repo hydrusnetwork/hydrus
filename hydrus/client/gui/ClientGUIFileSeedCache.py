@@ -32,7 +32,6 @@ from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTagSorting
-from hydrus.client.networking import ClientNetworkingFunctions
 
 def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache, statuses_to_remove ):
     
@@ -359,7 +358,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         QP.CallAfter( self._UpdateText )
         
     
-    def _ConvertFileSeedToListCtrlTuples( self, file_seed: ClientImportFileSeeds.FileSeed ):
+    def _ConvertFileSeedToListCtrlTuples( self, file_seed ):
         
         try:
             
@@ -374,22 +373,14 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_file_seed_index = '--'
             
         
-        file_seed_data = file_seed.file_seed_data_for_comparison
+        file_seed_data = file_seed.file_seed_data
         status = file_seed.status
         added = file_seed.created
         modified = file_seed.modified
         source_time = file_seed.source_time
         note = file_seed.note
         
-        if file_seed.file_seed_type == ClientImportFileSeeds.FILE_SEED_TYPE_URL:
-            
-            pretty_file_seed_data = ClientNetworkingFunctions.ConvertURLToHumanString( file_seed_data )
-            
-        else:
-            
-            pretty_file_seed_data = file_seed_data
-            
-        
+        pretty_file_seed_data = str( file_seed_data )
         pretty_status = CC.status_string_lookup[ status ] if status != CC.STATUS_UNKNOWN else ''
         pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
         pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )

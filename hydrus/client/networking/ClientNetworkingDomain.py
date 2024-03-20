@@ -266,7 +266,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             seen_url_classes.add( api_url_class )
             
         
-        api_url = api_url_class.Normalise( api_url, ephemeral_ok = True )
+        api_url = api_url_class.Normalise( api_url )
         
         return ( api_url_class, api_url )
         
@@ -1336,15 +1336,13 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def GetURLClassFromName( self, name: str ):
+    def GetURLClassFromName( self, name ):
         
         with self._lock:
             
-            name_search = name.casefold()
-            
             for url_class in self._url_classes:
                 
-                if url_class.GetName().casefold() == name_search:
+                if url_class.GetName() == name:
                     
                     return url_class
                     
@@ -1510,7 +1508,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return True
         
     
-    def NormaliseURL( self, url, ephemeral_ok = False ):
+    def NormaliseURL( self, url ):
         
         with self._lock:
             
@@ -1525,8 +1523,6 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 path = p.path
                 params = p.params
                 
-                # this puts them all in alphabetical order
-                
                 ( query_dict, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( p.query )
                 
                 query = ClientNetworkingFunctions.ConvertQueryDictToText( query_dict, single_value_parameters )
@@ -1539,14 +1535,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                normalised_url = url_class.Normalise( url, ephemeral_ok = ephemeral_ok )
+                normalised_url = url_class.Normalise( url )
                 
             
             return normalised_url
             
         
     
-    def NormaliseURLs( self, urls: typing.Collection[ str ], ephemeral_ok = False ) -> typing.List[ str ]:
+    def NormaliseURLs( self, urls: typing.Collection[ str ] ) -> typing.List[ str ]:
         
         normalised_urls = []
         
@@ -1554,14 +1550,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                normalised_url = self.NormaliseURL( url, ephemeral_ok = ephemeral_ok )
+                normalised_url = self.NormaliseURL( url )
                 
             except HydrusExceptions.URLClassException:
                 
                 continue
                 
             
-            normalised_urls.append( normalised_url )
+            normalised_urls.append( url )
             
         
         normalised_urls = HydrusData.DedupeList( normalised_urls )

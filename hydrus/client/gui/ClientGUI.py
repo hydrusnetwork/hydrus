@@ -2213,7 +2213,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
-        url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
+        url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         
         ( url_type, match_name, can_parse, cannot_parse_reason ) = self._controller.network_engine.domain_manager.GetURLParseCapability( url )
         
