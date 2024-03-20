@@ -118,7 +118,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
                 
             except HydrusExceptions.URLClassException:
                 

@@ -24,6 +24,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.importing import ClientImportGallerySeeds
+from hydrus.client.networking import ClientNetworkingFunctions
 
 def ClearGallerySeeds( win: QW.QWidget, gallery_seed_log: ClientImportGallerySeeds.GallerySeedLog, statuses_to_remove, gallery_type_string ):
     
@@ -297,7 +298,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         note = gallery_seed.note
         
         pretty_gallery_seed_index = HydrusData.ToHumanInt( gallery_seed_index )
-        pretty_url = url
+        pretty_url = ClientNetworkingFunctions.ConvertURLToHumanString( url )
         pretty_status = CC.status_string_lookup[ status ] if status != CC.STATUS_UNKNOWN else ''
         pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
         pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )

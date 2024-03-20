@@ -4222,6 +4222,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
             
+            self._replace_tag_emojis_with_boxes = QW.QCheckBox( render_panel )
+            self._replace_tag_emojis_with_boxes.setToolTip( 'This will replace emojis and weird symbols with □ in front-facing user views, in case you are getting crazy rendering. It may break some CJK punctuation.' )
+            
             #
             
             namespace_colours_panel = ClientGUICommon.StaticBox( self, 'namespace colours' )
@@ -4239,6 +4242,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_subtag_number_namespaces.setChecked( new_options.GetBoolean( 'show_subtag_number_namespaces' ) )
             self._namespace_connector.setText( new_options.GetString( 'namespace_connector' ) )
             self._replace_tag_underscores_with_spaces.setChecked( new_options.GetBoolean( 'replace_tag_underscores_with_spaces' ) )
+            self._replace_tag_emojis_with_boxes.setChecked( new_options.GetBoolean( 'replace_tag_emojis_with_boxes' ) )
             self._sibling_connector.setText( new_options.GetString( 'sibling_connector' ) )
             self._fade_sibling_connector.setChecked( new_options.GetBoolean( 'fade_sibling_connector' ) )
             self._sibling_connector_custom_namespace_colour.SetValue( new_options.GetNoneableString( 'sibling_connector_custom_namespace_colour' ) )
@@ -4287,6 +4291,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'OR connecting string: ', self._or_connector ) )
             rows.append( ( 'Namespace for the colour of the OR connecting string: ', self._or_connector_custom_namespace_colour ) )
             rows.append( ( 'EXPERIMENTAL: Replace all underscores with spaces: ', self._replace_tag_underscores_with_spaces ) )
+            rows.append( ( 'EXPERIMENTAL: Replace all emojis with □: ', self._replace_tag_emojis_with_boxes ) )
             
             gridbox = ClientGUICommon.WrapInGrid( render_panel, rows )
             
@@ -4394,6 +4399,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'show_subtag_number_namespaces', self._show_subtag_number_namespaces.isChecked() )
             self._new_options.SetString( 'namespace_connector', self._namespace_connector.text() )
             self._new_options.SetBoolean( 'replace_tag_underscores_with_spaces', self._replace_tag_underscores_with_spaces.isChecked() )
+            self._new_options.SetBoolean( 'replace_tag_emojis_with_boxes', self._replace_tag_emojis_with_boxes.isChecked() )
             self._new_options.SetString( 'sibling_connector', self._sibling_connector.text() )
             self._new_options.SetBoolean( 'fade_sibling_connector', self._fade_sibling_connector.isChecked() )
             
@@ -5199,7 +5205,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             try:
                 
-                normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
+                normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
                 
                 normalised_urls.append( normalised_url )
                 

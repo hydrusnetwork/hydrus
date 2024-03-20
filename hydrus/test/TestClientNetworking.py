@@ -228,6 +228,8 @@ class TestNetworkingDomain( unittest.TestCase ):
     
     def test_url_classes( self ):
         
+        # TODO: Yo, these all suck and should be broken into separate spammy tests with more appropriate example urls and all that!
+        
         name = 'test'
         url_type = HC.URL_TYPE_POST
         preferred_scheme = 'https'
@@ -245,10 +247,10 @@ class TestNetworkingDomain( unittest.TestCase ):
         path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
         path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
         
-        parameters = {}
+        parameters = []
         
-        parameters[ 's' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
-        parameters[ 'id' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ), None )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
@@ -277,6 +279,57 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), referral_url )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), None )
+        
+        # encoding test
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = 'hello' ) ) )
+        
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        unnormalised_human_url = 'https://testbooru.cx/post/page.php?id=1234 56&s=view'
+        normalised_encoded_url = 'https://testbooru.cx/post/page.php?id=1234%2056&s=view'
+        
+        self.assertEqual( url_class.Normalise( unnormalised_human_url ), normalised_encoded_url )
+        self.assertEqual( url_class.Normalise( normalised_encoded_url ), normalised_encoded_url )
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        
+        # default test
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'pid', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '0' ), default_value = '0' ) )
+        
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        unnormalised_without_pid = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        unnormalised_with_pid = 'https://testbooru.cx/post/page.php?id=123456&pid=3&s=view'
+        normalised_with_pid = 'https://testbooru.cx/post/page.php?id=123456&pid=0&s=view'
+        
+        self.assertEqual( url_class.Normalise( unnormalised_without_pid ), normalised_with_pid )
+        self.assertEqual( url_class.Normalise( normalised_with_pid ), normalised_with_pid )
+        self.assertEqual( url_class.Normalise( unnormalised_with_pid ), unnormalised_with_pid )
+        
+        self.assertTrue( url_class.Matches( unnormalised_without_pid ) )
+        self.assertTrue( url_class.Matches( unnormalised_with_pid ) )
+        self.assertTrue( url_class.Matches( good_url ) )
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
         
         #
         
@@ -349,7 +402,7 @@ class TestNetworkingDomain( unittest.TestCase ):
         path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'file', example_string = 'file' ), None ) )
         path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY ), None ) )
         
-        parameters = {}
+        parameters = []
         
         send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
         referral_url_converter = None
@@ -401,10 +454,10 @@ class TestNetworkingDomain( unittest.TestCase ):
         path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
         path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
         
-        parameters = {}
+        parameters = []
         
-        parameters[ 's' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ), None )
-        parameters[ 'id' ] = ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ), None )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
         
         has_single_value_parameters = True
         single_value_parameters_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_REGEX, match_value = '^token.*', example_string = 'token1' )

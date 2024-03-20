@@ -857,7 +857,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
             
         
     
-    if exif_dict is None and file_text is None:
+    if exif_dict is None and file_text is None and len( extra_rows ) == 0:
         
         ClientGUIDialogsMessage.ShowWarning( win, 'Sorry, could not see any human-readable information in this file! Hydrus should have known this, so if this keeps happening, you may need to schedule a rescan of this info in file maintenance.' )
         

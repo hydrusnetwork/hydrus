@@ -265,12 +265,12 @@ SYSTEM_PREDICATES = {
     'all viewtime': (Predicate.ALL_VIEWTIME, Operators.RELATIONAL, Value.TIME_INTERVAL, None),
     'has (a )?url matching regex': (Predicate.URL_REGEX, None, Value.ANY_STRING, None),
     '(does not|doesn\'t) have (a )?url matching regex': (Predicate.NO_URL_REGEX, None, Value.ANY_STRING, None),
-    'has url': (Predicate.URL, None, Value.ANY_STRING, None),
-    '(does not|doesn\'t) have url': (Predicate.NO_URL, None, Value.ANY_STRING, None),
-    'has (a )?(url with )?domain': (Predicate.DOMAIN, None, Value.ANY_STRING, None),
-    '(does not|doesn\'t) have (a )?(url with )?domain': (Predicate.NO_DOMAIN, None, Value.ANY_STRING, None),
-    'has (a )?url with (url )?class': (Predicate.URL_CLASS, None, Value.ANY_STRING, None),
-    '(does not|doesn\'t) have (a )?url with (url )?class': (Predicate.NO_URL_CLASS, None, Value.ANY_STRING, None),
+    'has url:? (?=http)': (Predicate.URL, None, Value.ANY_STRING, None),
+    '(does not|doesn\'t) have url:? (?=http)': (Predicate.NO_URL, None, Value.ANY_STRING, None),
+    'has (an? )?(url with )?domain': (Predicate.DOMAIN, None, Value.ANY_STRING, None),
+    '(does not|doesn\'t) have (an? )?(url with )?domain': (Predicate.NO_DOMAIN, None, Value.ANY_STRING, None),
+    'has (an? )?url with (url )?class': (Predicate.URL_CLASS, None, Value.ANY_STRING, None),
+    '(does not|doesn\'t) have (an? )?url with (url )?class': (Predicate.NO_URL_CLASS, None, Value.ANY_STRING, None),
     'tag as number': (Predicate.TAG_AS_NUMBER, Operators.TAG_RELATIONAL, Value.INTEGER, None),
     'has notes?$': (Predicate.HAS_NOTES, None, None, None),
     '((has )?no|does not have( a)?|doesn\'t have) notes?$': (Predicate.NO_NOTES, None, None, None),
@@ -300,7 +300,13 @@ def parse_system_predicate( string: str ):
     
     # TODO: (hydev): rework this thing into passing around a 'parse result object' that the operator parser can set a value for and say 'yeah value is sorted' for things like 'has words' = '> 0' in one swoop
     
-    string = string.lower().strip()
+    string = string.strip()
+    
+    if 'url' not in string: # hack for system:url has regex (blah) and matching url in general
+        
+        string = string.lower()
+        
+    
     string = string.replace( '_', ' ' )
     if string.startswith( "-" ):
         raise ValueError( "System predicate can't start with negation" )

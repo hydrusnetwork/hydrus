@@ -18,6 +18,7 @@ from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
+from hydrus.client.networking import ClientNetworkingFunctions
 
 def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
     
@@ -379,7 +380,7 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
                 
             else:
                 
-                label = url_class.GetName() + ': ' + url
+                label = url_class.GetName() + ': ' + ClientNetworkingFunctions.ConvertURLToHumanString( url )
                 
                 focus_matched_labels_and_urls.append( ( label, url ) )
                 
@@ -390,7 +391,7 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         
         focus_labels_and_urls = list( focus_matched_labels_and_urls )
         
-        focus_labels_and_urls.extend( ( ( url, url ) for url in focus_unmatched_urls ) )
+        focus_labels_and_urls.extend( ( ( ClientNetworkingFunctions.ConvertURLToHumanString( url ), url ) for url in focus_unmatched_urls ) )
         
     
     # figure out which urls these selected files have

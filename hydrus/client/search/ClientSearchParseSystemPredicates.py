@@ -186,7 +186,7 @@ def strip_quotes( s: str ) -> str:
 
 def url_class_pred_generator( include, url_class_name ):
     
-    description = ( 'has {} url' if include else 'does not have {} url' ).format( url_class_name )
+    description = f'has url with class {url_class_name}' if include else f'does not have url with class {url_class_name}'
     
     try:
         
@@ -251,12 +251,12 @@ pred_generators = {
     SystemPredicateParser.Predicate.MEDIA_VIEWTIME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', ), o, convert_timetuple_to_seconds( v ) ) ),
     SystemPredicateParser.Predicate.PREVIEW_VIEWTIME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'preview', ), o, convert_timetuple_to_seconds( v ) ) ),
     SystemPredicateParser.Predicate.ALL_VIEWTIME : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_VIEWING_STATS, ( 'viewtime', ( 'media', 'preview' ), o, convert_timetuple_to_seconds( v ) ) ),
-    SystemPredicateParser.Predicate.URL_REGEX : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'regex', v, 'has a url matching regex: {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.NO_URL_REGEX : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'regex', v, 'does not have a url matching regex: {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.URL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', v, 'has url: {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.NO_URL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'exact_match', v, 'does not have url: {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.DOMAIN : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'domain', v, 'has a url with domain: {}'.format( v ) ) ),
-    SystemPredicateParser.Predicate.NO_DOMAIN : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'domain', v, 'does not have a url with domain: {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.URL_REGEX : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'regex', v, 'has url matching regex {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.NO_URL_REGEX : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'regex', v, 'does not have url matching regex {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.URL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'exact_match', v, 'has url {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.NO_URL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'exact_match', v, 'does not have url {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.DOMAIN : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( True, 'domain', v, 'has url with domain {}'.format( v ) ) ),
+    SystemPredicateParser.Predicate.NO_DOMAIN : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( False, 'domain', v, 'does not have url with domain {}'.format( v ) ) ),
     SystemPredicateParser.Predicate.URL_CLASS : lambda o, v, u: url_class_pred_generator( True, v ),
     SystemPredicateParser.Predicate.NO_URL_CLASS : lambda o, v, u: url_class_pred_generator( False, v ),
     SystemPredicateParser.Predicate.MOD_DATE : lambda o, v, u: date_pred_generator( ClientSearch.PREDICATE_TYPE_SYSTEM_MODIFIED_TIME, o, v ),

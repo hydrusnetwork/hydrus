@@ -263,11 +263,16 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             
             thumbnail_numpy = HydrusOfficeOpenXMLHandling.GenerateThumbnailNumPyFromOfficePath( path, target_resolution )
             
+        except HydrusExceptions.NoThumbnailFileException:
+            
+            thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            
         except Exception as e:
             
             PrintMoreThumbErrorInfo( e, f'Problem generating thumbnail for "{path}".', extra_description = extra_description )
             
             thumbnail_numpy = GenerateDefaultThumbnail(mime, target_resolution)
+            
         
     elif mime == HC.APPLICATION_FLASH:
         
@@ -547,12 +552,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             pass
             
         
-        
     elif mime == HC.APPLICATION_DOCX:
         
         try:
             
-            ( num_words ) = HydrusOfficeOpenXMLHandling.GetDOCXInfo( path )
+            num_words = HydrusOfficeOpenXMLHandling.GetDOCXInfo( path )
             
         except HydrusExceptions.LimitedSupportFileException:
             
