@@ -1049,7 +1049,15 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         num_total_path_components = len( self._path_components )
         num_required_parameters = len( [ 1 for parameter in self._parameters if parameter.GetDefaultValue() is None ] )
         num_total_parameters = len( self._parameters )
-        len_example_url = len( self.Normalise( self._example_url, ephemeral_ok = True ) )
+        
+        try:
+            
+            len_example_url = len( self.Normalise( self._example_url, ephemeral_ok = True ) )
+            
+        except:
+            
+            len_example_url = len( self._example_url )
+            
         
         return ( num_required_path_components, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
         
