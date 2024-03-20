@@ -105,6 +105,7 @@ class App( QW.QApplication ):
         self._pubsub = pubsub
         
         self.setApplicationName( 'Hydrus Client' )
+        self.setDesktopFileName( 'io.github.hydrusnetwork.hydrus' )
         
         self.setApplicationVersion( str( HC.SOFTWARE_VERSION ) )
         
