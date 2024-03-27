@@ -187,7 +187,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
     
     def MustBeInOriginalURL( self ):
         
-        return self._default_value is None
+        return self._default_value is None and not self.IsEphemeralToken()
         
     
     def MatchesName( self, name ):
