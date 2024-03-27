@@ -133,6 +133,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.file_seed_data = file_seed_data
         self.file_seed_data_for_comparison = file_seed_data
         
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            try:
+                
+                self.file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
+                
+            except:
+                
+                pass
+                
+            
+        
         self.created = HydrusTime.GetNow()
         self.modified = self.created
         self.source_time = None
@@ -297,6 +309,20 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             serialisable_names_and_notes_dict,
             serialisable_hashes
         ) = serialisable_info
+        
+        self.file_seed_data_for_comparison = self.file_seed_data
+        
+        if self.file_seed_type == FILE_SEED_TYPE_URL:
+            
+            try:
+                
+                self.file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
+                
+            except:
+                
+                pass
+                
+            
         
         self._external_filterable_tags = set( serialisable_external_filterable_tags )
         self._external_additional_service_keys_to_tags = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_external_additional_service_keys_to_tags )
