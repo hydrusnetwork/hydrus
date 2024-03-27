@@ -149,6 +149,12 @@ class TestStringConverter( unittest.TestCase ):
         
         #
         
+        string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_APPEND_RANDOM, ( 'a', 5 ) ) ] )
+        
+        self.assertEqual( string_converter.Convert( 'bbbbb' ), 'bbbbbaaaaa' )
+        
+        #
+        
         string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_ENCODE, 'url percent encoding' ) ] )
         
         self.assertEqual( string_converter.Convert( '01234 56789' ), '01234%2056789' )

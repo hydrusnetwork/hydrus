@@ -5205,7 +5205,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             try:
                 
-                normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
+                normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, for_server = True )
                 
                 normalised_urls.append( normalised_url )
                 
@@ -5463,6 +5463,26 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         return command_processed
         
     
+    def UserIsOKToOK( self ):
+        
+        current_text = self._url_input.text()
+        
+        if current_text != '':
+            
+            message = 'You have text still in the input! Sure you are ok to apply?'
+            
+            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+            
+            if result != QW.QDialog.Accepted:
+                
+                return False
+                
+            
+        
+        return True
+        
+    
+
 class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def __init__( self, parent, missing_subfolders: typing.Collection[ ClientFilesPhysical.FilesStorageSubfolder ] ):

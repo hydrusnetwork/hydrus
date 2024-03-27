@@ -160,6 +160,11 @@ def ConvertQueryTextToDict( query_text ):
     
     # I no longer do this. I will encode if there is no '%' in there already, which catches cases of humans pasting/typing an URL with something human, but only if it is non-destructive
     
+    # Update: I still hate this a bit. I should have a parameter that says 'from human=True' and then anything we ingest should go through a normalisation( from_human = True ) wash
+    # I don't like the '+' exception we have to do here, and it would be better isolated to just the initian from_human wash rather than basically every time we look at an url for normalisation
+    # indeed, instead of having 'from_human' in here, I could have a 'EncodeQueryDict' that does best-attempt smart encoding from_human, once
+    # this guy would then just be a glorified dict parser, great
+    
     param_order = []
     
     query_dict = {}
@@ -184,7 +189,7 @@ def ConvertQueryTextToDict( query_text ):
             
             if '%' not in value:
                 
-                value = urllib.parse.quote( value, safe = '' )
+                value = urllib.parse.quote( value, safe = '+' )
                 
             
             single_value_parameters.append( value )
@@ -196,12 +201,12 @@ def ConvertQueryTextToDict( query_text ):
             
             if '%' not in key:
                 
-                key = urllib.parse.quote( key, safe = '' )
+                key = urllib.parse.quote( key, safe = '+' )
                 
             
             if '%' not in value:
                 
-                value = urllib.parse.quote( value, safe = '' )
+                value = urllib.parse.quote( value, safe = '+' )
                 
             
             param_order.append( key )
@@ -291,7 +296,7 @@ def GetSearchURLs( url ):
     
     try:
         
-        ephemeral_normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
+        ephemeral_normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, for_server = True )
         
         search_urls.add( ephemeral_normalised_url )
         

@@ -266,7 +266,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             seen_url_classes.add( api_url_class )
             
         
-        api_url = api_url_class.Normalise( api_url, ephemeral_ok = True )
+        api_url = api_url_class.Normalise( api_url, for_server = True )
         
         return ( api_url_class, api_url )
         
@@ -1510,7 +1510,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
         return True
         
     
-    def NormaliseURL( self, url, ephemeral_ok = False ):
+    def NormaliseURL( self, url, for_server = False ):
         
         with self._lock:
             
@@ -1539,14 +1539,14 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                normalised_url = url_class.Normalise( url, ephemeral_ok = ephemeral_ok )
+                normalised_url = url_class.Normalise( url, for_server = for_server )
                 
             
             return normalised_url
             
         
     
-    def NormaliseURLs( self, urls: typing.Collection[ str ], ephemeral_ok = False ) -> typing.List[ str ]:
+    def NormaliseURLs( self, urls: typing.Collection[ str ], for_server = False ) -> typing.List[ str ]:
         
         normalised_urls = []
         
@@ -1554,7 +1554,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                normalised_url = self.NormaliseURL( url, ephemeral_ok = ephemeral_ok )
+                normalised_url = self.NormaliseURL( url, for_server = for_server )
                 
             except HydrusExceptions.URLClassException:
                 

@@ -528,11 +528,16 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if selected_file_seed.IsURLFileImport():
                 
+                main_url = selected_file_seed.file_seed_data
                 referral_url = selected_file_seed.GetReferralURL()
                 primary_urls = sorted( selected_file_seed.GetPrimaryURLs() )
                 source_urls = sorted( selected_file_seed.GetSourceURLs() )
                 
-                if referral_url is None and len( primary_urls ) + len( source_urls ) == 0:
+                for_server_url = CG.client_controller.network_engine.domain_manager.GetURLToFetch( main_url )
+                
+                nothing_interesting_going_on = main_url == for_server_url and referral_url is None and len( primary_urls ) == 0 and len( source_urls ) == 0
+                
+                if nothing_interesting_going_on:
                     
                     ClientGUIMenus.AppendMenuLabel( menu, 'no additional urls' )
                     
@@ -540,21 +545,23 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     url_submenu = ClientGUIMenus.GenerateMenu( menu )
                     
+                    if main_url != for_server_url:
+                        
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'request url: {for_server_url}', copy_text = for_server_url )
+                        
+                    
                     if referral_url is not None:
                         
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, 'referral url:' )
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, referral_url )
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'referral url: {referral_url}', copy_text = referral_url )
                         
                     
                     if len( primary_urls ) > 0:
                         
                         ClientGUIMenus.AppendSeparator( url_submenu )
                         
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, 'primary urls:' )
-                        
                         for url in primary_urls:
                             
-                            ClientGUIMenus.AppendMenuLabel( url_submenu, url )
+                            ClientGUIMenus.AppendMenuLabel( url_submenu, f'primary url: {url}', copy_text = url )
                             
                         
                     
@@ -562,11 +569,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                         
                         ClientGUIMenus.AppendSeparator( url_submenu )
                         
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, 'source urls:' )
-                        
                         for url in source_urls:
                             
-                            ClientGUIMenus.AppendMenuLabel( url_submenu, url )
+                            ClientGUIMenus.AppendMenuLabel( url_submenu, f'source url: {url}', copy_text = url )
                             
                         
                     

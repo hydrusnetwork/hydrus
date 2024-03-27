@@ -224,11 +224,9 @@ class TestBandwidthManager( unittest.TestCase ):
         pass
         
     
-class TestNetworkingDomain( unittest.TestCase ):
+class TestURLClasses( unittest.TestCase ):
     
-    def test_url_classes( self ):
-        
-        # TODO: Yo, these all suck and should be broken into separate spammy tests with more appropriate example urls and all that!
+    def test_url_class_basics( self ):
         
         name = 'test'
         url_type = HC.URL_TYPE_POST
@@ -280,6 +278,38 @@ class TestNetworkingDomain( unittest.TestCase ):
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), referral_url )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), None )
         
+    
+    def test_encoding( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        
+        alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
         # encoding test
         
         parameters = []
@@ -297,10 +327,41 @@ class TestNetworkingDomain( unittest.TestCase ):
         self.assertEqual( url_class.Normalise( unnormalised_human_url ), normalised_encoded_url )
         self.assertEqual( url_class.Normalise( normalised_encoded_url ), normalised_encoded_url )
         
+    
+    def test_defaults( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        
+        alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        #
+        
+        good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         
         # default test
         
@@ -308,7 +369,12 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
-        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'pid', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '0' ), default_value = '0' ) )
+        
+        p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'pid', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '0' ) )
+        
+        p.SetDefaultValue( '0' )
+        
+        parameters.append( p )
         
         url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
         
@@ -326,12 +392,193 @@ class TestNetworkingDomain( unittest.TestCase ):
         self.assertTrue( url_class.Matches( unnormalised_with_pid ) )
         self.assertTrue( url_class.Matches( good_url ) )
         
+    
+    def test_is_ephemeral( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        
+        alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        #
+        
+        # default test
+        
         parameters = []
         
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
         parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
         
+        p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'token', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = 'abcd' ) )
+        
+        p.SetDefaultValue( '0' )
+        p.SetIsEphemeral( True )
+        
+        parameters.append( p )
+        
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        unnormalised = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        unnormalised_and_already_has = 'https://testbooru.cx/post/page.php?id=123456&s=view&token=hello'
+        for_server_normalised = 'https://testbooru.cx/post/page.php?id=123456&s=view&token=0'
+        normalised = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        self.assertEqual( url_class.Normalise( unnormalised, for_server = True ), for_server_normalised )
+        self.assertEqual( url_class.Normalise( unnormalised ), normalised )
+        
+        self.assertEqual( url_class.Normalise( unnormalised_and_already_has, for_server = True ), unnormalised_and_already_has )
+        self.assertEqual( url_class.Normalise( unnormalised_and_already_has ), normalised )
+        
+        self.assertTrue( url_class.Matches( unnormalised ) )
+        self.assertTrue( url_class.Matches( unnormalised_and_already_has ) )
+        self.assertTrue( url_class.Matches( for_server_normalised ) )
+        self.assertTrue( url_class.Matches( normalised ) )
+        
+    
+    def test_defaults_with_string_processor( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        
+        alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
         #
+        
+        # default test
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        
+        p = ClientNetworkingURLClass.URLClassParameterFixedName( name = 'cache_reset', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_ANY, example_string = 'abcd' ) )
+        
+        p.SetDefaultValue( '0' )
+        p.SetIsEphemeral( True )
+        
+        sp = ClientStrings.StringProcessor()
+        sp.SetProcessingSteps(
+            [
+                ClientStrings.StringConverter(
+                    conversions = [
+                        ( ClientStrings.STRING_CONVERSION_APPEND_RANDOM, ( 'a', 5 ) )
+                    ],
+                    example_string = '0'
+                )
+            ]
+        )
+        
+        p.SetDefaultValueStringProcessor( sp )
+        
+        parameters.append( p )
+        
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        unnormalised = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        unnormalised_and_already_has = 'https://testbooru.cx/post/page.php?cache_reset=hello&id=123456&s=view'
+        for_server_normalised = 'https://testbooru.cx/post/page.php?cache_reset=0aaaaa&id=123456&s=view'
+        normalised = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        self.assertEqual( url_class.Normalise( unnormalised, for_server = True ), for_server_normalised )
+        self.assertEqual( url_class.Normalise( unnormalised ), normalised )
+        
+        self.assertEqual( url_class.Normalise( unnormalised_and_already_has, for_server = True ), unnormalised_and_already_has )
+        self.assertEqual( url_class.Normalise( unnormalised_and_already_has ), normalised )
+        
+        self.assertTrue( url_class.Matches( unnormalised ) )
+        self.assertTrue( url_class.Matches( unnormalised_and_already_has ) )
+        self.assertTrue( url_class.Matches( for_server_normalised ) )
+        self.assertTrue( url_class.Matches( normalised ) )
+        
+    
+    def test_alphabetise_params( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        
+        alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        #
+        
+        referral_url = 'https://testbooru.cx/gallery/tags=samus_aran'
+        good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        unnormalised_good_url_1 = 'https://testbooru.cx/post/page.php?id=123456&s=view&additional_gumpf=stuff'
+        unnormalised_good_url_2 = 'https://testbooru.cx/post/page.php?s=view&id=123456'
+        bad_url = 'https://wew.lad/123456'
+        
+        #
+        
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        self.assertEqual( url_class.Normalise( unnormalised_good_url_2 ), good_url )
         
         alphabetise_get_parameters = False
         
@@ -341,7 +588,41 @@ class TestNetworkingDomain( unittest.TestCase ):
         
         self.assertEqual( url_class.Normalise( unnormalised_good_url_2 ), unnormalised_good_url_2 )
         
+    
+    def test_referral( self ):
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        
         alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        #
+        
+        referral_url = 'https://testbooru.cx/gallery/tags=samus_aran'
+        good_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
         
         #
         
@@ -384,7 +665,8 @@ class TestNetworkingDomain( unittest.TestCase ):
         self.assertEqual( url_class.GetReferralURL( good_url, referral_url ), converted_referral_url )
         self.assertEqual( url_class.GetReferralURL( good_url, None ), converted_referral_url )
         
-        # fragment test
+    
+    def test_fragment( self ):
         
         name = 'mega test'
         url_type = HC.URL_TYPE_POST
@@ -426,6 +708,69 @@ class TestNetworkingDomain( unittest.TestCase ):
         url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
         
         self.assertEqual( url_class.Normalise( example_url ), example_url )
+        
+    
+    def test_extra_params( self ):
+        
+        unnormalised_with_extra = 'https://testbooru.cx/post/page.php?id=123456&s=view&from_tag=skirt'
+        normalised_with_extra = 'https://testbooru.cx/post/page.php?from_tag=skirt&id=123456&s=view'
+        normalised_without_extra = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        name = 'test'
+        url_type = HC.URL_TYPE_POST
+        preferred_scheme = 'https'
+        netloc = 'testbooru.cx'
+        
+        alphabetise_get_parameters = True
+        match_subdomains = False
+        keep_matched_subdomains = False
+        can_produce_multiple_files = False
+        should_be_associated_with_files = True
+        keep_fragment = False
+        
+        path_components = []
+        
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'post', example_string = 'post' ), None ) )
+        path_components.append( ( ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'page.php', example_string = 'page.php' ), None ) )
+        
+        parameters = []
+        
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 's', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'view', example_string = 'view' ) ) )
+        parameters.append( ClientNetworkingURLClass.URLClassParameterFixedName( name = 'id', value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FLEXIBLE, match_value = ClientStrings.NUMERIC, example_string = '123456' ) ) )
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
+        example_url = 'https://testbooru.cx/post/page.php?id=123456&s=view'
+        
+        url_class = ClientNetworkingURLClass.URLClass( name, url_type = url_type, preferred_scheme = preferred_scheme, netloc = netloc, path_components = path_components, parameters = parameters, send_referral_url = send_referral_url, referral_url_converter = referral_url_converter, gallery_index_type = gallery_index_type, gallery_index_identifier = gallery_index_identifier, gallery_index_delta = gallery_index_delta, example_url = example_url )
+        
+        url_class.SetURLBooleans( match_subdomains, keep_matched_subdomains, alphabetise_get_parameters, can_produce_multiple_files, should_be_associated_with_files, keep_fragment )
+        
+        url_class.SetKeepExtraParametersForServer( False )
+        
+        self.assertEqual( url_class.Normalise( unnormalised_with_extra, for_server = True ), normalised_without_extra )
+        self.assertEqual( url_class.Normalise( unnormalised_with_extra ), normalised_without_extra )
+        
+        url_class.SetKeepExtraParametersForServer( True )
+        
+        self.assertEqual( url_class.Normalise( unnormalised_with_extra, for_server = True ), normalised_with_extra )
+        self.assertEqual( url_class.Normalise( unnormalised_with_extra ), normalised_without_extra )
+        
+        self.assertTrue( url_class.Matches( unnormalised_with_extra ) )
+        self.assertTrue( url_class.Matches( normalised_without_extra ) )
+        self.assertTrue( url_class.Matches( normalised_with_extra ) )
+        
+    
+    def test_single_value_params( self ):
+        
+        send_referral_url = ClientNetworkingURLClass.SEND_REFERRAL_URL_ONLY_IF_PROVIDED
+        referral_url_converter = None
+        gallery_index_type = None
+        gallery_index_identifier = None
+        gallery_index_delta = 1
         
         # single-value params test
         

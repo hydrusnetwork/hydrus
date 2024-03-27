@@ -209,6 +209,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result = {}
         
+        expected_result[ 'request_url' ] = normalised_url
         expected_result[ 'normalised_url' ] = normalised_url
         expected_result[ 'url_type' ] = HC.URL_TYPE_POST
         expected_result[ 'url_type_string' ] = 'post url'
@@ -1229,6 +1230,10 @@ class TestClientAPI( unittest.TestCase ):
         
         #
         
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        HG.test_controller.SetRead( 'media_results', [ media_result ] )
+        
         HG.test_controller.ClearWrites( 'content_updates' )
         
         path = '/add_files/undelete_files'
@@ -1252,6 +1257,10 @@ class TestClientAPI( unittest.TestCase ):
         HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
+        
+        media_results = [ HF.GetFakeMediaResult( h ) for h in hashes ]
+        
+        HG.test_controller.SetRead( 'media_results', media_results )
         
         HG.test_controller.ClearWrites( 'content_updates' )
         
@@ -1296,6 +1305,59 @@ class TestClientAPI( unittest.TestCase ):
         text = str( data, 'utf-8' )
         
         self.assertIn( not_existing_service_hex, text ) # error message should be complaining about it
+        
+        #
+        
+        media_result = HF.GetFakeMediaResult( hash )
+        
+        
+        deleted_timestamp_ms = 5000000
+        previously_imported_timestamp_ms = 2500000
+        
+        deleted_to_timestamps_ms = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : deleted_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : deleted_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : deleted_timestamp_ms }
+        deleted_to_previously_imported_timestamp_ms = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY : previously_imported_timestamp_ms, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : previously_imported_timestamp_ms, CC.LOCAL_FILE_SERVICE_KEY : previously_imported_timestamp_ms }
+        
+        times_manager = ClientMediaManagers.TimesManager()
+        
+        times_manager.SetDeletedTimestampsMS( deleted_to_timestamps_ms )
+        times_manager.SetPreviouslyImportedTimestampsMS( deleted_to_previously_imported_timestamp_ms )
+        
+        locations_manager = ClientMediaManagers.LocationsManager(
+            set(),
+            set( deleted_to_timestamps_ms.keys() ),
+            set(),
+            set(),
+            times_manager,
+            inbox = False,
+            urls = set(),
+            service_keys_to_filenames = {}
+        )
+        
+        media_result._locations_manager = locations_manager
+        
+        HG.test_controller.SetRead( 'media_results', [ media_result ] )
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/clear_file_deletion_record'
+        
+        body_dict = { 'hash' : hash.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, { hash } ) ] )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
         
         #
         
@@ -2986,6 +3048,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result = {}
         
+        expected_result[ 'request_url' ] = url
         expected_result[ 'normalised_url' ] = url
         expected_result[ 'url_type' ] = HC.URL_TYPE_UNKNOWN
         expected_result[ 'url_type_string' ] = 'unknown url'
@@ -3000,6 +3063,7 @@ class TestClientAPI( unittest.TestCase ):
         # known
         
         url = 'http://8ch.net/tv/res/1846574.html'
+        request_url = 'https://8ch.net/tv/res/1846574.json'
         normalised_url = 'https://8ch.net/tv/res/1846574.html'
         # http so we can test normalised is https
         
@@ -3019,6 +3083,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result = {}
         
+        expected_result[ 'request_url' ] = request_url
         expected_result[ 'normalised_url' ] = normalised_url
         expected_result[ 'url_type' ] = HC.URL_TYPE_WATCHABLE
         expected_result[ 'url_type_string' ] = 'watchable url'
@@ -3052,6 +3117,7 @@ class TestClientAPI( unittest.TestCase ):
         
         expected_result = {}
         
+        expected_result[ 'request_url' ] = normalised_url
         expected_result[ 'normalised_url' ] = normalised_url
         expected_result[ 'url_type' ] = HC.URL_TYPE_POST
         expected_result[ 'url_type_string' ] = 'post url'

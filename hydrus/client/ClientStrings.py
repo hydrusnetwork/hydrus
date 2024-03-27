@@ -2,6 +2,7 @@ import base64
 import datetime
 import hashlib
 import html
+import random
 import re
 import typing
 import urllib.parse
@@ -31,6 +32,7 @@ STRING_CONVERSION_INTEGER_ADDITION = 11
 STRING_CONVERSION_DATE_ENCODE = 12
 STRING_CONVERSION_HASH_FUNCTION = 13
 STRING_CONVERSION_DATEPARSER_DECODE = 14
+STRING_CONVERSION_APPEND_RANDOM = 15
 
 conversion_type_str_lookup = {}
 
@@ -38,6 +40,7 @@ conversion_type_str_lookup[ STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING ] = 're
 conversion_type_str_lookup[ STRING_CONVERSION_REMOVE_TEXT_FROM_END ] = 'remove text from end of string'
 conversion_type_str_lookup[ STRING_CONVERSION_PREPEND_TEXT ] = 'prepend text'
 conversion_type_str_lookup[ STRING_CONVERSION_APPEND_TEXT ] = 'append text'
+conversion_type_str_lookup[ STRING_CONVERSION_APPEND_RANDOM ] = 'append random text'
 conversion_type_str_lookup[ STRING_CONVERSION_ENCODE ] = 'encode'
 conversion_type_str_lookup[ STRING_CONVERSION_DECODE ] = 'decode'
 conversion_type_str_lookup[ STRING_CONVERSION_CLIP_TEXT_FROM_BEGINNING ] = 'take the start of the string'
@@ -175,6 +178,12 @@ class StringConverter( StringProcessingStep ):
                     text = data
                     
                     s = s + text
+                    
+                elif conversion_type == STRING_CONVERSION_APPEND_RANDOM:
+                    
+                    ( population_text, num_chars ) = data
+                    
+                    s = s + ''.join( random.choices( population_text, k = num_chars ) )
                     
                 elif conversion_type == STRING_CONVERSION_ENCODE:
                     
@@ -417,6 +426,12 @@ class StringConverter( StringProcessingStep ):
         elif conversion_type == STRING_CONVERSION_APPEND_TEXT:
             
             return 'append with "' + data + '"'
+            
+        elif conversion_type == STRING_CONVERSION_APPEND_RANDOM:
+            
+            ( population_text, num_chars ) = data
+            
+            return f'append with {HydrusData.ToHumanInt( num_chars )} random characters, from "{population_text}"'
             
         elif conversion_type == STRING_CONVERSION_ENCODE:
             

@@ -2841,7 +2841,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         deletee_timestamp_domains = [ domain for domain in self._original_domain_modified_domains.difference( current_domains ) ]
         
-        deletee_result_tuples = [ ( hashes, ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain ) ) for ( domain, ( hashes, datetime_value_range, user_has_edited ) ) in self._domain_modified_list_ctrl_data_dict.items() if domain in deletee_timestamp_domains ]
+        deletee_result_tuples = [ ( hashes, ClientTime.TimestampData( timestamp_type = HC.TIMESTAMP_TYPE_MODIFIED_DOMAIN, location = domain ), datetime_value_range.GetStepMS() ) for ( domain, ( hashes, datetime_value_range, user_has_edited ) ) in self._domain_modified_list_ctrl_data_dict.items() if domain in deletee_timestamp_domains ]
         
         result_tuples.extend( deletee_result_tuples )
         

@@ -1568,9 +1568,13 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
     
     def GetDefaultPredicate( self ):
         
+        from hydrus.client.networking import ClientNetworkingURLClass
+        
         operator = True
-        rule_type = 'regex'
-        rule = None
+        rule_type = 'url_class'
+        rule = ClientNetworkingURLClass.URLClass(
+            name = 'safebooru post url'
+        )
         description = ''
         
         return ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, ( operator, rule_type, rule, description ) )

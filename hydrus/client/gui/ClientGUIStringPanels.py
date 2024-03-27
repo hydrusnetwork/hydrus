@@ -704,6 +704,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                     ClientStrings.STRING_CONVERSION_CLIP_TEXT_FROM_END,
                     ClientStrings.STRING_CONVERSION_PREPEND_TEXT,
                     ClientStrings.STRING_CONVERSION_APPEND_TEXT,
+                    ClientStrings.STRING_CONVERSION_APPEND_RANDOM,
                     ClientStrings.STRING_CONVERSION_ENCODE,
                     ClientStrings.STRING_CONVERSION_DECODE,
                     ClientStrings.STRING_CONVERSION_REVERSE,
@@ -825,6 +826,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             elif conversion_type == ClientStrings.STRING_CONVERSION_HASH_FUNCTION:
                 
                 self._data_hash_function.SetValue( data )
+                
+            elif conversion_type == ClientStrings.STRING_CONVERSION_APPEND_RANDOM:
+                
+                ( population, num_chars ) = data
+                
+                self._data_text.setText( population )
+                self._data_number.setValue( num_chars )
                 
             elif data is not None:
                 
@@ -964,6 +972,19 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_dateparser_label.setVisible( True )
                 
+            elif conversion_type == ClientStrings.STRING_CONVERSION_APPEND_RANDOM:
+                
+                self._data_text_label.setVisible( True )
+                self._data_text.setVisible( True )
+                
+                self._data_number_label.setVisible( True )
+                self._data_number.setVisible( True )
+                
+                self._data_text_label.setText( 'population' )
+                self._data_number_label.setText( 'number of characters' )
+                
+                self._data_number.setMinimum( 1 )
+                
             elif conversion_type in ( ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE, ClientStrings.STRING_CONVERSION_REGEX_SUB ):
                 
                 self._data_text_label.setVisible( True )
@@ -1092,6 +1113,13 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             elif conversion_type == ClientStrings.STRING_CONVERSION_DECODE:
                 
                 data = self._data_decoding.GetValue()
+                
+            elif conversion_type ==  ClientStrings.STRING_CONVERSION_APPEND_RANDOM:
+                
+                population = self._data_text.text()
+                number_of_chars = self._data_number.value()
+                
+                data = ( population, number_of_chars )
                 
             elif conversion_type in ( ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT ):
                 

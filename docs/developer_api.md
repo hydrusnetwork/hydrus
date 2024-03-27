@@ -555,7 +555,7 @@ If you specify a file service, the file will only be deleted from that location.
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 
-_Tell the client to pull files back out of the trash._
+_Tell the client to restore files that were previously deleted to their old file service(s)._
 
 Restricted access:
 :   YES. Import Files permission needed.
@@ -577,11 +577,37 @@ Arguments (in JSON):
 
 Response: 
 :   200 and no content.
+
+This is the reverse of a delete_files--restoring files back to where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'all my files', undeletes to all local file services for which there are deletion records.
+
+This operation will only occur on files that are currently in your file store (i.e. in 'all local files', and maybe, but not necessarily, in 'trash'). You cannot 'undelete' something you do not have!
+
+### **POST `/add_files/clear_file_deletion_record`** { id="add_files_clear_file_deletion_record" }
+
+_Tell the client to forget that it once deleted files._
+
+Restricted access:
+:   YES. Import Files permission needed.
     
-You can use hash or hashes, whichever is more convenient.
-    
-This is the reverse of a delete_files--removing files from trash and putting them back where they came from. If you specify a file service, the files will only be undeleted to there (if they have a delete record, otherwise this is nullipotent). The default, 'all my files', undeletes to all local file services for which there are deletion records. There is no error if any of the files do not currently exist in 'trash'.
-    
+Required Headers:
+:   
+*   `Content-Type`: application/json
+
+Arguments (in JSON):
+:   
+*   [files](#parameters_files)
+
+```json title="Example request body"
+{
+  "hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538"
+}
+```
+
+Response: 
+:   200 and no content.
+
+This is the same as the advanced deletion option of the same basic name. It will erase the record that a file has been physically deleted (i.e. it only applies to deletion records in the 'all local files' domain). A file that no longer has a 'all local files' deletion record will pass a 'exclude previously deleted files' check in a _file import options_.
+
 
 ### **POST `/add_files/archive_files`** { id="add_files_archive_files" }
 
@@ -740,16 +766,17 @@ Arguments:
     *   `url`: (the url you want to ask about)
 
 Example request:
-:   for URL `https://8ch.net/tv/res/1846574.html`:
+:   for URL `https://boards.4chan.org/tv/thread/197641945/itt-moments-in-film-or-tv-that-aged-poorly`:
     ```
-    /add_urls/get_url_info?url=https%3A%2F%2F8ch.net%2Ftv%2Fres%2F1846574.html
+    /add_urls/get_url_info?url=https%3A%2F%2Fboards.4chan.org%2Ftv%2Fthread%2F197641945%2Fitt-moments-in-film-or-tv-that-aged-poorly
     ```
         
 Response: 
 :   Some JSON describing what the client thinks of the URL.
 ```json title="Example response"
 {
-  "normalised_url" : "https://8ch.net/tv/res/1846574.html",
+  "request_url" : "https://a.4cdn.org/tv/thread/197641945.json",
+  "normalised_url" : "https://boards.4chan.org/tv/thread/197641945",
   "url_type" : 4,
   "url_type_string" : "watchable url",
   "match_name" : "8chan thread",
@@ -766,6 +793,10 @@ Response:
     *   5 - Unknown URL (i.e. no matching URL Class)
     
     'Unknown' URLs are treated in the client as direct File URLs. Even though the 'File URL' type is available, most file urls do not have a URL Class, so they will appear as Unknown. Adding them to the client will pass them to the URL Downloader as a raw file for download and import.
+    
+    The `normalised_url` is the fully normalised URL--what is used for comparison and saving to disk.
+    
+    The `request_url` is either the lighter 'for server' normalised URL, which may include ephemeral token parameters, or, as in the case here, the fully converted API/redirect URL. (When hydrus is asked to check a 4chan thread, it doesn't hit the HTML, but the JSON API.)
     
 
 ### **POST `/add_urls/add_url`** { id="add_urls_add_url" }

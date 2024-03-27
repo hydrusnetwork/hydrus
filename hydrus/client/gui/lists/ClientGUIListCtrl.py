@@ -65,6 +65,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._data_to_tuples_func = data_to_tuples_func
         
         self._use_simple_delete = use_simple_delete
+        self._has_done_deletes = False
         self._can_delete_callback = can_delete_callback
         
         self._rows_menu_callable = None
@@ -595,6 +596,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         self.columnListContentsChanged.emit()
         
+        self._has_done_deletes = True
+        
     
     def DeleteSelected( self ):
         
@@ -618,6 +621,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._RecalculateIndicesAfterDelete()
         
         self.columnListContentsChanged.emit()
+        
+        self._has_done_deletes = True
         
     
     def EventColumnClick( self, col ):
@@ -731,6 +736,11 @@ class BetterListCtrl( QW.QTreeWidget ):
     def HasData( self, data: object ):
         
         return data in self._data_to_indices
+        
+    
+    def HasDoneDeletes( self ):
+        
+        return self._has_done_deletes
         
     
     def HasOneSelected( self ):
