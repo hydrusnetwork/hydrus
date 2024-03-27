@@ -7,7 +7,7 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
-## [Version 567](https://github.com/hydrusnetwork/hydrus/releases/tag/v567)
+## [Version 568](https://github.com/hydrusnetwork/hydrus/releases/tag/v568)
 
 ### user contributions
 
@@ -81,6 +81,8 @@ title: Changelog
 * also broke the monolithic url class unit test into eight smaller (albeit ugly for now) pieces
 * added a unit test for the new 'append random text' converter
 * cleaned up some misc URL Class code
+
+## Version 567 was cancelled, its changes folded into 568.
 
 ## [Version 566](https://github.com/hydrusnetwork/hydrus/releases/tag/v566)
 
