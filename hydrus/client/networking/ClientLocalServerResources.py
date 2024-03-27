@@ -1764,6 +1764,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1781,6 +1782,32 @@ class HydrusResourceClientAPIRestrictedAddFilesArchiveFiles( HydrusResourceClien
         return response_context
         
     
+
+
+class HydrusResourceClientAPIRestrictedAddFilesClearDeletedFileRecord( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        hashes = set( ParseHashes( request ) )
+        
+        media_results = CG.client_controller.Read( 'media_results', hashes )
+        
+        media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in media_result.GetLocationsManager().GetDeleted() ]
+        
+        clearee_hashes = { m.GetHash() for m in media_results }
+        
+        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_CLEAR_DELETE_RECORD, clearee_hashes )
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
+        
+        CG.client_controller.Write( 'content_updates', content_update_package )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
 class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1848,6 +1875,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUnarchiveFiles( HydrusResourceCli
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClientAPIRestrictedAddFiles ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1857,6 +1885,13 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
         hashes = set( ParseHashes( request ) )
         
         location_context.LimitToServiceTypes( CG.client_controller.services_manager.GetServiceType, ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA ) )
+        
+        media_results = CG.client_controller.Read( 'media_results', hashes )
+        
+        # this is the only scan I have to do. all the stuff like 'can I undelete from here' and 'what does an undelete to combined local media mean' is all sorted at the db level no worries
+        media_results = [ media_result for media_result in media_results if CC.COMBINED_LOCAL_FILE_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent() ]
+        
+        hashes = { media_result.GetHash() for media_result in media_results }
         
         content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_UNDELETE, hashes )
         
@@ -1872,6 +1907,7 @@ class HydrusResourceClientAPIRestrictedAddFilesUndeleteFiles( HydrusResourceClie
         return response_context
         
     
+
 class HydrusResourceClientAPIRestrictedAddFilesGenerateHashes( HydrusResourceClientAPIRestrictedAddFiles ):
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
@@ -2583,6 +2619,17 @@ class HydrusResourceClientAPIRestrictedAddURLsGetURLInfo( HydrusResourceClientAP
             
             body_dict[ 'cannot_parse_reason' ] = cannot_parse_reason
             
+        
+        try:
+            
+            url_to_fetch = CG.client_controller.network_engine.domain_manager.GetURLToFetch( normalised_url )
+            
+        except Exception as e:
+            
+            raise HydrusExceptions.BadRequestException( e )
+            
+        
+        body_dict[ 'request_url' ] = url_to_fetch
         
         body = Dumps( body_dict, request.preferred_mime )
         

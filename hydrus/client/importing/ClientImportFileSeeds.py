@@ -1166,7 +1166,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             try:
                 
-                self.file_seed_data = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data, ephemeral_ok = True )
+                self.file_seed_data = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data, for_server = True )
                 self.file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
                 
             except HydrusExceptions.URLClassException:

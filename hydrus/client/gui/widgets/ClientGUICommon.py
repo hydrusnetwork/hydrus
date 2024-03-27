@@ -1682,6 +1682,11 @@ class NoneableTextCtrl( QW.QWidget ):
         self._text.setPlaceholderText( text )
         
     
+    def setReadOnly( self, value: bool ):
+        
+        self._text.setReadOnly( value )
+        self._checkbox.setEnabled( not value )
+        
     def setToolTip( self, text ):
         
         QW.QWidget.setToolTip( self, text )
