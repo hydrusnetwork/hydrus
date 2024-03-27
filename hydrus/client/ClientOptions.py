@@ -164,6 +164,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'show_number_namespaces' ] = True
         self._dictionary[ 'booleans' ][ 'show_subtag_number_namespaces' ] = True
         self._dictionary[ 'booleans' ][ 'replace_tag_underscores_with_spaces' ] = False
+        self._dictionary[ 'booleans' ][ 'replace_tag_emojis_with_boxes' ] = False
         
         self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True
         

@@ -101,6 +101,7 @@ def ConvertHTTPToHTTPS( url ):
         raise Exception( 'Given a url that did not have a scheme!' )
         
     
+
 def ConvertQueryDictToText( query_dict, single_value_parameters, param_order = None ):
     
     # we now do everything with requests, which does all the unicode -> %20 business naturally, phew
@@ -142,7 +143,7 @@ def ConvertQueryDictToText( query_dict, single_value_parameters, param_order = N
             
             if key in query_dict:
                 
-                params.append( '{}={}'.format( key, query_dict[ key ] ) )
+                params.append( f'{key}={query_dict[ key ]}' )
                 
             
         
@@ -153,16 +154,11 @@ def ConvertQueryDictToText( query_dict, single_value_parameters, param_order = N
     
 def ConvertQueryTextToDict( query_text ):
     
-    # we generally do not want quote characters, %20 stuff, in our urls. we would prefer properly formatted unicode
+    # in the old version of this func, we played silly games with character encoding. I made the foolish decision to try to handle/save URLs with %20 stuff decoded
+    # this lead to complexity with odd situations like '6+girls+skirt', which would come here encoded as '6%2Bgirls+skirt' 
+    # I flipped back and forth and tried to preserve the encoding if it did stepped on x or did not change y, what a mess!
     
-    # so, let's replace all keys and values with unquoted versions
-    # -but-
-    # we only replace if it is a completely reversable operation!
-    # odd situations like '6+girls+skirt', which comes here encoded as '6%2Bgirls+skirt', shouldn't turn into '6+girls+skirt'
-    # so if there are a mix of encoded and non-encoded, we won't touch it here m8
-    
-    # except these chars, which screw with GET arg syntax when unquoted
-    bad_chars = [ '&', '=', '/', '?', '#', ';', '+', ',' ]
+    # I no longer do this. I will encode if there is no '%' in there already, which catches cases of humans pasting/typing an URL with something human, but only if it is non-destructive
     
     param_order = []
     
@@ -186,23 +182,9 @@ def ConvertQueryTextToDict( query_text ):
                 continue
                 
             
-            try:
+            if '%' not in value:
                 
-                unquoted_value = urllib.parse.unquote( value )
-                
-                if True not in ( bad_char in unquoted_value for bad_char in bad_chars ):
-                    
-                    requoted_value = urllib.parse.quote( unquoted_value )
-                    
-                    if requoted_value == value:
-                        
-                        value = unquoted_value
-                        
-                    
-                
-            except:
-                
-                pass
+                value = urllib.parse.quote( value, safe = '' )
                 
             
             single_value_parameters.append( value )
@@ -212,42 +194,14 @@ def ConvertQueryTextToDict( query_text ):
             
             ( key, value ) = result
             
-            try:
+            if '%' not in key:
                 
-                unquoted_key = urllib.parse.unquote( key )
-                
-                if True not in ( bad_char in unquoted_key for bad_char in bad_chars ):
-                    
-                    requoted_key = urllib.parse.quote( unquoted_key )
-                    
-                    if requoted_key == key:
-                        
-                        key = unquoted_key
-                        
-                    
-                
-            except:
-                
-                pass
+                key = urllib.parse.quote( key, safe = '' )
                 
             
-            try:
+            if '%' not in value:
                 
-                unquoted_value = urllib.parse.unquote( value )
-                
-                if True not in ( bad_char in unquoted_value for bad_char in bad_chars ):
-                    
-                    requoted_value = urllib.parse.quote( unquoted_value )
-                    
-                    if requoted_value == value:
-                        
-                        value = unquoted_value
-                        
-                    
-                
-            except:
-                
-                pass
+                value = urllib.parse.quote( value, safe = '' )
                 
             
             param_order.append( key )
@@ -258,6 +212,7 @@ def ConvertQueryTextToDict( query_text ):
     
     return ( query_dict, single_value_parameters, param_order )
     
+
 def ConvertURLIntoDomain( url ):
     
     parser_result = ParseURL( url )
@@ -282,6 +237,18 @@ def ConvertURLIntoSecondLevelDomain( url ):
     
     return ConvertDomainIntoSecondLevelDomain( domain )
     
+
+def ConvertURLToHumanString( url: str ) -> str:
+    
+    # ok so the idea here is that we want to store 'ugly' urls behind the scenes, with quoted %20 gubbins, but any time we present to the user, we want to convert all that to real (URL-invalid) characters 
+    # although there are some caveats, we can pretty much just do a dequote on the whole string and it'll be fine most of the time mate
+    # if we have a unicode domain, we'll need to figure out 'punycode' decoding, but w/e for now
+    
+    pretty_url = urllib.parse.unquote( url )
+    
+    return pretty_url
+    
+
 def CookieDomainMatches( cookie, search_domain ):
     
     cookie_domain = cookie.domain
@@ -323,6 +290,10 @@ def GetSearchURLs( url ):
     search_urls.add( url )
     
     try:
+        
+        ephemeral_normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, ephemeral_ok = True )
+        
+        search_urls.add( ephemeral_normalised_url )
         
         normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
         

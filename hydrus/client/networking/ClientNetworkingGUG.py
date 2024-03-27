@@ -108,45 +108,59 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             raise HydrusExceptions.GUGException( 'Replacement phrase not in URL template!' )
             
         
-        ( first_part, second_part ) = self._url_template.split( self._replacement_phrase, 1 )
-        
-        search_phrase_seems_to_go_in_path = '?' not in first_part
-        
-        search_terms = query_text.split( ' ' )
-        
-        # if a user enters "%20" in a query, or any other percent-encoded char, we turn it into human here, lest it be re-quoted in a moment
-        # if a user enters "%25", i.e. "%", followed by some characters, then all bets are off
-        search_terms = [ urllib.parse.unquote( search_term ) for search_term in search_terms ]
-        
-        if search_phrase_seems_to_go_in_path:
+        if '%' in query_text:
             
-            # encode all this gubbins since requests won't be able to do it
-            # this basically fixes e621 searches for 'male/female', which through some httpconf trickery are embedded in path but end up in a query, so need to be encoded right beforehand
+            # redundant test but leave it in for now
+            if ' ' in query_text or '% ' in query_text or query_text.endswith( '%' ):
+                
+                # there is probably a legit % character here that should be encoded
+                
+                search_terms = query_text.split( ' ' )
+                
+                we_think_query_text_is_pre_encoded = False
+                
+            elif '%20' in query_text:
+                
+                # we are generally confident the user pasted a multi-tag query they copied from a notepad or something
+                
+                search_terms = query_text.split( '%20' )
+                
+                # any % character entered here should be encoded as '%25'
+                we_think_query_text_is_pre_encoded = True
+                
+            else:
+                
+                # we simply do not know in this case. this is a single tag with a % not at the end, but it could be male%2Ffemale or it could be "120%120%hello", the hit new anime series
+                # assuming it is the former more often than the latter, we will not intrude on what the user sent here and cross our fingers
+                
+                search_terms = [ query_text ]
+                
+                we_think_query_text_is_pre_encoded = True
+                
+            
+        else:
+            
+            search_terms = query_text.split( ' ' )
+            
+            # normal, not pre-encoded text
+            we_think_query_text_is_pre_encoded = False
+            
+        
+        if not we_think_query_text_is_pre_encoded:
             
             encoded_search_terms = [ urllib.parse.quote( search_term, safe = '' ) for search_term in search_terms ]
             
         else:
             
-            encoded_search_terms = []
-            
-            for search_term in search_terms:
-                
-                # when the tags separator is '+' but the tags include '6+girls', we run into fun internet land
-                
-                bad_chars = [ self._search_terms_separator, '&', '=', '/', '?', '#', ';' ]
-                
-                if True in ( bad_char in search_term for bad_char in bad_chars ):
-                    
-                    search_term = urllib.parse.quote( search_term, safe = '' )
-                    
-                
-                encoded_search_terms.append( search_term )
-                
+            encoded_search_terms = search_terms
             
         
         try:
             
             search_phrase = self._search_terms_separator.join( encoded_search_terms )
+            
+            # we do not encode the whole thing here since we may want to keep tag-connector-+ for the '6+girls+skirt' = '6%2Bgirls+skirt' scenario
+            # some characters are optional or something when it comes to encoding. '+' is one of these
             
             gallery_url = self._url_template.replace( self._replacement_phrase, search_phrase )
             

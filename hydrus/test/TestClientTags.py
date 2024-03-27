@@ -2167,14 +2167,14 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:media viewtime < 1 day 1 hour', "system:media viewtime < 1 days 1 hour 0 minutes" ),
             ( 'system:all viewtime > 1 hour 1 minute', "system:all viewtime > 1 hours 100 seconds" ),
             ( f'system:preview viewtime {HC.UNICODE_APPROX_EQUAL} 2 days 7 hours', "system:preview viewtime ~= 1 day 30 hours 100 minutes 90s" ),
-            ( 'system:has a url matching regex: index\\.php', " system:has url matching regex index\\.php" ),
-            ( 'system:does not have a url matching regex: index\\.php', "system:does not have a url matching regex index\\.php" ),
-            ( 'system:has url: https://safebooru.donmai.us/posts/4695284', "system:has_url https://safebooru.donmai.us/posts/4695284" ),
-            ( 'system:does not have url: https://safebooru.donmai.us/posts/4695284', " system:doesn't have url https://safebooru.donmai.us/posts/4695284  " ),
-            ( 'system:has a url with domain: safebooru.com', "system:has domain safebooru.com" ),
-            ( 'system:does not have a url with domain: safebooru.com', "system:doesn't have domain safebooru.com" ),
-            ( 'system:has safebooru file page url', "system:has a url with class safebooru file page" ),
-            ( 'system:does not have safebooru file page url', "system:doesn't have a url with url class safebooru file page " ),
+            ( 'system:has url matching regex index\\.php', " system:has url matching regex index\\.php" ),
+            ( 'system:does not have url matching regex index\\.php', "system:does not have a url matching regex index\\.php" ),
+            ( 'system:has url https://safebooru.donmai.us/posts/4695284', "system:has_url https://safebooru.donmai.us/posts/4695284" ),
+            ( 'system:does not have url https://safebooru.donmai.us/posts/4695284', " system:doesn't have url https://safebooru.donmai.us/posts/4695284  " ),
+            ( 'system:has url with domain safebooru.com', "system:has domain safebooru.com" ),
+            ( 'system:does not have url with domain safebooru.com', "system:doesn't have domain safebooru.com" ),
+            ( 'system:has url with class safebooru file page', "system:has url with class safebooru file page" ),
+            ( 'system:does not have url with class safebooru file page', "system:doesn't have a url with url class safebooru file page " ),
             ( 'system:tag as number: page less than 5', "system:tag as number page < 5" ),
             ( 'system:tag as number: page less than 5', "system:tag as number: page less than 5" ),
             ( 'system:number of notes: has notes', 'system:has note' ),
@@ -2265,6 +2265,12 @@ class TestTagRendering( unittest.TestCase ):
         self.assertEqual( ClientTags.RenderTag( 'test_tag', True ), 'test tag' )
         
         HG.test_controller.new_options.SetBoolean( 'replace_tag_underscores_with_spaces', False )
+        
+        HG.test_controller.new_options.SetBoolean( 'replace_tag_emojis_with_boxes', True )
+        
+        self.assertEqual( ClientTags.RenderTag( 'title:skeb⛓️💙', True ), 'title:skeb□□' )
+        
+        HG.test_controller.new_options.SetBoolean( 'replace_tag_emojis_with_boxes', False )
         
         self.assertEqual( ClientTags.RenderTag( 'character:lara', True ), 'character:lara' )
         

@@ -381,6 +381,7 @@ def ParseTwistedRequestGETArgs( requests_args: dict, int_params, byte_params, st
                 else:
                     
                     args[ name ] = json.loads( urllib.parse.unquote( value ) )
+                    
                 
             except Exception as e:
                 
@@ -398,6 +399,7 @@ def ParseTwistedRequestGETArgs( requests_args: dict, int_params, byte_params, st
                 else:
                     
                     list_of_hex_strings = json.loads( urllib.parse.unquote( value ) )
+                    
                 
                 args[ name ] = [ bytes.fromhex( hex_string ) for hex_string in list_of_hex_strings ]
                 

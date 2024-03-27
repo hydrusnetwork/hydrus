@@ -18,6 +18,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingJobs
 
 class NetworkJobControl( QW.QFrame ):
@@ -107,7 +108,7 @@ class NetworkJobControl( QW.QFrame ):
             
             url = self._network_job.GetURL()
             
-            ClientGUIMenus.AppendMenuLabel( menu, url, description = 'copy URL to the clipboard' )
+            ClientGUIMenus.AppendMenuLabel( menu, ClientNetworkingFunctions.ConvertURLToHumanString( url ), copy_text = url, description = 'copy URL to the clipboard' )
             
             ClientGUIMenus.AppendSeparator( menu )
             
