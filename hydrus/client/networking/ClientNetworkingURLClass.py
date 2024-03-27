@@ -387,7 +387,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return netloc
         
     
-    def _ClipAndFleshOutPath( self, path ):
+    def _ClipAndFleshOutPath( self, path: str, for_server: bool ):
         
         # /post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
         
@@ -400,7 +400,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         path_components = path.split( '/' )
         
-        do_clip = self.UsesAPIURL()
+        do_clip = self.UsesAPIURL() or not for_server
         flesh_out = len( path_components ) < len( self._path_components )
         
         if do_clip or flesh_out:
@@ -1332,7 +1332,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
         
         netloc = self._ClipNetLoc( p.netloc )
-        path = self._ClipAndFleshOutPath( p.path )
+        path = self._ClipAndFleshOutPath( p.path, for_server )
         query = self._ClipAndFleshOutQuery( p.query, for_server )
         
         r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
