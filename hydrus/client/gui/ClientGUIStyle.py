@@ -5,7 +5,8 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusTime
+
+from hydrus.client.gui import QtInit
 
 STYLESHEET_DIR = os.path.join( HC.STATIC_DIR, 'qss' )
 
@@ -67,7 +68,14 @@ def InitialiseDefaults():
     
     global ORIGINAL_STYLE_NAME
     
-    ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().name()
+    if QtInit.WE_ARE_QT5:
+        
+        ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().objectName()
+        
+    else:
+        
+        ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().name()
+        
     
     global ORIGINAL_STYLESHEET
     global CURRENT_STYLESHEET
@@ -77,8 +85,15 @@ def InitialiseDefaults():
     
 def SetStyleFromName( name: str ):
     
-    current_style_name = QW.QApplication.instance().style().name()
+    if QtInit.WE_ARE_QT5:
         
+        current_style_name  = QW.QApplication.instance().style().objectName()
+        
+    else:
+        
+        current_style_name  = QW.QApplication.instance().style().name()
+        
+    
     if name.casefold() == current_style_name.casefold():
         
         return
