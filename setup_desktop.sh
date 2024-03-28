@@ -3,8 +3,8 @@
 pushd "$(dirname "$0")" || exit 1
 
 INSTALL_DIR="$(readlink -f .)"
-DESKTOP_SOURCE_PATH=$INSTALL_DIR/static/hydrus.desktop
-DESKTOP_DEST_PATH=$HOME/.local/share/applications/hydrus.desktop
+DESKTOP_SOURCE_PATH=$INSTALL_DIR/static/io.github.hydrusnetwork.hydrus.desktop
+DESKTOP_DEST_PATH=$HOME/.local/share/applications/io.github.hydrusnetwork.hydrus.desktop
 
 echo "Install folder appears to be $INSTALL_DIR"
 
@@ -16,11 +16,11 @@ fi
 
 if [ -f "$DESKTOP_DEST_PATH" ]; then
 
-    echo "You already have a hydrus.desktop file at $DESKTOP_DEST_PATH. Would you like to overwrite it? y/n "
+    echo "You already have an io.github.hydrusnetwork.hydrus.desktop file at $DESKTOP_DEST_PATH. Would you like to overwrite it? y/n "
 
 else
 
-    echo "Create a hydrus.desktop file at $DESKTOP_DEST_PATH? y/n "
+    echo "Create an io.github.hydrusnetwork.hydrus.desktop file at $DESKTOP_DEST_PATH? y/n "
 
 fi
 

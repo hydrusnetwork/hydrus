@@ -169,7 +169,7 @@ There are three special external libraries. You just have to get them and put th
     
     If you get an error about the venv failing to activate during `setup_venv.sh`, you may need to install venv especially for your system. The specific error message should help you out, but you'll be looking at something along the lines of `apt install python3.10-venv`. 
     
-    If you like, you can run the `setup_desktop.sh` file to install a hydrus.desktop file to your applications folder. (Or check the template in `install_dir/static/hydrus.desktop` and do it yourself!)
+    If you like, you can run the `setup_desktop.sh` file to install an io.github.hydrusnetwork.hydrus.desktop file to your applications folder. (Or check the template in `install_dir/static/io.github.hydrusnetwork.hydrus.desktop` and do it yourself!)
     
 
 === "macOS"
