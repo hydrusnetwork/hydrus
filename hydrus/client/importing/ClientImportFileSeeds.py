@@ -1590,6 +1590,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 duplicate_file_seed.file_seed_data = child_url
                                 
+                                duplicate_file_seed.Normalise()
+                                
                                 duplicate_file_seed.SetReferralURL( url_for_child_referral )
 
                                 duplicate_file_seed.AddRequestHeaders( self._request_headers )
