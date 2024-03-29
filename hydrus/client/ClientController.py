@@ -112,6 +112,8 @@ class App( QW.QApplication ):
         
         self.setQuitOnLastWindowClosed( False )
         
+        self.setQuitLockEnabled( False )
+        
         self.call_after_catcher = QP.CallAfterEventCatcher( self )
         
         self.pubsub_catcher = PubSubEventCatcher( self, self._pubsub )
