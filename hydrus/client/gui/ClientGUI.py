@@ -2688,7 +2688,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 ClientGUIMenus.AppendMenuItem( save, name, 'Save the existing open pages as a session.', self.ProposeSaveGUISession, name )
                 
             
-            ClientGUIMenus.AppendMenuItem( save, 'as new session', 'Save the existing open pages as a session.', self.ProposeSaveGUISession )
+            ClientGUIMenus.AppendMenuItem( save, 'as new session' + HC.UNICODE_ELLIPSIS, 'Save the existing open pages as a session.', self.ProposeSaveGUISession )
             
             ClientGUIMenus.AppendMenu( self._menubar_pages_sessions_submenu, save, 'save' )
             
@@ -2955,20 +2955,20 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     if can_overrule_accounts:
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'review all accounts', 'See all accounts.', self._STARTReviewAllAccounts, service_key )
-                        ClientGUIMenus.AppendMenuItem( submenu, 'modify an account', 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'review all accounts' + HC.UNICODE_ELLIPSIS, 'See all accounts.', self._STARTReviewAllAccounts, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'modify an account' + HC.UNICODE_ELLIPSIS, 'Modify a specific account\'s type and expiration.', self._ModifyAccount, service_key )
                         
                     
                     if can_overrule_accounts and service_type == HC.FILE_REPOSITORY:
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'get an uploader\'s ip address', 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'get an uploader\'s ip address' + HC.UNICODE_ELLIPSIS, 'Fetch the ip address that uploaded a specific file, if the service knows it.', self._FetchIP, service_key )
                         
                     
                     if can_create_accounts:
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts', 'Create new accounts for this service.', self._GenerateNewAccounts, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'create new accounts' + HC.UNICODE_ELLIPSIS, 'Create new accounts for this service.', self._GenerateNewAccounts, service_key )
                         
                     
                     if can_overrule_account_types:
@@ -2982,13 +2982,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'change update period', 'Change the update period for this service.', self._ManageServiceOptionsUpdatePeriod, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'change update period' + HC.UNICODE_ELLIPSIS, 'Change the update period for this service.', self._ManageServiceOptionsUpdatePeriod, service_key )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'change anonymisation period', 'Change the account history nullification period for this service.', self._ManageServiceOptionsNullificationPeriod, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'change anonymisation period' + HC.UNICODE_ELLIPSIS, 'Change the account history nullification period for this service.', self._ManageServiceOptionsNullificationPeriod, service_key )
                         
                         if service_type == HC.TAG_REPOSITORY:
                             
-                            ClientGUIMenus.AppendMenuItem( submenu, 'edit tag filter', 'Change the tag filter for this service.', self._ManageServiceOptionsTagFilter, service_key )
+                            ClientGUIMenus.AppendMenuItem( submenu, 'edit tag filter' + HC.UNICODE_ELLIPSIS, 'Change the tag filter for this service.', self._ManageServiceOptionsTagFilter, service_key )
                             
                         
                         ClientGUIMenus.AppendSeparator( submenu )
@@ -3000,7 +3000,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                         ClientGUIMenus.AppendSeparator( submenu )
                         
-                        ClientGUIMenus.AppendMenuItem( submenu, 'manage services', 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'manage services' + HC.UNICODE_ELLIPSIS, 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
                         ClientGUIMenus.AppendSeparator( submenu )
                         ClientGUIMenus.AppendMenuItem( submenu, 'backup server', 'Command the server to temporarily pause and back up its database.', self._BackupServer, service_key )
                         ClientGUIMenus.AppendSeparator( submenu )
@@ -3088,7 +3088,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 if have_closed_pages:
                     
-                    ClientGUIMenus.AppendMenuItem( self._menubar_undo_closed_pages_submenu, 'clear all', 'Remove all closed pages from memory.', self.AskToDeleteAllClosedPages )
+                    ClientGUIMenus.AppendMenuItem( self._menubar_undo_closed_pages_submenu, 'clear all' + HC.UNICODE_ELLIPSIS, 'Remove all closed pages from memory.', self.AskToDeleteAllClosedPages )
                     
                     self._menubar_undo_closed_pages_submenu.addSeparator()
                     
@@ -3120,17 +3120,17 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'set a password', 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
+        ClientGUIMenus.AppendMenuItem( menu, 'set a password' + HC.UNICODE_ELLIPSIS, 'Set a simple password for the database so only you can open it in the client.', self._SetPassword )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        self._menubar_database_set_up_backup_path = ClientGUIMenus.AppendMenuItem( menu, 'set up a database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
-        self._menubar_database_update_backup = ClientGUIMenus.AppendMenuItem( menu, 'update database backup', 'Back the database up to an external location.', self._BackupDatabase )
-        self._menubar_database_change_backup_path = ClientGUIMenus.AppendMenuItem( menu, 'change database backup location', 'Choose a path to back the database up to.', self._SetupBackupPath )
+        self._menubar_database_set_up_backup_path = ClientGUIMenus.AppendMenuItem( menu, 'set up a database backup location' + HC.UNICODE_ELLIPSIS, 'Choose a path to back the database up to.', self._SetupBackupPath )
+        self._menubar_database_update_backup = ClientGUIMenus.AppendMenuItem( menu, 'update database backup' + HC.UNICODE_ELLIPSIS, 'Back the database up to an external location.', self._BackupDatabase )
+        self._menubar_database_change_backup_path = ClientGUIMenus.AppendMenuItem( menu, 'change database backup location' + HC.UNICODE_ELLIPSIS, 'Choose a path to back the database up to.', self._SetupBackupPath )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        self._menubar_database_restore_backup = ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup', 'Restore the database from an external location.', self._controller.RestoreDatabase )
+        self._menubar_database_restore_backup = ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup' + HC.UNICODE_ELLIPSIS, 'Restore the database from an external location.', self._controller.RestoreDatabase )
         
         message = 'Your database is stored across multiple locations. The in-client backup routine can only handle simple databases (in one location), so the menu commands to backup have been hidden. To back up, please use a third-party program that will work better than anything I can write.'
         message += os.linesep * 2
@@ -3140,7 +3140,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'move media files', 'Review and manage the locations your database is stored.', self._MoveMediaFiles )
+        ClientGUIMenus.AppendMenuItem( menu, 'move media files' + HC.UNICODE_ELLIPSIS, 'Review and manage the locations your database is stored.', self._MoveMediaFiles )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3153,7 +3153,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         file_maintenance_menu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'manage scheduled jobs', 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
+        ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'manage scheduled jobs' + HC.UNICODE_ELLIPSIS, 'Review outstanding jobs, and schedule new ones.', self._ReviewFileMaintenance )
         ClientGUIMenus.AppendSeparator( file_maintenance_menu )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'file_maintenance_during_idle' )
@@ -3172,7 +3172,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( file_maintenance_menu )
         
-        ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'clear orphan files', 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
+        ClientGUIMenus.AppendMenuItem( file_maintenance_menu, 'clear orphan files' + HC.UNICODE_ELLIPSIS, 'Clear out surplus files that have found their way into the file structure.', self._ClearOrphanFiles )
         
         ClientGUIMenus.AppendMenu( menu, file_maintenance_menu, 'file maintenance' )
         
@@ -3202,53 +3202,53 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( db_maintenance_submenu )
         
-        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'analyze', 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
-        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'review vacuum data', 'See whether it is worth rebuilding the database to reformat tables and recover disk space.', self._ReviewVacuumData )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'analyze' + HC.UNICODE_ELLIPSIS, 'Optimise slow queries by running statistical analyses on the database.', self._AnalyzeDatabase )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'review vacuum data' + HC.UNICODE_ELLIPSIS, 'See whether it is worth rebuilding the database to reformat tables and recover disk space.', self._ReviewVacuumData )
         
         ClientGUIMenus.AppendSeparator( db_maintenance_submenu )
         
-        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear/fix orphan file records', 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear/fix orphan file records' + HC.UNICODE_ELLIPSIS, 'Clear out surplus file records that have not been deleted correctly.', self._ClearOrphanFileRecords )
         
-        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan tables', 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan tables' + HC.UNICODE_ELLIPSIS, 'Clear out surplus db tables that have not been deleted correctly.', self._ClearOrphanTables )
         
-        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan hashed serialisables', 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
+        ClientGUIMenus.AppendMenuItem( db_maintenance_submenu, 'clear orphan hashed serialisables' + HC.UNICODE_ELLIPSIS, 'Clear non-needed cached hashed serialisable objects.', self._ClearOrphanHashedSerialisables )
         
         ClientGUIMenus.AppendMenu( menu, db_maintenance_submenu, 'db maintenance' )
         
         check_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity', 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables', 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'resync tag mappings cache files', 'Check the tag mappings cache for surplus or missing files.', self._ResyncTagMappingsCacheFiles )
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings', 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'fix invalid tags', 'Scan the database for invalid tags.', self._RepairInvalidTags )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity' + HC.UNICODE_ELLIPSIS, 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables' + HC.UNICODE_ELLIPSIS, 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'resync tag mappings cache files' + HC.UNICODE_ELLIPSIS, 'Check the tag mappings cache for surplus or missing files.', self._ResyncTagMappingsCacheFiles )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings' + HC.UNICODE_ELLIPSIS, 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'fix invalid tags' + HC.UNICODE_ELLIPSIS, 'Scan the database for invalid tags.', self._RepairInvalidTags )
         
         ClientGUIMenus.AppendMenu( menu, check_submenu, 'check and repair' )
         
         regen_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'total pending count, in the pending menu', 'Regenerate the pending count up top.', self._DeleteServiceInfo, only_pending = True )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (all, with deferred siblings & parents calculation)', 'Delete and recreate the tag mappings cache, fixing bad tags or miscounts.', self._RegenerateTagMappingsCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagPendingMappingsCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (all, deferred siblings & parents calculation)', 'Delete and recreate the tag display mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayMappingsCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (just pending tags, instant calculation)', 'Delete and recreate the tag display pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (missing file repopulation)', 'Repopulate the mappings cache if you know it is lacking files, fixing bad tags or miscounts.', self._RepopulateTagDisplayMappingsCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag siblings lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag parents lookup cache', 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache', 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (subtags repopulation)', 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (searchable subtag maps)', 'Regenerate the searchable subtag maps.', self._RegenerateTagCacheSearchableSubtagsMaps )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'total pending count, in the pending menu' + HC.UNICODE_ELLIPSIS, 'Regenerate the pending count up top.', self._DeleteServiceInfo, only_pending = True )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (all, with deferred siblings & parents calculation)' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag mappings cache, fixing bad tags or miscounts.', self._RegenerateTagMappingsCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag storage mappings cache (just pending tags, instant calculation)' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagPendingMappingsCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (all, deferred siblings & parents calculation)' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag display mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayMappingsCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (just pending tags, instant calculation)' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag display pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (missing file repopulation)' + HC.UNICODE_ELLIPSIS, 'Repopulate the mappings cache if you know it is lacking files, fixing bad tags or miscounts.', self._RepopulateTagDisplayMappingsCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag siblings lookup cache' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag parents lookup cache' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache' + HC.UNICODE_ELLIPSIS, 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (subtags repopulation)' + HC.UNICODE_ELLIPSIS, 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (searchable subtag maps)' + HC.UNICODE_ELLIPSIS, 'Regenerate the searchable subtag maps.', self._RegenerateTagCacheSearchableSubtagsMaps )
         
         ClientGUIMenus.AppendSeparator( regen_submenu )
         
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'all deleted files', 'Resynchronise the store of all known deleted files.', self._RegenerateCombinedDeletedFiles )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local hash cache', 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local tag cache', 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'all deleted files' + HC.UNICODE_ELLIPSIS, 'Resynchronise the store of all known deleted files.', self._RegenerateCombinedDeletedFiles )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local hash cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local tag cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
         
         ClientGUIMenus.AppendSeparator( regen_submenu )
         
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'service info numbers', 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'similar files search tree', 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'service info numbers' + HC.UNICODE_ELLIPSIS, 'Delete all cached service info like total number of mappings or files, in case it has become desynchronised. Some parts of the gui may be laggy immediately after this as these numbers are recalculated.', self._DeleteServiceInfo )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'similar files search tree' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the similar files search tree.', self._RegenerateSimilarFilesTree )
         
         ClientGUIMenus.AppendMenu( menu, regen_submenu, 'regenerate' )
         
@@ -3256,8 +3256,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         file_viewing_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'clear all file viewing statistics', 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
-        ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'cull file viewing statistics based on current min/max values', 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
+        ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'clear all file viewing statistics' + HC.UNICODE_ELLIPSIS, 'Delete all file viewing records from the database.', self._ClearFileViewingStats )
+        ClientGUIMenus.AppendMenuItem( file_viewing_submenu, 'cull file viewing statistics based on current min/max values' + HC.UNICODE_ELLIPSIS, 'Cull your file viewing statistics based on minimum and maximum permitted time deltas.', self._CullFileViewingStats )
         
         ClientGUIMenus.AppendMenu( menu, file_viewing_submenu, 'file viewing statistics' )
         
@@ -3268,7 +3268,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'import files', 'Add new files to the database.', self._ImportFiles )
+        ClientGUIMenus.AppendMenuItem( menu, 'import files' + HC.UNICODE_ELLIPSIS, 'Add new files to the database.', self._ImportFiles )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3295,8 +3295,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( i_and_e_submenu )
         
-        ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage import folders', 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
-        ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage export folders', 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
+        ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage import folders' + HC.UNICODE_ELLIPSIS, 'Manage folders from which the client can automatically import.', self._ManageImportFolders )
+        ClientGUIMenus.AppendMenuItem( i_and_e_submenu, 'manage export folders' + HC.UNICODE_ELLIPSIS, 'Manage folders to which the client can automatically export.', self._ManageExportFolders )
         
         ClientGUIMenus.AppendMenu( menu, i_and_e_submenu, 'import and export folders' )
         
@@ -3314,8 +3314,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'options', 'Change how the client operates.', self._ManageOptions, role = QW.QAction.MenuRole.PreferencesRole )
-        ClientGUIMenus.AppendMenuItem( menu, 'shortcuts', 'Edit the shortcuts your client responds to.', ClientGUIShortcutControls.ManageShortcuts, self, role = QW.QAction.MenuRole.ApplicationSpecificRole )
+        ClientGUIMenus.AppendMenuItem( menu, 'options' + HC.UNICODE_ELLIPSIS, 'Change how the client operates.', self._ManageOptions, role = QW.QAction.MenuRole.PreferencesRole )
+        ClientGUIMenus.AppendMenuItem( menu, 'shortcuts' + HC.UNICODE_ELLIPSIS, 'Edit the shortcuts your client responds to.', ClientGUIShortcutControls.ManageShortcuts, self, role = QW.QAction.MenuRole.ApplicationSpecificRole )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3369,7 +3369,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'add the public tag repository', 'This will add the public tag repository to your client.', self._AutoRepoSetup )
+        ClientGUIMenus.AppendMenuItem( menu, 'add the public tag repository' + HC.UNICODE_ELLIPSIS, 'This will add the public tag repository to your client.', self._AutoRepoSetup )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3555,7 +3555,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage subscriptions', 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
+        ClientGUIMenus.AppendMenuItem( menu, 'manage subscriptions' + HC.UNICODE_ELLIPSIS, 'Change the queries you want the client to regularly import from.', self._ManageSubscriptions )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -3564,11 +3564,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( submenu, 'review bandwidth usage and edit rules', 'See where you are consuming data.', self._ReviewBandwidth )
         ClientGUIMenus.AppendMenuItem( submenu, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
         ClientGUIMenus.AppendMenuItem( submenu, 'review session cookies', 'Review and edit which cookies you have for which network contexts.', self._ReviewNetworkSessions )
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage http headers', 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage http headers' + HC.UNICODE_ELLIPSIS, 'Configure how the client talks to the network.', self._ManageNetworkHeaders )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage upnp', 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage upnp' + HC.UNICODE_ELLIPSIS, 'If your router supports it, see and edit your current UPnP NAT traversal mappings.', self._ManageUPnP )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'data' )
         
@@ -3587,13 +3587,13 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             ClientGUIMenus.AppendSeparator( submenu )
             
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders', 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
-        ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders', 'Export downloader components to easy-import pngs.', self._ExportDownloader )
+        ClientGUIMenus.AppendMenuItem( submenu, 'import downloaders' + HC.UNICODE_ELLIPSIS, 'Import new download capability through encoded pngs from other users.', self._ImportDownloaders )
+        ClientGUIMenus.AppendMenuItem( submenu, 'export downloaders' + HC.UNICODE_ELLIPSIS, 'Export downloader components to easy-import pngs.', self._ExportDownloader )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage default import options', 'Change the default import options for each of your linked url matches.', self._ManageDefaultImportOptions )
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display', 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage default import options' + HC.UNICODE_ELLIPSIS, 'Change the default import options for each of your linked url matches.', self._ManageDefaultImportOptions )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage downloader and url display' + HC.UNICODE_ELLIPSIS, 'Configure how downloader objects present across the client.', self._ManageDownloaderDisplay )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
@@ -3610,17 +3610,17 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links', 'Configure how URLs present across the client.', self._ManageURLClassLinks )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage url class links' + HC.UNICODE_ELLIPSIS, 'Configure how URLs present across the client.', self._ManageURLClassLinks )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators', 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes', 'Configure which URLs the client can recognise.', self._ManageURLClasses )
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers', 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage gallery url generators' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s GUGs, which convert search terms into URLs.', self._ManageGUGs )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage url classes' + HC.UNICODE_ELLIPSIS, 'Configure which URLs the client can recognise.', self._ManageURLClasses )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage parsers' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s parsers, which convert URL content into hydrus metadata.', self._ManageParsers )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'SEMI-LEGACY: manage file lookup scripts', 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
+        ClientGUIMenus.AppendMenuItem( submenu, 'SEMI-LEGACY: manage file lookup scripts' + HC.UNICODE_ELLIPSIS, 'Manage how the client parses different types of web content.', self._ManageParsingScripts )
         
         ClientGUIMenus.AppendMenu( menu, submenu, 'downloader components' )
         
@@ -3628,11 +3628,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage logins', 'Edit which domains you wish to log in to.', self._ManageLogins )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage logins' + HC.UNICODE_ELLIPSIS, 'Edit which domains you wish to log in to.', self._ManageLogins )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage login scripts', 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
+        ClientGUIMenus.AppendMenuItem( submenu, 'manage login scripts' + HC.UNICODE_ELLIPSIS, 'Manage the client\'s login scripts, which define how to log in to different sites.', self._ManageLoginScripts )
         
         ClientGUIMenus.AppendSeparator( submenu )
         
@@ -3683,7 +3683,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page', 'Choose a new page to open.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE ) )
+        ClientGUIMenus.AppendMenuItem( menu, 'pick a new page' + HC.UNICODE_ELLIPSIS, 'Choose a new page to open.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NEW_PAGE ) )
         
         #
         
@@ -3753,7 +3753,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendSeparator( menu )
         
         ClientGUIMenus.AppendMenuItem( menu, 'review services', 'Look at the services your client connects to.', self._ReviewServices )
-        ClientGUIMenus.AppendMenuItem( menu, 'manage services', 'Edit the services your client connects to.', self._ManageServices )
+        ClientGUIMenus.AppendMenuItem( menu, 'manage services' + HC.UNICODE_ELLIPSIS, 'Edit the services your client connects to.', self._ManageServices )
         
         self._menubar_services_admin_submenu = ClientGUIMenus.GenerateMenu( menu )
         
@@ -3761,7 +3761,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'import repository update files', 'Add repository update files to the database.', self._ImportUpdateFiles )
+        ClientGUIMenus.AppendMenuItem( menu, 'import repository update files' + HC.UNICODE_ELLIPSIS, 'Add repository update files to the database.', self._ImportUpdateFiles )
         
         return ( menu, '&services' )
         
@@ -3770,18 +3770,18 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'migrate tags', 'Migrate tags from one place to another.', self._MigrateTags )
+        ClientGUIMenus.AppendMenuItem( menu, 'migrate tags' + HC.UNICODE_ELLIPSIS, 'Migrate tags from one place to another.', self._MigrateTags )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage tag display and search', 'Set which tags you want to see from which services.', self._ManageTagDisplay )
+        ClientGUIMenus.AppendMenuItem( menu, 'manage tag display and search' + HC.UNICODE_ELLIPSIS, 'Set which tags you want to see from which services.', self._ManageTagDisplay )
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings', 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
-        ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents', 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
+        ClientGUIMenus.AppendMenuItem( menu, 'manage tag siblings' + HC.UNICODE_ELLIPSIS, 'Set certain tags to be automatically replaced with other tags.', self._ManageTagSiblings )
+        ClientGUIMenus.AppendMenuItem( menu, 'manage tag parents' + HC.UNICODE_ELLIPSIS, 'Set certain tags to be automatically added with other tags.', self._ManageTagParents )
         
-        ClientGUIMenus.AppendMenuItem( menu, 'manage where tag siblings and parents apply', 'Set which services\' siblings and parents apply where.', self._ManageTagDisplayApplication )
+        ClientGUIMenus.AppendMenuItem( menu, 'manage where tag siblings and parents apply' + HC.UNICODE_ELLIPSIS, 'Set which services\' siblings and parents apply where.', self._ManageTagDisplayApplication )
         
         #
         
