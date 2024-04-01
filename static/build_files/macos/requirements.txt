@@ -22,15 +22,15 @@ Send2Trash>=1.5.0
 service-identity>=18.1.0
 Twisted>=20.3.0
 
-opencv-python-headless==4.7.0.72
-python-mpv==1.0.3
+opencv-python-headless==4.8.0.76
+python-mpv==1.0.5
 requests==2.31.0
 
-QtPy==2.3.1
-PyQt6==6.5.2
-PyQt6-Qt6==6.5.2
+QtPy==2.4.1
+PyQt6==6.6.0
+PyQt6-Qt6==6.6.0
 
-setuptools==65.5.1
+setuptools==69.1.1
 
 pyobjc-core>=10.1
 pyobjc-framework-Cocoa>=10.1
