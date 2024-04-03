@@ -1,5 +1,5 @@
 def make_dist():
-    return default_python_distribution( python_version = "3.11" )
+    return default_python_distribution( python_version = "3.10" )
 
 def make_packaging_policy(dist):
     policy = dist.make_python_packaging_policy()
@@ -44,8 +44,6 @@ def make_install(client, resources):
 
 print(BUILD_TARGET_TRIPLE)
 print(CWD)
-
-MACOSX_DEPLOYMENT_TARGET=11
 
 # Tell PyOxidizer about the build targets defined above.
 register_target("dist", make_dist)
