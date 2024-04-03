@@ -45,8 +45,6 @@ def make_install(client, resources):
 print(BUILD_TARGET_TRIPLE)
 print(CWD)
 
-MACOSX_DEPLOYMENT_TARGET=11
-
 # Tell PyOxidizer about the build targets defined above.
 register_target("dist", make_dist)
 register_target("policy", make_packaging_policy, depends=["dist"])
