@@ -393,11 +393,25 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         
         if self.operator == NUMBER_TEST_OPERATOR_LESS_THAN:
             
-            return lambda x: x is not None and x < self.value
+            if self.value > 0:
+                
+                return lambda x: x is None or x < self.value
+                
+            else:
+                
+                return lambda x: x is not None and x < self.value
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
             
-            return lambda x: x is not None and x > self.value
+            if self.value < 0:
+                
+                return lambda x: x is None or x > self.value
+                
+            else:
+                
+                return lambda x: x is not None and x > self.value
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
             
@@ -415,18 +429,39 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             lower = self.value * ( 1 - self.extra_value )
             upper = self.value * ( 1 + self.extra_value )
             
-            return lambda x: x is not None and lower < x < upper
+            if lower <= 0:
+                
+                return lambda x: x is None or x < upper
+                
+            else:
+                
+                return lambda x: x is not None and lower < x < upper
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
             
             lower = self.value - self.extra_value
             upper = self.value + self.extra_value
             
-            return lambda x: x is not None and lower < x < upper
+            if lower <= 0:
+                
+                return lambda x: x is None or x < upper
+                
+            else:
+                
+                return lambda x: x is not None and lower < x < upper
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
             
-            return lambda x: x is not None and x != self.value
+            if self.value == 0:
+                
+                return lambda x: x is not None and x != self.value
+                
+            else:
+                
+                return lambda x: x is None or x != self.value
+                
             
         
     
@@ -434,17 +469,31 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         
         if self.operator == NUMBER_TEST_OPERATOR_LESS_THAN:
             
-            return [ f'{variable_name} < {self.value}' ]
+            if self.value > 0:
+                
+                return [ f'( {variable_name} IS NULL OR {variable_name} < {self.value} )' ]
+                
+            else:
+                
+                return [ f'{variable_name} < {self.value}' ]
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_GREATER_THAN:
             
-            return [ f'{variable_name} > {self.value}' ]
+            if self.value < 0:
+                
+                return [ f'( {variable_name} IS NULL OR {variable_name} > {self.value} )' ]
+                
+            else:
+                
+                return [ f'{variable_name} > {self.value}' ]
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_EQUAL:
             
             if self.value == 0:
                 
-                return [ f'({variable_name} IS NULL OR {variable_name} = {self.value})' ]
+                return [ f'( {variable_name} IS NULL OR {variable_name} = {self.value} )' ]
                 
             else:
                 
@@ -456,18 +505,39 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
             lower = self.value * ( 1 - self.extra_value )
             upper = self.value * ( 1 + self.extra_value )
             
-            return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+            if lower <= 0:
+                
+                return [ f'( {variable_name} is NULL OR {variable_name} < {upper} )' ]
+                
+            else:
+                
+                return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
             
             lower = self.value - self.extra_value
             upper = self.value + self.extra_value
             
-            return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+            if lower <= 0:
+                
+                return [ f'( {variable_name} IS NULL OR {variable_name} < {upper} )' ]
+                
+            else:
+                
+                return [ f'{variable_name} > {lower}', f'{variable_name} < {upper}' ]
+                
             
         elif self.operator == NUMBER_TEST_OPERATOR_NOT_EQUAL:
             
-            return [ f'{variable_name} != {self.value}' ]
+            if self.value == 0:
+                
+                return [ f'{variable_name} IS NOT NULL AND {variable_name} != {self.value}' ]
+                
+            else:
+                
+                return [ f'( {variable_name} IS NULL OR {variable_name} != {self.value} )' ]
+                
             
         
         return []

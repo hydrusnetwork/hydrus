@@ -1,3 +1,4 @@
+import re
 import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
@@ -108,12 +109,11 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             raise HydrusExceptions.GUGException( 'Replacement phrase not in URL template!' )
             
         
-        if '%' in query_text:
+        if re.search( r'%[0-9A-Fa-f]{2}', query_text ) is not None:
             
-            # redundant test but leave it in for now
-            if ' ' in query_text or '% ' in query_text or query_text.endswith( '%' ):
+            if ' ' in query_text:
                 
-                # there is probably a legit % character here that should be encoded
+                # against probability, there is probably a legit % character here that should be encoded
                 
                 search_terms = query_text.split( ' ' )
                 

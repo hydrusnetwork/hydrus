@@ -1,5 +1,7 @@
 import http.cookiejar
 import re
+import typing
+
 import unicodedata
 import urllib.parse
 
@@ -102,6 +104,27 @@ def ConvertHTTPToHTTPS( url ):
         
     
 
+def ConvertPathTextToList( path: str ) -> typing.List[ str ]:
+    
+    # yo sometimes you see a URL with double slashes in a weird place. maybe we should just split( '/' ) and then remove empty '' results?
+    
+    # /post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
+    
+    # for a while we've had URLs like this:
+    # https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg
+    # I was going to be careful as I unified all this to preserve the double-slash to help legacy known url storage matching, but it seems we've been nuking the extra slash for ages in actual db storage, so w/e!
+    while path.startswith( '/' ):
+        
+        path = path[ 1 : ]
+        
+    
+    # post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
+    
+    path_components = path.split( '/' )
+    
+    return path_components
+    
+
 def ConvertQueryDictToText( query_dict, single_value_parameters, param_order = None ):
     
     # we now do everything with requests, which does all the unicode -> %20 business naturally, phew
@@ -152,6 +175,7 @@ def ConvertQueryDictToText( query_dict, single_value_parameters, param_order = N
     
     return query_text
     
+
 def ConvertQueryTextToDict( query_text ):
     
     # in the old version of this func, we played silly games with character encoding. I made the foolish decision to try to handle/save URLs with %20 stuff decoded
@@ -187,27 +211,12 @@ def ConvertQueryTextToDict( query_text ):
                 continue
                 
             
-            if '%' not in value:
-                
-                value = urllib.parse.quote( value, safe = '+' )
-                
-            
             single_value_parameters.append( value )
             param_order.append( None )
             
         elif len( result ) == 2:
             
             ( key, value ) = result
-            
-            if '%' not in key:
-                
-                key = urllib.parse.quote( key, safe = '+' )
-                
-            
-            if '%' not in value:
-                
-                value = urllib.parse.quote( value, safe = '+' )
-                
             
             param_order.append( key )
             
@@ -216,6 +225,32 @@ def ConvertQueryTextToDict( query_text ):
         
     
     return ( query_dict, single_value_parameters, param_order )
+    
+
+def EnsureURLInfoIsEncoded( path_components: typing.List[ str ], query_dict: typing.Dict[ str, str ], single_value_parameters: typing.List[ str ] ):
+    
+    # ok so the user just posted a URL at us, and this query dict could either be from a real url, like "tags=skirt%20blonde_hair", or it could be a pretty URL they typed or whatever, "tags=skirt blonde_hair"
+    # so, let's do our best to figure out if the thing was pre-encoded or not, and wash it through a safe encoding process so it is encoded when we give it back
+    # what's the potential problem? '+' is a special character that may or may not be encoded, e.g. "tags=6%2Bgirls+skirt" WEW
+    
+    percent_encoding_re = re.compile( r'%[0-9A-Fa-f]{2}' )
+    
+    all_gubbins = set( path_components )
+    all_gubbins.update( query_dict.keys() )
+    all_gubbins.update( query_dict.values() )
+    all_gubbins.update( single_value_parameters )
+    
+    there_are_percent_encoding_chars = True in ( percent_encoding_re.search( text ) is not None for text in all_gubbins )
+    
+    # if there are percent-encoded characters anywhere, we have to assume the whole URL is already encoded correctly!
+    if not there_are_percent_encoding_chars:
+        
+        path_components = [ urllib.parse.quote( value, safe = '+' ) for value in path_components ]
+        query_dict = { urllib.parse.quote( key, safe = '+' ) : urllib.parse.quote( value, safe = '+' ) for ( key, value ) in query_dict.items() }
+        single_value_parameters = [ urllib.parse.quote( value, safe = '+' ) for value in single_value_parameters ]
+        
+    
+    return ( path_components, query_dict, single_value_parameters )
     
 
 def ConvertURLIntoDomain( url ):
@@ -372,14 +407,14 @@ def LooksLikeAFullURL( text: str ) -> bool:
     
     try:
         
-        result = urllib.parse.urlparse( text )
+        p = ParseURL( text )
         
-        if result.scheme == '':
+        if p.scheme == '':
             
             return False
             
         
-        if result.netloc == '':
+        if p.netloc == '':
             
             return False
             
@@ -414,6 +449,7 @@ def NormaliseAndFilterAssociableURLs( urls ):
     
     return associable_urls
     
+
 def ParseURL( url: str ) -> urllib.parse.ParseResult:
     
     url = url.strip()
@@ -430,6 +466,47 @@ def ParseURL( url: str ) -> urllib.parse.ParseResult:
         
     
 
+def WashURL( url: str, keep_fragment = True ) -> str:
+    
+    if not LooksLikeAFullURL( url ):
+        
+        return url
+        
+    
+    try:
+        
+        p = ParseURL( url )
+        
+        scheme = p.scheme
+        netloc = p.netloc
+        params = p.params # just so you know, this is ancient web semicolon tech, can be ignored
+        fragment = p.fragment
+        
+        path_components = ConvertPathTextToList( p.path )
+        ( query_dict, single_value_parameters, param_order ) = ConvertQueryTextToDict( p.query )
+        
+        ( path_components, query_dict, single_value_parameters ) = EnsureURLInfoIsEncoded( path_components, query_dict, single_value_parameters )
+        
+        path = '/' + '/'.join( path_components )
+        query = ConvertQueryDictToText( query_dict, single_value_parameters )
+        
+        if not keep_fragment:
+            
+            fragment = ''
+            
+        
+        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
+        
+        clean_url = r.geturl()
+        
+        return clean_url
+        
+    except:
+        
+        return url
+        
+    
+
 OH_NO_NO_NETLOC_CHARACTERS = '?#'
 OH_NO_NO_NETLOC_CHARACTERS_UNICODE_TRANSLATE = { ord( char ) : '_' for char in OH_NO_NO_NETLOC_CHARACTERS }
 
@@ -442,6 +519,7 @@ def RemoveWWWFromDomain( domain ):
     
     return domain
     
+
 def UnicodeNormaliseURL( url: str ):
     
     if url.startswith( 'file:' ):

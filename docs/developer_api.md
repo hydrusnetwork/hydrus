@@ -1783,7 +1783,7 @@ Response:
       "has_transparency" : false,
       "known_urls" : [
         "https://gelbooru.com/index.php?page=post&s=view&id=4841557",
-        "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+        "https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
         "http://origin-orig.deviantart.net/ed31/f/2019/210/7/8/beachqueen_samus_by_dandonfuga-ddcu1xg.jpg"
       ],
       "ratings" : {
@@ -1971,7 +1971,7 @@ If you add `detailed_url_information=true`, a new entry, `detailed_known_urls`, 
       "can_parse": true
     },
     {
-      "normalised_url": "https://img2.gelbooru.com//images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
+      "normalised_url": "https://img2.gelbooru.com/images/80/c8/80c8646b4a49395fb36c805f316c49a9.jpg",
       "url_type": 5,
       "url_type_string": "unknown url",
       "match_name": "unknown url",

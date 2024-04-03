@@ -17,6 +17,7 @@ from hydrus.client import ClientTime
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationCore
+from hydrus.client.networking import ClientNetworkingFunctions
 
 class SingleFileMetadataExporter( ClientMetadataMigrationCore.ImporterExporterNode ):
     
@@ -406,7 +407,9 @@ class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, Hydr
             
             try:
                 
-                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( row )
+                url = ClientNetworkingFunctions.WashURL( row )
+                
+                url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
                 urls.append( url )
                 

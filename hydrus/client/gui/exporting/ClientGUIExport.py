@@ -806,7 +806,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        def do_it( directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards ):
+        def do_it( directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards, media_to_number_indices ):
             
             job_status = ClientThreading.JobStatus( cancellable = True )
             
@@ -818,7 +818,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             for ( index, ( media, dest_path ) ) in enumerate( to_do ):
                 
-                number = self._media_to_number_indices[ media ]
+                number = media_to_number_indices[ media ]
                 
                 if job_status.IsCancelled():
                     
@@ -881,7 +881,16 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 except:
                     
-                    ClientGUIDialogsMessage.ShowCritical( self, 'Problem during file export!', f'Encountered a problem while attempting to export file #{HydrusData.ToHumanInt( number )}:\n\n{traceback.format_exc()}' )
+                    if QP.isValid( self ):
+                        
+                        win = self
+                        
+                    else:
+                        
+                        win = CG.client_controller.gui
+                        
+                    
+                    ClientGUIDialogsMessage.ShowCritical( win, 'Problem during file export!', f'Encountered a problem while attempting to export file #{HydrusData.ToHumanInt( number )}:\n\n{traceback.format_exc()}' )
                     
                     break
                     
@@ -938,7 +947,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             QP.CallAfter( qt_done, quit_afterwards )
             
         
-        CG.client_controller.CallToThread( do_it, directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards )
+        CG.client_controller.CallToThread( do_it, directory, metadata_routers, delete_afterwards, export_symlinks, quit_afterwards, self._media_to_number_indices )
         
     
     def _GetPath( self, media ):

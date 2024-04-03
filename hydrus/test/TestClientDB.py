@@ -388,7 +388,7 @@ class TestClientDB( unittest.TestCase ):
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_ARCHIVE, None, 0 ) )
         
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 100, ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 100, ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 0, ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( HC.UNICODE_APPROX_EQUAL, 100, ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( HC.UNICODE_APPROX_EQUAL, 0, ), 1 ) )
@@ -472,7 +472,7 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '', '>', 0 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_TAGS, ( '', '>', 1 ), 0 ) )
         
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 1 ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 1 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 0 ), 0 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( HC.UNICODE_APPROX_EQUAL, 0 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( HC.UNICODE_APPROX_EQUAL, 1 ), 0 ) )

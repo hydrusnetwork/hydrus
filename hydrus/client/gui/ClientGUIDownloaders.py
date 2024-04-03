@@ -30,6 +30,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingURLClass
 
@@ -2055,12 +2056,16 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             self._example_url_classes.setText( 'Example matches ok!' )
             self._example_url_classes.setObjectName( 'HydrusValid' )
             
+            for_server_normalised = url_class.Normalise( example_url, for_server = True )
+            
+            self._for_server_normalised_url.setText( for_server_normalised )
+            
             normalised = url_class.Normalise( example_url )
             
             self._normalised_url.setText( normalised )
             
-            self._referral_url_converter.SetExampleString( normalised )
-            self._api_lookup_converter.SetExampleString( normalised )
+            self._referral_url_converter.SetExampleString( for_server_normalised )
+            self._api_lookup_converter.SetExampleString( for_server_normalised )
             
             if url_class.UsesAPIURL():
                 
@@ -2106,15 +2111,11 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 
             
-            for_server_normalised = url_class.Normalise( example_url, for_server = True )
-            
-            self._for_server_normalised_url.setText( for_server_normalised )
-            
             try:
                 
                 if url_class.UsesAPIURL():
                     
-                    api_lookup_url = url_class.GetAPIURL( normalised )
+                    api_lookup_url = url_class.GetAPIURL( example_url )
                     
                     if url_class.Matches( api_lookup_url ):
                         
@@ -2450,13 +2451,15 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateURLClassCheckerText( self ):
         
-        url = self._url_class_checker.text()
+        unclean_url = self._url_class_checker.text()
         
-        if url == '':
+        if unclean_url == '':
             
             text = '<-- Enter a URL here to see which url class it currently matches!'
             
         else:
+            
+            url = ClientNetworkingFunctions.WashURL( unclean_url )
             
             url_classes = self.GetValue()
             
