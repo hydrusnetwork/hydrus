@@ -1,13 +1,10 @@
 import os
 
-from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
 
@@ -69,6 +66,8 @@ def GetExportableSourcesString( file_seed_cache: ClientImportFileSeeds.FileSeedC
 def GetSourcesFromSourcesString( sources_string ):
     
     sources = HydrusText.DeserialiseNewlinedTexts( sources_string )
+    
+    sources = [ ClientNetworkingFunctions.WashURL( source ) for source in sources ]
     
     return sources
     
@@ -528,14 +527,13 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
             if selected_file_seed.IsURLFileImport():
                 
-                main_url = selected_file_seed.file_seed_data
+                request_url = selected_file_seed.file_seed_data
+                normalised_url = selected_file_seed.file_seed_data_for_comparison
                 referral_url = selected_file_seed.GetReferralURL()
                 primary_urls = sorted( selected_file_seed.GetPrimaryURLs() )
                 source_urls = sorted( selected_file_seed.GetSourceURLs() )
                 
-                for_server_url = CG.client_controller.network_engine.domain_manager.GetURLToFetch( main_url )
-                
-                nothing_interesting_going_on = main_url == for_server_url and referral_url is None and len( primary_urls ) == 0 and len( source_urls ) == 0
+                nothing_interesting_going_on = request_url == normalised_url and referral_url is None and len( primary_urls ) == 0 and len( source_urls ) == 0
                 
                 if nothing_interesting_going_on:
                     
@@ -545,9 +543,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     url_submenu = ClientGUIMenus.GenerateMenu( menu )
                     
-                    if main_url != for_server_url:
+                    if request_url != normalised_url:
                         
-                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'request url: {for_server_url}', copy_text = for_server_url )
+                        ClientGUIMenus.AppendMenuLabel( url_submenu, f'request url: {request_url}', copy_text = request_url )
                         
                     
                     if referral_url is not None:

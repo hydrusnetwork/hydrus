@@ -2,6 +2,26 @@
 
 pushd "%~dp0"
 
+IF "%1"=="" (
+
+    set python_bin=python
+
+) else (
+
+    set python_bin=%1
+
+)
+
+IF "%2"=="" (
+
+    set venv_location=venv
+
+) else (
+
+    set venv_location=%2
+
+)
+
 ECHO   r::::::::::::::::::::::::::::::::::r
 ECHO   :                                  :
 ECHO   :               :PP.               :
@@ -27,24 +47,27 @@ ECHO:
 ECHO                  hydrus
 ECHO:
 
-where /q python
-IF ERRORLEVEL 1 (
+IF "%python_bin%"=="python" (
 
-    SET /P gumpf="You do not seem to have python installed. Please check the 'running from source' help."
+    where /q %python_bin%
+    IF ERRORLEVEL 1 (
 
-    popd
+        SET /P gumpf="You do not seem to have python installed. Please check the 'running from source' help."
 
-    EXIT /B 1
+        popd
 
+        EXIT /B 1
+
+    )
 )
 
-IF EXIST "venv\" (
+IF EXIST "%venv_location%\" (
 
     SET /P ready="Virtual environment will be reinstalled. Hit Enter to start."
 
     echo Deleting old venv...
 
-    rmdir /s /q venv
+    rmdir /s /q %venv_location%
 
 ) ELSE (
 
@@ -52,7 +75,7 @@ IF EXIST "venv\" (
 
 )
 
-IF EXIST "venv\" (
+IF EXIST "%venv_location%\" (
 
     SET /P gumpf="It looks like the venv directory did not delete correctly. Do you have it activated in a terminal or IDE anywhere? Please close that and try this again!"
 
@@ -68,7 +91,7 @@ ECHO --------
 ECHO Users on older Windows or Python ^>=3.11 need the advanced install.
 ECHO:
 ECHO Your Python version is:
-python --version
+%python_bin% --version
 ECHO:
 SET /P install_type="Do you want the (s)imple or (a)dvanced install? "
 
@@ -161,9 +184,9 @@ goto :parse_fail
 ECHO --------
 echo Creating new venv...
 
-python -m venv venv
+%python_bin% -m venv %venv_location%
 
-CALL venv\Scripts\activate.bat
+CALL %venv_location%\Scripts\activate.bat
 
 IF ERRORLEVEL 1 (
 
@@ -252,7 +275,7 @@ IF "%install_type%" == "a" (
 
 )
 
-CALL venv\Scripts\deactivate.bat
+CALL %venv_location%\Scripts\deactivate.bat
 
 ECHO --------
 SET /P done="Done!"

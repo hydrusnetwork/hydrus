@@ -393,20 +393,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            text = 'Enter strings such as "http://ip:port" or "http://user:pass@ip:port" to use for http and https traffic. It should take effect immediately on dialog ok.'
-            text += os.linesep * 2
-            text += 'NO PROXY DOES NOT WORK UNLESS YOU HAVE A CUSTOM BUILD OF REQUESTS, SORRY! no_proxy takes the form of comma-separated hosts/domains, just as in curl or the NO_PROXY environment variable. When http and/or https proxies are set, they will not be used for these.'
-            text += os.linesep * 2
+            text = 'PROTIP: Use a system-wide VPN or other software to handle this externally if you can. This tech is old and imperfect.'
+            text += '\n' * 2
+            text += 'Enter strings such as "http://ip:port" or "http://user:pass@ip:port" to use for http and https traffic. It should take effect immediately on dialog ok. Note that you have to enter "http://", not "https://" (an HTTP proxy forwards your traffic, which when you talk to an https:// address will be encrypted, but it does not wrap that in an extra layer of encryption itself).'
+            text += '\n' * 2
+            text += '"NO_PROXY" DOES NOT WORK UNLESS YOU HAVE A CUSTOM BUILD OF REQUESTS, SORRY! no_proxy takes the form of comma-separated hosts/domains, just as in curl or the NO_PROXY environment variable. When http and/or https proxies are set, they will not be used for these.'
+            text += '\n' * 2
             
             if ClientNetworkingSessions.SOCKS_PROXY_OK:
                 
-                text += 'It looks like you have socks support! You should also be able to enter (socks4 or) "socks5://ip:port".'
-                text += os.linesep
+                text += 'It looks like you have SOCKS support! You should also be able to enter (socks4 or) "socks5://ip:port".'
+                text += '\n'
                 text += 'Use socks4a or socks5h to force remote DNS resolution, on the proxy server.'
                 
             else:
                 
-                text += 'It does not look like you have socks support! If you want it, try adding "pysocks" (or "requests[socks]")!'
+                text += 'It does not look like you have SOCKS support! If you want it, try adding "pysocks" (or "requests[socks]")!'
                 
             
             st = ClientGUICommon.BetterStaticText( proxy_panel, text )
@@ -3214,6 +3216,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_options.SetInteger( 'ac_read_list_height_num_chars', self._ac_read_list_height_num_chars.value() )
             self._new_options.SetInteger( 'ac_write_list_height_num_chars', self._ac_write_list_height_num_chars.value() )
+            
+            self._new_options.SetBoolean( 'save_default_tag_service_tab_on_change', self._save_default_tag_service_tab_on_change.isChecked() )
+            self._new_options.SetKey( 'default_tag_service_tab', self._default_tag_service_tab.GetValue() )
             
             self._new_options.SetBoolean( 'always_show_system_everything', self._always_show_system_everything.isChecked() )
             self._new_options.SetBoolean( 'filter_inbox_and_archive_predicates', self._filter_inbox_and_archive_predicates.isChecked() )

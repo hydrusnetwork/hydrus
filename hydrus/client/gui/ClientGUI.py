@@ -98,6 +98,7 @@ from hydrus.client.interfaces import ClientControllerInterface
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
+from hydrus.client.networking import ClientNetworkingFunctions
 
 MENU_ORDER = [ 'file', 'undo', 'pages', 'database', 'network', 'services', 'tags', 'pending', 'help' ]
 
@@ -2192,7 +2193,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _ImportURL(
         self,
-        url,
+        unclean_url,
         filterable_tags = None,
         additional_service_keys_to_tags = None,
         destination_page_name = None,
@@ -2212,6 +2213,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
+        
+        url = ClientNetworkingFunctions.WashURL( unclean_url )
         
         url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, for_server = True )
         

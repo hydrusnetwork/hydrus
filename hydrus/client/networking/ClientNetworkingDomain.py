@@ -1518,24 +1518,8 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
             
             if url_class is None:
                 
-                p = ClientNetworkingFunctions.ParseURL( url )
-                
-                scheme = p.scheme
-                netloc = p.netloc
-                path = p.path
-                params = p.params
-                
-                # this puts them all in alphabetical order
-                
-                ( query_dict, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( p.query )
-                
-                query = ClientNetworkingFunctions.ConvertQueryDictToText( query_dict, single_value_parameters )
-                
-                fragment = ''
-                
-                r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
-                
-                normalised_url = r.geturl()
+                # this is less about washing as it is about stripping the fragment
+                normalised_url = ClientNetworkingFunctions.WashURL( url, keep_fragment = False )
                 
             else:
                 
