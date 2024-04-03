@@ -106,11 +106,18 @@ class App( QW.QApplication ):
         
         self.setApplicationName( 'Hydrus Client' )
         
+        if HC.PLATFORM_LINUX:
+            
+            self.setDesktopFileName( 'io.github.hydrusnetwork.hydrus' )
+            
+        
         self.setApplicationVersion( str( HC.SOFTWARE_VERSION ) )
         
         QC.qInstallMessageHandler( MessageHandler )
         
         self.setQuitOnLastWindowClosed( False )
+        
+        self.setQuitLockEnabled( False )
         
         self.call_after_catcher = QP.CallAfterEventCatcher( self )
         
@@ -1423,20 +1430,52 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         if self.new_options.GetBoolean( 'maintain_similar_files_duplicate_pairs_during_idle' ):
             
-            search_distance = self.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+            work_done = False
             
-            search_stop_time = stop_time
+            still_work_to_do = True
             
-            if search_stop_time is None:
+            while still_work_to_do:
                 
-                search_stop_time = HydrusTime.GetNow() + 60
+                search_distance = CG.client_controller.new_options.GetInteger( 'similar_files_duplicate_pairs_search_distance' )
+                
+                start_time = HydrusTime.GetNowPrecise()
+                
+                work_time_ms = CG.client_controller.new_options.GetInteger( 'potential_duplicates_search_work_time_ms' )
+                
+                work_time = work_time_ms / 1000
+                
+                ( still_work_to_do, num_done ) = CG.client_controller.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = maintenance_mode, work_time_float = work_time )
+                
+                if num_done > 0:
+                    
+                    work_done = True
+                    
+                
+                if not still_work_to_do:
+                    
+                    break
+                    
+                
+                if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):
+                    
+                    break
+                    
+                
+                time_it_took = HydrusTime.GetNowPrecise() - start_time
+                
+                rest_ratio = CG.client_controller.new_options.GetInteger( 'potential_duplicates_search_rest_percentage' ) / 100
+                
+                reasonable_work_time = min( 5 * work_time, time_it_took )
+                
+                time.sleep( reasonable_work_time * rest_ratio )
                 
             
-            self.WriteSynchronous( 'maintain_similar_files_search_for_potential_duplicates', search_distance, maintenance_mode = maintenance_mode, stop_time = search_stop_time )
-            
-            from hydrus.client import ClientDuplicates
-            
-            ClientDuplicates.DuplicatesManager.instance().RefreshMaintenanceNumbers()
+            if work_done:
+                
+                from hydrus.client import ClientDuplicates
+                
+                ClientDuplicates.DuplicatesManager.instance().RefreshMaintenanceNumbers()
+                
             
         
         if self.ShouldStopThisWork( maintenance_mode, stop_time = stop_time ):

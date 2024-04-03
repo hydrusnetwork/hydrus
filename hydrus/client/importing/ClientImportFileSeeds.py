@@ -133,17 +133,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         self.file_seed_data = file_seed_data
         self.file_seed_data_for_comparison = file_seed_data
         
-        if self.file_seed_type == FILE_SEED_TYPE_URL:
-            
-            try:
-                
-                self.file_seed_data_for_comparison = CG.client_controller.network_engine.domain_manager.NormaliseURL( self.file_seed_data )
-                
-            except:
-                
-                pass
-                
-            
+        self.Normalise() # this fixes the comparison file seed data and fails safely
         
         self.created = HydrusTime.GetNow()
         self.modified = self.created
@@ -1260,6 +1250,14 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
         
     
+    def SetFileSeedData( self, file_seed_data: str ):
+        
+        self.file_seed_data = file_seed_data
+        self.file_seed_data_for_comparison = file_seed_data
+        
+        self.Normalise() # this fixes the comparison file seed data and fails safely
+        
+    
     def SetHash( self, hash ):
         
         if hash is not None:
@@ -1588,7 +1586,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 duplicate_file_seed = self.Duplicate() # inherits all urls and tags from here
                                 
-                                duplicate_file_seed.file_seed_data = child_url
+                                duplicate_file_seed.SetFileSeedData( child_url )
                                 
                                 duplicate_file_seed.SetReferralURL( url_for_child_referral )
 

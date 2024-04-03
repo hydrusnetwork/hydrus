@@ -64,6 +64,7 @@ from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
+from hydrus.client.networking import ClientNetworkingFunctions
 from hydrus.client.search import ClientSearch
 
 management_panel_types_to_classes = {}
@@ -3443,9 +3444,9 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._RefreshFormulae()
         
     
-    def _PendPageURLs( self, urls ):
+    def _PendPageURLs( self, unclean_urls ):
         
-        urls = [ url for url in urls if url.startswith( 'http' ) ]
+        urls = [ ClientNetworkingFunctions.WashURL( unclean_url ) for unclean_url in unclean_urls if ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ) ]
         
         simple_downloader_formula = self._formulae.GetValue()
         
@@ -3757,7 +3758,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._import_options_button.tagImportOptionsChanged.connect( self._urls_import.SetTagImportOptions )
         
     
-    def _PendURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):
+    def _PendURLs( self, unclean_urls, filterable_tags = None, additional_service_keys_to_tags = None ):
         
         if filterable_tags is None:
             
@@ -3769,7 +3770,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
-        urls = [ url for url in urls if url.startswith( 'http' ) ]
+        urls = [ ClientNetworkingFunctions.WashURL( unclean_url ) for unclean_url in unclean_urls if ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ) ]
         
         self._urls_import.PendURLs( urls, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
         

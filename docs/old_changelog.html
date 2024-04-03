@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_569"><a href="#version_569">version 569</a></h2>
+                    <ul>
+                        <li><h3>user contributions</h3></li>
+                        <li>thanks to a user, fixed a problem with the recent URL changes that caused downloaders examining multi-file posts to only grab the first file</li>
+                        <li>thanks to a user, all the menubar commands that launch a modal dialog are now suffix'd by an ellipsis</li>
+                        <li>thanks to a user, fixed an issue regarding KDE 6 quitting the program as soon as the pre-boot 'your database is missing a location, let's find it' repair dialog was ok'd</li>
+                        <li>thanks to a user, the application icon is fixed in KDE Plasma Wayland (and anything else that pulls icon from .desktop file). if you have been using a hydrus.desktop file and don't see a program icon, you should rename it to `/usr/share/applications/io.github.hydrusnetwork.hydrus.desktop` . more importantly, if you manage a package for hydrus--please output to this file path instead of `hydrus.desktop` if you make one</li>
+                        <li>thanks to a user, updated the `hydrus_client.sh` file to include `"$@"`, which passes parameters given to the .sh file to the .py call</li>
+                        <li><h3>more on last week's URL work</h3></li>
+                        <li>fixed the 'show the Request URL under "additional urls" submenu' thing on the file log list menu. I screwed up the logic and was effectively testing for when `1 != 1`</li>
+                        <li>the converter that generates a Referral URL now operates on the API/redirect conversion principle too--it normalises the Source URL to its 'Request URL' state--keeping defined ephemeral params and filling in defaults but dropping any extra gubbins not asked for--before applying the conversion</li>
+                        <li>fixed the 'manage url class' dialog to correctly display an example API/redirect-converted URL based on the new _request url_, not the _normalised url_ (so the api/redirect example will now show the new ephemeral params properly). this was working in requests correctly behind the scenes, it was just the example text box in the dialog that was showing wrong</li>
+                        <li>improved the 'is this query text pre-encoded?' test to check for `%hh`, where `h` is a hexadecimal character, instead of the hackier 'is % in it while not followed by whitespace or end of string?'</li>
+                        <li>improved/simplified/optimised the overall procedure that figures out if an entered URL is pre-encoded or not. this routine now only runs at the stage where a URL is ingested and it obeys the `%hh` rule. these ingestion points are currently: the text boxes in a urls downloader/simple downloader page; the 'import new sources' function of file log menus; a URL `ContentParser` in the parsing system; the test box in `manage url classes`; and the main gui's 'import url' landing pad, which is used by the drag and drop system, the clipboard watcher, and the client api's 'import url' command. note that this does not occur on 'manage known urls' editing, where you can do what you want with whatever, and I won't coerce it to anything</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed a variety of logical cases around &gt;0, =0, !=0, &lt;0 for the `NumberTest` objects I recently applied to system:duration and elsewhere. when it comes to file searching, files that have 'None' duration are now considered equivalent to files that have an explicit 0 duration in all cases. previously, I was trying to thread a needle where '=0' would find null results but &lt;x would not, and it was a mess. now it all works the same way. if you want to search for 'duration &lt; x' and want to exclude still images, either add a filetype pred or slap on 'has duration'</li>
+                        <li>improved the stability of the manual file exporter process. it was consulting an object in a thread that it shouldn't have</li>
+                        <li>improved the ability of the manual file exporter process to report errors on a very large export that encounters errors after the dialog has closed</li>
+                        <li>fixed the 'remember last used default tag service in manage tag dialogs' and its accompanying dropdown not saving their current value on options dialog ok. sorry for the trouble!</li>
+                        <li>fixed the system that truncates very long filenames (for export folders and drag and drop exports) on Linux when the exporter is also outputting a sidecar that has a long extra suffix</li>
+                        <li>the 'find potential duplicate pairs' routine that runs in idle time now properly obeys the work/rest times in `options->maintenance and processing`. previously, it was just the 'run now' routine that was resting in that way, and the idle thing was just doing a hardcoded 'work for 60 seconds every 10 mins or so'. thanks to the reporting user who cleverly noticed this</li>
+                        <li>the `options->connection` page now mentions your proxy needs to be `http://`</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>updated the windows setup_venv.bat to allow for custom python or venv locations using parameters. this was so I could set up a multi-python testing situation easier</li>
+                        <li>added some unit tests for the new URL encoding gubbins</li>
+                        <li>improved un-encoded URL parsing in the downloader when the URL is relative and needs to be joined to the source url</li>
+                        <li>improved some URL parsing and ingestion to better handle urls with non-ascii characters in the domain</li>
+                        <li>replaced several 'does it start with "http"?' areas with a better and unified scheme/netloc test</li>
+                        <li>wrote a routine to split URL paths into path components, and spammed it everywhere so this code is now unified. I expect we'll get a `PathComponent` class at some point, too. there will be a future question about what to do with double slashes, `//` in paths--it turns out the logic has been mixed here, and I think I will probably collapse them to `/` in all cases</li>
+                        <li>rewrote an unhealthy call that indirectly caused the above multi-file post parsing problem</li>
+                        <li>fixed some None/0 `NumberTest` stuff if you manage to enter '&lt;0' or &gt;-5 and similar</li>
+                        <li>I figured out the problems with PyInstaller 6.x and some other stuff, there should be a 'Future Build' alongside this release in github for advanced users to test with</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_568"><a href="#version_568">version 568</a></h2>
                     <p><i>Version 567 was cancelled, its changes folded into 568</i></p>
                     <ul>

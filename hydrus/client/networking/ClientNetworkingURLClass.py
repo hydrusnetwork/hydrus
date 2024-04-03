@@ -42,7 +42,9 @@ def ConvertURLClassesIntoAPIPairs( url_classes ):
             continue
             
         
-        api_url = url_class.GetAPIURL( url_class.GetExampleURL() )
+        example_url = url_class.GetExampleURL()
+        
+        api_url = url_class.GetAPIURL( example_url )
         
         for other_url_class in url_classes:
             
@@ -387,18 +389,9 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return netloc
         
     
-    def _ClipAndFleshOutPath( self, path: str, for_server: bool ):
+    def _ClipAndFleshOutPath( self, path_components: typing.List[ str ], for_server: bool ):
         
         # /post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
-        
-        while path.startswith( '/' ):
-            
-            path = path[ 1 : ]
-            
-        
-        # post/show/1326143/akunim-anthro-armband-armwear-clothed-clothing-fem
-        
-        path_components = path.split( '/' )
         
         do_clip = self.UsesAPIURL() or not for_server
         flesh_out = len( path_components ) < len( self._path_components )
@@ -425,21 +418,17 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 clipped_path_components.append( clipped_path_component )
                 
             
-            path = '/'.join( clipped_path_components )
+            path_components = clipped_path_components
             
         
-        # post/show/1326143
-        
-        path = '/' + path
+        path = '/' + '/'.join( path_components )
         
         # /post/show/1326143
         
         return path
         
     
-    def _ClipAndFleshOutQuery( self, query: str, for_server: bool ):
-        
-        ( query_dict, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( query )
+    def _ClipAndFleshOutQuery( self, query_dict: typing.Dict[ str, str ], single_value_parameters: typing.List[ str ], param_order: typing.List[ str ], for_server: bool ):
         
         query_dict_keys_to_parameters = {}
         
@@ -1034,16 +1023,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return self._api_lookup_converter
         
     
-    def GetAPIURL( self, url = None ):
+    def GetAPIURL( self, url ):
         
-        if url is None:
-            
-            url = self._example_url
-            
+        request_url = self.Normalise( url, for_server = True )
         
-        url = self.Normalise( url, for_server = True )
-        
-        return self._api_lookup_converter.Convert( url )
+        return self._api_lookup_converter.Convert( request_url )
         
     
     def GetClassKey( self ):
@@ -1093,12 +1077,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             page_index_path_component_index = self._gallery_index_identifier
             
-            while path.startswith( '/' ):
-                
-                path = path[ 1 : ]
-                
-            
-            path_components = path.split( '/' )
+            path_components = ClientNetworkingFunctions.ConvertPathTextToList( path )
             
             try:
                 
@@ -1195,9 +1174,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
         elif self._send_referral_url in ( SEND_REFERRAL_URL_CONVERTER_IF_NONE_PROVIDED, SEND_REFERRAL_URL_ONLY_CONVERTER ):
             
+            request_url = self.Normalise( url, for_server = True )
+            
             try:
                 
-                converted_referral_url = self._referral_url_converter.Convert( url )
+                converted_referral_url = self._referral_url_converter.Convert( request_url )
                 
             except HydrusExceptions.StringConvertException:
                 
@@ -1331,9 +1312,12 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             fragment = ''
             
         
+        path_components = ClientNetworkingFunctions.ConvertPathTextToList( p.path )
+        ( query_dict, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( p.query )
+        
         netloc = self._ClipNetLoc( p.netloc )
-        path = self._ClipAndFleshOutPath( p.path, for_server )
-        query = self._ClipAndFleshOutQuery( p.query, for_server )
+        path = self._ClipAndFleshOutPath( path_components, for_server )
+        query = self._ClipAndFleshOutQuery( query_dict, single_value_parameters, param_order, for_server )
         
         r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
         
@@ -1442,32 +1426,29 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        url_path = p.path
+        path = p.path
+        query = p.query
         
-        while url_path.startswith( '/' ):
-            
-            url_path = url_path[ 1 : ]
-            
-        
-        url_path_components = url_path.split( '/' )
+        path_components = ClientNetworkingFunctions.ConvertPathTextToList( path )
+        ( query_dict, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( query )
         
         if self._no_more_path_components_than_this:
             
-            if len( url_path_components ) > len( self._path_components ):
+            if len( path_components ) > len( self._path_components ):
                 
-                raise HydrusExceptions.URLClassException( '"{}" has {} path components, but I will not allow more than my defined {}!'.format( url_path, len( url_path_components ), len( self._path_components ) ) )
+                raise HydrusExceptions.URLClassException( '"{}" has {} path components, but I will not allow more than my defined {}!'.format( path, len( path_components ), len( self._path_components ) ) )
                 
             
         
         for ( index, ( string_match, default ) ) in enumerate( self._path_components ):
             
-            if len( url_path_components ) > index:
+            if len( path_components ) > index:
                 
-                url_path_component = url_path_components[ index ]
+                path_component = path_components[ index ]
                 
                 try:
                     
-                    string_match.Test( url_path_component )
+                    string_match.Test( path_component )
                     
                 except HydrusExceptions.StringMatchException as e:
                     
@@ -1478,24 +1459,22 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if index + 1 == len( self._path_components ):
                     
-                    message = '"{}" has {} path components, but I was expecting {}!'.format( url_path, len( url_path_components ), len( self._path_components ) )
+                    message = '"{}" has {} path components, but I was expecting {}!'.format( path, len( path_components ), len( self._path_components ) )
                     
                 else:
                     
-                    message = '"{}" has {} path components, but I was expecting at least {} and maybe as many as {}!'.format( url_path, len( url_path_components ), index + 1, len( self._path_components ) )
+                    message = '"{}" has {} path components, but I was expecting at least {} and maybe as many as {}!'.format( path, len( path_components ), index + 1, len( self._path_components ) )
                     
                 
                 raise HydrusExceptions.URLClassException( message )
                 
             
         
-        ( url_query_dict, single_value_parameters, param_order ) = ClientNetworkingFunctions.ConvertQueryTextToDict( p.query )
-        
         if self._no_more_parameters_than_this:
             
             good_fixed_names = { parameter.GetName() for parameter in self._parameters if isinstance( parameter, URLClassParameterFixedName ) }
             
-            for ( name, value ) in url_query_dict.items():
+            for ( name, value ) in query_dict.items():
                 
                 if name not in good_fixed_names:
                     
@@ -1510,7 +1489,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 name = parameter.GetName()
                 
-                if name not in url_query_dict:
+                if name not in query_dict:
                     
                     if parameter.MustBeInOriginalURL():
                         
@@ -1522,7 +1501,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                         
                     
                 
-                value = url_query_dict[ name ]
+                value = query_dict[ name ]
                 
                 try:
                     
@@ -1537,7 +1516,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         if len( single_value_parameters ) > 0 and not self._has_single_value_parameters and self._no_more_parameters_than_this:
             
-            raise HydrusExceptions.URLClassException( '"{}" has unexpected single-value parameters, but I am set to not allow any unexpected parameters!'.format( url_path ) )
+            raise HydrusExceptions.URLClassException( '"{}" has unexpected single-value parameters, but I am set to not allow any unexpected parameters!'.format( query ) )
             
         
         if self._has_single_value_parameters:

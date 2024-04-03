@@ -2335,12 +2335,12 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                 
                 base_url = parsing_context[ 'url' ]
                 
-                def clean_url( u ):
+                def remove_pre_url_gubbins( u ):
                     
                     # clears up when a source field starts with gubbins for some reason. e.g.:
-                    # (jap characters).avi | ranken [pixiv] http:/www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
+                    # (jap characters).avi | ranken [pixiv] http://www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
                     # ->
-                    # http:/www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
+                    # http://www.pixiv.net/member_illust.php?illust_id=48114073&mode=medium
                     
                     gumpf_until_scheme = r'^.*\s(?P<scheme>https?://)'
                     
@@ -2368,33 +2368,33 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                     return u
                     
                 
-                clean_parsed_texts = []
+                clean_urls = []
                 
-                for parsed_text in parsed_texts:
+                for unclean_url in parsed_texts:
                     
-                    if not ClientNetworkingFunctions.LooksLikeAFullURL( parsed_text ) and ( 'http://' in parsed_text or 'https://' in parsed_text ):
+                    if not ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ) and ( 'http://' in unclean_url or 'https://' in unclean_url ):
                         
-                        parsed_text = clean_url( parsed_text )
+                        unclean_url = remove_pre_url_gubbins( unclean_url )
                         
                     
-                    clean_parsed_texts.append( parsed_text )
+                    if not ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ):
+                        
+                        try:
+                            
+                            unclean_url = urllib.parse.urljoin( base_url, unclean_url )
+                            
+                        except:
+                            
+                            pass # welp
+                            
+                        
+                    
+                    clean_url = ClientNetworkingFunctions.WashURL( unclean_url )
+                    
+                    clean_urls.append( clean_url )
                     
                 
-                parsed_texts = []
-                
-                for clean_parsed_text in clean_parsed_texts:
-                    
-                    try:
-                        
-                        parsed_text = urllib.parse.urljoin( base_url, clean_parsed_text )
-                        
-                    except:
-                        
-                        parsed_text = clean_parsed_text
-                        
-                    
-                    parsed_texts.append( parsed_text )
-                    
+                parsed_texts = clean_urls
                 
             
         

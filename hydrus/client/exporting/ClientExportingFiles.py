@@ -154,9 +154,9 @@ def GenerateExportFilename( destination_directory, media, terms, file_index, do_
         
     
     # sidecar suffixes, and in general we don't want to spam giganto strings to people's hard drives
-    extra_characters_and_padding = 64
+    extra_characters_and_padding = 64 + len( ext )
     
-    filename = HydrusPaths.ElideFilenameOrDirectorySafely( filename, num_characters_used_in_other_components = destination_directory_num_characters_in_filesystem + extra_characters_and_padding )
+    filename = HydrusPaths.ElideFilenameOrDirectorySafely( filename, num_characters_already_used_in_this_component = extra_characters_and_padding, num_characters_used_in_other_components = destination_directory_num_characters_in_filesystem )
     
     if do_not_use_filenames is not None:
         
