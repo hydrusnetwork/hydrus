@@ -12,6 +12,7 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITime
@@ -92,7 +93,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += '\n'
         tt += '"display" = with sibling replacements and implied parents (what you see in normal views, good for export to other programs)'
         
-        self._tag_display_type_button.setToolTip( tt )
+        self._tag_display_type_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         rows = []
         
@@ -135,7 +136,7 @@ class EditSingleFileMetadataImporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._string_processor_button = ClientGUIStringControls.StringProcessorButton( self, string_processor, self._GetExampleTestData )
         tt = 'You can alter the texts that come in through this source here.'
-        self._string_processor_button.setToolTip( tt )
+        self._string_processor_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         vbox = QP.VBoxLayout()
         

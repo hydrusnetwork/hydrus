@@ -16,6 +16,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListBoxesData
@@ -352,24 +353,24 @@ class RelatedTagsPanel( QW.QWidget ):
         self._status_label = ClientGUICommon.BetterStaticText( self, label = 'ready' )
         
         self._just_do_local_files = ClientGUICommon.OnOffButton( self, on_label = 'just for my files', off_label = 'for all known files', start_on = True )
-        self._just_do_local_files.setToolTip( 'Select how big the search is. Searching across all known files on a repository produces high quality results but takes a long time.' )
+        self._just_do_local_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'Select how big the search is. Searching across all known files on a repository produces high quality results but takes a long time.' ) )
         
         tt = 'If you select some tags, this will search using only those as reference!'
         
         self._button_1 = QW.QPushButton( 'quick', self )
         self._button_1.clicked.connect( self.RefreshQuick )
         self._button_1.setMinimumWidth( 30 )
-        self._button_1.setToolTip( tt )
+        self._button_1.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._button_2 = QW.QPushButton( 'medium', self )
         self._button_2.clicked.connect( self.RefreshMedium )
         self._button_2.setMinimumWidth( 30 )
-        self._button_2.setToolTip( tt )
+        self._button_2.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._button_3 = QW.QPushButton( 'thorough', self )
         self._button_3.clicked.connect( self.RefreshThorough )
         self._button_3.setMinimumWidth( 30 )
-        self._button_3.setToolTip( tt )
+        self._button_3.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         if CG.client_controller.services_manager.GetServiceType( self._service_key ) == HC.LOCAL_TAG:
             

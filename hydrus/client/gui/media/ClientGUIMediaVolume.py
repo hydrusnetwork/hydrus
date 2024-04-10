@@ -1,6 +1,7 @@
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIMediaControls
+
+from hydrus.client.gui.media import ClientGUIMediaControls
 
 def GetCorrectCurrentMute( canvas_type: int ):
     

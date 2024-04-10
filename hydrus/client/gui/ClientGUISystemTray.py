@@ -5,9 +5,9 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import QtPorting as QP
 
@@ -159,21 +159,21 @@ class ClientSystemTrayIcon( QW.QSystemTrayIcon ):
         
         app_display_name = CG.client_controller.new_options.GetString( 'app_display_name' )
         
-        tooltip = app_display_name
+        tt = app_display_name
         
         if self._network_traffic_paused:
             
-            tooltip = '{} - network traffic paused'.format( tooltip )
+            tt = '{} - network traffic paused'.format( tt )
             
         
         if self._subscriptions_paused:
             
-            tooltip = '{} - subscriptions paused'.format( tooltip )
+            tt = '{} - subscriptions paused'.format( tt )
             
         
-        if self.toolTip != tooltip:
+        if self.toolTip != tt:
             
-            self.setToolTip( tooltip )
+            self.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
         
     

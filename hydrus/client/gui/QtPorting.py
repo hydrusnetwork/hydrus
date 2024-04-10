@@ -22,6 +22,7 @@ from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtInit
 
 isValid = QtInit.isValid
@@ -1558,7 +1559,7 @@ class StatusBar( QW.QStatusBar ):
         
         if cell.toolTip() != tooltip:
             
-            cell.setToolTip( tooltip )
+            cell.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
             
         
     
@@ -1856,7 +1857,7 @@ class EllipsizedLabel( QW.QLabel ):
 
         fontMetrics = painter.fontMetrics()
 
-        text_lines = self.text().split( '\n' )
+        text_lines = self.text().splitlines()
         
         line_spacing = fontMetrics.lineSpacing()
         

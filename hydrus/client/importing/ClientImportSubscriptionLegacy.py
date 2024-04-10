@@ -525,11 +525,11 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
         if HG.subscription_report_mode:
             
             message = 'Subscription "{}" CanDoWork check.'.format( self._name )
-            message += os.linesep
+            message += '\n'
             message += 'Paused/Global/Network Pause: {}/{}/{}'.format( self._paused, CG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ), CG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ) )
-            message += os.linesep
+            message += '\n'
             message += 'Started/Thread shutdown: {}/{}'.format( HG.started_shutdown, HydrusThreading.IsThreadShuttingDown() )
-            message += os.linesep
+            message += '\n'
             message += 'No delays: {}'.format( self._NoDelays() )
             
             HydrusData.ShowText( message )
@@ -669,9 +669,9 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                         login_fail_reason = str( e )
                         
                         message = 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login for one of its file imports. The reason was:'
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += login_fail_reason
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                         
                         HydrusData.ShowText( message )
@@ -729,9 +729,9 @@ class SubscriptionLegacy( HydrusSerialisable.SerialisableBaseNamed ):
                         login_fail_reason = str( e )
                         
                         message = 'Query "' + query.GetHumanName() + '" for subscription "' + self._name + '" seemed to have an invalid login. The reason was:'
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += login_fail_reason
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                         
                         HydrusData.ShowText( message )

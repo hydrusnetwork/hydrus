@@ -62,9 +62,9 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         if len( missing_prefixes_f ) > 0 or len( missing_prefixes_t ) > 0:
             
             message = 'When fetching the directories where your files are stored, the database discovered that some entries were missing! If you did not fiddle with the database yourself, this probably happened due to database corruption.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Default values will now be inserted. If you have previously migrated your files or thumbnails, and assuming this is occuring on boot, you will next be presented with a dialog to remap them to the correct location.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'If this is not happening on client boot, you should kill the hydrus process right now, as a serious hard drive fault has likely recently occurred.'
             
             self._DisplayCatastrophicError( message )

@@ -21,7 +21,8 @@ from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIBytes
+from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.search import ClientSearch
 
 class StaticSystemPredicateButton( QW.QWidget ):
@@ -1079,7 +1080,7 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
             ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
-        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, unit_string = 'fps', appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 5 )
+        self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, unit_string = 'fps', appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 5 )
         
         #
         
@@ -1145,7 +1146,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         self._sign.SetValue( predicate.IsInclusive() )
         
-        hashes_text = os.linesep.join( [ hash.hex() for hash in hashes ] )
+        hashes_text = '\n'.join( [ hash.hex() for hash in hashes ] )
         
         self._hashes.setPlainText( hashes_text )
         
@@ -1260,7 +1261,7 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
             ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
-        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px', appropriate_absolute_plus_or_minus_default = 200 )
+        self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px', appropriate_absolute_plus_or_minus_default = 200 )
         
         #
         
@@ -1761,7 +1762,7 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
             ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
-        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, appropriate_absolute_plus_or_minus_default = 300 )
+        self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 1000000, appropriate_absolute_plus_or_minus_default = 300 )
         
         #
         
@@ -1807,7 +1808,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         
         self._namespace = QW.QLineEdit( self )
         self._namespace.setPlaceholderText( 'Leave empty for unnamespaced, \'*\' for all namespaces' )
-        self._namespace.setToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' )
+        self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' ) )
         
         self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=','>'] )
         
@@ -1897,7 +1898,7 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
             ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
-        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators )
+        self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators )
         
         #
         
@@ -1949,7 +1950,7 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
             ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
-        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators )
+        self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators )
         
         #
         
@@ -2003,7 +2004,7 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
             ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
-        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, max = 100000000, appropriate_absolute_plus_or_minus_default = 5000 )
+        self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, max = 100000000, appropriate_absolute_plus_or_minus_default = 5000 )
         
         #
         
@@ -2132,11 +2133,11 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         ( pixel_hashes, perceptual_hashes, hamming_distance ) = predicate.GetValue()
         
-        hashes_text = os.linesep.join( [ hash.hex() for hash in pixel_hashes ] )
+        hashes_text = '\n'.join( [ hash.hex() for hash in pixel_hashes ] )
         
         self._pixel_hashes.setPlainText( hashes_text )
         
-        hashes_text = os.linesep.join( [ hash.hex() for hash in perceptual_hashes ] )
+        hashes_text = '\n'.join( [ hash.hex() for hash in perceptual_hashes ] )
         
         self._perceptual_hashes.setPlainText( hashes_text )
         
@@ -2325,7 +2326,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         
         ( hashes, hamming_distance ) = predicate.GetValue()
         
-        hashes_text = os.linesep.join( [ hash.hex() for hash in hashes ] )
+        hashes_text = '\n'.join( [ hash.hex() for hash in hashes ] )
         
         self._hashes.setPlainText( hashes_text )
         
@@ -2385,7 +2386,7 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         
         self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=',HC.UNICODE_NOT_EQUAL,'>'] )
         
-        self._bytes = ClientGUIControls.BytesControl( self )
+        self._bytes = ClientGUIBytes.BytesControl( self )
         
         #
         
@@ -2450,7 +2451,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         self._namespace.setText( namespace )
         self._namespace.setPlaceholderText( 'Leave empty for unnamespaced, \'*\' for all namespaces' )
-        self._namespace.setToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' )
+        self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' ) )
         
         self._sign.SetStringSelection( sign )
         self._num.setValue( num )
@@ -2498,7 +2499,7 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
             ClientSearch.NUMBER_TEST_OPERATOR_GREATER_THAN
         ]
         
-        self._number_test = ClientGUIControls.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px',  appropriate_absolute_plus_or_minus_default = 200 )
+        self._number_test = ClientGUINumberTest.NumberTestWidget( self, allowed_operators = allowed_operators, unit_string = 'px',  appropriate_absolute_plus_or_minus_default = 200 )
         
         #
         

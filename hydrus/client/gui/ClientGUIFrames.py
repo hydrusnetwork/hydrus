@@ -40,7 +40,7 @@ class ShowKeys( ClientGUITopLevelWindows.Frame ):
         if key_type == 'registration': prepend = 'r'
         else: prepend = ''
         
-        self._text = os.linesep.join( [ prepend + key.hex() for key in self._keys ] )
+        self._text = '\n'.join( [ prepend + key.hex() for key in self._keys ] )
         
         self._text_ctrl.setPlainText( self._text )
         

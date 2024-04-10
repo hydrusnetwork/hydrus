@@ -42,7 +42,7 @@ def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
                 
             
             row_text = '{}{}:'.format( prefix, key )
-            row_text += os.linesep
+            row_text += '\n'
             row_text += value_string
             
             texts.append( row_text )
@@ -50,7 +50,7 @@ def GetEmbeddedFileText( pil_image: PILImage.Image ) -> typing.Optional[ str ]:
         
         if len( texts ) > 0:
             
-            return os.linesep.join( texts )
+            return '\n'.join( texts )
             
         else:
             

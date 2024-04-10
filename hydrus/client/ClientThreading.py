@@ -414,7 +414,7 @@ class JobStatus( object ):
         
         try:
             
-            return os.linesep.join( stuff_to_print )
+            return '\n'.join( stuff_to_print )
             
         except:
             

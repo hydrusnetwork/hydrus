@@ -67,11 +67,11 @@ def DealWithBrokenJSONDump( db_dir, dump, dump_object_descriptor, dump_descripto
         
     
     message = 'A serialised object failed to load! Its description is "{}".'.format( dump_descriptor )
-    message += os.linesep * 2
+    message += '\n' * 2
     message += 'This error could be due to several factors, but is most likely a hard drive fault (perhaps your computer recently had a bad power cut?).'
-    message += os.linesep * 2
+    message += '\n' * 2
     message += 'The database has attempted to delete the broken object, and the object\'s dump written to {}. Depending on the object, your client may no longer be able to boot, or it may have lost something like a session or a subscription.'.format( path )
-    message += os.linesep * 2
+    message += '\n' * 2
     message += 'Please review the \'help my db is broke.txt\' file in your install_dir/db directory as background reading, and if the situation or fix here is not obvious, please contact hydrus dev.'
     
     HydrusData.ShowText( message )
@@ -254,11 +254,11 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 if not shown_missing_dump_message:
                     
                     message = 'A hashed serialised object was missing! Its hash is "{}".'.format( hash.hex() )
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'This error could be due to several factors, but is most likely a hard drive fault (perhaps your computer recently had a bad power cut?).'
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'Your client may have lost one or more session pages.'
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'Please review the \'help my db is broke.txt\' file in your install_dir/db directory as background reading, and if the situation or fix here is not obvious, please contact hydrus dev.'
                     
                     HydrusData.ShowText( message )
@@ -293,11 +293,11 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 if not shown_broken_dump_message:
                     
                     message = 'A hashed serialised object failed to load! Its hash is "{}".'.format( hash.hex() )
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'This error could be due to several factors, but is most likely a hard drive fault (perhaps your computer recently had a bad power cut?).'
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'The database has attempted to delete the broken object, and the object\'s dump written to your database directory. Your client may have lost one or more session pages.'
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'Please review the \'help my db is broke.txt\' file in your install_dir/db directory as background reading, and if the situation or fix here is not obvious, please contact hydrus dev.'
                     
                     HydrusData.ShowText( message )

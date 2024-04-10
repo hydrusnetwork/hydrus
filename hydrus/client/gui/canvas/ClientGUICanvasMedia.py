@@ -30,13 +30,12 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientRendering
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIMedia
-from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
-from hydrus.client.gui.canvas import ClientGUIMediaVolume
+from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.media import ClientGUIMediaVolume
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMedia
 
@@ -687,24 +686,6 @@ class Animation( QW.QWidget ):
                 ( direction, duration_ms ) = command.GetSimpleData()
                 
                 self.SeekDelta( direction, duration_ms )
-                
-            elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
-                
-                if self._media is not None:
-                    
-                    self.Pause()
-                    
-                    ClientGUIMedia.OpenExternally( self._media )
-                    
-                
-            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
-                
-                if self._media is not None:
-                    
-                    self.Pause()
-                    
-                    ClientGUIMedia.OpenFileLocation( self._media )
-                    
                 
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
@@ -3048,24 +3029,6 @@ class QtMediaPlayer( QW.QWidget ):
                 
                 self.SeekDelta( direction, duration_ms )
                 
-            elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
-                
-                if self._media is not None:
-                    
-                    self.Pause()
-                    
-                    ClientGUIMedia.OpenExternally( self._media )
-                    
-                
-            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
-                
-                if self._media is not None:
-                    
-                    self.Pause()
-                    
-                    ClientGUIMedia.OpenFileLocation( self._media )
-                    
-                
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
                 self.window().close()
@@ -3640,21 +3603,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             action = command.GetSimpleAction()
             
-            if action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
-                
-                if self._media is not None:
-                    
-                    ClientGUIMedia.OpenExternally( self._media )
-                    
-                
-            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
-                
-                if self._media is not None:
-                    
-                    ClientGUIMedia.OpenFileLocation( self._media )
-                    
-                
-            elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
+            if action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 
                 self.window().close()
                 

@@ -27,8 +27,8 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.networking import ClientNetworking
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingContexts
@@ -39,14 +39,14 @@ class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._bandwidth_rules_ctrl = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
+        self._bandwidth_rules_ctrl = ClientGUIBandwidth.BandwidthRulesCtrl( self, bandwidth_rules )
         
         vbox = QP.VBoxLayout()
         
         intro = 'A network job exists in several contexts. It must wait for all those contexts to have free bandwidth before it can work.'
-        intro += os.linesep * 2
+        intro += '\n' * 2
         intro += 'You are currently editing:'
-        intro += os.linesep * 2
+        intro += '\n' * 2
         intro += summary
         
         st = ClientGUICommon.BetterStaticText( self, intro )
@@ -578,7 +578,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._reset_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'reset default bandwidth rules', self._ResetDefaultBandwidthRules )
         
         default_rules_help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowDefaultRulesHelp )
-        default_rules_help_button.setToolTip( 'Show help regarding default bandwidth rules.' )
+        default_rules_help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding default bandwidth rules.' ) )
         
         self._delete_record_button = ClientGUICommon.BetterButton( self, 'delete selected history', self._DeleteNetworkContexts )
         
@@ -772,15 +772,15 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
     def _ShowDefaultRulesHelp( self ):
         
         help_text = 'Network requests act in multiple contexts. Most use the \'global\' and \'web domain\' network contexts, but a downloader page or subscription will also add a special label for itself. Each context can have its own set of bandwidth rules.'
-        help_text += os.linesep * 2
+        help_text += '\n' * 2
         help_text += 'If a network context does not have some specific rules set up, it will fall back to its respective default. It is possible for a default to not have any rules. If you want to set general policy, like "Never download more than 1GB/day from any individual website," or "Limit the entire client to 2MB/s," do it through \'global\' and the defaults.'
-        help_text += os.linesep * 2
+        help_text += '\n' * 2
         help_text += 'All contexts\' rules are consulted and have to pass before a request can do work. If you set a 2MB/s limit on a website domain and a 64KB/s limit on global, your download will only ever run at 64KB/s (and it fact it will probably run much slower, since everything shares the global context!). To make sense, network contexts with broader scope should have more lenient rules.'
-        help_text += os.linesep * 2
+        help_text += '\n' * 2
         help_text += 'There are two special ephemeral \'instance\' contexts, for downloaders and thread watchers. These represent individual queries, either a single gallery search or a single watched thread. It can be useful to set default rules for these so your searches will gather a fast initial sample of results in the first few minutes--so you can make sure you are happy with them--but otherwise trickle the rest in over time. This keeps your CPU and other bandwidth limits less hammered and helps to avoid accidental downloads of many thousands of small bad files or a few hundred gigantic files all in one go.'
-        help_text += os.linesep * 2
+        help_text += '\n' * 2
         help_text += 'Please note that this system bases its calendar dates on UTC time (it helps servers and clients around the world stay in sync a bit easier). This has no bearing on what, for instance, the \'past 24 hours\' means, but monthly transitions may occur a few hours off whatever your midnight is.'
-        help_text += os.linesep * 2
+        help_text += '\n' * 2
         help_text += 'If you do not understand what is going on here, you can safely leave it alone. The default settings make for a _reasonable_ and polite profile that will not accidentally cause you to download way too much in one go or piss off servers by being too aggressive. If you want to throttle your client, the simplest way is to add a simple rule like \'500MB per day\' to the global context.'
         
         ClientGUIDialogsMessage.ShowInformation( self, help_text )

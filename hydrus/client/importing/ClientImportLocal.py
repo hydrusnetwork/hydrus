@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 
@@ -28,7 +29,6 @@ from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 from hydrus.client.metadata import ClientMetadataMigrationImporters
 from hydrus.client.metadata import ClientTags
-from hydrus.client.search import ClientSearch
 
 class HDDImport( HydrusSerialisable.SerialisableBase ):
     
@@ -194,7 +194,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                self._files_status = ClientImportControl.NeatenStatusText( text )
+                self._files_status = HydrusText.GetFirstLine( text )
                 
             
         

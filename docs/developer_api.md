@@ -36,7 +36,7 @@ In general, the API deals with standard UTF-8 JSON. POST requests and 200 OK res
 *   In python, converting your tag list to the URL encoded string would be:
     
     ```
-    urllib.parse.quote( json.dumps( tag_list ) )
+    urllib.parse.quote( json.dumps( tag_list ), safe = '' )
     ```
     
 *   Full URL path example:

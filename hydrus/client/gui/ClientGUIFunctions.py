@@ -7,11 +7,9 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.core.files.images import HydrusImageNormalisation
@@ -388,30 +386,6 @@ def NotebookScreenToHitTest( notebook, screen_position ):
     return notebook.tabBar().tabAt( tab_pos )
     
 
-def PresentClipboardParseError( win: QW.QWidget, content: str, expected_content_description: str, e: Exception ):
-    
-    MAX_CONTENT_SIZE = 1024
-    
-    log_message = 'Clipboard Error!\nI was expecting: {}'.format( expected_content_description )
-    
-    if len( content ) > MAX_CONTENT_SIZE:
-        
-        log_message += '\nFirst {} of content received (total was {}):\n'.format( HydrusData.ToHumanBytes( MAX_CONTENT_SIZE ), HydrusData.ToHumanBytes( len( content ) ) ) + content[:MAX_CONTENT_SIZE]
-        
-    else:
-        
-        log_message += '\nContent received ({}):\n'.format( HydrusData.ToHumanBytes( len( content ) ) ) + content[:MAX_CONTENT_SIZE]
-        
-    
-    HydrusData.DebugPrint( log_message )
-    
-    HydrusData.PrintException( e, do_wait = False )
-    
-    message = 'Sorry, I could not understand what was in the clipboard. I was expecting "{}" but received this text:\n\n{}\n\nMore details have been written to the log, but the general error was:\n\n{}'.format( expected_content_description, HydrusText.ElideText( content, 64 ), repr( e ) )
-    
-    ClientGUIDialogsMessage.ShowCritical( win, 'Clipboard Error!', message )
-    
-
 def SetBitmapButtonBitmap( button, bitmap ):
     
     # old wx stuff, but still basically relevant
@@ -509,4 +483,49 @@ def WidgetOrAnyTLWChildHasFocus( window ):
         
     
     return False
+    
+
+def WrapToolTip( s: str, max_line_length = 80 ):
+    
+    wrapped_lines = []
+    
+    for line in s.splitlines():
+        
+        if len( line ) == 0:
+            
+            wrapped_lines.append( line )
+            
+            continue
+            
+        
+        words = line.split( ' ' )
+        
+        words_of_current_line = []
+        num_chars_in_current_line = 0
+        
+        for word in words:
+            
+            if num_chars_in_current_line + len( words_of_current_line ) + len( word ) > max_line_length and len( words_of_current_line ) > 0:
+                
+                wrapped_lines.append( ' '.join( words_of_current_line ) )
+                
+                words_of_current_line = [ word ]
+                num_chars_in_current_line = len( word )
+                
+            else:
+                
+                words_of_current_line.append( word )
+                num_chars_in_current_line += len( word )
+                
+            
+        
+        if len( words_of_current_line ) > 0:
+            
+            wrapped_lines.append( ' '.join( words_of_current_line ) )
+            
+        
+    
+    wrapped_tt = '\n'.join( wrapped_lines )
+    
+    return wrapped_tt
     

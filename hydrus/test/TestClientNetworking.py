@@ -19,6 +19,7 @@ from hydrus.client.networking import ClientNetworkingBandwidth
 from hydrus.client.networking import ClientNetworkingContexts
 from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.networking import ClientNetworkingGUG
 from hydrus.client.networking import ClientNetworkingJobs
 from hydrus.client.networking import ClientNetworkingLogin
 from hydrus.client.networking import ClientNetworkingSessions
@@ -225,6 +226,59 @@ class TestBandwidthManager( unittest.TestCase ):
         pass
         
     
+
+class TestGUGs( unittest.TestCase ):
+    
+    def test_some_basics( self ):
+        
+        gug = ClientNetworkingGUG.GalleryURLGenerator(
+            'test',
+            url_template = 'https://blahbooru.com/post/search?tags=%tags%',
+            replacement_phrase = '%tags%',
+            search_terms_separator = '+',
+            initial_search_text = 'enter tags',
+            example_search_text = 'blonde_hair blue_eyes'
+        )
+        
+        self.assertEqual( gug.GetExampleURL(), 'https://blahbooru.com/post/search?tags=blonde_hair+blue_eyes' )
+        self.assertEqual( gug.GenerateGalleryURL( 'blonde_hair%20blue_eyes' ), 'https://blahbooru.com/post/search?tags=blonde_hair+blue_eyes' )
+        self.assertEqual( gug.GenerateGalleryURL( '100% nice' ), 'https://blahbooru.com/post/search?tags=100%25+nice' )
+        self.assertEqual( gug.GenerateGalleryURL( '6+girls blonde_hair' ), 'https://blahbooru.com/post/search?tags=6%2Bgirls+blonde_hair' )
+        self.assertEqual( gug.GenerateGalleryURL( '@artistname' ), 'https://blahbooru.com/post/search?tags=%40artistname' )
+        self.assertEqual( gug.GenerateGalleryURL( '日本 語版' ), 'https://blahbooru.com/post/search?tags=%E6%97%A5%E6%9C%AC+%E8%AA%9E%E7%89%88' )
+        
+        gug = ClientNetworkingGUG.GalleryURLGenerator(
+            'test',
+            url_template = 'https://blahsite.net/post/%username%',
+            replacement_phrase = '%username%',
+            search_terms_separator = '_',
+            initial_search_text = 'enter username',
+            example_search_text = 'someguy'
+        )
+        
+        self.assertEqual( gug.GetExampleURL(), 'https://blahsite.net/post/someguy' )
+        self.assertEqual( gug.GenerateGalleryURL( 'someguy' ), 'https://blahsite.net/post/someguy' )
+        self.assertEqual( gug.GenerateGalleryURL( 'some guy' ), 'https://blahsite.net/post/some_guy' )
+        self.assertEqual( gug.GenerateGalleryURL( '@someguy' ), 'https://blahsite.net/post/@someguy' ) # note this does not encode since this is a path component
+        self.assertEqual( gug.GenerateGalleryURL( '日本 語版' ), 'https://blahsite.net/post/%E6%97%A5%E6%9C%AC_%E8%AA%9E%E7%89%88' )
+        
+        gug = ClientNetworkingGUG.GalleryURLGenerator(
+            'test',
+            url_template = 'https://blahsite.net/post/%username%?page=1',
+            replacement_phrase = '%username%',
+            search_terms_separator = '_',
+            initial_search_text = 'enter username',
+            example_search_text = 'someguy'
+        )
+        
+        self.assertEqual( gug.GetExampleURL(), 'https://blahsite.net/post/someguy?page=1' )
+        self.assertEqual( gug.GenerateGalleryURL( 'someguy' ), 'https://blahsite.net/post/someguy?page=1' )
+        self.assertEqual( gug.GenerateGalleryURL( 'some guy' ), 'https://blahsite.net/post/some_guy?page=1' )
+        self.assertEqual( gug.GenerateGalleryURL( '@someguy' ), 'https://blahsite.net/post/@someguy?page=1' ) # note this does not encode since this is a path component
+        self.assertEqual( gug.GenerateGalleryURL( '日本 語版' ), 'https://blahsite.net/post/%E6%97%A5%E6%9C%AC_%E8%AA%9E%E7%89%88?page=1' )
+        
+    
+
 class TestURLClasses( unittest.TestCase ):
     
     def test_url_class_basics( self ):
@@ -285,17 +339,23 @@ class TestURLClasses( unittest.TestCase ):
         human_url = 'https://testbooru.cx/post/page.php?id=1234 56&s=view'
         encoded_url = 'https://testbooru.cx/post/page.php?id=1234%2056&s=view'
         
-        self.assertEqual( ClientNetworkingFunctions.WashURL( human_url ), encoded_url )
-        self.assertEqual( ClientNetworkingFunctions.WashURL( encoded_url ), encoded_url )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( human_url ), encoded_url )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( encoded_url ), encoded_url )
         
         human_url_with_fragment = 'https://testbooru.cx/post/page.php?id=1234 56&s=view#hello'
         encoded_url_with_fragment = 'https://testbooru.cx/post/page.php?id=1234%2056&s=view#hello'
         
-        self.assertEqual( ClientNetworkingFunctions.WashURL( human_url_with_fragment ), encoded_url_with_fragment )
-        self.assertEqual( ClientNetworkingFunctions.WashURL( encoded_url_with_fragment ), encoded_url_with_fragment )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( human_url_with_fragment ), encoded_url_with_fragment )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( encoded_url_with_fragment ), encoded_url_with_fragment )
         
-        self.assertEqual( ClientNetworkingFunctions.WashURL( human_url_with_fragment, keep_fragment = False ), encoded_url )
-        self.assertEqual( ClientNetworkingFunctions.WashURL( encoded_url_with_fragment, keep_fragment = False ), encoded_url )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( human_url_with_fragment, keep_fragment = False ), encoded_url )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( encoded_url_with_fragment, keep_fragment = False ), encoded_url )
+        
+        human_url_with_mix = 'https://testbooru.cx/po@s%20t/page.php?id=1234 56&s=view%%25'
+        encoded_url_with_mix = 'https://testbooru.cx/po@s%20t/page.php?id=1234%2056&s=view%25%25'
+        
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( human_url_with_mix ), encoded_url_with_mix )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( encoded_url_with_mix ), encoded_url_with_mix )
         
     
     def test_defaults( self ):

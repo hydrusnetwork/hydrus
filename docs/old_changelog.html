@@ -35,6 +35,50 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_570"><a href="#version_570">version 570</a></h2>
+                    <ul>
+                        <li><h3>UI stuff</h3></li>
+                        <li>wrote a thing to wrap tooltips and applied it everywhere. every tooltip in the program should now wrap to 80 characters</li>
+                        <li>the thumbnail view is now better about pausing the current video if you open it externally in various ways</li>
+                        <li>the 'open' submenu you get off of a file right-click is now exactly the same for the thumbnail menu and the media viewer menu, with all commands working in either place, the labels are also brushed up a little</li>
+                        <li>added a shortcut action for 'open file in web browser' to the media shortcut set</li>
+                        <li>added a shortcut action for 'open files in a new duplicates filter page' to the media shortcut set</li>
+                        <li>added/updated the shortcut action for 'open similar looking files in a new page' in the media shortcut set. this is now one job that lets you set any distance, and it now works from the media viewer too. all existing `show similar files: 0 (exact)` fixed-distance simple actions will be converted to the new action when you update</li>
+                        <li>I removed 'open externally' and 'open in file explorer' shortcuts from the media viewer/preview viewer/thumbnails sets. these sets are technically awkward and were really meant for a different thing, like pause/play or 'close media viewer', and having the media command code duplicated here was getting spammy. if you have any of these now-defunct commands set, please move them up to the general 'media' set, where it'll work everywhere. sorry if this breaks a very complicated set you have, but let's KISS!</li>
+                        <li>the 'files' submenu off thumbnails or the media viewer is flattened one level. the 'upload to' remote services stuff still isn't available for the media viewer, but I'll do the same as I did above for that in the near future</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed an issue with the 'manage tag siblings/parents' dialogs where the mass-import button was, in 'add or delete' mode, not doing any deletes/rescinds if there were any new pairs in what was being imported. this was probably applying to large regular adds in the UI, also</li>
+                        <li>this mass-import button of 'manage tag siblings/parents' also dedupes the pairs coming in. it now shouldn't do anything like 'add, then ask to remove' if you have the same pair twice!</li>
+                        <li>the nitter downloaders are removed from the defaults. I can't keep up with whatever the situation is there</li>
+                        <li>the style and stylesheet names in the options are now sorted</li>
+                        <li>sidecar importers will now work on sidecars that have uppercase .TXT or .JSON extensions</li>
+                        <li><h3>more URL stuff (advanced, can be ignored by most)</h3></li>
+                        <li>fixed up the recent URL encoding tech to properly follow the encoding exceptions as under RFC 3986. an '@' in an URL shouldn't get messed up now. thanks to the user(s) who helped here</li>
+                        <li>incoming URLs can now have a mix of encoded and non-encoded characters and the 'ensure URL is encoded' process will accept it and encode the non-encoded parts, idempotently. it only fails on ingesting a legit decoded percent character that happens to be followed by two hex chars, but that's rare enough we don't really have to worry</li>
+                        <li>you can similarly now enter multiple tags in a query text that are a mix of encoded and non-encoded, a mix of %20 and spaces, and it should figure it out</li>
+                        <li>the 'ensure URL is encoded' process now applies to GUG-generated URLs, and in the edit GUG UI, you now see the normalised 'for server' URL, with any additional tokens or whatever the URL class has</li>
+                        <li>GUGs also try to recognise if their replacement phrase is going into the path or the parameters now, and only force-encodes everything if it looks like our tags are going into a query param</li>
+                        <li>ensured that what you paste into an 'edit URL Class' panel's 'example url' section gets encoded before normalisation just as it would in engine</li>
+                        <li>the file log right-click now shows both the normalised and request urls under the 'additional urls' section, if they differ from the pretty human URL in the list</li>
+                        <li>right-clicking a single item in the downloader search log now previews the specific request URL to be copied</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>all instances of URL path or parameter encoding now go through one location that obeys RFC 3986</li>
+                        <li>replaced my various uses of the unusual `ParseResult` with `urllib.parse.urlunparse`</li>
+                        <li>added a couple unit tests for the improved URL encoding tech</li>
+                        <li>added some unit tests for the GUGs' new encoding tech</li>
+                        <li>harmonised how a file is opened in the OS file explorer in the media results and media canvas pages. what was previously random hardcode, duplicated internal method calls, and ancient pubsub redirects now all goes thorugh the application command system to a singular isolated media-actioning method</li>
+                        <li>did the same harmonisation for opening files externally</li>
+                        <li>and for opening files in your web browser, which gets additional new infrastructure so it can plug into the shortcuts system</li>
+                        <li>and to a lesser degree the 'open in a new page' and 'open in a new duplicates filter page' commands</li>
+                        <li>moved the various gui-side media python files to a new 'gui.media' module. renamed `ClientGUIMedia` to `ClientGUISimpleActions` and `ClientGUIMediaActions` to `ClientGUIModalActions` and shuffled their methods back and forth a bit</li>
+                        <li>cleaned up `ClientGUIFunctions` and `ClientGUICommon` and their imports a little with some similar shuffle-refactoring</li>
+                        <li>broke up `ClientGUIControls` into a bunch of smaller, defined files, mostly to untangle imports</li>
+                        <li>cleaned up how some text and exceptions are split by newlines to handle different sorts of newline, and cleaned up how I fetch the first 'summary' line of text in all cases across the program</li>
+                        <li>replaced `os.linesep` with `\n` across the program. Qt only wants `\n` anyway, most logging wants `\n` (and sometimes converts on the fly behind the scenes), and this helps KISS otherwise. I might bring back `os.linesep` for sidecars and stuff if it proves a problem, but most text editors and scripting languages are very happy with `\n`, so we'll see</li>
+                        <li>multi-column lists now show multiline tooltips if the underlying text in the cell was originally multiline (although tbh this is rare)</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_569"><a href="#version_569">version 569</a></h2>
                     <ul>
                         <li><h3>user contributions</h3></li>

@@ -96,7 +96,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         search_tag_filter = api_permissions.GetSearchTagFilter()
         
         message = 'The API will only permit searching for tags that pass through this filter.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you want to allow all tags, just leave it as is, permitting everything. If you want to limit it to just one tag, such as "do waifu2x on this", set up a whitelist with only that tag allowed.'
         
         self._search_tag_filter = ClientGUITags.TagFilterButton( self, message, search_tag_filter, label_prefix = 'permitted tags: ' )

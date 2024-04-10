@@ -522,9 +522,9 @@ class ClientFilesManager( object ):
             summaries = sorted( ( '{} folders seem to have moved from {} to {}'.format( HydrusData.ToHumanInt( count ), missing_base_location, correct_base_location ) for ( ( missing_base_location, correct_base_location ), count ) in fixes_counter.items() ) )
             
             summary_message = 'Some client file folders were missing, but they appear to be in other known locations! The folders are:'
-            summary_message += os.linesep * 2
-            summary_message += os.linesep.join( summaries )
-            summary_message += os.linesep * 2
+            summary_message += '\n' * 2
+            summary_message += '\n'.join( summaries )
+            summary_message += '\n' * 2
             summary_message += 'Assuming you did this on purpose, or hydrus recently inserted stub values after database corruption, Hydrus is ready to update its internal knowledge to reflect these new mappings as soon as this dialog closes. If you know these proposed fixes are incorrect, terminate the program now.'
             
             HydrusData.Print( summary_message )
@@ -1116,11 +1116,11 @@ class ClientFilesManager( object ):
                     
                     missing_prefixes = sorted( missing_dict[ missing_base_location ] )
                     
-                    missing_prefixes_string = '    ' + os.linesep.join( ( ', '.join( block ) for block in HydrusLists.SplitListIntoChunks( missing_prefixes, 32 ) ) )
+                    missing_prefixes_string = '    ' + '\n'.join( ( ', '.join( block ) for block in HydrusLists.SplitListIntoChunks( missing_prefixes, 32 ) ) )
                     
-                    missing_string += os.linesep
+                    missing_string += '\n'
                     missing_string += str( missing_base_location )
-                    missing_string += os.linesep
+                    missing_string += '\n'
                     missing_string += missing_prefixes_string
                     
                 
@@ -1129,7 +1129,7 @@ class ClientFilesManager( object ):
                 if len( self._missing_subfolders ) > 4:
                     
                     text = 'When initialising the client files manager, some file locations did not exist! They have all been written to the log!'
-                    text += os.linesep * 2
+                    text += '\n' * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
                     self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
@@ -1140,9 +1140,9 @@ class ClientFilesManager( object ):
                 else:
                     
                     text = 'When initialising the client files manager, these file locations did not exist:'
-                    text += os.linesep * 2
+                    text += '\n' * 2
                     text += missing_string
-                    text += os.linesep * 2
+                    text += '\n' * 2
                     text += 'If this is happening on client boot, you should now be presented with a dialog to correct this manually!'
                     
                     self._controller.BlockingSafeShowCriticalMessage( 'missing locations', text )
@@ -2226,7 +2226,7 @@ class FilesMaintenanceManager( object ):
                     self._pubbed_message_about_invalid_file_export = True
                     
                     message = 'During file maintenance, a file was found to be invalid. It and any known URLs have been moved to "{}".'.format( error_dir )
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'More files may be invalid, but this message will not appear again during this boot.'
                     
                     HydrusData.ShowText( message )
@@ -2279,7 +2279,7 @@ class FilesMaintenanceManager( object ):
                         
                     
                     message = 'During file maintenance, a file was found to be missing or invalid. {} Its file hash and any known URLs have been written to "{}".'.format( m, error_dir )
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'This may happen to more files in the near future, but this message will not appear again during this boot.'
                     
                     HydrusData.ShowText( message )
@@ -2881,7 +2881,7 @@ class FilesMaintenanceManager( object ):
                         job_status = ClientThreading.JobStatus()
                         
                         message = 'Hey, while performing file maintenance task "{}" on file {}, the client ran into an I/O Error! This could be just some media library moaning about a weird (probably truncated) file, but it could also be a significant hard drive problem. Look at the error yourself. If it looks serious, you should shut the client down and check your hard drive health immediately. Just to be safe, no more file maintenance jobs will be run this boot, and a full traceback has been written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += str( e )
                         
                         job_status.SetStatusText( message )
@@ -2902,7 +2902,7 @@ class FilesMaintenanceManager( object ):
                         job_status = ClientThreading.JobStatus()
                         
                         message = 'There was an unexpected problem performing maintenance task "{}" on file {}! The job will not be reattempted. A full traceback of this error should be written to the log.'.format( regen_file_enum_to_str_lookup[ job_type ], hash.hex() )
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += str( e )
                         
                         job_status.SetStatusText( message )

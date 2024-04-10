@@ -199,20 +199,20 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._initial_file_limit = ClientGUICommon.BetterSpinBox( self._file_limits_panel, min=1, max=limits_max )
-        self._initial_file_limit.setToolTip( 'The first sync will add no more than this many URLs.' )
+        self._initial_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'The first sync will add no more than this many URLs.' ) )
         
         self._periodic_file_limit = ClientGUICommon.BetterSpinBox( self._file_limits_panel, min=1, max=limits_max )
-        self._periodic_file_limit.setToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' )
+        self._periodic_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' ) )
         
         self._this_is_a_random_sample_sub = QW.QCheckBox( self._file_limits_panel )
-        self._this_is_a_random_sample_sub.setToolTip( 'If you check this, you will not get warnings if the normal file limit is hit. Useful if you have a randomly sorted gallery, or you just want a recurring small sample of files.' )
+        self._this_is_a_random_sample_sub.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you check this, you will not get warnings if the normal file limit is hit. Useful if you have a randomly sorted gallery, or you just want a recurring small sample of files.' ) )
         
         self._checker_options = ClientGUIImport.CheckerOptionsButton( self._file_limits_panel, checker_options )
         
         self._file_presentation_panel = ClientGUICommon.StaticBox( self, 'file publication' )
         
         self._show_a_popup_while_working = QW.QCheckBox( self._file_presentation_panel )
-        self._show_a_popup_while_working.setToolTip( 'Careful with this! Leave it on to begin with, just in case it goes wrong!' )
+        self._show_a_popup_while_working.setToolTip( ClientGUIFunctions.WrapToolTip( 'Careful with this! Leave it on to begin with, just in case it goes wrong!' ) )
         
         self._publish_files_to_popup_button = QW.QCheckBox( self._file_presentation_panel )
         self._publish_files_to_page = QW.QCheckBox( self._file_presentation_panel )
@@ -221,11 +221,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'This is great to merge multiple subs to a combined location!'
         
-        self._publish_label_override.setToolTip( tt )
+        self._publish_label_override.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         tt = 'If unchecked, each query will produce its own \'subscription_name: query\' button or page.'
         
-        self._merge_query_publish_events.setToolTip( tt )
+        self._merge_query_publish_events.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -521,7 +521,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             query_texts.append( query_header.GetQueryText() )
             
         
-        clipboard_text = os.linesep.join( query_texts )
+        clipboard_text = '\n'.join( query_texts )
         
         if len( clipboard_text ) > 0:
             
@@ -694,7 +694,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             data_strings.append( data_string )
             
         
-        text = os.linesep.join( data_strings )
+        text = '\n'.join( data_strings )
         
         CG.client_controller.pub( 'clipboard', 'text', text )
         
@@ -740,7 +740,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             data_strings.append( data_string )
             
         
-        message = os.linesep.join( data_strings )
+        message = '\n'.join( data_strings )
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
         
@@ -827,7 +827,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of Queries', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of Queries', e )
             
             return
             
@@ -879,19 +879,19 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    aeqt_separator = os.linesep
+                    aeqt_separator = '\n'
                     
                 
                 message += 'The queries:'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += aeqt_separator.join( already_existing_query_texts )
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'Were already in the subscription.'
                 
             
             if len( DEAD_query_headers ) > 0:
                 
-                message += os.linesep * 2
+                message += '\n' * 2
                 
                 if len( DEAD_query_headers ) > 50:
                     
@@ -907,13 +907,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                     else:
                         
-                        aeqt_separator = os.linesep
+                        aeqt_separator = '\n'
                         
                     
                     message += 'The DEAD queries:'
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += aeqt_separator.join( DEAD_query_texts )
-                    message += os.linesep * 2
+                    message += '\n' * 2
                     message += 'Were revived.'
                     
                 
@@ -923,7 +923,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( already_existing_query_texts ) > 0:
                 
-                message += os.linesep * 2
+                message += '\n' * 2
                 
             
             if len( new_query_texts ) > 50:
@@ -938,13 +938,13 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    nqt_separator = os.linesep
+                    nqt_separator = '\n'
                     
                 
                 message += 'The queries:'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += nqt_separator.join( new_query_texts )
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'Were added.'
                 
             
@@ -2468,9 +2468,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         edited_datas = []
         
         message = 'Are you sure you want to merge the selected subscriptions? This will combine all selected subscriptions that share the same downloader, wrapping all their different queries into one subscription.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This is a big operation, so if it does not do what you expect, hit cancel afterwards!'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Please note that all other subscription settings settings (like paused status and file limits and tag options) will be merged as well, so double-check your merged subs\' settings afterwards.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )

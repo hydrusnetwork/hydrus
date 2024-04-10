@@ -12,11 +12,11 @@ import urllib.parse
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 
@@ -1275,10 +1275,10 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         if exception is not None:
             
-            first_line = repr( exception ).splitlines()[0]
+            first_line = HydrusText.GetFirstLine( repr( exception ) )
             
             note = f'{first_line}{HC.UNICODE_ELLIPSIS} (Copy note to see full error)'
-            note += os.linesep
+            note += '\n'
             note += traceback.format_exc()
             
             HydrusData.Print( 'Error when processing {}!'.format( self.file_seed_data ) )

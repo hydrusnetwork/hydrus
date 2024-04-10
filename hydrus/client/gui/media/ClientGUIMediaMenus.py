@@ -7,15 +7,15 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
-from hydrus.client.gui import ClientGUIMedia
 from hydrus.client.gui import ClientGUIMenus
+from hydrus.client.gui.media import ClientGUIMediaModalActions
+from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.networking import ClientNetworkingFunctions
@@ -105,7 +105,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
                         
                     else:
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', ClientGUIMedia.ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
+                        ClientGUIMenus.AppendMenuItem( duplicates_menu, 'show the best quality file of this file\'s group', 'Load up a new search with this file\'s best quality duplicate.', ClientGUIMediaSimpleActions.ShowDuplicatesInNewPage, job_location_context, focused_hash, HC.DUPLICATE_KING )
                         
                     
                 
@@ -122,7 +122,7 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
                         
                         label = 'view {} {}'.format( HydrusData.ToHumanInt( count ), HC.duplicate_type_string_lookup[ duplicate_type ] )
                         
-                        ClientGUIMenus.AppendMenuItem( duplicates_menu, label, 'Show these duplicates in a new page.', ClientGUIMedia.ShowDuplicatesInNewPage, job_location_context, focused_hash, duplicate_type )
+                        ClientGUIMenus.AppendMenuItem( duplicates_menu, label, 'Show these duplicates in a new page.', ClientGUIMediaSimpleActions.ShowDuplicatesInNewPage, job_location_context, focused_hash, duplicate_type )
                         
                         if duplicate_type == HC.DUPLICATE_MEMBER:
                             
@@ -205,12 +205,12 @@ def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: Client
             
             for duplicate_type in ( HC.DUPLICATE_BETTER, HC.DUPLICATE_SAME_QUALITY ):
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[duplicate_type], 'Edit what happens when you set this status.', ClientGUIMedia.EditDuplicateContentMergeOptions, win, duplicate_type )
+                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[duplicate_type], 'Edit what happens when you set this status.', ClientGUIMediaModalActions.EditDuplicateContentMergeOptions, win, duplicate_type )
                 
             
             if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                 
-                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[HC.DUPLICATE_ALTERNATE] + ' (advanced!)', 'Edit what happens when you set this status.', ClientGUIMedia.EditDuplicateContentMergeOptions, win, HC.DUPLICATE_ALTERNATE )
+                ClientGUIMenus.AppendMenuItem( duplicates_edit_action_submenu, 'for ' + HC.duplicate_type_string_lookup[HC.DUPLICATE_ALTERNATE] + ' (advanced!)', 'Edit what happens when you set this status.', ClientGUIMediaModalActions.EditDuplicateContentMergeOptions, win, HC.DUPLICATE_ALTERNATE )
                 
             
             ClientGUIMenus.AppendMenu( duplicates_action_submenu, duplicates_edit_action_submenu, 'edit default duplicate metadata merge options' )
@@ -485,9 +485,9 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             label = 'open this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' recognised urls in your web browser'
             
-            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open these urls in your web browser.', ClientGUIMedia.OpenURLs, urls )
+            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls )
             
-            urls_string = os.linesep.join( urls )
+            urls_string = '\n'.join( urls )
             
             label = 'copy this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' recognised urls to your clipboard'
             
@@ -500,9 +500,9 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             label = 'open this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' urls in your web browser'
             
-            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open these urls in your web browser.', ClientGUIMedia.OpenURLs, urls )
+            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls )
             
-            urls_string = os.linesep.join( urls )
+            urls_string = '\n'.join( urls )
             
             label = 'copy this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' urls to your clipboard'
             
@@ -529,11 +529,11 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
                 
                 label = 'open files\' ' + url_class.GetName() + ' urls in your web browser'
                 
-                ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open this url class in your web browser for all files.', ClientGUIMedia.OpenMediaURLClassURLs, selected_media, url_class )
+                ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open this url class in your web browser for all files.', ClientGUIMediaModalActions.OpenMediaURLClassURLs, win, selected_media, url_class )
                 
                 label = 'copy files\' ' + url_class.GetName() + ' urls'
                 
-                ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url class for all files.', ClientGUIMedia.CopyMediaURLClassURLs, selected_media, url_class )
+                ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url class for all files.', ClientGUIMediaSimpleActions.CopyMediaURLClassURLs, selected_media, url_class )
                 
             
         
@@ -543,11 +543,11 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             label = 'open all files\' urls'
             
-            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open urls in your web browser for all files.', ClientGUIMedia.OpenMediaURLs, selected_media )
+            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open urls in your web browser for all files.', ClientGUIMediaModalActions.OpenMediaURLs, win, selected_media )
             
             label = 'copy all files\' urls'
             
-            ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy urls for all files.', ClientGUIMedia.CopyMediaURLs, selected_media )
+            ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy urls for all files.', ClientGUIMediaSimpleActions.CopyMediaURLs, selected_media )
             
         
         #
@@ -565,8 +565,6 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicabl
         
         return
         
-    
-    local_action_menu = ClientGUIMenus.GenerateMenu( menu )
     
     if len( local_duplicable_to_file_service_keys ) > 0:
         
@@ -595,7 +593,7 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicabl
             submenu_name = 'add to'
             
         
-        ClientGUIMenus.AppendMenuOrItem( local_action_menu, submenu_name, menu_tuples )
+        ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
         
     
     if len( local_moveable_from_and_to_file_service_keys ) > 0:
@@ -625,10 +623,8 @@ def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicabl
             submenu_name = 'move'
             
         
-        ClientGUIMenus.AppendMenuOrItem( local_action_menu, submenu_name, menu_tuples )
+        ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
         
-    
-    ClientGUIMenus.AppendMenu( menu, local_action_menu, 'local services' )
     
 
 def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
@@ -637,9 +633,65 @@ def AddManageFileViewingStatsMenu( win: QW.QWidget, menu: QW.QMenu, flat_medias:
     
     submenu = ClientGUIMenus.GenerateMenu( menu )
     
-    ClientGUIMenus.AppendMenuItem( submenu, 'clear', 'Clear all the recorded file viewing stats for the selected files.', ClientGUIMedia.DoClearFileViewingStats, win, flat_medias )
+    ClientGUIMenus.AppendMenuItem( submenu, 'clear', 'Clear all the recorded file viewing stats for the selected files.', ClientGUIMediaModalActions.DoClearFileViewingStats, win, flat_medias )
     
     ClientGUIMenus.AppendMenu( menu, submenu, 'viewing stats' )
+    
+
+def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
+    
+    if len( selected_media ) == 0:
+        
+        return
+        
+    
+    open_menu = ClientGUIMenus.GenerateMenu( menu )
+    
+    ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Copy your current selection into a simple new page.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE ) )
+    ClientGUIMenus.AppendMenuItem( open_menu, 'in a new duplicate filter page', 'Make a new duplicate filter page that searches for these files specifically.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SELECTION_IN_NEW_DUPLICATES_FILTER_PAGE ) )
+    
+    similar_menu = ClientGUIMenus.GenerateMenu( open_menu )
+    
+    if focused_media is not None:
+        
+        if focused_media.HasStaticImages():
+            
+            ClientGUIMenus.AppendSeparator( similar_menu )
+            
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'exact match', 'Search the database for files that look precisely like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_EXACT_MATCH ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'very similar', 'Search the database for files that look just like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_VERY_SIMILAR ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'similar', 'Search the database for files that look generally like those selected.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SIMILAR ) )
+            ClientGUIMenus.AppendMenuItem( similar_menu, 'speculative', 'Search the database for files that probably look like those selected. This is sometimes useful for symbols with sharp edges or lines.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES, simple_data = CC.HAMMING_SPECULATIVE ) )
+            
+            ClientGUIMenus.AppendMenu( open_menu, similar_menu, 'similar files in a new page' )
+            
+        
+        ClientGUIMenus.AppendSeparator( open_menu )
+        
+        if len( selected_media ) > 1:
+            
+            prefix = 'focused file '
+            
+        else:
+            
+            prefix = ''
+            
+        
+        ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in external program', 'Launch this file with your OS\'s default program for it.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM ) )
+        ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in web browser', 'Show this file in your OS\'s web browser.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER ) )
+        
+        if focused_media.GetLocationsManager().IsLocal():
+            
+            show_open_in_explorer = CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) and ( HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS )
+            
+            if show_open_in_explorer:
+                
+                ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in file browser', 'Show this file in your OS\'s file browser.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER ) )
+                
+            
+        
+    
+    ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
     
 
 def AddPrettyInfoLines( menu, pretty_info_lines ):

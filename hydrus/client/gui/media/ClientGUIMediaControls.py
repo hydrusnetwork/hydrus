@@ -93,7 +93,7 @@ class VolumeControl( QW.QWidget ):
         
         self._global_mute = AudioMuteButton( self, AUDIO_GLOBAL )
         
-        self._global_mute.setToolTip( 'Global mute/unmute' )
+        self._global_mute.setToolTip( ClientGUIFunctions.WrapToolTip( 'Global mute/unmute' ) )
         self._global_mute.setFocusPolicy( QC.Qt.NoFocus )
         
         vbox = QP.VBoxLayout( margin = 0, spacing = 0 )
@@ -161,7 +161,7 @@ class VolumeControl( QW.QWidget ):
             
             self._specific_mute = AudioMuteButton( self, volume_type )
             
-            self._specific_mute.setToolTip( 'Mute/unmute: {}'.format( CC.canvas_type_str_lookup[ self._canvas_type ] ) )
+            self._specific_mute.setToolTip( ClientGUIFunctions.WrapToolTip( 'Mute/unmute: {}'.format( CC.canvas_type_str_lookup[ self._canvas_type ] ) ) )
             
             if CG.client_controller.new_options.GetBoolean( option_to_use ):
                 

@@ -5,15 +5,59 @@ from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import QtInit
+from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.widgets import ClientGUICommon
+
+class AlphaColourControl( QW.QWidget ):
+    
+    def __init__( self, parent ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._colour_picker = ColourPickerButton( self )
+        
+        self._alpha_selector = ClientGUICommon.BetterSpinBox( self, min=0, max=255 )
+        
+        hbox = QP.HBoxLayout( spacing = 5 )
+        
+        QP.AddToLayout( hbox, self._colour_picker, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,'alpha:'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._alpha_selector, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+    
+    def GetValue( self ):
+        
+        colour = self._colour_picker.GetColour()
+        
+        a = self._alpha_selector.value()
+        
+        colour.setAlpha( a )
+        
+        return colour
+        
+    
+    def SetValue( self, colour: QG.QColor ):
+        
+        picker_colour = QG.QColor( colour.rgb() )
+        
+        self._colour_picker.SetColour( picker_colour )
+        
+        self._alpha_selector.setValue( colour.alpha() )
+        
+    
 
 def EditColour( win: QW.QWidget, colour: QG.QColor ):
     
@@ -159,7 +203,7 @@ class ColourPickerButton( QW.QPushButton ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'A hex colour like #FF0050', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'A hex colour like #FF0050', e )
             
             return
             

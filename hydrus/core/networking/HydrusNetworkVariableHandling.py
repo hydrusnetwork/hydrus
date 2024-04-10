@@ -139,7 +139,9 @@ def DumpToGETQuery( args ):
         
         if name in args:
             
-            args[ name ] = urllib.parse.quote( args[ name ] )
+            PARAM_EXCEPTION_CHARS = "!$&'()*+,;=@:/?"
+            
+            args[ name ] = urllib.parse.quote( args[ name ], safe = PARAM_EXCEPTION_CHARS )
             
         
     
@@ -198,7 +200,7 @@ def ParseFileArguments( path, decompression_bombs_ok = False ):
             
             tb = traceback.format_exc()
             
-            raise HydrusExceptions.BadRequestException( 'Could not generate thumbnail from that file:' + os.linesep + tb )
+            raise HydrusExceptions.BadRequestException( 'Could not generate thumbnail from that file:' + '\n' + tb )
             
         
         args[ 'thumbnail' ] = thumbnail_bytes

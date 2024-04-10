@@ -273,7 +273,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                 self._hash.hex()
             )
             
-            m += os.linesep * 2
+            m += '\n' * 2
             m += 'Jobs to check its integrity and metadata have been scheduled. If it is damaged, it may be redownloaded or removed from the client completely. If it is not damaged, it may be fixed automatically or further action may be required.'
             
             HydrusData.ShowText( m )
@@ -295,7 +295,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
                         my_numpy_size
                     )
                     
-                    m += os.linesep * 2
+                    m += '\n' * 2
                     m += 'You may see some black squares in the image. A metadata regeneration has been scheduled, so with luck the image will fix itself soon.'
                     
                     HydrusData.ShowText( m )
@@ -581,7 +581,7 @@ class RasterContainerVideo( RasterContainer ):
         if duration is None or duration == 0:
             
             message = 'The file with hash ' + media.GetHash().hex() + ', had an invalid duration.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'You may wish to try regenerating its metadata through the advanced mode right-click menu.'
             
             HydrusData.ShowText( message )
@@ -592,7 +592,7 @@ class RasterContainerVideo( RasterContainer ):
         if num_frames_in_video is None or num_frames_in_video == 0:
             
             message = 'The file with hash ' + media.GetHash().hex() + ', had an invalid number of frames.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'You may wish to try regenerating its metadata through the advanced mode right-click menu.'
             
             HydrusData.ShowText( message )

@@ -26,7 +26,7 @@ class HydrusException( Exception ):
             s = [ repr( self.args ) ]
             
         
-        return os.linesep.join( s )
+        return '\n'.join( s )
         
     
 

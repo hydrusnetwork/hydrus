@@ -10,6 +10,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -96,11 +97,11 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
         if HG.subscription_report_mode:
             
             message = 'Subscription "{}" CanDoWork check.'.format( self._name )
-            message += os.linesep
+            message += '\n'
             message += 'Paused/Global/Network/Dialog Pause: {}/{}/{}/{}'.format( self._paused, CG.client_controller.new_options.GetBoolean( 'pause_subs_sync' ), CG.client_controller.new_options.GetBoolean( 'pause_all_new_network_traffic' ), CG.client_controller.subscriptions_manager.SubscriptionsArePausedForEditing() )
-            message += os.linesep
+            message += '\n'
             message += 'Started/Sub shutdown: {}/{}'.format( HG.started_shutdown, self._stop_work_for_shutdown )
-            message += os.linesep
+            message += '\n'
             message += 'No delays: {}'.format( self._NoDelays() )
             
             HydrusData.ShowText( message )
@@ -120,10 +121,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     
     def _DelayWork( self, time_delta, reason ):
         
-        if len( reason ) > 0:
-            
-            reason = reason.splitlines()[0]
-            
+        reason = HydrusText.GetFirstLine( reason )
         
         self._no_work_until = HydrusTime.GetNow() + time_delta
         self._no_work_until_reason = reason
@@ -241,7 +239,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def _ShowHitPeriodicFileLimitMessage( self, query_name: int, query_text: int, file_limit: int ):
         
         message = 'The query "{}" for subscription "{}" found {} new URLs without running into any it had seen before.'.format( query_name, self._name, file_limit )
-        message += os.linesep
+        message += '\n'
         message += 'Either a user uploaded a lot of files to that query in a short period, in which case there is a gap in your subscription you may wish to fill, or the site has just changed its URL format, in which case you may see several of these messages for this site over the coming weeks, and you should ignore them.'
         
         call = HydrusData.Call( CG.client_controller.pub, 'make_new_subscription_gap_downloader', self._gug_key_and_name, query_text, self._file_import_options.Duplicate(), self._tag_import_options.Duplicate(), self._note_import_options, file_limit * 5 )
@@ -280,7 +278,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             self._paused = True
             
             message = 'The subscription "{}"\'s Gallery URL Generator, "{}" seems not to be functional! The sub has paused! The given reason was:'.format( self._name, self._gug_key_and_name[1] )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += str( e )
             
             HydrusData.ShowText( message )
@@ -421,9 +419,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         if not self._paused:
                             
                             message = 'Query "{}" for subscription "{}" seemed to have an invalid login. The reason was:'.format( query_header.GetHumanName(), self._name )
-                            message += os.linesep * 2
+                            message += '\n' * 2
                             message += login_reason
-                            message += os.linesep * 2
+                            message += '\n' * 2
                             message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                             
                             HydrusData.ShowText( message )
@@ -457,12 +455,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 def status_hook( text ):
                     
-                    if len( text ) > 0:
-                        
-                        text = text.splitlines()[0]
-                        
-                    
-                    job_status.SetStatusText( status_prefix + ': ' + text )
+                    job_status.SetStatusText( status_prefix + ': ' + HydrusText.GetFirstLine( text ) )
                     
                 
                 def title_hook( text ):
@@ -1033,9 +1026,9 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                         if not self._paused:
                             
                             message = 'Query "{}" for subscription "{}" seemed to have an invalid login for one of its file imports. The reason was:'.format( query_header.GetHumanName(), self._name )
-                            message += os.linesep * 2
+                            message += '\n' * 2
                             message += login_reason
-                            message += os.linesep * 2
+                            message += '\n' * 2
                             message += 'The subscription has paused. Please see if you can fix the problem and then unpause. If the login script stopped because of missing cookies or similar, it may be broken. Please check out Hydrus Companion for a better login solution.'
                             
                             HydrusData.ShowText( message )
@@ -1066,12 +1059,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     
                     def status_hook( text ):
                         
-                        if len( text ) > 0:
-                            
-                            text = text.splitlines()[0]
-                            
-                        
-                        job_status.SetStatusText( x_out_of_y + text, 2 )
+                        job_status.SetStatusText( x_out_of_y + HydrusText.GetFirstLine( text ), 2 )
                         
                     
                     file_seed.WorkOnURL( file_seed_cache, status_hook, query_header.GenerateNetworkJobFactory( self._name ), ClientImporting.GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status ), self._file_import_options, FileImportOptions.IMPORT_TYPE_QUIET, self._tag_import_options, self._note_import_options )
@@ -2103,11 +2091,11 @@ class SubscriptionsManager( object ):
             next_times = sorted( self._names_to_next_work_time.items(), key = lambda n_nwt_tuple: n_nwt_tuple[1] )
             
             message = '{} subs: {}'.format( HydrusData.ToHumanInt( len( self._names_to_subscriptions ) ), ', '.join( sub_names ) )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += '{} running: {}'.format( HydrusData.ToHumanInt( len( self._names_to_running_subscription_info ) ), ', '.join( running ) )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += '{} not runnable: {}'.format( HydrusData.ToHumanInt( len( self._names_that_cannot_run ) ), ', '.join( cannot_run ) )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, ClientTime.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
             
             HydrusData.ShowText( message )

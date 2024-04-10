@@ -566,7 +566,7 @@ def LaunchFile( path, launch_path = None ):
                 
             except Exception as e:
                 
-                HydrusData.ShowText( 'Could not launch a file! Command used was:' + os.linesep + str( cmd ) )
+                HydrusData.ShowText( 'Could not launch a file! Command used was:' + '\n' + str( cmd ) )
                 
                 HydrusData.ShowException( e )
                 

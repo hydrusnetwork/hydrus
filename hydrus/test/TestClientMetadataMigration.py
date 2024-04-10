@@ -118,7 +118,7 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         
         with open( expected_input_path_1, 'w', encoding = 'utf-8' ) as f:
             
-            f.write( os.linesep.join( rows_1 ) )
+            f.write( '\n'.join( rows_1 ) )
             
         
         importer_1 = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT( suffix = '1' )
@@ -127,7 +127,7 @@ class TestSingleFileMetadataRouter( unittest.TestCase ):
         
         with open( expected_input_path_2, 'w', encoding = 'utf-8' ) as f:
             
-            f.write( os.linesep.join( rows_2 ) )
+            f.write( '\n'.join( rows_2 ) )
             
         
         importer_2 = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT( suffix = '2' )
@@ -472,7 +472,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
             
-            f.write( os.linesep.join( rows ) )
+            f.write( '\n'.join( rows ) )
             
         
         importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT()
@@ -514,7 +514,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
             
-            f.write( os.linesep.join( rows ) )
+            f.write( '\n'.join( rows ) )
             
         
         importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT( string_processor = string_processor, suffix = 'tags' )
@@ -533,7 +533,7 @@ class TestSingleFileMetadataImporters( unittest.TestCase ):
         
         with open( expected_input_path, 'w', encoding = 'utf-8' ) as f:
             
-            f.write( os.linesep.join( rows ) )
+            f.write( '\n'.join( rows ) )
             
         
         importer = ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT( remove_actual_filename_ext = True, filename_string_converter = ClientStrings.StringConverter( conversions = [ ( ClientStrings.STRING_CONVERSION_REMOVE_TEXT_FROM_BEGINNING, 1 ) ] ) )

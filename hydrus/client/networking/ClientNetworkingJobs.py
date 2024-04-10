@@ -139,7 +139,7 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         HydrusData.DebugPrint( large_chunk )
         
         error_text = 'The server\'s error text was too long to display. The first part follows, while a larger chunk has been written to the log.'
-        error_text += os.linesep
+        error_text += '\n'
         error_text += smaller_chunk
         
     
@@ -749,7 +749,7 @@ class NetworkJob( object ):
             
             if HG.network_report_mode:
                 
-                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( url, os.linesep, self._referral_url, os.linesep, referral_url ) )
+                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( url, '\n', self._referral_url, '\n', referral_url ) )
                 
             
             if referral_url is not None:
@@ -760,12 +760,21 @@ class NetworkJob( object ):
                     
                 except UnicodeEncodeError:
                     
-                    # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
-                    referral_url = urllib.parse.quote( referral_url, "!#$%&'()*+,/:;=?@[]~" )
+                    try:
+                        
+                        # it prob has some weird unicode characters in it, so let's encode
+                        referral_url = ClientNetworkingFunctions.EnsureURLIsEncoded( referral_url )
+                        
+                    except:
+                        
+                        # ok this situation is crazy, so let's fall back to what I read in StackExchange an eon ago
+                        # quick and dirty way to quote this url when it comes here with full unicode chars. not perfect, but does the job
+                        referral_url = urllib.parse.quote( referral_url, "!#$%&'()*+,/:;=?@[]~" )
+                        
                     
                     if HG.network_report_mode:
                         
-                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( url, os.linesep, referral_url ) )
+                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( url, '\n', referral_url ) )
                         
                     
                 
