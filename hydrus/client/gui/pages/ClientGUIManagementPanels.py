@@ -53,8 +53,8 @@ from hydrus.client.gui.pages import ClientGUIResultsSortCollect
 from hydrus.client.gui.parsing import ClientGUIParsingFormulae
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.gui.widgets import ClientGUITextInput
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportWatchers
 from hydrus.client.importing import ClientImportLocal
@@ -842,7 +842,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
     def _ResetUnknown( self ):
         
         text = 'ADVANCED TOOL: This will delete all the current potential duplicate pairs. All files that may be similar will be queued for search again.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'This can be useful if you know you have database damage and need to reset and re-search everything, or if you have accidentally searched too broadly and are now swamped with too many false positives. It is not useful for much else.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
@@ -1176,7 +1176,7 @@ class ManagementPanelImporterHDD( ManagementPanelImporter ):
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
-        self._pause_button.setToolTip( 'pause/play imports' )
+        self._pause_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play imports' ) )
         
         self._hdd_import: ClientImportLocal.HDDImport = self._management_controller.GetVariable( 'hdd_import' )
         
@@ -1311,7 +1311,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         #
         
-        self._query_input = ClientGUIControls.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
+        self._query_input = ClientGUITextInput.TextAndPasteCtrl( self._gallery_downloader_panel, self._PendQueries )
         
         self._cog_button = ClientGUICommon.BetterBitmapButton( self._gallery_downloader_panel, CC.global_pixmaps().cog, self._ShowCogMenu )
         
@@ -1319,7 +1319,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.valueChanged.connect( self.EventFileLimit )
-        self._file_limit.setToolTip( 'per query, stop searching the gallery once this many files has been reached' )
+        self._file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'per query, stop searching the gallery once this many files has been reached' ) )
         
         file_import_options = self._multiple_gallery_import.GetFileImportOptions()
         tag_import_options = self._multiple_gallery_import.GetTagImportOptions()
@@ -1568,7 +1568,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if len( gallery_importers ) > 0:
             
-            text = os.linesep.join( ( gallery_importer.GetQueryText() for gallery_importer in gallery_importers ) )
+            text = '\n'.join( ( gallery_importer.GetQueryText() for gallery_importer in gallery_importers ) )
             
             CG.client_controller.pub( 'clipboard', 'text', text )
             
@@ -1840,13 +1840,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if num_working > 0:
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += HydrusData.ToHumanInt( num_working ) + ' are still working.'
             
         
         if self._highlighted_gallery_import is not None and self._highlighted_gallery_import in removees:
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'The currently highlighted query will be removed, and the media panel cleared.'
             
         
@@ -2250,7 +2250,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl.Sort()
         
-        self._watcher_url_input = ClientGUIControls.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
+        self._watcher_url_input = ClientGUITextInput.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
         
         self._watcher_url_input.setPlaceholderText( 'watcher url' )
         
@@ -2535,7 +2535,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if len( watchers ) > 0:
             
-            text = os.linesep.join( ( watcher.GetSubject() for watcher in watchers ) )
+            text = '\n'.join( ( watcher.GetSubject() for watcher in watchers ) )
             
             CG.client_controller.pub( 'clipboard', 'text', text )
             
@@ -2547,7 +2547,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if len( watchers ) > 0:
             
-            text = os.linesep.join( ( watcher.GetURL() for watcher in watchers ) )
+            text = '\n'.join( ( watcher.GetURL() for watcher in watchers ) )
             
             CG.client_controller.pub( 'clipboard', 'text', text )
             
@@ -2864,19 +2864,19 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if num_working > 0:
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += HydrusData.ToHumanInt( num_working ) + ' are still working.'
             
         
         if num_alive > 0:
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += HydrusData.ToHumanInt( num_alive ) + ' are not yet DEAD.'
             
         
         if self._highlighted_watcher is not None and self._highlighted_watcher in removees:
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'The currently highlighted watcher will be removed, and the media panel cleared.'
             
         
@@ -3214,7 +3214,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'imports' )
         
         self._pause_files_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.PauseFiles )
-        self._pause_files_button.setToolTip( 'pause/play files' )
+        self._pause_files_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play files' ) )
         self._current_action = ClientGUICommon.BetterStaticText( self._import_queue_panel, ellipsize_end = True )
         self._file_seed_cache_control = ClientGUIFileSeedCache.FileSeedCacheStatusControl( self._import_queue_panel, self._controller, self._page_key )
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
@@ -3226,7 +3226,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._simple_parsing_jobs_panel = ClientGUICommon.StaticBox( self._simple_downloader_panel, 'parsing' )
         
         self._pause_queue_button = ClientGUICommon.BetterBitmapButton( self._simple_parsing_jobs_panel, CC.global_pixmaps().gallery_pause, self.PauseQueue )
-        self._pause_queue_button.setToolTip( 'pause/play queue' )
+        self._pause_queue_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play queue' ) )
         
         self._parser_status = ClientGUICommon.BetterStaticText( self._simple_parsing_jobs_panel, ellipsize_end = True )
         
@@ -3247,7 +3247,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         self._delay_button = QW.QPushButton( '\u2193', self._simple_parsing_jobs_panel )
         self._delay_button.clicked.connect( self.EventDelay )
         
-        self._page_url_input = ClientGUIControls.TextAndPasteCtrl( self._simple_parsing_jobs_panel, self._PendPageURLs )
+        self._page_url_input = ClientGUITextInput.TextAndPasteCtrl( self._simple_parsing_jobs_panel, self._PendPageURLs )
         
         self._page_url_input.setPlaceholderText( 'url to be parsed by the selected formula' )
         
@@ -3446,7 +3446,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
     
     def _PendPageURLs( self, unclean_urls ):
         
-        urls = [ ClientNetworkingFunctions.WashURL( unclean_url ) for unclean_url in unclean_urls if ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ) ]
+        urls = [ ClientNetworkingFunctions.EnsureURLIsEncoded( unclean_url ) for unclean_url in unclean_urls if ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ) ]
         
         simple_downloader_formula = self._formulae.GetValue()
         
@@ -3676,7 +3676,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         self._import_queue_panel = ClientGUICommon.StaticBox( self._url_panel, 'imports' )
         
         self._pause_button = ClientGUICommon.BetterBitmapButton( self._import_queue_panel, CC.global_pixmaps().file_pause, self.Pause )
-        self._pause_button.setToolTip( 'pause/play files' )
+        self._pause_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play files' ) )
         
         self._file_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._import_queue_panel )
         
@@ -3694,7 +3694,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
         
         #
         
-        self._url_input = ClientGUIControls.TextAndPasteCtrl( self._url_panel, self._PendURLs )
+        self._url_input = ClientGUITextInput.TextAndPasteCtrl( self._url_panel, self._PendURLs )
         
         self._url_input.setPlaceholderText( 'any url hydrus recognises, or a raw file url' )
         
@@ -3770,7 +3770,7 @@ class ManagementPanelImporterURLs( ManagementPanelImporter ):
             additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
-        urls = [ ClientNetworkingFunctions.WashURL( unclean_url ) for unclean_url in unclean_urls if ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ) ]
+        urls = [ ClientNetworkingFunctions.EnsureURLIsEncoded( unclean_url ) for unclean_url in unclean_urls if ClientNetworkingFunctions.LooksLikeAFullURL( unclean_url ) ]
         
         self._urls_import.PendURLs( urls, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags )
         
@@ -5110,7 +5110,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                         
                     else:
                         
-                        text = os.linesep.join( copyable_items )
+                        text = '\n'.join( copyable_items )
                         
                         ClientGUIMenus.AppendMenuItem( menu, 'copy {} tags'.format( HydrusData.ToHumanInt( len( copyable_items ) ) ), 'Copy this tag.', CG.client_controller.pub, 'clipboard', 'text', text )
                         

@@ -30,15 +30,15 @@ def CatchExceptionClient( etype, value, tb ):
         
         pretty_value = str( value )
         
-        if os.linesep in pretty_value:
+        all_lines = pretty_value.splitlines()
+        
+        first_line = all_lines[0]
+        
+        if len( all_lines ) > 1:
             
-            ( first_line, anything_else ) = pretty_value.split( os.linesep, 1 )
+            the_rest = all_lines[1:]
             
-            trace = trace + os.linesep + anything_else
-            
-        else:
-            
-            first_line = pretty_value
+            trace = trace + '\n' + '\n'.join( the_rest )
             
         
         job_status = ClientThreading.JobStatus()
@@ -68,7 +68,7 @@ def CatchExceptionClient( etype, value, tb ):
         
         text = 'Encountered an error I could not parse:'
         
-        text += os.linesep
+        text += '\n'
         
         text += str( ( etype, value, tb ) )
         
@@ -153,7 +153,7 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
     if tb is None:
         
-        trace = 'No error trace--here is the stack:' + os.linesep + ''.join( traceback.format_stack() )
+        trace = 'No error trace--here is the stack:' + '\n' + ''.join( traceback.format_stack() )
         
     else:
         
@@ -162,15 +162,15 @@ def ShowExceptionTupleClient( etype, value, tb, do_wait = True ):
     
     pretty_value = str( value )
     
-    if os.linesep in pretty_value:
+    all_lines = pretty_value.splitlines()
+    
+    first_line = all_lines[0]
+    
+    if len( all_lines ) > 1:
         
-        ( first_line, anything_else ) = pretty_value.split( os.linesep, 1 )
+        the_rest = all_lines[1:]
         
-        trace = trace + os.linesep + anything_else
-        
-    else:
-        
-        first_line = pretty_value
+        trace = trace + '\n' + '\n'.join( the_rest )
         
     
     job_status = ClientThreading.JobStatus()

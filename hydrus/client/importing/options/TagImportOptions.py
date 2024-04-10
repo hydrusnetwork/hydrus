@@ -564,7 +564,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                     continue
                     
                 
-                service_statement = name + ':' + os.linesep * 2 + os.linesep.join( sub_statements )
+                service_statement = name + ':' + '\n' * 2 + '\n'.join( sub_statements )
                 
                 statements.append( service_statement )
                 
@@ -603,7 +603,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 statements = pre_statements + [ '---' ] + statements
                 
             
-            separator = os.linesep * 2
+            separator = '\n' * 2
             
             summary = separator.join( statements )
             

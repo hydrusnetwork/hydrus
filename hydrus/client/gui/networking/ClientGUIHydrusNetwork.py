@@ -1,4 +1,3 @@
-import os
 import typing
 
 from qtpy import QtCore as QC
@@ -7,7 +6,6 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworking
@@ -25,8 +23,8 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
 
 class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -88,7 +86,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( self._permissions_panel, gridbox_rows )
         
-        self._bandwidth_rules_control = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
+        self._bandwidth_rules_control = ClientGUIBandwidth.BandwidthRulesCtrl( self, bandwidth_rules )
         
         self._auto_creation_box = ClientGUICommon.StaticBox( self, 'automatic account creation' )
         
@@ -109,7 +107,7 @@ class EditAccountTypePanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         intro = 'If you wish, you can allow new users to create their own accounts. They will be limited to a certain number over a particular time.'
-        intro += os.linesep * 2
+        intro += '\n' * 2
         intro += 'Set to 0 to disable auto-creation.'
         
         st = ClientGUICommon.BetterStaticText( self._auto_creation_box, label = intro )
@@ -587,7 +585,7 @@ class ReviewAccountsPanel( QW.QWidget ):
                         
                         keys_in_order = sorted( account_info.keys() )
                         
-                        account_info_components.append( os.linesep.join( ( '{}: {}'.format( key, account_info[ key ] ) for key in keys_in_order ) ) )
+                        account_info_components.append( '\n'.join( ( '{}: {}'.format( key, account_info[ key ] ) for key in keys_in_order ) ) )
                         
                     else:
                         
@@ -604,7 +602,7 @@ class ReviewAccountsPanel( QW.QWidget ):
                 account_info_components.append( 'Could not find this account!' )
                 
             
-            joiner = os.linesep * 2
+            joiner = '\n' * 2
             
             account_info = joiner.join( account_info_components )
             
@@ -622,7 +620,7 @@ class ReviewAccountsPanel( QW.QWidget ):
         
         if len( checked_account_keys ) > 0:
             
-            account_keys_text = os.linesep.join( ( account_key.hex() for account_key in checked_account_keys ) )
+            account_keys_text = '\n'.join( ( account_key.hex() for account_key in checked_account_keys ) )
             
             CG.client_controller.pub( 'clipboard', 'text', account_keys_text )
             
@@ -700,7 +698,7 @@ class ReviewAccountsPanel( QW.QWidget ):
                 
                 account_errors = sorted( account_errors )
                 
-                ClientGUIDialogsMessage.ShowInformation( self, 'Errors were encountered during account fetch:{}{}'.format( os.linesep * 2, os.linesep.join( account_errors ) ) )
+                ClientGUIDialogsMessage.ShowInformation( self, 'Errors were encountered during account fetch:{}{}'.format( '\n' * 2, '\n'.join( account_errors ) ) )
                 
             
             if not self._done_first_fetch:
@@ -1233,7 +1231,7 @@ class ModifyAccountsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if self._service.GetServiceType() == HC.TAG_REPOSITORY:
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Note that if the user never had permission to add siblings and parents on their own (i.e. they could only ever _petition_ to add them), then their petitioned siblings and parents will not be deleted (janitor accounts take ownership of siblings and parents when they approve them).'
             
         

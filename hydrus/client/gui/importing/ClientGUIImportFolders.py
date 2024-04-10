@@ -11,6 +11,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFileSeedCache
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -195,7 +196,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._last_modified_time_skip_period = ClientGUITime.TimeDeltaButton( self._folder_box, min = 1, days = True, hours = True, minutes = True, seconds = True )
         tt = 'If a file has a modified time more recent than this long ago, it will not be imported in the current check. Helps to avoid importing files that are in the process of downloading/copying (usually on a NAS where other "already in use" checks may fail).'
-        self._last_modified_time_skip_period.setToolTip( tt )
+        self._last_modified_time_skip_period.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._paused = QW.QCheckBox( self._folder_box )
         

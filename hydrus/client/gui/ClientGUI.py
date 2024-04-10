@@ -3,11 +3,9 @@ import os
 import random
 import re
 import ssl
-import subprocess
 import sys
 import threading
 import time
-import traceback
 
 import cv2
 import PIL
@@ -36,7 +34,6 @@ from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
-from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -60,7 +57,6 @@ from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUILogin
-from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIPopupMessages
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -84,6 +80,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.importing import ClientGUIImportFolders
+from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIManagementController
@@ -202,9 +199,9 @@ def THREADUploadPending( service_key ):
                     ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in unauthorised_content_types ) )
                 )
                 
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'If you are currently using a public, read-only account (such as with the PTR), you may be able to generate your own private account with more permissions. Please hit the button below to open this service in _manage services_ and see if you can generate a new account. If accounts cannot be automatically created, you may have to contact the server owner directly to get this permission.'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'If you think your account does have this permission, try refreshing it under _review services_.'
                 
                 unauthorised_job_status = ClientThreading.JobStatus()
@@ -886,7 +883,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         description = 'This is the media management application of the hydrus software suite.'
         
-        description += os.linesep * 2 + os.linesep.join( library_version_lines )
+        description += '\n' * 2 + '\n'.join( library_version_lines )
         
         #
         
@@ -916,9 +913,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _AnalyzeDatabase( self ):
         
         message = 'This will gather statistical information on the database\'s indices, helping the query planner perform efficiently. It typically happens automatically every few days, but you can force it here. If you have a large database, it will take a few minutes, during which your gui may hang. A popup message will show its status.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'A \'soft\' analyze will only reanalyze those indices that are due for a check in the normal db maintenance cycle. If nothing is due, it will return immediately.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'A \'full\' analyze will force a run over every index in the database. This can take substantially longer. If you do not have a specific reason to select this, it is probably pointless.'
         
         ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose how thorough your analyze will be.', yes_label = 'soft', no_label = 'full', check_for_cancelled = True )
@@ -968,7 +965,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             self._controller.SetServices( all_services )
             
             message = 'PTR setup done! Check services->review services to see it.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'The PTR has a lot of tags and will sync a little bit at a time when you are not using the client. Expect it to take a few weeks to sync fully.'
             
             HydrusData.ShowText( message )
@@ -991,16 +988,16 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
         text = 'This will automatically set up your client with public shared \'read-only\' account for the Public Tag Repository, just as if you had added it manually under services->manage services.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'Over the coming weeks, your client will download updates and then process them into your database in idle time, and the PTR\'s tags will increasingly appear across your files. If you decide to upload tags, it is just a couple of clicks (under services->manage services again) to generate your own account that has permission to do so.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'Be aware that the PTR has been growing since 2011 and now has more than a billion mappings. As of 2021-06, it requires about 6GB of bandwidth and file storage, and your database itself will grow by 50GB! Processing also takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work in reasonable time if your hydrus database is on an SSD.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += '++++If you are on a mechanical HDD or will not be able to free up enough space on your SSD, cancel out now.++++'
         
         if have_it_already:
             
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'You seem to have the PTR already. If it is paused or desynchronised, this is best fixed under services->review services. Are you sure you want to add a duplicate?'
             
         
@@ -1042,7 +1039,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
         text = action + ' backup at "' + path + '"?'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'The database will be locked while the backup occurs, which may lock up your gui as well.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text )
@@ -1199,9 +1196,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _ClearOrphanFiles( self ):
         
         text = 'This job will iterate through every file in your database\'s file storage, extracting any it does not expect to be there. This is particularly useful for \'re-syncing\' your file storage to what it should be, and is particularly useful if you are marrying an older/newer database with a newer/older file storage.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'You can choose to move the orphans in your file directories somewhere or delete them. Orphans in your thumbnail directories will always be deleted.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'Files and thumbnails will be inaccessible while this runs, so it is best to leave the client alone until it is done. It may take some time.'
         
         yes_tuples = []
@@ -1241,11 +1238,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _ClearOrphanFileRecords( self ):
         
         text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'This will instruct the database to review its file records\' integrity. If anything appears to be in a specific domain (e.g. my files) but not an umbrella domain (e.g. all my files), and the actual file also exists on disk, it will try to recover the record. If the file does not actually exist on disk, or the record is in the umbrella domain and not in the specific domain, or if recovery data cannot be found, the record will be deleted.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'You typically do not ever see these files and they are basically harmless, but they can offset some file counts confusingly and may break other maintenance routines. You probably only need to run this if you can\'t process the apparent last handful of duplicate filter pairs or hydrus dev otherwise told you to try it.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'It will create a popup message while it works and inform you of the number of orphan records found. It may lock up the client for a bit.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
@@ -1259,7 +1256,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _ClearOrphanHashedSerialisables( self ):
         
         text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'This force-runs a routine that regularly removes some spare data from the database. You most likely do not need to run it.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
@@ -1291,9 +1288,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _ClearOrphanTables( self ):
         
         text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'This will instruct the database to review its service tables and delete any orphans. This will typically do nothing, but hydrus dev may tell you to run this, just to check. Be sure you have a recent backup before you run this--if it deletes something important by accident, you will want to roll back!'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'It will create popups if it finds anything to delete.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
@@ -1307,11 +1304,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _CullFileViewingStats( self ):
         
         text = 'If your file viewing statistics have some erroneous values due to many short views or accidental long views, this routine will cull your current numbers to compensate. For instance:'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'If you have a file with 100 views over 100 seconds and a minimum view time of 2 seconds, this will cull the views to 50.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'If you have a file with 10 views over 100000 seconds and a maximum view time of 60 seconds, this will cull the total viewtime to 600 seconds.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'It will work for both preview and media views based on their separate rules.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )
@@ -1783,7 +1780,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             types_to_delete = None
             
             message = 'This clears the cached counts for things like the number of files or tags on a service. Due to unusual situations and little counting bugs, these numbers can sometimes become unsynced. Clearing them forces an accurate recount from source.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Some GUI elements (review services, mainly) may be slow the next time they launch. Especially if you clear for all services.'
             
         
@@ -1876,7 +1873,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 local_time = HydrusTime.TimestampToPrettyTime( timestamp )
                 
                 text = 'File Hash: ' + hash.hex()
-                text += os.linesep
+                text += '\n'
                 text += 'Uploader\'s IP: ' + ip
                 text += 'Upload Time (UTC): ' + utc_time
                 text += 'Upload Time (Your time): ' + local_time
@@ -1904,7 +1901,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _FixLogicallyInconsistentMappings( self ):
         
         message = 'This will check for tags that are occupying mutually exclusive states--either current & pending or deleted & petitioned.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Please run this if you attempt to upload some tags and get a related error. You may need some follow-up regeneration work to correct autocomplete or \'num pending\' counts.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -2214,7 +2211,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             additional_service_keys_to_tags = ClientTags.ServiceKeysToTags()
             
         
-        url = ClientNetworkingFunctions.WashURL( unclean_url )
+        url = ClientNetworkingFunctions.EnsureURLIsEncoded( unclean_url )
         
         url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, for_server = True )
         
@@ -2223,7 +2220,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         if url_type in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_POST, HC.URL_TYPE_WATCHABLE ) and not can_parse:
             
             message = 'This URL was recognised as a "{}" but it cannot be parsed: {}'.format( match_name, cannot_parse_reason )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Since this URL cannot be parsed, a downloader cannot be created for it! Please check your url class links under the \'networking\' menu.'
             
             raise HydrusExceptions.URLClassException( message )
@@ -3136,7 +3133,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._menubar_database_restore_backup = ClientGUIMenus.AppendMenuItem( menu, 'restore from a database backup' + HC.UNICODE_ELLIPSIS, 'Restore the database from an external location.', self._controller.RestoreDatabase )
         
         message = 'Your database is stored across multiple locations. The in-client backup routine can only handle simple databases (in one location), so the menu commands to backup have been hidden. To back up, please use a third-party program that will work better than anything I can write.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Check the help for more info on how best to backup manually.'
         
         self._menubar_database_multiple_location_label = ClientGUIMenus.AppendMenuItem( menu, 'database is stored in multiple locations', 'The database is migrated, and internal backups are not possible--click for more info.', HydrusData.ShowText, message )
@@ -3402,11 +3399,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         profiling = ClientGUIMenus.GenerateMenu( debug_menu )
         
         profile_mode_message = 'If something is running slow, you can turn on profile mode to have hydrus gather information on how long many jobs take to run.'
-        profile_mode_message += os.linesep * 2
+        profile_mode_message += '\n' * 2
         profile_mode_message += 'Turn the mode on, do the slow thing for a bit, and then turn it off. In your database directory will be a new profile log, which is really helpful for hydrus dev to figure out what is running slow for you and how to fix it.'
-        profile_mode_message += os.linesep * 2
+        profile_mode_message += '\n' * 2
         profile_mode_message += 'A new Query Planner mode also makes very detailed database analysis. This is an alternate profiling mode hydev is testing.'
-        profile_mode_message += os.linesep * 2
+        profile_mode_message += '\n' * 2
         profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
         
         ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', ClientGUIDialogsMessage.ShowInformation, self, profile_mode_message )
@@ -3582,7 +3579,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         if not ClientParsing.HTML5LIB_IS_OK:
             
             message = 'The client was unable to import html5lib on boot. This is an important parsing library that performs better than the usual backup, lxml. Without it, some downloaders will not work well and you will miss tags and files.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'You are likely running from source, so I recommend you close the client, run \'pip install html5lib\' (or whatever is appropriate for your environment) and try again. You can double-check what imported ok under help->about.'
             
             ClientGUIMenus.AppendMenuItem( submenu, '*** html5lib not found! ***', 'Your client does not have an important library.', ClientGUIDialogsMessage.ShowWarning, self, message )
@@ -3849,9 +3846,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 # this can be upgraded to a nicer checkboxlist dialog to select pages or w/e
                 
                 message = 'It looks like the last instance of the client did not shut down cleanly.'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'Would you like to try loading your default session "' + default_gui_session + '", or just a blank page?'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'This will auto-choose to open your default session in 15 seconds.'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Previous shutdown was bad', yes_label = 'try to load "' + default_gui_session + '"', no_label = 'just load a blank page', auto_yes_time = 15 )
@@ -4716,9 +4713,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             if len( missing_query_log_container_names ) > 0:
                 
                 text = '{} subscription queries had missing database data! This is a serious error!'.format( HydrusData.ToHumanInt( len( missing_query_log_container_names ) ) )
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += 'If you continue, the client will now create and save empty file/search logs for those queries, essentially resetting them, but if you know you need to exit and fix your database in a different way, cancel out now.'
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += 'If you do not know why this happened, you may have had a hard drive fault. Please consult "install_dir/db/help my db is broke.txt", and you may want to contact hydrus dev.'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Missing Query Logs!', yes_label = 'continue', no_label = 'back out' )
@@ -4756,9 +4753,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             if len( surplus_query_log_container_names ) > 0:
                 
                 text = 'When loading subscription data, the client discovered surplus orphaned subscription data for {} queries! This data is harmless and no longer used. The situation is however unusual, and probably due to an unusual deletion routine or a bug.'.format( HydrusData.ToHumanInt( len( surplus_query_log_container_names ) ) )
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += 'If you continue, this surplus data will backed up to your database directory and then safely deleted from the database itself, but if you recently did manual database editing and know you need to exit and fix your database in a different way, cancel out now.'
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += 'If you do not know why this happened, hydrus dev would be interested in being told about it and the surrounding circumstances.'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Orphan Query Logs!', yes_label = 'continue', no_label = 'back out' )
@@ -5190,7 +5187,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             db_tooltip = None
             
         
-        self._statusbar.setToolTip( job_name )
+        self._statusbar.setToolTip( ClientGUIFunctions.WrapToolTip( job_name ) )
         
         self._statusbar.SetStatusText( media_status, 0 )
         self._statusbar.SetStatusText( idle_status, 2, tooltip = idle_tooltip )
@@ -5202,9 +5199,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateCombinedDeletedFiles( self ):
         
         message = 'This will resynchronise the "all deleted files" cache to the actual records in the database, ensuring that various tag searches over the deleted files domain give correct counts and file results. It isn\'t super important, but this routine fixes it if it is desynchronised.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'It should not take all that long, but if you have a lot of deleted files, it can take a little while, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -5218,9 +5215,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagCache( self ):
         
         message = 'This will delete and then recreate the fast search cache for one or all tag services.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags and files, it can take a little while, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless. It fixes missing autocomplete or tag search results.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5243,9 +5240,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateLocalHashCache( self ):
         
         message = 'This will delete and then recreate the local hash cache, which keeps a small record of hashes for files on your hard drive. It isn\'t super important, but it speeds most operations up, and this routine fixes it when broken.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of files, it can take a long time, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -5259,9 +5256,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateLocalTagCache( self ):
         
         message = 'This will delete and then recreate the local tag cache, which keeps a small record of tags for files on your hard drive. It isn\'t super important, but it speeds most operations up, and this routine fixes it when broken.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -5275,9 +5272,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagDisplayMappingsCache( self ):
         
         message = 'This will delete and then recreate the tag \'display\' mappings cache, which is used for user-presented tag searching, loading, and autocomplete counts. This is useful if miscounting (particularly related to siblings/parents) has somehow occurred.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. All siblings and parents will have to be resynced.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5300,9 +5297,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagDisplayPendingMappingsCache( self ):
         
         message = 'This will delete and then recreate the pending tags on the tag \'display\' mappings cache, which is used for user-presented tag searching, loading, and autocomplete counts. This is useful if you have \'ghost\' pending tags or counts hanging around.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a millions of tags, pending or current, it can take a long time, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5325,11 +5322,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagMappingsCache( self ):
         
         message = 'WARNING: Do not run this for no reason! On a large database, this could take hours to finish!'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This will delete and then recreate the entire tag \'storage\' mappings cache, which is used for tag calculation based on actual values and autocomplete counts in editing contexts like _manage tags_. This is useful if miscounting has somehow occurred.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. It necessarily involves a regeneration of the tag display mappings cache, which relies on the storage cache, and the tag text search cache. All siblings and parents will have to be resynced.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5352,9 +5349,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagPendingMappingsCache( self ):
         
         message = 'This will delete and then recreate the pending tags on the whole tag mappings cache, which is used for multiple kinds of tag searching, loading, and autocomplete counts. This is useful if you have \'ghost\' pending tags or counts hanging around.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a millions of tags, pending or current, it can take a long time, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5377,9 +5374,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateSimilarFilesTree( self ):
         
         message = 'This will delete and then recreate the similar files search tree. This is useful if it has somehow become unbalanced and similar files searches are running slow.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of files, it can take a little while, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it', check_for_cancelled = True )
@@ -5393,9 +5390,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagCacheSearchableSubtagsMaps( self ):
         
         message = 'This will regenerate the fast search cache\'s \'unusual character logic\' lookup map, for one or all tag services.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags, it can take a little while, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless. It fixes missing autocomplete search results.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5418,9 +5415,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagParentsLookupCache( self ):
         
         message = 'This will delete and then recreate the tag parents lookup cache, which is used for all basic tag parents operations. This is useful if it has become damaged or otherwise desynchronised.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'It should only take a second or two.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -5434,9 +5431,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RegenerateTagSiblingsLookupCache( self ):
         
         message = 'This will delete and then recreate the tag siblings lookup cache, which is used for all basic tag sibling operations. This is useful if it has become damaged or otherwise desynchronised.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'It should only take a second or two. It necessarily involves a regeneration of the tag parents lookup cache.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -5450,9 +5447,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RepairInvalidTags( self ):
         
         message = 'This will scan all your tags and repair any that are invalid. This might mean taking out unrenderable characters or cleaning up improper whitespace. If there is a tag collision once cleaned, it may add a (1)-style number on the end.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags, it can take a long time, during which the gui may hang. If it finds bad tags, you should restart the program once it is complete.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have not had tag rendering problems, there is no reason to run this.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -5472,9 +5469,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RepopulateMappingsTables( self ):
         
         message = 'WARNING: Do not run this for no reason!'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have significant local tags (e.g. \'my tags\') storage, recently had a \'malformed\' client.mappings.db file, and have since gone through clone/repair and now have a truncated file, this routine will attempt to recover missing tags from the smaller tag cache stored in client.caches.db.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'It can only recover tags for files currently stored by your client. It will take some time, during which the gui may hang. Once it is done, you probably want to regenerate your tag mappings cache, so that you are completely synced again.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'I have a reason to run this, let\'s do it--now choose which service', no_label = 'forget it' )
@@ -5503,9 +5500,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RepopulateTagCacheMissingSubtags( self ):
         
         message = 'This will repopulate the fast search cache\'s subtag search, filling in missing entries, for one or all tag services.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags and files, it can take a little while, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless. It fixes missing autocomplete or tag search results.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5528,9 +5525,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RepopulateTagDisplayMappingsCache( self ):
         
         message = 'This will go through your mappings cache and fill in any missing files. It is radically faster than a full regen, and adds siblings and parents instantly, but it only solves the problem of missing file rows.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a millions of tags, pending or current, it can take a long time, during which the gui may hang.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -5558,9 +5555,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _ResyncTagMappingsCacheFiles( self ):
         
         message = 'This will scan your mappings cache for surplus or missing files and correct them. This is useful if you see ghost files or if searches miss files that have the tag.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have a lot of tags and files, it can take a long time, during which the gui may hang. It should be much faster than the full regen options though!'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it--now choose which service', no_label = 'forget it' )
@@ -6433,19 +6430,19 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         if existing_backup_path is None:
             
             backup_intro = 'Everything in your client is stored in the \'database\', which consists of a handful of .db files and a single subdirectory that contains all your media files. It is a very good idea to maintain a regular backup schedule--to save from hard drive failure, serious software fault, accidental deletion, or any other unexpected problem. It sucks to lose all your work, so make sure it can\'t happen!'
-            backup_intro += os.linesep * 2
+            backup_intro += '\n' * 2
             backup_intro += 'If you prefer to create a manual backup with an external program like FreeFileSync, then please cancel out of the dialog after this and set up whatever you like, but if you would rather a simple solution, simply select a directory and the client will remember it as the designated backup location. Creating or updating your backup can be triggered at any time from the database menu.'
-            backup_intro += os.linesep * 2
+            backup_intro += '\n' * 2
             backup_intro += 'An ideal backup location is initially empty and on a different hard drive.'
-            backup_intro += os.linesep * 2
+            backup_intro += '\n' * 2
             backup_intro += 'If you have a large database (100,000+ files) or a slow hard drive, creating the initial backup may take a long time--perhaps an hour or more--but updating an existing backup should only take a couple of minutes (since the client only has to copy new or modified files). Try to update your backup every week!'
-            backup_intro += os.linesep * 2
+            backup_intro += '\n' * 2
             backup_intro += 'If you would like some more info on making or restoring backups, please consult the help\'s \'installing and updating\' page.'
             
         else:
             
             backup_intro = 'Your current backup location is "{}".'.format( existing_backup_path )
-            backup_intro += os.linesep * 2
+            backup_intro += '\n' * 2
             backup_intro += 'If your client is getting large and/or complicated, I recommend you start backing up with a proper external program like FreeFileSync. If you would like some more info on making or restoring backups, please consult the help\'s \'installing and updating\' page.'
             
         
@@ -6501,9 +6498,9 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     
                 
                 text = 'You chose "' + path + '". Here is what I understand about it:'
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += extra_info
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += 'Are you sure this is the correct directory?'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self, text )
@@ -6570,13 +6567,13 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         total_closed_num_seeds_weight = ClientGUIPages.ConvertNumSeedsToWeight( total_closed_num_seeds )
         
         message = 'Session weight is a simple representation of your pages combined memory and CPU load. A file counts as 1, and a URL counts as 20.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Try to keep the total below 10 million! It is also generally better to spread it around--have five download pages each of 500k weight rather than one page with 2.5M.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Your {} open pages\' total is: {}'.format( total_active_page_count, HydrusData.ToHumanInt( total_active_num_hashes_weight + total_active_num_seeds_weight ) )
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Specifically, your file weight is {} and URL weight is {}.'.format( HydrusData.ToHumanInt( total_active_num_hashes_weight ), HydrusData.ToHumanInt( total_active_num_seeds_weight ) )
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'For extra info, your {} closed pages (in the undo list) have total weight {}, being file weight {} and URL weight {}.'.format(
             total_closed_page_count,
             HydrusData.ToHumanInt( total_closed_num_hashes_weight + total_closed_num_seeds_weight ),
@@ -6894,11 +6891,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def _VacuumDatabase( self ):
         
         text = 'This will rebuild the database, rewriting all indices and tables to be contiguous and optimising most operations. It also truncates the database files, recovering unused space back to your hard drive. It typically happens automatically every few months, but you can force it here.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'If you have no reason to run this, it is usually pointless. If you have a very large database on an HDD instead of an SSD, it may take upwards of an hour, during which your gui may hang. A popup message will show its status.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'A \'soft\' vacuum will only reanalyze those databases that are due for a check in the normal db maintenance cycle. If nothing is due, it will return immediately.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'A \'full\' vacuum will immediately force a vacuum for the entire database. This can take substantially longer.'
         
         ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Choose how thorough your vacuum will be.', yes_label = 'soft', no_label = 'full', check_for_cancelled = True )
@@ -8401,7 +8398,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                 
                 if able_to_close_statement is not None:
                     
-                    text += os.linesep * 2
+                    text += '\n' * 2
                     text += able_to_close_statement
                     
                 
@@ -8452,17 +8449,17 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         if len( work_to_do ) > 0:
                             
                             text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
-                            text += os.linesep * 2
+                            text += '\n' * 2
                             
                             if CG.client_controller.IsFirstStart():
                                 
                                 text += 'Since this is your first session, this maintenance should just be some quick initialisation work. It should only take a few seconds.'
-                                text += os.linesep * 2
+                                text += '\n' * 2
                                 
                             
                             text += 'The outstanding jobs appear to be:'
-                            text += os.linesep * 2
-                            text += os.linesep.join( work_to_do )
+                            text += '\n' * 2
+                            text += '\n'.join( work_to_do )
                             
                             ( result, was_cancelled ) = ClientGUIDialogsQuick.GetYesNo( self, text, title = 'Maintenance is due', auto_no_time = 15, check_for_cancelled = True )
                             

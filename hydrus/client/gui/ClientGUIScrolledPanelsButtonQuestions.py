@@ -105,7 +105,7 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
             
             if kept_label is not None:
                 
-                label = '{}{}-and-'.format( kept_label, os.linesep )
+                label = f'{kept_label}\n-and-'
                 
                 st = ClientGUICommon.BetterStaticText( self, label )
                 

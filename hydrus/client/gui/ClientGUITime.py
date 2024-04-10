@@ -8,19 +8,19 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.importing.options import ClientImportOptions
 
 def QDateTimeToPrettyString( dt: typing.Optional[ QC.QDateTime ], include_milliseconds = False ):
@@ -52,7 +52,7 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
-        help_button.setToolTip( 'Show help regarding these checker options.' )
+        help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding these checker options.' ) )
         
         help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
@@ -103,20 +103,20 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
         self._reactive_check_panel = ClientGUICommon.StaticBox( self, 'reactive checking' )
         
         self._intended_files_per_check = ClientGUICommon.BetterSpinBox( self._reactive_check_panel, min=1, max=1000 )
-        self._intended_files_per_check.setToolTip( 'How many new files you want the checker to find on each check. If a source is producing about 2 files a day, and this is set to 6, you will probably get a check every three days. You probably want this to be a low number, like 1-4.' )
+        self._intended_files_per_check.setToolTip( ClientGUIFunctions.WrapToolTip( 'How many new files you want the checker to find on each check. If a source is producing about 2 files a day, and this is set to 6, you will probably get a check every three days. You probably want this to be a low number, like 1-4.' ) )
         
         self._never_faster_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_faster_than_min, days = True, hours = True, minutes = True, seconds = True )
-        self._never_faster_than.setToolTip( 'Even if the download source produces many new files, the checker will never ask for a check more often than this. This is a safety measure.' )
+        self._never_faster_than.setToolTip( ClientGUIFunctions.WrapToolTip( 'Even if the download source produces many new files, the checker will never ask for a check more often than this. This is a safety measure.' ) )
         
         self._never_slower_than = TimeDeltaCtrl( self._reactive_check_panel, min = never_slower_than_min, days = True, hours = True, minutes = True, seconds = True )
-        self._never_slower_than.setToolTip( 'Even if the download source slows down significantly, the checker will make sure it checks at least this often anyway, just to catch a future wave in time.' )
+        self._never_slower_than.setToolTip( ClientGUIFunctions.WrapToolTip( 'Even if the download source slows down significantly, the checker will make sure it checks at least this often anyway, just to catch a future wave in time.' ) )
         
         #
         
         self._static_check_panel = ClientGUICommon.StaticBox( self, 'static checking' )
         
         self._flat_check_period = TimeDeltaCtrl( self._static_check_panel, min = flat_check_period_min, days = True, hours = True, minutes = True, seconds = True )
-        self._flat_check_period.setToolTip( 'Always use the same check delay. It is based on the time the last check completed, not the time the last check was due. If you want once a day with no skips, try setting this to 23 hours.' )
+        self._flat_check_period.setToolTip( ClientGUIFunctions.WrapToolTip( 'Always use the same check delay. It is based on the time the last check completed, not the time the last check was due. If you want once a day with no skips, try setting this to 23 hours.' ) )
         
         #
         
@@ -215,19 +215,19 @@ class EditCheckerOptions( ClientGUIScrolledPanels.EditPanel ):
     def _ShowHelp( self ):
         
         help = 'The intention of this object is to govern how frequently the watcher or subscription checks for new files--and when it should stop completely.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'PROTIP: Do not change anything here unless you understand what it means!'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'In general, checkers can and should be set up to check faster or slower based on how fast new files are coming in. This is polite to the server you are talking to and saves you CPU and bandwidth. The rate of new files is called the \'file velocity\' and is based on how many files appeared in a certain period before the _most recent check time_.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'Once the first check is done and an initial file velocity is established, the time to the next check will be based on what you set for the \'intended files per check\'. If the current file velocity is 10 files per 24 hours, and you set the intended files per check to 5 files, the checker will set the next check time to be 12 hours after the previous check time.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'After a check is completed, the new file velocity and next check time is calculated, so when files are being posted frequently, it will check more often. When things are slow, it will slow down as well. There are also minimum and maximum check periods to smooth out the bumps.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'But if you would rather just check at a fixed rate, check the checkbox and you will get a simpler \'static checking\' panel.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'If the \'file velocity\' drops below a certain amount, the checker considers the source of files dead and will stop checking. If it falls into this state but you think there might have since been a rush of new files, hit the watcher or subscription\'s \'check now\' button in an attempt to revive the checker. If there are new files, it will start checking again until they drop off once more.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'If you are still not comfortable with how this system works, the \'reasonable defaults\' are good fallbacks. Most of the time, setting some reasonable rules and leaving checkers to do their work is the best way to deal with this stuff, rather than obsessing over the exact perfect values you want for each situation.'
         
         ClientGUIDialogsMessage.ShowInformation( self, help )
@@ -701,13 +701,13 @@ class DateTimesCtrl( QW.QWidget ):
         tt += 'For instance, if you have a manga chapter in order in a search page, but their import times are scattered, set this to 5 milliseconds and their import times will be set to cascade nicely.'
         tt += '\n' * 2
         tt += 'Negative values are allowed!'
-        self._step.setToolTip( tt )
+        self._step.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
-        self._copy_button.setToolTip( 'Copy timestamp to the clipboard.' )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamp to the clipboard.' ) )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Paste timestamp from another datetime widget.' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste timestamp from another datetime widget.' ) )
         
         #
         
@@ -866,7 +866,7 @@ class DateTimesCtrl( QW.QWidget ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'A simple integer timestamp', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'A simple integer timestamp', e )
             
             return
             
@@ -1486,7 +1486,7 @@ class TimestampDataStubCtrl( QW.QWidget ):
         
     
 
-class NumberTestWidgetDuration( ClientGUIControls.NumberTestWidget ):
+class NumberTestWidgetDuration( ClientGUINumberTest.NumberTestWidget ):
     
     def _GenerateAbsoluteValueWidget( self, max: int ):
         

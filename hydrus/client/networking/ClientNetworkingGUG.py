@@ -109,58 +109,38 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             raise HydrusExceptions.GUGException( 'Replacement phrase not in URL template!' )
             
         
-        if re.search( r'%[0-9A-Fa-f]{2}', query_text ) is not None:
+        query_text = query_text.replace( '%20', ' ' )
+        
+        search_terms = query_text.split( ' ' )
+        
+        looks_like_tags_are_going_into_params = False
+        
+        if '?' in self._url_template:
             
-            if ' ' in query_text:
-                
-                # against probability, there is probably a legit % character here that should be encoded
-                
-                search_terms = query_text.split( ' ' )
-                
-                we_think_query_text_is_pre_encoded = False
-                
-            elif '%20' in query_text:
-                
-                # we are generally confident the user pasted a multi-tag query they copied from a notepad or something
-                
-                search_terms = query_text.split( '%20' )
-                
-                # any % character entered here should be encoded as '%25'
-                we_think_query_text_is_pre_encoded = True
-                
-            else:
-                
-                # we simply do not know in this case. this is a single tag with a % not at the end, but it could be male%2Ffemale or it could be "120%120%hello", the hit new anime series
-                # assuming it is the former more often than the latter, we will not intrude on what the user sent here and cross our fingers
-                
-                search_terms = [ query_text ]
-                
-                we_think_query_text_is_pre_encoded = True
-                
+            ( first_half, second_half ) = self._url_template.split( '?', 1 )
             
-        else:
-            
-            search_terms = query_text.split( ' ' )
-            
-            # normal, not pre-encoded text
-            we_think_query_text_is_pre_encoded = False
+            if self._replacement_phrase in second_half:
+                
+                looks_like_tags_are_going_into_params = True
+                
             
         
-        if not we_think_query_text_is_pre_encoded:
+        if looks_like_tags_are_going_into_params:
             
-            encoded_search_terms = [ urllib.parse.quote( search_term, safe = '' ) for search_term in search_terms ]
+            # we pre-encode each term here because we are not talking about URL with RFC 3986 rules, but the taglist, which is 'encode each tag to %-encoding thanks'
+            # we need to handle the '6+girls+skirt' = '6%2Bgirls+skirt' scenario
+            
+            encoded_search_terms = [ ClientNetworkingFunctions.ensure_component_is_encoded( search_term, '' ) for search_term in search_terms ]
             
         else:
             
-            encoded_search_terms = search_terms
+            # in this case, we are just plonking an artist name in a path component, so we want normal path encoding rules, not 'encode everything mate'
+            encoded_search_terms = [ ClientNetworkingFunctions.ensure_path_component_is_encoded( search_term ) for search_term in search_terms ]
             
         
         try:
             
             search_phrase = self._search_terms_separator.join( encoded_search_terms )
-            
-            # we do not encode the whole thing here since we may want to keep tag-connector-+ for the '6+girls+skirt' = '6%2Bgirls+skirt' scenario
-            # some characters are optional or something when it comes to encoding. '+' is one of these
             
             gallery_url = self._url_template.replace( self._replacement_phrase, search_phrase )
             
@@ -169,7 +149,7 @@ class GalleryURLGenerator( HydrusSerialisable.SerialisableBaseNamed ):
             raise HydrusExceptions.GUGException( str( e ) )
             
         
-        return gallery_url
+        return ClientNetworkingFunctions.EnsureURLIsEncoded( gallery_url )
         
     
     def GenerateGalleryURLs( self, query_text ):

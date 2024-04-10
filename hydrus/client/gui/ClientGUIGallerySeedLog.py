@@ -2,6 +2,7 @@ import os
 
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
@@ -45,7 +46,7 @@ def GetExportableURLsString( gallery_seed_log: ClientImportGallerySeeds.GalleryS
     
     urls = [ gallery_seed.url for gallery_seed in gallery_seeds ]
     
-    return os.linesep.join( urls )
+    return '\n'.join( urls )
     
 def GetURLsFromURLsString( urls_string ):
     
@@ -75,7 +76,7 @@ def ImportFromClipboard( win: QW.QWidget, gallery_seed_log: ClientImportGalleryS
         
     except Exception as e:
         
-        ClientGUIFunctions.PresentClipboardParseError( win, raw_text, 'Lines of URLs', e )
+        ClientGUIDialogsQuick.PresentClipboardParseError( win, raw_text, 'Lines of URLs', e )
         
     
 
@@ -302,10 +303,11 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_status = CC.status_string_lookup[ status ] if status != CC.STATUS_UNKNOWN else ''
         pretty_added = ClientTime.TimestampToPrettyTimeDelta( added )
         pretty_modified = ClientTime.TimestampToPrettyTimeDelta( modified )
-        pretty_note = note.split( os.linesep )[0]
+        
+        pretty_note = HydrusText.GetFirstLine( note )
         
         display_tuple = ( pretty_gallery_seed_index, pretty_url, pretty_status, pretty_added, pretty_modified, pretty_note )
-        sort_tuple = ( gallery_seed_index, url, status, added, modified, note )
+        sort_tuple = ( gallery_seed_index, pretty_url, status, added, modified, note )
         
         return ( display_tuple, sort_tuple )
         
@@ -316,7 +318,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( gallery_seeds ) > 0:
             
-            separator = os.linesep * 2
+            separator = '\n' * 2
             
             text = separator.join( ( gallery_seed.url for gallery_seed in gallery_seeds ) )
             
@@ -340,7 +342,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( notes ) > 0:
             
-            separator = os.linesep * 2
+            separator = '\n' * 2
             
             text = separator.join( notes )
             
@@ -378,12 +380,33 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
             return menu
             
         
-        ClientGUIMenus.AppendMenuItem( menu, 'copy urls', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
-        ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+        if len( selected_gallery_seeds ) == 1:
+            
+            ( gallery_seed, ) = selected_gallery_seeds
+            
+            url = gallery_seed.url
+            
+            ClientGUIMenus.AppendMenuItem( menu, f'copy "{url}"', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
+            
+            note = gallery_seed.note
+            
+            if len( note ) > 0: 
+                
+                note_preview = HydrusText.GetFirstLine( gallery_seed.note ) + HC.UNICODE_ELLIPSIS
+                
+                ClientGUIMenus.AppendMenuItem( menu, f'copy "{note_preview}"', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+                
+            
+        else:
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'copy urls', 'Copy all the selected urls to clipboard.', self._CopySelectedGalleryURLs )
+            ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
+            
         
         ClientGUIMenus.AppendSeparator( menu )
-
+        
         ClientGUIMenus.AppendMenuItem( menu, 'open urls', 'Open all the selected urls in your web browser.', self._OpenSelectedGalleryURLs )
+        
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -538,7 +561,7 @@ class GallerySeedLogButton( ClientGUICommon.ButtonWithMenuArrow ):
         action = QW.QAction()
         
         action.setText( '{} log'.format( gallery_type_string ) )
-        action.setToolTip( 'open detailed {} log'.format( self._gallery_type_string ) )
+        action.setToolTip( ClientGUIFunctions.WrapToolTip( 'open detailed {} log'.format( self._gallery_type_string ) ) )
         
         action.triggered.connect( self._ShowGallerySeedLogFrame )
         

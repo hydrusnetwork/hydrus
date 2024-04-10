@@ -297,6 +297,8 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_url = QW.QLineEdit( self )
         self._example_url.setReadOnly( True )
+        self._example_url.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is the Request URL--what will be sent to the server, with any additional normalisation the matching URL Class will add.' ) )
+        
         self._matched_url_class = QW.QLineEdit( self )
         self._matched_url_class.setReadOnly( True )
         
@@ -327,7 +329,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         rows.append( ( 'search terms separator: ', self._search_terms_separator ) )
         rows.append( ( 'initial search text (to prompt user): ', self._initial_search_text ) )
         rows.append( ( 'example search text: ', self._example_search_text ) )
-        rows.append( ( 'example url: ', self._example_url ) )
+        rows.append( ( 'example request url: ', self._example_url ) )
         rows.append( ( 'matches as a: ', self._matched_url_class ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
@@ -797,9 +799,9 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                     affected_ngug_names.sort()
                     
                     message = 'The GUG "' + deletee.GetName() + '" is in the NGUGs:'
-                    message += os.linesep * 2
-                    message += os.linesep.join( affected_ngug_names )
-                    message += os.linesep * 2
+                    message += '\n' * 2
+                    message += '\n'.join( affected_ngug_names )
+                    message += '\n' * 2
                     message += 'Deleting this GUG will ultimately remove it from those NGUGs--are you sure that is ok?'
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -928,13 +930,13 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
         string_match_panel = ClientGUICommon.StaticBox( self, 'value test' )
         
         self._string_match = ClientGUIStringPanels.EditStringMatchPanel( string_match_panel, string_match )
-        self._string_match.setToolTip( 'If the encoded value of the component matches this, the URL Class matches!' )
+        self._string_match.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the encoded value of the component matches this, the URL Class matches!' ) )
         
         self._pretty_default_value = ClientGUICommon.NoneableTextCtrl( self )
-        self._pretty_default_value.setToolTip( 'If the URL is missing this component, you can add it here, and the URL Class will still match and will normalise by adding this default value. This can be useful if you need to add a /art or similar to a URL that ends with either /username or /username/art--sometimes it is better to make that stuff explicit in all cases.' )
+        self._pretty_default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the URL is missing this component, you can add it here, and the URL Class will still match and will normalise by adding this default value. This can be useful if you need to add a /art or similar to a URL that ends with either /username or /username/art--sometimes it is better to make that stuff explicit in all cases.' ) )
         
         self._default_value = ClientGUICommon.NoneableTextCtrl( self )
-        self._default_value.setToolTip( 'What actual value will be embedded into the URL sent to the server.' )
+        self._default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'What actual value will be embedded into the URL sent to the server.' ) )
         
         #
         
@@ -991,7 +993,7 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_default_value = self._pretty_default_value.GetValue()
         
-        default_value = pretty_default_value if pretty_default_value is None else urllib.parse.quote( pretty_default_value )
+        default_value = pretty_default_value if pretty_default_value is None else ClientNetworkingFunctions.ensure_path_component_is_encoded( pretty_default_value )
         
         self._default_value.blockSignals( True )
         
@@ -1051,35 +1053,35 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         self._dupe_names = dupe_names
         
         self._pretty_name = QW.QLineEdit( self )
-        self._pretty_name.setToolTip( 'The "key" of the key=value pair.' )
+        self._pretty_name.setToolTip( ClientGUIFunctions.WrapToolTip( 'The "key" of the key=value pair.' ) )
         
         self._name = QW.QLineEdit( self )
-        self._name.setToolTip( 'The "key" of the key=value pair. This encoded form is what is actually sent to the server!' )
+        self._name.setToolTip( ClientGUIFunctions.WrapToolTip( 'The "key" of the key=value pair. This encoded form is what is actually sent to the server!' ) )
         
         value_string_match_panel = ClientGUICommon.StaticBox( self, 'value test' )
         
         from hydrus.client.gui import ClientGUIStringPanels
         
         self._value_string_match = ClientGUIStringPanels.EditStringMatchPanel( value_string_match_panel, parameter.GetValueStringMatch() )
-        self._value_string_match.setToolTip( 'If the encoded value of the key=value pair matches this, the URL Class matches!' )
+        self._value_string_match.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the encoded value of the key=value pair matches this, the URL Class matches!' ) )
         
         self._is_ephemeral = QW.QCheckBox( self )
         tt = 'THIS IS ADVANCED, DO NOT SET IF YOU ARE UNSURE! If this parameter is a one-time token or similar needed for the server request but not something you want to keep or use to compare, you can define it here.'
         tt += '\n' * 2
         tt += 'These tokens are also allowed _en masse_ in the main URL Class by setting "allow extra parameters for server", BUT if you need a whitelist, you will want to define them here. Also, if you need to pass this token on to an API/redirect converter, you have to define it here!'
-        self._is_ephemeral.setToolTip( tt )
+        self._is_ephemeral.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._pretty_default_value = ClientGUICommon.NoneableTextCtrl( self )
-        self._pretty_default_value.setToolTip( 'If the URL is missing this key=value pair, you can add it here, and the URL Class will still match and will normalise with this default value. This can be useful for gallery URLs that have an implicit page=1 or index=0 for their first result--sometimes it is better to make that stuff explicit in all cases.' )
+        self._pretty_default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the URL is missing this key=value pair, you can add it here, and the URL Class will still match and will normalise with this default value. This can be useful for gallery URLs that have an implicit page=1 or index=0 for their first result--sometimes it is better to make that stuff explicit in all cases.' ) )
         
         self._default_value = ClientGUICommon.NoneableTextCtrl( self )
-        self._default_value.setToolTip( 'What actual value will be embedded into the URL sent to the server.' )
+        self._default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'What actual value will be embedded into the URL sent to the server.' ) )
         
         self._default_value_string_processor = ClientGUIStringControls.StringProcessorButton( self, parameter.GetDefaultValueStringProcessor(), self._GetTestData )
         tt = 'WARNING WARNING: Extremely Big Brain'
         tt += '/n' * 2
         tt += 'You can apply the parsing system\'s normal String Processor steps to your fixed default value here. For instance, you could append/replace the default value with random hex or today\'s date. This is obviously super advanced, so be careful.'
-        self._default_value_string_processor.setToolTip( tt )
+        self._default_value_string_processor.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1196,7 +1198,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_default_value = self._pretty_default_value.GetValue()
         
-        default_value = pretty_default_value if pretty_default_value is None else urllib.parse.quote( pretty_default_value )
+        default_value = pretty_default_value if pretty_default_value is None else ClientNetworkingFunctions.ensure_param_component_is_encoded( pretty_default_value )
         
         self._default_value.blockSignals( True )
         
@@ -1209,7 +1211,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_name = self._pretty_name.text()
         
-        name = pretty_name if pretty_name is None else urllib.parse.quote( pretty_name )
+        name = pretty_name if pretty_name is None else ClientNetworkingFunctions.ensure_param_component_is_encoded( pretty_name )
         
         self._name.blockSignals( True )
         
@@ -1334,12 +1336,12 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._match_subdomains = QW.QCheckBox( self._matching_panel )
         
         tt = 'Should this class apply to subdomains as well?'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'For instance, if this url class has domain \'example.com\', should it match a url with \'boards.example.com\' or \'artistname.example.com\'?'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Any subdomain starting with \'www\' is automatically matched, so do not worry about having to account for that.'
         
-        self._match_subdomains.setToolTip( tt )
+        self._match_subdomains.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1369,7 +1371,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'Some URLs have parameters with just a key or a value, not a "key=value" pair. Normally these are removed on normalisation, but if you turn this on, then this URL will keep them and require at least one.'
         
-        self._has_single_value_parameters.setToolTip( tt )
+        self._has_single_value_parameters.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._has_single_value_parameters.setChecked( has_single_value_parameters )
         
@@ -1390,68 +1392,70 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         self._keep_matched_subdomains = QW.QCheckBox( self._options_panel )
         
         tt = 'Should this url keep its matched subdomains when it is normalised?'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'This is typically useful for direct file links that are often served on a numbered CDN subdomain like \'img3.example.com\' but are also valid on the neater main domain.'
         
-        self._keep_matched_subdomains.setToolTip( tt )
+        self._keep_matched_subdomains.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._alphabetise_get_parameters = QW.QCheckBox( self._options_panel )
         
         tt = 'Normally, to ensure the same URLs are merged, hydrus will alphabetise GET parameters as part of the normalisation process.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Almost all servers support GET params in any order. One or two do not. Uncheck this if you know there is a problem.'
         
-        self._alphabetise_get_parameters.setToolTip( tt )
+        self._alphabetise_get_parameters.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._no_more_path_components_than_this = QW.QCheckBox( self._options_panel )
         
         tt = 'Normally, hydrus will match a URL that has a longer path than is defined here. site.com/index/123456/cool-pic-by-artist will match a URL class that looks for site.com/index/123456, and it will remove that extra cruft on normalisation.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Checking this turns that behaviour off. It will only match if the given URL satisfies all defined path component tests, and no more. If you have multiple URL Classes matching on different levels of a tree, and hydrus is having difficulty matching them up in the right order (neighbouring Gallery/Post URLs can do this), try this.'
         
-        self._no_more_path_components_than_this.setToolTip( tt )
+        self._no_more_path_components_than_this.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._no_more_parameters_than_this = QW.QCheckBox( self._options_panel )
         
         tt = 'Normally, hydrus will match a URL that has more parameters than is defined here. site.com/index?p=123456&orig_tags=skirt will match a URL class that looks for site.com/index?p=123456. Post URLs will remove that extra cruft on normalisation.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Checking this turns that behaviour off. It will only match if the given URL satisfies all defined parameter tests, and no more. If you have multiple URL Classes matching on the same base URL path but with different query params, and hydrus is having difficulty matching them up in the right order (neighbouring Gallery/Post URLs can do this), try this.'
         
-        self._no_more_parameters_than_this.setToolTip( tt )
+        self._no_more_parameters_than_this.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._keep_extra_parameters_for_server = QW.QCheckBox( self._options_panel )
         
-        tt = 'If checked, the URL not strip out undefined parameters in the normalisation process that occurs before a URL is sent to the server. In general, you probably want to keep this on, since these extra parameters can include temporary tokens and so on. Undefined parameters are removed when URLs are compared to each other (to detect dupes) or saved to the "known urls" storage in the database.'
+        tt = 'Only available if not using an API/redirect converter!'
+        tt += '\n' * 2
+        tt += 'If checked, the URL not strip out undefined parameters in the normalisation process that occurs before a URL is sent to the server. In general, you probably want to keep this on, since these extra parameters can include temporary tokens and so on. Undefined parameters are removed when URLs are compared to each other (to detect dupes) or saved to the "known urls" storage in the database.'
         
-        self._keep_extra_parameters_for_server.setToolTip( tt )
+        self._keep_extra_parameters_for_server.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._can_produce_multiple_files = QW.QCheckBox( self._options_panel )
         
         tt = 'If checked, the client will not rely on instances of this URL class to predetermine \'already in db\' or \'previously deleted\' outcomes. This is important for post types like pixiv pages (which can ultimately be manga, and represent many pages) and tweets (which can have multiple images).'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Most booru-type Post URLs only produce one file per URL and should not have this checked. Checking this avoids some bad logic where the client would falsely think it if it had seen one file at the URL, it had seen them all, but it then means the client has to download those pages\' content again whenever it sees them (so it can check against the direct File URLs, which are always considered one-file each).'
         
-        self._can_produce_multiple_files.setToolTip( tt )
+        self._can_produce_multiple_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._should_be_associated_with_files = QW.QCheckBox( self._options_panel )
         
         tt = 'If checked, the client will try to remember this url with any files it ends up importing. It will present this url in \'known urls\' ui across the program.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'If this URL is a File or Post URL and the client comes across it after having already downloaded it once, it can skip the redundant download since it knows it already has (or has already deleted) the file once before.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Turning this on is only useful if the URL is non-ephemeral (i.e. the URL will produce the exact same file(s) in six months\' time). It is usually not appropriate for booru gallery or thread urls, which alter regularly, but is for static Post URLs or some fixed doujin galleries.'
         
-        self._should_be_associated_with_files.setToolTip( tt )
+        self._should_be_associated_with_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._keep_fragment = QW.QCheckBox( self._options_panel )
         
         tt = 'If checked, fragment text will be kept. This is the component sometimes after an URL that starts with a "#", such as "#kwGFb3xhA3k8B".'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'This data is never sent to a server, so in normal cases should never be kept, but for some clever services such as Mega, with complicated javascript navigation, it may contain unique clientside navigation data if you open the URL in your browser.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Only turn this on if you know it is needed. For almost all sites, it only hurts the normalisation process.'
         
-        self._keep_fragment.setToolTip( tt )
+        self._keep_fragment.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1466,13 +1470,13 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'Do not change this unless you know you need to. It fixes complicated problems.'
         
-        self._send_referral_url.setToolTip( tt )
+        self._send_referral_url.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._referral_url_converter = ClientGUIStringControls.StringConverterButton( self._referral_url_panel, referral_url_converter )
         
         tt = 'This will generate a referral URL from the original URL. If the URL needs a referral URL, and you can infer what that would be from just this URL, this will let hydrus download this URL without having to previously visit the referral URL (e.g. letting the user drag-and-drop import). It also lets you set up alternate referral URLs for perculiar situations.'
         
-        self._referral_url_converter.setToolTip( tt )
+        self._referral_url_converter.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._referral_url = QW.QLineEdit( self._referral_url_panel )
         self._referral_url.setReadOnly( True )
@@ -1485,7 +1489,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'This will let you generate an alternate URL for the client to use for the actual download whenever it encounters a URL in this class. You must have a separate URL class to match the API type (which will link to parsers).'
         
-        self._api_lookup_converter.setToolTip( tt )
+        self._api_lookup_converter.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._api_url = QW.QLineEdit( self._api_url_panel )
         self._api_url.setReadOnly( True )
@@ -1524,7 +1528,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'This is what should actually be sent to the server. It has some elements of full normalisation, but depending on your options, there may be additional, "ephemeral" data included. If you use an API/redirect, it will be that.'
         
-        self._for_server_normalised_url.setToolTip( tt )
+        self._for_server_normalised_url.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._normalised_url = QW.QLineEdit( self )
         self._normalised_url.setReadOnly( True )
@@ -1533,7 +1537,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += '/n' * 2
         tt += 'We want to normalise to a single reliable URL because the same URL can be expressed in different ways. The parameters can be reordered, and descriptive \'sugar\' like "/123456/bodysuit-samus_aran" can be altered at a later date, say to "/123456/bodysuit-green_eyes-samus_aran". In order to collapse all the different expressions of a url down to a single comparable form, we remove any cruft and "normalise" things. The preferred scheme (http/https) will be switched to, and, typically, parameters will be alphabetised and non-defined elements will be removed.'
         
-        self._normalised_url.setToolTip( tt )
+        self._normalised_url.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1656,14 +1660,14 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'if matching by subdomain, keep it when normalising?: ', self._keep_matched_subdomains ) )
-        rows.append( ( 'alphabetise GET parameters when normalising?: ', self._alphabetise_get_parameters ) )
-        rows.append( ( 'do not match on any extra path components?: ', self._no_more_path_components_than_this ) )
-        rows.append( ( 'do not match on any extra parameters?: ', self._no_more_parameters_than_this ) )
-        rows.append( ( 'keep extra parameters for server?: ', self._keep_extra_parameters_for_server ) )
-        rows.append( ( 'keep fragment when normalising?: ', self._keep_fragment ) )
-        rows.append( ( 'post page can produce multiple files?: ', self._can_produce_multiple_files ) )
-        rows.append( ( 'associate a \'known url\' with resulting files?: ', self._should_be_associated_with_files ) )
+        rows.append( ( 'if matching by subdomain, keep it when normalising: ', self._keep_matched_subdomains ) )
+        rows.append( ( 'alphabetise GET parameters when normalising: ', self._alphabetise_get_parameters ) )
+        rows.append( ( 'disallow match on any extra path components: ', self._no_more_path_components_than_this ) )
+        rows.append( ( 'disallow match on any extra parameters: ', self._no_more_parameters_than_this ) )
+        rows.append( ( 'keep extra parameters for server: ', self._keep_extra_parameters_for_server ) )
+        rows.append( ( 'keep fragment when normalising: ', self._keep_fragment ) )
+        rows.append( ( 'post page can produce multiple files: ', self._can_produce_multiple_files ) )
+        rows.append( ( 'associate a \'known url\' with resulting files: ', self._should_be_associated_with_files ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._options_panel, rows )
         
@@ -2051,6 +2055,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             
             example_url = self._example_url.text()
             
+            example_url = ClientNetworkingFunctions.EnsureURLIsEncoded( example_url )
+            
             url_class.Test( example_url )
             
             self._example_url_classes.setText( 'Example matches ok!' )
@@ -2186,7 +2192,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             if self._url_type.GetValue() in ( HC.URL_TYPE_GALLERY, HC.URL_TYPE_WATCHABLE ):
                 
                 message = 'Please note that it is only appropriate to associate a Gallery or Watchable URL with a file if that URL is non-ephemeral. It is only appropriate if the exact same URL will definitely give the same files in six months\' time (like a fixed doujin chapter gallery).'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'If you are not sure what this means, turn this back off.'
                 
                 ClientGUIDialogsMessage.ShowInformation( self, message )
@@ -2197,7 +2203,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             if self._url_type.GetValue() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_POST ):
                 
                 message = 'Hydrus uses these file associations to make sure not to re-download the same file when it comes across the same URL in future. It is only appropriate to not associate a file or post url with a file if that url is particularly ephemeral, such as if the URL includes a non-removable random key that becomes invalid after a few minutes.'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'If you are not sure what this means, turn this back on.'
                 
                 ClientGUIDialogsMessage.ShowInformation( self, message )
@@ -2459,7 +2465,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            url = ClientNetworkingFunctions.WashURL( unclean_url )
+            url = ClientNetworkingFunctions.EnsureURLIsEncoded( unclean_url )
             
             url_classes = self.GetValue()
             

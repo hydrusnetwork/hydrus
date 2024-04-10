@@ -53,7 +53,7 @@ from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientTags
@@ -820,7 +820,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, message = message )
                     
-                    control = ClientGUIControls.NoneableBytesControl( panel, initial_value = 100 * ( 1024 ** 3 ) )
+                    control = ClientGUIBytes.NoneableBytesControl( panel, initial_value = 100 * ( 1024 ** 3 ) )
                     
                     control.SetValue( max_num_bytes )
                     
@@ -889,7 +889,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         label = 'media is {}, thumbnails are estimated at {}-{}'.format( HydrusData.ToHumanBytes( approx_total_client_files ), HydrusData.ToHumanBytes( approx_total_thumbnails_min ), HydrusData.ToHumanBytes( approx_total_thumbnails_max ) )
         
         self._current_media_paths_st.setText( label )
-        self._current_media_paths_st.setToolTip( 'Precise thumbnail sizes are not tracked, so this is an estimate based on your current thumbnail dimensions.' )
+        self._current_media_paths_st.setToolTip( ClientGUIFunctions.WrapToolTip( 'Precise thumbnail sizes are not tracked, so this is an estimate based on your current thumbnail dimensions.' ) )
         
         base_locations = self._GetListCtrlLocations()
         
@@ -988,7 +988,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._migration_content_type.addItem( HC.content_type_string_lookup[ content_type ], content_type )
             
         
-        self._migration_content_type.setToolTip( 'Sets what will be migrated.' )
+        self._migration_content_type.setToolTip( ClientGUIFunctions.WrapToolTip( 'Sets what will be migrated.' ) )
         
         self._migration_source = ClientGUICommon.BetterChoice( self._migration_panel )
         
@@ -996,11 +996,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._migration_source_hash_type_st = ClientGUICommon.BetterStaticText( self._migration_panel, 'hash type: unknown' )
         
-        self._migration_source_hash_type_st.setToolTip( 'If this is something other than sha256, this will only work for files the client has ever previously imported.' )
+        self._migration_source_hash_type_st.setToolTip( ClientGUIFunctions.WrapToolTip( 'If this is something other than sha256, this will only work for files the client has ever previously imported.' ) )
         
         self._migration_source_content_status_filter = ClientGUICommon.BetterChoice( self._migration_panel )
         
-        self._migration_source_content_status_filter.setToolTip( 'This filters which status of tags will be migrated.' )
+        self._migration_source_content_status_filter.setToolTip( ClientGUIFunctions.WrapToolTip( 'This filters which status of tags will be migrated.' ) )
         
         self._migration_source_file_filtering_type = ClientGUICommon.BetterChoice( self._migration_panel )
         
@@ -1013,15 +1013,15 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._migration_source_file_filtering_type.SetValue( self.HASHES_LOCATION )
             
         
-        self._migration_source_file_filtering_type.setToolTip( 'Choose whether to do this operation for the files you launched the dialog on, or a whole file domain.' )
+        self._migration_source_file_filtering_type.setToolTip( ClientGUIFunctions.WrapToolTip( 'Choose whether to do this operation for the files you launched the dialog on, or a whole file domain.' ) )
         
         self._migration_source_location_context_button = ClientGUILocation.LocationSearchContextButton( self._migration_panel, location_context )
-        self._migration_source_location_context_button.setToolTip( 'Set which files should be eligible. This can get as complicated as you like!' )
+        self._migration_source_location_context_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set which files should be eligible. This can get as complicated as you like!' ) )
         
         self._migration_source_archive_path_button = ClientGUICommon.BetterButton( self._migration_panel, 'no path set', self._SetSourceArchivePath )
         
         message = 'Tags that pass this filter will be applied to the destination with the chosen action.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'For instance, if you whitelist the \'series\' namespace, only series: tags from the source will be added to/deleted from the destination.'
         
         tag_filter = HydrusTags.TagFilter()
@@ -1029,7 +1029,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_tag_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'tags taken: ' )
         
         message = 'The left side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'For instance, if you whitelist the \'character\' namespace, only pairs from the source with character: tags on the left will be added to/deleted from the destination.'
         
         tag_filter = HydrusTags.TagFilter()
@@ -1037,7 +1037,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_source_left_tag_pair_filter = ClientGUITags.TagFilterButton( self._migration_panel, message, tag_filter, label_prefix = 'left: ' )
         
         message = 'The right side of a tag sibling/parent pair must pass this filter for the pair to be included in the migration.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'For instance, if you whitelist the \'series\' namespace, only pairs from the source with series: tags on the right will be added to/deleted from the destination.'
         
         tag_filter = HydrusTags.TagFilter()
@@ -1057,7 +1057,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
             self._migration_destination_hash_type_choice.addItem( hash_type, hash_type )
             
         
-        self._migration_destination_hash_type_choice.setToolTip( 'If you set something other than sha256, this will only work for files the client has ever previously imported.' )
+        self._migration_destination_hash_type_choice.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you set something other than sha256, this will only work for files the client has ever previously imported.' ) )
         
         self._migration_action = ClientGUICommon.BetterChoice( self._migration_panel )
         
@@ -1123,11 +1123,11 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         #
         
         message = 'The content from the SOURCE that the FILTER ALLOWS is applied using the ACTION to the DESTINATION.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'To delete content en masse from one location, select what you want to delete with the filter and set the source and destination the same.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'These migrations can be powerful, so be very careful that you understand what you are doing and choose what you want. Large jobs may have a significant initial setup time, during which case the client may hang briefly, but once they start they are pausable or cancellable. If you do want to perform a large action, it is a good idea to back up your database first, just in case you get a result you did not intend.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'You may need to restart your client to see their effect.' 
         
         st = ClientGUICommon.BetterStaticText( self, message )
@@ -1307,9 +1307,9 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         title = 'taking {} {}{} from "{}" and {} "{}"'.format( source_content_statuses_strings[ content_statuses ], HC.content_type_string_lookup[ content_type ], extra_info, source.GetName(), destination_action_strings[ content_action ], destination.GetName() )
         
         message = 'Migrations can make huge changes. They can be cancelled early, but any work they do cannot always be undone. Please check that this summary looks correct:'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += title
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you plan to make a very big change (especially a mass delete), I recommend making a backup of your database before going ahead, just in case something unexpected happens.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'looks good', no_label = 'go back' )
@@ -1419,7 +1419,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._migration_destination_archive_path_button.setText( filename )
                 
-                self._migration_destination_archive_path_button.setToolTip( path )
+                self._migration_destination_archive_path_button.setToolTip( ClientGUIFunctions.WrapToolTip( path ) )
                 
             
         
@@ -1497,7 +1497,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 self._migration_source_archive_path_button.setText( filename )
                 
-                self._migration_source_archive_path_button.setToolTip( path )
+                self._migration_source_archive_path_button.setToolTip( ClientGUIFunctions.WrapToolTip( path ) )
                 
             
         
@@ -1681,10 +1681,10 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._migration_destination_hash_type_choice.setEnabled( True )
         
         self._migration_source_archive_path_button.setText( 'no path set' )
-        self._migration_source_archive_path_button.setToolTip( '' )
+        self._migration_source_archive_path_button.setToolTip( ClientGUIFunctions.WrapToolTip( '' ) )
         
         self._migration_destination_archive_path_button.setText( 'no path set' )
-        self._migration_destination_archive_path_button.setToolTip( '' )
+        self._migration_destination_archive_path_button.setToolTip( ClientGUIFunctions.WrapToolTip( '' ) )
         
         if content_type == HC.CONTENT_TYPE_MAPPINGS:
             
@@ -1738,7 +1738,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         self._repo_link = ClientGUICommon.BetterHyperLink( self, 'get user-made downloaders here', 'https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts/tree/master/Downloaders' )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Or you can paste bitmaps from clipboard!' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Or you can paste bitmaps from clipboard!' ) )
         
         st = ClientGUICommon.BetterStaticText( self, label = 'Drop downloader-encoded pngs onto Lain to import.' )
         
@@ -1829,7 +1829,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     if len( payloads ) > 1:
                         
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += 'If there are more unloadable objects in this import, they will be skipped silently.'
                         
                     
@@ -2116,7 +2116,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
             
             if len( new_domain_metadatas ) > TOO_MANY_DM:
                 
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'There are more than ' + HydrusData.ToHumanInt( TOO_MANY_DM ) + ' domain metadata objects. So I do not give you dozens of preview windows, I will only show you these first ' + HydrusData.ToHumanInt( TOO_MANY_DM ) + '.'
                 
             
@@ -2135,16 +2135,16 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
         all_to_add.extend( new_domain_metadatas )
         
         message = 'The client is about to add and link these objects:'
-        message += os.linesep * 2
-        message += os.linesep.join( ( obj.GetSafeSummary() for obj in all_to_add[:20] ) )
+        message += '\n' * 2
+        message += '\n'.join( ( obj.GetSafeSummary() for obj in all_to_add[:20] ) )
         
         if len( all_to_add ) > 20:
             
-            message += os.linesep
+            message += '\n'
             message += '(and ' + HydrusData.ToHumanInt( len( all_to_add ) - 20 ) + ' others)'
             
         
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Does that sound good?'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -2914,7 +2914,7 @@ class ReviewFileMaintenance( ClientGUIScrolledPanels.ReviewPanel ):
         job_type = self._action_selector.GetValue()
         
         message = ClientFiles.regen_file_enum_to_description_lookup[ job_type ]
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This job has weight {}, where a normalised unit of file work has value {}.'.format( HydrusData.ToHumanInt( ClientFiles.regen_file_enum_to_job_weight_lookup[ job_type ] ), HydrusData.ToHumanInt( ClientFiles.NORMALISED_BIG_JOB_WEIGHT ) )
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
@@ -3615,7 +3615,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
         self._tag_button = ClientGUICommon.BetterButton( self, 'add tags/urls with the import >>', self._AddTags )
         self._tag_button.setObjectName( 'HydrusAccept' )
         
-        self._tag_button.setToolTip( 'You can add specific tags to these files, import from sidecar files, or generate them based on filename. Don\'t be afraid to experiment!' )
+        self._tag_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can add specific tags to these files, import from sidecar files, or generate them based on filename. Don\'t be afraid to experiment!' ) )
         
         gauge_sizer = QP.HBoxLayout()
         

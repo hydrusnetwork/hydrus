@@ -660,7 +660,7 @@ class JobScheduler( threading.Thread ):
             
             lines = [ HydrusData.ToHumanInt( num_jobs ) + ' jobs:' ] + job_lines
             
-            text = os.linesep.join( lines )
+            text = '\n'.join( lines )
             
             return text
             

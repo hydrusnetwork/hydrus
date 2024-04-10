@@ -28,6 +28,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusImageHandling
@@ -1088,7 +1089,7 @@ class HydrusResourceBooruGallery( HydrusResourceBooru ):
         <p>'''
             
             body += '''
-        <p>''' + text.replace( os.linesep, newline ).replace( '\n', newline ) + '''</p>'''
+        <p>''' + text.replace( '\n', newline ).replace( '\n', newline ) + '''</p>'''
         
         body+= '''
         <div class="media">'''
@@ -1163,7 +1164,7 @@ class HydrusResourceBooruPage( HydrusResourceBooru ):
         <p>'''
             
             body += '''
-        <p>''' + text.replace( os.linesep, newline ).replace( '\n', newline ) + '''</p>'''
+        <p>''' + text.replace( '\n', newline ).replace( '\n', newline ) + '''</p>'''
         
         body+= '''
         <div class="media">'''
@@ -1745,7 +1746,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
                 
             else:
                 
-                note = repr( e ).splitlines()[0]
+                note = HydrusText.GetFirstLine( repr( e ) )
                 
             
             file_import_status = ClientImportFiles.FileImportStatus( CC.STATUS_ERROR, file_import_job.GetHash(), note = note )
@@ -4065,7 +4066,7 @@ class HydrusResourceClientAPIRestrictedManageCookiesSetHeaders( HydrusResourceCl
                 message_lines.extend( [ 'Altered: {}'.format( key ) for key in sorted( headers_altered ) ] )
                 
             
-            message = os.linesep.join( message_lines )
+            message = '\n'.join( message_lines )
             
             job_status = ClientThreading.JobStatus()
             

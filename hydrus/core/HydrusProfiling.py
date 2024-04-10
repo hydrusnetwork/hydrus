@@ -31,12 +31,12 @@ def Profile( summary, code, global_vars, local_vars, min_duration_ms = 20, show_
         stats.sort_stats( 'tottime' )
         
         output.write( 'Stats' )
-        output.write( os.linesep * 2 )
+        output.write( '\n' * 2 )
         
         stats.print_stats()
         
         output.write( 'Callers' )
-        output.write( os.linesep * 2 )
+        output.write( '\n' * 2 )
         
         stats.print_callers()
         

@@ -168,8 +168,8 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
         if len( veto_errors ) > 0:
             
             message = 'These values are invalid--are you sure this is ok?'
-            message += os.linesep * 2
-            message += os.linesep.join( veto_errors )
+            message += '\n' * 2
+            message += '\n'.join( veto_errors )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
             
@@ -300,7 +300,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         warning = 'WARNING: Your credentials are stored in plaintext! For this and other reasons, I recommend you use throwaway accounts with hydrus!'
-        warning += os.linesep * 2
+        warning += '\n' * 2
         warning += 'If a login script does not work for you, or the site you want has a complicated captcha, check out the Hydrus Companion web browser add-on--it can copy login cookies to hydrus! Pixiv recently changed their login system and now require this!'
         
         warning_st = ClientGUICommon.BetterStaticText( self, warning )
@@ -767,9 +767,9 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             domains_to_login.sort()
             
             message = 'It looks like the following domains can log in:'
-            message += os.linesep * 2
-            message += os.linesep.join( domains_to_login )
-            message += os.linesep * 2
+            message += '\n' * 2
+            message += '\n'.join( domains_to_login )
+            message += '\n' * 2
             message += 'The dialog will ok and the login attempts will start. Is this ok?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -1227,7 +1227,7 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         QP.SetMinClientSize( self._data_preview, min_size )
         
         self._data_copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._CopyData )
-        self._data_copy_button.setToolTip( 'Copy the current example data to the clipboard.' )
+        self._data_copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current example data to the clipboard.' ) )
         
         self._temp_variables = QW.QPlainTextEdit( self )
         self._temp_variables.setReadOnly( True )
@@ -1263,8 +1263,8 @@ class ReviewTestResultPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._data_preview.setPlainText( str( self._downloaded_data[:1024] ) )
         
-        self._temp_variables.setPlainText( os.linesep.join( new_temp_strings ) )
-        self._cookies.setPlainText( os.linesep.join( new_cookie_strings ) )
+        self._temp_variables.setPlainText( '\n'.join( new_temp_strings ) )
+        self._cookies.setPlainText( '\n'.join( new_cookie_strings ) )
         
         #
         
@@ -1907,9 +1907,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         except HydrusExceptions.ValidationException as e:
             
             message = 'There is a problem with this script. The reason is:'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += str( e )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Do you want to proceed with this invalid script, or go back and fix it?'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'ok as invalid', no_label = 'go back' )

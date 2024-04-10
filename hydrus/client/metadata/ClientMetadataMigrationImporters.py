@@ -30,7 +30,7 @@ class SingleFileMetadataImporter( ClientMetadataMigrationCore.ImporterExporterNo
         return self._string_processor
         
     
-    def Import( self, *args, **kwargs ):
+    def Import( self, *args, **kwargs ) -> typing.Collection[ str ]:
         
         raise NotImplementedError()
         
@@ -43,31 +43,7 @@ class SingleFileMetadataImporter( ClientMetadataMigrationCore.ImporterExporterNo
 
 class SingleFileMetadataImporterMedia( SingleFileMetadataImporter ):
     
-    def Import( self, media_result: ClientMediaResult.MediaResult ):
-        
-        raise NotImplementedError()
-        
-    
-    def ToString( self ) -> str:
-        
-        raise NotImplementedError()
-        
-    
-
-class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetadataMigrationCore.SidecarNode ):
-    
-    def __init__( self, string_processor: ClientStrings.StringProcessor, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter ):
-        
-        ClientMetadataMigrationCore.SidecarNode.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
-        SingleFileMetadataImporter.__init__( self, string_processor )
-        
-    
-    def GetExpectedSidecarPath( self, path: str ):
-        
-        raise NotImplementedError()
-        
-    
-    def Import( self, actual_file_path: str ):
+    def Import( self, media_result: ClientMediaResult.MediaResult ) -> typing.Collection[ str ]:
         
         raise NotImplementedError()
         
@@ -478,6 +454,45 @@ class SingleFileMetadataImporterMediaURLs( SingleFileMetadataImporterMedia, Hydr
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_MEDIA_URLS ] = SingleFileMetadataImporterMediaURLs
 
+class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetadataMigrationCore.SidecarNode ):
+    
+    def __init__( self, string_processor: ClientStrings.StringProcessor, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter ):
+        
+        ClientMetadataMigrationCore.SidecarNode.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
+        SingleFileMetadataImporter.__init__( self, string_processor )
+        
+    
+    def GetPossibleSidecarPaths( self, path: str ) -> typing.Collection[ str ]:
+        
+        raise NotImplementedError()
+        
+    
+    def GetSidecarPath( self, actual_file_path ) -> typing.Optional[ str ]:
+        
+        possible_paths = self.GetPossibleSidecarPaths( actual_file_path )
+        
+        for path in possible_paths:
+            
+            if os.path.exists( path ):
+                
+                return path
+                
+            
+        
+        return None
+        
+    
+    def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
+        
+        raise NotImplementedError()
+        
+    
+    def ToString( self ) -> str:
+        
+        raise NotImplementedError()
+        
+    
+
 class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_METADATA_SINGLE_FILE_IMPORTER_JSON
@@ -567,9 +582,12 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
             
         
     
-    def GetExpectedSidecarPath( self, actual_file_path: str ):
+    def GetPossibleSidecarPaths( self, actual_file_path: str ) -> typing.Collection[ str ]:
         
-        return ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'json' )
+        return [
+            ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'json' ),
+            ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'JSON' )
+        ]
         
     
     def GetJSONParsingFormula( self ) -> ClientParsing.ParseFormulaJSON:
@@ -579,9 +597,9 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
     
     def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
         
-        path = self.GetExpectedSidecarPath( actual_file_path )
+        path = self.GetSidecarPath( actual_file_path )
         
-        if not os.path.exists( path ):
+        if path is None:
             
             return []
             
@@ -729,9 +747,12 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
             
         
     
-    def GetExpectedSidecarPath( self, actual_file_path: str ):
+    def GetPossibleSidecarPaths( self, actual_file_path: str ) -> typing.Collection[ str ]:
         
-        return ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'txt' )
+        return [
+            ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'txt' ),
+            ClientMetadataMigrationCore.GetSidecarPath( actual_file_path, self._remove_actual_filename_ext, self._suffix, self._filename_string_converter, 'TXT' )
+        ]
         
     
     def GetSeparator( self ) -> str:
@@ -741,9 +762,9 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
     
     def Import( self, actual_file_path: str ) -> typing.Collection[ str ]:
         
-        path = self.GetExpectedSidecarPath( actual_file_path )
+        path = self.GetSidecarPath( actual_file_path )
         
-        if not os.path.exists( path ):
+        if path is None:
             
             return []
             

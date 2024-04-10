@@ -20,6 +20,7 @@ from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIStringControls
@@ -246,16 +247,16 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         export_object = HydrusSerialisable.SerialisableList( self._listctrl.GetData() )
         
         message = 'The end-user will see this sort of summary:'
-        message += os.linesep * 2
-        message += os.linesep.join( ( obj.GetSafeSummary() for obj in export_object[:20] ) )
+        message += '\n' * 2
+        message += '\n'.join( ( obj.GetSafeSummary() for obj in export_object[:20] ) )
         
         if len( export_object ) > 20:
             
-            message += os.linesep
+            message += '\n'
             message += '(and ' + HydrusData.ToHumanInt( len( export_object ) - 20 ) + ' others)'
             
         
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Does that look good? (Ideally, every object should have correct and sane domains listed here)'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -560,7 +561,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._namespace = ClientGUICommon.NoneableTextCtrl( self._mappings_panel, none_phrase = 'any namespace' )
         tt = 'The difference between "any namespace" and setting an empty input for "unnamespaced" is "unnamespaced" will force unnamespaced, even if the parsed tag includes a colon. If you are parsing hydrus content and expect to see "namespace:subtag", hit "any namespace", and if you are parsing normal boorus that might have a colon in for weird reasons, try "unnamespaced".'
-        self._namespace.setToolTip( tt )
+        self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -607,7 +608,7 @@ class EditContentParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._header_name = QW.QLineEdit( self._header_panel )
         tt = 'Any header you parse here will be passed on to subsequent jobs/objects created by this same parse. Next gallery pages, file downloads from post urls, post pages spawned from multi-file posts. And the headers will be passed on to their children. Should help with tokenised searches or weird guest-login issues.'
-        self._header_name.setToolTip( tt )
+        self._header_name.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1569,7 +1570,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
                     stuff_read = 'no response'
                     
                 
-                example_data = 'fetch failed: {}'.format( e ) + os.linesep * 2 + stuff_read
+                example_data = 'fetch failed: {}'.format( e ) + '\n' * 2 + stuff_read
                 
             
             QP.CallAfter( qt_tidy_up, example_data, example_bytes, error )

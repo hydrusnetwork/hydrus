@@ -842,14 +842,35 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 example_url
             ) = old_serialisable_info
             
-            def encode_fixed_string_match( s_m: ClientStrings.StringMatch ) -> ClientStrings.StringMatch:
+            def encode_fixed_string_match_param( s_m: ClientStrings.StringMatch ) -> ClientStrings.StringMatch:
                 
                 ( match_type, match_value, min_chars, max_chars, example_string ) = s_m.ToTuple()
                 
                 if match_type == ClientStrings.STRING_MATCH_FIXED:
                     
-                    match_value = urllib.parse.quote( match_value )
-                    example_string = urllib.parse.quote( example_string )
+                    match_value = ClientNetworkingFunctions.ensure_param_component_is_encoded( match_value )
+                    example_string = ClientNetworkingFunctions.ensure_param_component_is_encoded( example_string )
+                    
+                    s_m = ClientStrings.StringMatch(
+                        match_type = match_type,
+                        match_value = match_value,
+                        min_chars = min_chars,
+                        max_chars = max_chars,
+                        example_string = example_string
+                    )
+                    
+                
+                return s_m
+                
+            
+            def encode_fixed_string_match_path( s_m: ClientStrings.StringMatch ) -> ClientStrings.StringMatch:
+                
+                ( match_type, match_value, min_chars, max_chars, example_string ) = s_m.ToTuple()
+                
+                if match_type == ClientStrings.STRING_MATCH_FIXED:
+                    
+                    match_value = ClientNetworkingFunctions.ensure_path_component_is_encoded( match_value )
+                    example_string = ClientNetworkingFunctions.ensure_path_component_is_encoded( example_string )
                     
                     s_m = ClientStrings.StringMatch(
                         match_type = match_type,
@@ -868,11 +889,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             for ( name, ( serialisable_value_string_match, default_value ) ) in serialisable_parameters:
                 
                 # we are converting from post[id] to post%5Bid%5D
-                name = urllib.parse.quote( name )
+                name = ClientNetworkingFunctions.ensure_param_component_is_encoded( name )
                 
                 value_string_match = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_value_string_match )
                 
-                value_string_match = encode_fixed_string_match( value_string_match )
+                value_string_match = encode_fixed_string_match_param( value_string_match )
                 
                 parameter = URLClassParameterFixedName(
                     name = name,
@@ -881,7 +902,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 if default_value is not None:
                     
-                    default_value = urllib.parse.quote( default_value )
+                    default_value = ClientNetworkingFunctions.ensure_param_component_is_encoded( default_value )
                     
                     parameter.SetDefaultValue( default_value )
                     
@@ -897,11 +918,11 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             
             for ( string_match, default ) in path_components:
                 
-                string_match = encode_fixed_string_match( string_match )
+                string_match = encode_fixed_string_match_path( string_match )
                 
                 if default is not None:
                     
-                    default = urllib.parse.quote( default )
+                    default = ClientNetworkingFunctions.ensure_path_component_is_encoded( default )
                     
                 
                 new_path_components.append( ( string_match, default ) )
@@ -1142,9 +1163,9 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             raise NotImplementedError( 'Did not understand the next gallery page rules!' )
             
         
-        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
+        next_gallery_url = urllib.parse.urlunparse( ( scheme, netloc, path, params, query, fragment ) )
         
-        return r.geturl()
+        return next_gallery_url
         
     
     def GetParameters( self ) -> typing.List[ URLClassParameterFixedName ]:
@@ -1319,9 +1340,9 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         path = self._ClipAndFleshOutPath( path_components, for_server )
         query = self._ClipAndFleshOutQuery( query_dict, single_value_parameters, param_order, for_server )
         
-        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
+        normalised_url = urllib.parse.urlunparse( ( scheme, netloc, path, params, query, fragment ) )
         
-        return r.geturl()
+        return normalised_url
         
     
     def NoMorePathComponentsThanThis( self ) -> bool:

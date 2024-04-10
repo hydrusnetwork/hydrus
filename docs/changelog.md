@@ -7,6 +7,55 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 570](https://github.com/hydrusnetwork/hydrus/releases/tag/v570)
+
+### UI stuff
+
+* wrote a thing to wrap tooltips and applied it everywhere. every tooltip in the program should now wrap to 80 characters
+* the thumbnail view is now better about pausing the current video if you open it externally in various ways
+* the 'open' submenu you get off of a file right-click is now exactly the same for the thumbnail menu and the media viewer menu, with all commands working in either place, the labels are also brushed up a little
+* added a shortcut action for 'open file in web browser' to the media shortcut set
+* added a shortcut action for 'open files in a new duplicates filter page' to the media shortcut set
+* added/updated the shortcut action for 'open similar looking files in a new page' in the media shortcut set. this is now one job that lets you set any distance, and it now works from the media viewer too. all existing `show similar files: 0 (exact)` fixed-distance simple actions will be converted to the new action when you update
+* I removed 'open externally' and 'open in file explorer' shortcuts from the media viewer/preview viewer/thumbnails sets. these sets are technically awkward and were really meant for a different thing, like pause/play or 'close media viewer', and having the media command code duplicated here was getting spammy. if you have any of these now-defunct commands set, please move them up to the general 'media' set, where it'll work everywhere. sorry if this breaks a very complicated set you have, but let's KISS!
+* the 'files' submenu off thumbnails or the media viewer is flattened one level. the 'upload to' remote services stuff still isn't available for the media viewer, but I'll do the same as I did above for that in the near future
+
+### misc
+
+* fixed an issue with the 'manage tag siblings/parents' dialogs where the mass-import button was, in 'add or delete' mode, not doing any deletes/rescinds if there were any new pairs in what was being imported. this was probably applying to large regular adds in the UI, also
+* this mass-import button of 'manage tag siblings/parents' also dedupes the pairs coming in. it now shouldn't do anything like 'add, then ask to remove' if you have the same pair twice!
+* the nitter downloaders are removed from the defaults. I can't keep up with whatever the situation is there
+* the style and stylesheet names in the options are now sorted
+* sidecar importers will now work on sidecars that have uppercase .TXT or .JSON extensions
+
+### more URL stuff (advanced, can be ignored by most)
+
+* fixed up the recent URL encoding tech to properly follow the encoding exceptions as under RFC 3986. an '@' in an URL shouldn't get messed up now. thanks to the user(s) who helped here
+* incoming URLs can now have a mix of encoded and non-encoded characters and the 'ensure URL is encoded' process will accept it and encode the non-encoded parts, idempotently. it only fails on ingesting a legit decoded percent character that happens to be followed by two hex chars, but that's rare enough we don't really have to worry
+* you can similarly now enter multiple tags in a query text that are a mix of encoded and non-encoded, a mix of %20 and spaces, and it should figure it out
+* the 'ensure URL is encoded' process now applies to GUG-generated URLs, and in the edit GUG UI, you now see the normalised 'for server' URL, with any additional tokens or whatever the URL class has
+* GUGs also try to recognise if their replacement phrase is going into the path or the parameters now, and only force-encodes everything if it looks like our tags are going into a query param
+* ensured that what you paste into an 'edit URL Class' panel's 'example url' section gets encoded before normalisation just as it would in engine
+* the file log right-click now shows both the normalised and request urls under the 'additional urls' section, if they differ from the pretty human URL in the list
+* right-clicking a single item in the downloader search log now previews the specific request URL to be copied
+
+### boring stuff
+
+* all instances of URL path or parameter encoding now go through one location that obeys RFC 3986
+* replaced my various uses of the unusual `ParseResult` with `urllib.parse.urlunparse`
+* added a couple unit tests for the improved URL encoding tech
+* added some unit tests for the GUGs' new encoding tech
+* harmonised how a file is opened in the OS file explorer in the media results and media canvas pages. what was previously random hardcode, duplicated internal method calls, and ancient pubsub redirects now all goes thorugh the application command system to a singular isolated media-actioning method
+* did the same harmonisation for opening files externally
+* and for opening files in your web browser, which gets additional new infrastructure so it can plug into the shortcuts system
+* and to a lesser degree the 'open in a new page' and 'open in a new duplicates filter page' commands
+* moved the various gui-side media python files to a new 'gui.media' module. renamed `ClientGUIMedia` to `ClientGUISimpleActions` and `ClientGUIMediaActions` to `ClientGUIModalActions` and shuffled their methods back and forth a bit
+* cleaned up `ClientGUIFunctions` and `ClientGUICommon` and their imports a little with some similar shuffle-refactoring
+* broke up `ClientGUIControls` into a bunch of smaller, defined files, mostly to untangle imports
+* cleaned up how some text and exceptions are split by newlines to handle different sorts of newline, and cleaned up how I fetch the first 'summary' line of text in all cases across the program
+* replaced `os.linesep` with `\n` across the program. Qt only wants `\n` anyway, most logging wants `\n` (and sometimes converts on the fly behind the scenes), and this helps KISS otherwise. I might bring back `os.linesep` for sidecars and stuff if it proves a problem, but most text editors and scripting languages are very happy with `\n`, so we'll see
+* multi-column lists now show multiline tooltips if the underlying text in the cell was originally multiline (although tbh this is rare)
+
 ## [Version 569](https://github.com/hydrusnetwork/hydrus/releases/tag/v569)
 
 ### user contributions
@@ -417,109 +466,3 @@ title: Changelog
 * the new `set_time` call has some additional safety rails. you can add (or delete) 'web domain' timestamps any time, but you now cannot add or delete any of the others, only edit when they already exist
 * updated the client api unit tests and help to account for this
 * the client api is now version 60
-
-## [Version 559](https://github.com/hydrusnetwork/hydrus/releases/tag/v559)
-
-### millisecond timestamps
-
-* since the program started, the database and code has generally handled timestamps as an integer (i.e. whole number, no fractions) count of the number of seconds since 1970. this is a very common system, but one drawback is it cannot track any amount of time less than a second. when a very fast import in hydrus imports two files in the same second, they then get the exact same import time and thus when you sort by import time, the two files don't know which should be truly first and they may sort either way. this week I have moved the database to store all file timestamps (archived time, imported time, etc...) with millisecond resolution. you do not have to do anything, and very little actually changes frontend, but your update may take a minute or two
-* whenever you sort by 'import time' now, we shouldn't get anymore switcheroos
-* the 'manage times' dialog now has millisecond display and edit widgets to reflect this, but in most places across the client, you'll see the same time labels as before
-* I changed a **ton** of code this week. all simple changes, but I'm sure a typo has slipped through somewhere. if you see a file with a 'last viewed time' of '54 years ago', let me know!
-
-### time details
-
-* this section is just a big list so I have somewhat of a record of what I did. you can broadly ignore it
-* updated `vacuum_timestamps` to `timestamp_ms` and adjusted read/write and the dialog handling to ms
-* updated `analyse_timestamps` to `timestamp_ms` and adjusted read/write to ms
-* updated `json_dumps_named` to `timestamp_ms` and adjusted read/write and some UI-level gubbins around session loading and saving to ms
-* updated `recent_tags` to `timestamp_ms` and adjusted the whole system to ms
-* updated `file_viewing_stats` to `last_viewed_timestamp_ms` and adjusted read/write to ms
-* updated `file_modified_timestamps` to `file_modified_timestamp_ms` and adjusted read/write to ms, including to and from the disk
-* updated `file_domain_modified_timestamps` to `file_modified_timestamp_ms` and adjusted read/write to ms
-* updated `archive_timestamps` to `archived_timestamp_ms` and adjusted read/write to ms
-* updated all the current- and deleted-file tables for all file services to use ms (`timestamp_ms`, `timestamp_ms`, and `original_timestamp_ms`) and adjusted _all_ database file storage, search, and update to work in ms
-* updated the `ClientDBFilesTimestamps` db module to use ms timestamps throughout
-* updated the `ClientDBFilesViewingStats` db module to use ms timestamps throughout
-* updated the `ClientDBFilesStorage` db module to use ms timestamps throughout
-* updated the controller timestamp tracker and all callers to use ms timestamps throughout
-* renamed `TimestampsManager` to `TimesManager` and `times_manager` across the program
-* updated the `TimesManager` and all of its calls and callers in general to work in ms. too much stuff to list here
-* the `TimestampData` object is now converted to ms, and since it does other jobs than a raw number, the various calls it is involved in are generally renamed from 'timestamp' to 'time'
-* the file viewing stats manager now tracks 'last viewed time' as ms, and the update pipeline is also updated
-* the locations manager now handles all file times in ms, and all the archive/add/delete pipelines are also updated
-* wrote some MS-based variants of the core time functions for spamming around here, including for both Qt `QDateTime` and python `datetime`
-* updated the main datetime edit panel, button, and widget to handle millisecond display and editing
-* fleshed out a ton of ambiguous variable names to the new strict time/timestamp/timestamp_ms system
-* wrote a clean transition method between ms<->s that accounts for various None situations and spammed it everywhere
-* fixed up some ill-advised timestamp data juggling in the time edit UI
-
-### what still has second-resolution
-
-* the parsing system (and hence downloaded files' source times)
-* the sidecar system's time stuff, both import and export
-* the server and the hydrus network protocol in general
-* Mr. Bones and the File History chart
-* almost all the actual UI labels. I'm not going to spam milliseconds at you outside of the time edit UI
-* almost all the general maintenance timers, sleepers, and grunt-work code across the program
-
-### client api
-
-* the `file_metadata` call has a new parameter, `include_milliseconds`, which turns the integer `1704419632` timestamps into floats with three sig figs `1704419632.154`, representing all the changes this week
-* a new permission, `edit file times` is added, with value `11`
-* a new command, `/edit_times/set_time` now lets you set any of the file times you see in the _manage times_ dialog. you can send it second- or millisecond-based timestamps
-* the client api help is updated for all this, particularly the new section here https://hydrusnetwork.github.io/hydrus/developer_api.html#edit_times_set_time  
-* added unit tests for this
-* the client api version is now 59
-
-### misc
-
-* the sankaku parsers, GUGs, and custom header/bandwidth rules are removed from the defaults, so new users will not see them. none of this stuff works well/at all any more, especially in recent weeks. for sites that are so difficult to download from, if there isn't a nice solution on the shared downloader repo, https://github.com/CuddleBear92/Hydrus-Presets-and-Scripts, I recommend going with a more robust solution like gallery-dl or just finding the content elsewhere
-* when there are multiple 'system:known url' predicates in a search, I now ensure the faster types run first, reducing the search domain for the slower, later ones. if you have a 'regex' 'known url' predicate, try tossing in a matching 'domain' one--it should accelerate it hugely, every time
-* fixed a bug in the autocomplete dropdown where it was not removing no-longer-valid file services from the location button after their deletion from _manage services_ until program restart (which was causing some harmless but unwelcome database errors). it should now remove them instantly, and may even end up on the rare 'nothing' domain
-* the duplicate filter will no longer mention pixel-perfect pngs being a waste of space against static gifs--this isn't necessarily true
-* the default height of the 'read' autocomplete result list is now 21 rows, so `system:time` and `system:urls` are no longer subtly obscured by default. for existing users, that's under _options->search_
-* in the 'running from source' requirements.txts, I bumped the 'new' and 'test' versions for python-mpv to 1.0.4/1.0.5. the newest python-mpv does not need you to rename libmpv-2.dll to mpv-2.dll, which will be one less annoying thing to do in future. I've also been testing this extremely new dll this week and ran into no problems, if you are also a Windows source user and would like to try it too: https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20231231-git-abc2a74.7z . I also tried out Qt 6.6.1, but I just discovered a column-sizing bug I want to sort out before I roll it out to the wider community
-* updated the sqlite dll that gets bundled into the windows release to 3.44.2. the sqlite3.exe is updated too
-
-## [Version 558](https://github.com/hydrusnetwork/hydrus/releases/tag/v558)
-
-### user contributions
-
-* thanks to a user, we now have rtf support! no word count yet, but it should be doable in future.
-* thanks to a user, ctrl+p and ctrl+n now move the tag listbox selection up and down, in case the arrow keys aren't what you want. it also works on the tag autocomplete results from the text input
-* added a link to 'Hydra Vista', https://github.com/konkrotte/hydravista, a macOS booru-like browser that talks to a hydrus client, to the main Client API help
-
-### misc
-
-* if you right-click on a selection of multiple tags, you can now hide them or their namespaces en masse
-* if you right-click on a selection of multiple tags, you can now add or remove them from the favourites list en masse. if you select a mix of tags that are part-in, part-out of the list, you'll get both add and remove menu entries summarising what's going on. also, this command is now wrapped in a yes/no confirmation with full summary of what's being added/removed
-* the 'favourites' "tag suggestions" section is renamed to 'most used'. this was often confused with the favourites that sit under a tag autocomplete, and these tags aren't really 'favourite' anyway, just most-used, so they are renamed
-* if you have 'remove files from view when they are sent to the trash' set, then moving a file from one local file domain to another or removing one of multiple local file domains will no longer trigger a 'remove media'! sorry for the trouble, it was dumb logic on my part
-* fixed the 'known urls' menu's url class section ('open all blahbooru urls' etc...) not appearing when right-clicking a single 'collection' thumbnail
-* fixed the 'known urls' menu's open/copy specific urls not appearing when right-clicking any collection. it now shows the front 'display media's' urls
-* if you change the darkmode in _options->colours_, the _help->darkmode_ menu item now updates correctly. just a side note: I hate much of this system and will eventually unify it with the style system
-* fixed a bunch of 'number of x' tests at the database level when the operator is `≠`
-
-### system:number of urls
-
-* added `system:number of urls`! note this counts raw URLs at the moment--I just don't have fast database filtering of post urls vs file urls or url-classless urls or whatever. it does a raw count.
-* `system:known urls` is now tucked with this new `system:number of urls` under a new stub predicate called `system:urls`
-* a variety of 'system:number of words: has/no words' predicates now parse correctly when typed
-* wrote some new system predicate parsing tests
-
-### more cbz rules
-
-* cbzs' non-image files must now have an appropriate extension like .txt, .nfo, or .xml
-* the test regarding the count of non-image files (typically allowing up to 5 non-image files per directory) is more precise with regards to subdirectories, meaning a cbz with a single subdirectory and three non-image files now counts as a cbz
-* every cbz must now have at least two image files that contain a number of some sort
-
-### cleanup and boring stuff
-
-* I split the github workflow build file into three, so the windows, linux, and macOS builds now all happen and upload in parallel. previously, the upload step was blocked on the slowest of the three, which was typically the macOS build by about ten minutes; now they all upload whenever they are ready. this will also help some future testing situations. the newly split scripts are a little unclean/inefficient, so there is also more work to do here
-* I think I fixed the non-Windows executable permission bits for the various .sh and .command files in the base directory, which were lacking them, and I removed it from a couple dozen pngs across the docs and static directories, which somehow had them. let me know if I missed anything or messed anything up!
-* if you click one of the static system predicate buttons that appear in the system pred edit UI, for instance 'system:has duration', this no longer gets promoted to the 'recent' predicates list the next time you open the panel
-* some sytem predicate edit panels should stretch vertically a bit better
-* some 'number of tags' queries should be a little faster
-* the 'tag suggestions' options page has a bit of brushed up UI and some new explanation labels
-* unified the various thumbnail generation error reporting for all the different filetypes. it should also print the file's hash, too, since most of these error contexts only have a temporary path to talk about at this stage, which isn't useful after the fact

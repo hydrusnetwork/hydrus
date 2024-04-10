@@ -35,7 +35,7 @@ def CleanNoteText( t: str ):
     
     t = t.strip()
     
-    # wash all newlines to be os.linesep
+    # wash all newlines
     
     lines = t.splitlines()
     
@@ -94,6 +94,19 @@ def ElideText( text, max_length, elide_center = False ):
     
     return text
     
+
+def GetFirstLine( text: str ) -> str:
+    
+    if len( text ) > 0:
+        
+        return text.splitlines()[0]
+        
+    else:
+        
+        return ''
+        
+    
+
 def LooksLikeHTML( file_data: typing.Union[ str, bytes ] ):
     # this will false-positive if it is json that contains html, ha ha
     

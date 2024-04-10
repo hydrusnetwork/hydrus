@@ -107,7 +107,7 @@ def GetExternalIP():
         
         if stderr is not None and len( stderr ) > 0:
             
-            raise Exception( 'Problem while trying to fetch External IP (if it says No IGD UPnP Device, you are either on a VPN or your router does not seem to support UPnP):' + os.linesep * 2 + str( stderr ) )
+            raise Exception( 'Problem while trying to fetch External IP (if it says No IGD UPnP Device, you are either on a VPN or your router does not seem to support UPnP):' + '\n' * 2 + str( stderr ) )
             
         else:
             
@@ -192,17 +192,17 @@ def AddUPnPMappingCheckResponse( internal_client, internal_port, external_port, 
         
         if 'UnknownError' in stdout:
             
-            raise HydrusExceptions.RouterException( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stdout )
+            raise HydrusExceptions.RouterException( 'Problem while trying to add UPnP mapping:' + '\n' * 2 + stdout )
             
         else:
             
-            raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stdout )
+            raise Exception( 'Problem while trying to add UPnP mapping:' + '\n' * 2 + stdout )
             
         
     
     if stderr is not None and len( stderr ) > 0:
         
-        raise Exception( 'Problem while trying to add UPnP mapping:' + os.linesep * 2 + stderr )
+        raise Exception( 'Problem while trying to add UPnP mapping:' + '\n' * 2 + stderr )
         
     
 def GetUPnPMappings():
@@ -233,7 +233,7 @@ def GetUPnPMappings():
     
     if stderr is not None and len( stderr ) > 0:
         
-        raise Exception( 'Problem while trying to fetch UPnP mappings (if it says No IGD UPnP Device, you are either on a VPN or your router does not seem to support UPnP):' + os.linesep * 2 + stderr )
+        raise Exception( 'Problem while trying to fetch UPnP mappings (if it says No IGD UPnP Device, you are either on a VPN or your router does not seem to support UPnP):' + '\n' * 2 + stderr )
         
     else:
         
@@ -316,7 +316,7 @@ def GetUPnPMappingsParseResponse( stdout ):
         HydrusData.Print( 'Full response follows:' )
         HydrusData.Print( stdout )
         
-        raise Exception( 'Problem while trying to parse UPnP mappings:' + os.linesep * 2 + str( e ) )
+        raise Exception( 'Problem while trying to parse UPnP mappings:' + '\n' * 2 + str( e ) )
         
     
 def RemoveUPnPMapping( external_port, protocol ):
@@ -347,7 +347,7 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     if stderr is not None and len( stderr ) > 0:
         
-        raise Exception( 'Problem while trying to remove UPnP mapping:' + os.linesep * 2 + stderr )
+        raise Exception( 'Problem while trying to remove UPnP mapping:' + '\n' * 2 + stderr )
         
     
 class ServicesUPnPManager( object ):

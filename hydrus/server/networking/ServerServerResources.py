@@ -1248,7 +1248,7 @@ class HydrusResourceRestrictedTagFilter( HydrusResourceRestricted ):
             HydrusData.Print(
                 'Account {} changed the tag filter. Rule changes are:{}{}.'.format(
                     request.hydrus_account.GetAccountKey().hex(),
-                    os.linesep,
+                    '\n',
                     summary_text
                 )
             )

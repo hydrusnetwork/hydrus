@@ -22,6 +22,7 @@ from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -1837,10 +1838,10 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         #
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'You can paste a newline-separated list of regular tags and/or system predicates.' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can paste a newline-separated list of regular tags and/or system predicates.' ) )
         
         self._favourite_searches_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().star, self._FavouriteSearchesMenu )
-        self._favourite_searches_button.setToolTip( 'Load or save a favourite search.' )
+        self._favourite_searches_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Load or save a favourite search.' ) )
         
         self._cancel_search_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().stop, self.searchCancelled.emit )
         
@@ -1853,15 +1854,15 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         #
         
         self._include_current_tags = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'include current tags', off_label = 'exclude current tags', start_on = tag_context.include_current_tags )
-        self._include_current_tags.setToolTip( 'select whether to include current tags in the search' )
+        self._include_current_tags.setToolTip( ClientGUIFunctions.WrapToolTip( 'select whether to include current tags in the search' ) )
         self._include_pending_tags = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'include pending tags', off_label = 'exclude pending tags', start_on = tag_context.include_pending_tags )
-        self._include_pending_tags.setToolTip( 'select whether to include pending tags in the search' )
+        self._include_pending_tags.setToolTip( ClientGUIFunctions.WrapToolTip( 'select whether to include pending tags in the search' ) )
         
         self._search_pause_play = ClientGUICommon.OnOffButton( self._dropdown_window, on_label = 'searching immediately', off_label = 'search paused', start_on = synchronised )
-        self._search_pause_play.setToolTip( 'select whether to renew the search as soon as a new predicate is entered' )
+        self._search_pause_play.setToolTip( ClientGUIFunctions.WrapToolTip( 'select whether to renew the search as soon as a new predicate is entered' ) )
         
         self._or_basic = ClientGUICommon.BetterButton( self._dropdown_window, 'OR', self._CreateNewOR )
-        self._or_basic.setToolTip( 'Create a new empty OR predicate in the dialog.' )
+        self._or_basic.setToolTip( ClientGUIFunctions.WrapToolTip( 'Create a new empty OR predicate in the dialog.' ) )
         
         if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -1869,7 +1870,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
         self._or_advanced = ClientGUICommon.BetterButton( self._dropdown_window, 'advanced', self._AdvancedORInput )
-        self._or_advanced.setToolTip( 'You can paste complicated predicate strings in here and it will parse into proper logic.' )
+        self._or_advanced.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can paste complicated predicate strings in here and it will parse into proper logic.' ) )
         
         if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -1877,11 +1878,11 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         
         self._or_cancel = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.global_pixmaps().delete, self._CancelORConstruction )
-        self._or_cancel.setToolTip( 'Cancel OR Predicate construction.' )
+        self._or_cancel.setToolTip( ClientGUIFunctions.WrapToolTip( 'Cancel OR Predicate construction.' ) )
         self._or_cancel.hide()
         
         self._or_rewind = ClientGUICommon.BetterBitmapButton( self._dropdown_window, CC.global_pixmaps().previous, self._RewindORConstruction )
-        self._or_rewind.setToolTip( 'Rewind OR Predicate construction.' )
+        self._or_rewind.setToolTip( ClientGUIFunctions.WrapToolTip( 'Rewind OR Predicate construction.' ) )
         self._or_rewind.hide()
         
         button_hbox_1 = QP.HBoxLayout()
@@ -2284,7 +2285,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
             
         
     
@@ -2862,7 +2863,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._location_context_button.SetAllKnownFilesAllowed( True, False )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self._text_input_panel, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste from the clipboard and quick-enter as if you had typed. This can take multiple newline-separated tags.' ) )
         
         if not show_paste_button:
             
@@ -2982,7 +2983,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
             
             raise
             
@@ -3089,9 +3090,9 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
         vbox = QP.VBoxLayout()
         
         summary = 'Enter a complicated tag search here as text, such as \'( blue eyes and blonde hair ) or ( green eyes and red hair )\', and this should turn it into hydrus-compatible search predicates.'
-        summary += os.linesep * 2
+        summary += '\n' * 2
         summary += 'Accepted operators: not (!, -), and (&&), or (||), implies (=>), xor, xnor (iff, <=>), nand, nor. Many system predicates are also supported.'
-        summary += os.linesep * 2
+        summary += '\n' * 2
         summary += 'Parentheses work the usual way. \\ can be used to escape characters (e.g. to search for tags including parentheses)'
         
         st = ClientGUICommon.BetterStaticText( self, summary )
@@ -3222,7 +3223,7 @@ class EditAdvancedORPredicates( ClientGUIScrolledPanels.EditPanel ):
                         
                     
                 
-                output = os.linesep.join( ( pred.ToString() for pred in self._current_predicates ) )
+                output = '\n'.join( ( pred.ToString() for pred in self._current_predicates ) )
                 object_name = 'HydrusValid'
                 
             except ValueError as e:

@@ -1,17 +1,14 @@
-import typing
-
 from qtpy import QtCore as QC
 
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientGlobals as CG
-from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
+from hydrus.client.gui.media import ClientGUIMediaControls
 
 class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.FrameThatResizesWithHovers ):
     

@@ -2,6 +2,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientStrings
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientMetadataMigrationCore
@@ -16,11 +17,11 @@ class EditSidecarDetailsPanel( ClientGUICommon.StaticBox ):
         
         self._remove_actual_filename_ext = QW.QCheckBox( self )
         tt = 'If you set this, the actual filename\'s extension will not be used in the sidecar. For a txt sidecar, \'my_image.jpg\' will be matched with \'my_image.txt\'.'
-        self._remove_actual_filename_ext.setToolTip( tt )
+        self._remove_actual_filename_ext.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._suffix = QW.QLineEdit( self )
         tt = 'If you set this, the sidecar will include this extra suffix. For a txt sidecar, \'my_image.jpg\' will be matched with \'my_image.jpg.tags.txt\'.'
-        self._suffix.setToolTip( tt )
+        self._suffix.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         string_converter = ClientStrings.StringConverter()
         
@@ -146,7 +147,7 @@ class EditSidecarTXTSeparator( ClientGUICommon.StaticBox ):
         
         tt = 'You can separate the "rows" of tags by something other than newlines if you like. If you are parsing multiple multi-line notes, try separating them by four pipes, ||||. If you have/want a CSV list, try a separator of "," or ", ".'
         
-        self._choice.setToolTip( tt )
+        self._choice.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._custom_input = QW.QLineEdit( self )
         

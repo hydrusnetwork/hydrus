@@ -20,6 +20,7 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import QtPorting as QP
@@ -50,13 +51,13 @@ class TestPanel( QW.QWidget ):
         self._example_data_raw_description = ClientGUICommon.BetterStaticText( raw_data_panel )
         
         self._copy_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().copy, self._Copy )
-        self._copy_button.setToolTip( 'Copy the current example data to the clipboard.' )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current example data to the clipboard.' ) )
         
         self._fetch_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().link, self._FetchFromURL )
-        self._fetch_button.setToolTip( 'Fetch data from a URL.' )
+        self._fetch_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Fetch data from a URL.' ) )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( raw_data_panel, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Paste the current clipboard data into here.' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste the current clipboard data into here.' ) )
         
         self._example_data_raw_preview = QW.QPlainTextEdit( raw_data_panel )
         self._example_data_raw_preview.setReadOnly( True )
@@ -167,7 +168,7 @@ class TestPanel( QW.QWidget ):
                 
             except Exception as e:
                 
-                example_data = 'fetch failed:' + os.linesep * 2 + str( e )
+                example_data = 'fetch failed:' + '\n' * 2 + str( e )
                 
                 HydrusData.ShowException( e )
                 
@@ -218,7 +219,7 @@ class TestPanel( QW.QWidget ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'UTF-8 text', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'UTF-8 text', e )
             
         
     
@@ -303,7 +304,7 @@ class TestPanel( QW.QWidget ):
                 
                 if len( example_data_to_show ) > MAX_CHARS_IN_PREVIEW:
                     
-                    preview = 'PREVIEW:' + os.linesep + str( example_data_to_show[:MAX_CHARS_IN_PREVIEW] )
+                    preview = 'PREVIEW:' + '\n' + str( example_data_to_show[:MAX_CHARS_IN_PREVIEW] )
                     
                 else:
                     
@@ -326,7 +327,7 @@ class TestPanel( QW.QWidget ):
                     
                     if len( example_data ) > MAX_CHARS_IN_PREVIEW:
                         
-                        preview = 'PREVIEW:' + os.linesep + repr( example_data[:MAX_CHARS_IN_PREVIEW] )
+                        preview = 'PREVIEW:' + '\n' + repr( example_data[:MAX_CHARS_IN_PREVIEW] )
                         
                     else:
                         
@@ -422,7 +423,7 @@ class TestPanel( QW.QWidget ):
             
             trace = ''.join( traceback.format_exception( etype, value, tb ) )
             
-            message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+            message = 'Exception:' + '\n' + str( etype.__name__ ) + ': ' + str( e ) + '\n' + trace
             
             self._results.setPlainText( message )
             
@@ -464,7 +465,7 @@ class TestPanelPageParser( TestPanel ):
         self._example_data_post_conversion_description = ClientGUICommon.BetterStaticText( post_conversion_panel )
         
         self._copy_button_post_conversion = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().copy, self._CopyPostConversion )
-        self._copy_button_post_conversion.setToolTip( 'Copy the current post conversion data to the clipboard.' )
+        self._copy_button_post_conversion.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current post conversion data to the clipboard.' ) )
         
         self._refresh_post_conversion_button = ClientGUICommon.BetterBitmapButton( post_conversion_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
         self._example_data_post_conversion_preview = QW.QPlainTextEdit( post_conversion_panel )
@@ -518,7 +519,7 @@ class TestPanelPageParser( TestPanel ):
                 
                 if len( post_conversion_example_data ) > 1024:
                     
-                    preview = 'PREVIEW:' + os.linesep + str( post_conversion_example_data[:1024] )
+                    preview = 'PREVIEW:' + '\n' + str( post_conversion_example_data[:1024] )
                     
                 else:
                     
@@ -551,7 +552,7 @@ class TestPanelPageParser( TestPanel ):
                 
                 trace = ''.join( traceback.format_exception( etype, value, tb ) )
                 
-                message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+                message = 'Exception:' + '\n' + str( etype.__name__ ) + ': ' + str( e ) + '\n' + trace
                 
                 preview = message
                 
@@ -594,7 +595,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
         self._example_data_post_separation_description = ClientGUICommon.BetterStaticText( post_separation_panel )
         
         self._copy_button_post_separation = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().copy, self._CopyPostSeparation )
-        self._copy_button_post_separation.setToolTip( 'Copy the current post separation data to the clipboard.' )
+        self._copy_button_post_separation.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy the current post separation data to the clipboard.' ) )
         
         self._refresh_post_separation_button = ClientGUICommon.BetterBitmapButton( post_separation_panel, CC.global_pixmaps().refresh, self._RefreshDataPreviews )
         self._example_data_post_separation_preview = QW.QPlainTextEdit( post_separation_panel )
@@ -626,7 +627,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
     
     def _CopyPostSeparation( self ):
         
-        joiner = os.linesep * 2
+        joiner = '\n' * 2
         
         CG.client_controller.pub( 'clipboard', 'text', joiner.join( self._example_data_post_separation ) )
         
@@ -651,13 +652,13 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 
                 separation_example_data = formula.Parse( example_parsing_context, self._example_data_post_conversion, self._collapse_newlines )
                 
-                joiner = os.linesep * 2
+                joiner = '\n' * 2
                 
                 preview = joiner.join( separation_example_data )
                 
                 if len( preview ) > 1024:
                     
-                    preview = 'PREVIEW:' + os.linesep + str( preview[:1024] )
+                    preview = 'PREVIEW:' + '\n' + str( preview[:1024] )
                     
                 
                 description = HydrusData.ToHumanInt( len( separation_example_data ) ) + ' subsidiary posts parsed'
@@ -672,7 +673,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 
                 trace = ''.join( traceback.format_exception( etype, value, tb ) )
                 
-                message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+                message = 'Exception:' + '\n' + str( etype.__name__ ) + ': ' + str( e ) + '\n' + trace
                 
                 preview = message
                 
@@ -731,7 +732,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                 pretty_texts.append( pretty_text )
                 
             
-            separator = os.linesep * 2
+            separator = '\n' * 2
             
             end_pretty_text = separator.join( pretty_texts )
             
@@ -745,7 +746,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
             
             trace = ''.join( traceback.format_exception( etype, value, tb ) )
             
-            message = 'Exception:' + os.linesep + str( etype.__name__ ) + ': ' + str( e ) + os.linesep + trace
+            message = 'Exception:' + '\n' + str( etype.__name__ ) + ': ' + str( e ) + '\n' + trace
             
             self._results.setPlainText( message )
             

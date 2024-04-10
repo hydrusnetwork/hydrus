@@ -12,6 +12,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -345,10 +346,10 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
         
         if exception is not None:
             
-            first_line = repr( exception ).splitlines()[0]
+            first_line = HydrusText.GetFirstLine( repr( exception ) )
             
             note = f'{first_line}{HC.UNICODE_ELLIPSIS} (Copy note to see full error)'
-            note += os.linesep
+            note += '\n'
             note += traceback.format_exc()
             
             HydrusData.Print( 'Error when processing ' + self.url + ' !' )
@@ -617,7 +618,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                             except Exception as e:
                                 
                                 note += ' - Attempted to generate a next gallery page url, but failed!'
-                                note += os.linesep
+                                note += '\n'
                                 note += traceback.format_exc()
                                 
                             

@@ -528,7 +528,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'An instance of JSON-serialised tag or note import options', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'An instance of JSON-serialised tag or note import options', e )
             
         
     
@@ -1930,10 +1930,10 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         self._delete_button = ClientGUICommon.BetterButton( self, 'delete current note', self._DeleteNote )
         
         self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
-        self._copy_button.setToolTip( 'Copy all notes to the clipboard.' )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy all notes to the clipboard.' ) )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Paste from a copy from another notes dialog.' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste from a copy from another notes dialog.' ) )
         
         #
         
@@ -2106,7 +2106,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON names and notes, either as an Object or a list of pairs', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON names and notes, either as an Object or a list of pairs', e )
             
             return
             
@@ -2258,7 +2258,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         if len( empty_note_names ) > 0:
             
             message = 'These notes are empty, and will not be saved--is this ok?'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += ', '.join( empty_note_names )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -2500,10 +2500,10 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         menu_items.append( ( 'normal', 'all file service times', 'Copy every imported/deleted/previously imported time here for pasting in another file\'s dialog.', c ) )
         
         self._copy_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().copy, menu_items )
-        self._copy_button.setToolTip( 'Copy timestamps to the clipboard.' )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamps to the clipboard.' ) )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Paste timestamps from another timestamps dialog.' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste timestamps from another timestamps dialog.' ) )
         
         #
         
@@ -2906,7 +2906,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'A list of JSON-serialised Timestamp Data objects', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'A list of JSON-serialised Timestamp Data objects', e )
             
             return
             
@@ -3361,7 +3361,7 @@ class EditMediaViewOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._exact_zooms_only = QW.QCheckBox( 'only permit half and double zooms', self )
-        self._exact_zooms_only.setToolTip( 'This limits zooms to 25%, 50%, 100%, 200%, 400%, and so on. It makes for fast resize and is useful for files that often have flat colours and hard edges, which often scale badly otherwise. The \'canvas fit\' zoom will still be inserted.' )
+        self._exact_zooms_only.setToolTip( ClientGUIFunctions.WrapToolTip( 'This limits zooms to 25%, 50%, 100%, 200%, 400%, and so on. It makes for fast resize and is useful for files that often have flat colours and hard edges, which often scale badly otherwise. The \'canvas fit\' zoom will still be inserted.' ) )
         
         self._scale_up_quality = ClientGUICommon.BetterChoice( self )
         
@@ -3838,11 +3838,11 @@ class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         first_focused = False
         
-        for ( text, data, tooltip ) in choices:
+        for ( text, data, tt ) in choices:
             
             button = ClientGUICommon.BetterButton( self, text, self._ButtonChoice, data )
             
-            button.setToolTip( tooltip )
+            button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             QP.AddToLayout( vbox, button, CC.FLAGS_EXPAND_BOTH_WAYS )
             

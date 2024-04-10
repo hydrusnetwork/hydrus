@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -69,10 +70,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
     def _DelayWork( self, time_delta, reason ):
         
-        if len( reason ) > 0:
-            
-            reason = reason.splitlines()[0]
-            
+        reason = HydrusText.GetFirstLine( reason )
         
         self._no_work_until = HydrusTime.GetNow() + time_delta
         self._no_work_until_reason = reason
@@ -221,7 +219,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                self._files_status = ClientImportControl.NeatenStatusText( text )
+                self._files_status = HydrusText.GetFirstLine( text )
                 
             
         
@@ -401,7 +399,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
             
             with self._lock:
                 
-                self._gallery_status = ClientImportControl.NeatenStatusText( parser_status )
+                self._gallery_status = HydrusText.GetFirstLine( parser_status )
                 
             
             if error_occurred:
@@ -882,10 +880,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     
     def _DelayWork( self, time_delta, reason ):
         
-        if len( reason ) > 0:
-            
-            reason = reason.splitlines()[0]
-            
+        reason = HydrusText.GetFirstLine( reason )
         
         self._no_work_until = HydrusTime.GetNow() + time_delta
         self._no_work_until_reason = reason

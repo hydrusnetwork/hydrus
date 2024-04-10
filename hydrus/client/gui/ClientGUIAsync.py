@@ -31,9 +31,9 @@ class AsyncQtJob( object ):
         HydrusData.ShowExceptionTuple( etype, value, tb )
         
         message = 'An error occured in a background task. If you had UI waiting on a fetch job, the dialog/panel may need to be closed and re-opened.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'The error info will show as a popup and also be printed to log. Hydev may want to know about this error, at least to improve error handling.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Error summary: {}'.format( value )
         
         ClientGUIDialogsMessage.ShowCritical( self._win, 'Error', message )

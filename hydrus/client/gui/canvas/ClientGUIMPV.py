@@ -1,6 +1,5 @@
 import locale
 import os
-import time
 import traceback
 import typing
 
@@ -18,11 +17,10 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUIMedia
-from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.canvas import ClientGUIMediaVolume
+from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.media import ClientGUIMediaVolume
 from hydrus.client.media import ClientMedia
 
 mpv_failed_reason = 'MPV seems ok!'
@@ -738,24 +736,6 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 ( direction, duration_ms ) = command.GetSimpleData()
                 
                 self.SeekDelta( direction, duration_ms )
-                
-            elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
-                
-                if self._media is not None:
-                    
-                    self.Pause()
-                    
-                    ClientGUIMedia.OpenExternally( self._media )
-                    
-                
-            elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
-                
-                if self._media is not None:
-                    
-                    self.Pause()
-                    
-                    ClientGUIMedia.OpenFileLocation( self._media )
-                    
                 
             elif action == CAC.SIMPLE_CLOSE_MEDIA_VIEWER and self._canvas_type in CC.CANVAS_MEDIA_VIEWER_TYPES:
                 

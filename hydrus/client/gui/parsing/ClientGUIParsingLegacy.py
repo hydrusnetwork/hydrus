@@ -284,7 +284,7 @@ class EditNodes( QW.QWidget ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Nodes', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Nodes', e )
             
         
     
@@ -471,7 +471,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
             
             result_lines.append( '*** RESULTS END ***' )
             
-            results_text = os.linesep.join( result_lines )
+            results_text = '\n'.join( result_lines )
             
             self._results.setPlainText( results_text )
             
@@ -764,7 +764,7 @@ And pass that html to a number of 'parsing children' that will each look through
             HydrusData.ShowException( e )
             
             message = 'Could not fetch data!'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += str( e )
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Could not fetch!', message )
@@ -790,7 +790,7 @@ And pass that html to a number of 'parsing children' that will each look through
             
             result_lines.append( '*** RESULTS END ***' )
             
-            results_text = os.linesep.join( result_lines )
+            results_text = '\n'.join( result_lines )
             
             self._results.setPlainText( results_text )
             
@@ -1142,7 +1142,7 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Parsing Scripts', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Parsing Scripts', e )
             
         
     
@@ -1203,7 +1203,7 @@ class ScriptManagementControl( QW.QWidget ):
         self._status.setWordWrap( True )
         
         self._link_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.global_pixmaps().link, self.LinkButton )
-        self._link_button.setToolTip( 'urls found by the script' )
+        self._link_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'urls found by the script' ) )
         
         self._cancel_button = ClientGUICommon.BetterBitmapButton( main_panel, CC.global_pixmaps().stop, self.CancelButton )
         

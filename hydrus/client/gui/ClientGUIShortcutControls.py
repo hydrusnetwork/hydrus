@@ -14,6 +14,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -331,15 +332,15 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             if dupe_command is not None:
                 
                 message = 'The shortcut:'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += shortcut.ToString()
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'is mapped twice:'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += command.ToString()
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += dupe_command.ToString()
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'The system only supports one command per shortcut in a set for now, please remove one.'
                 
                 raise HydrusExceptions.VetoException( message )
@@ -361,6 +362,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
+
 class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad, all_shortcuts ):
@@ -368,13 +370,13 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
-        help_button.setToolTip( 'Show help regarding editing shortcuts.' )
+        help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding editing shortcuts.' ) )
         
         self._call_mouse_buttons_primary_secondary = QW.QCheckBox( self )
-        self._call_mouse_buttons_primary_secondary.setToolTip( 'Useful if you swap your buttons around.' )
+        self._call_mouse_buttons_primary_secondary.setToolTip( ClientGUIFunctions.WrapToolTip( 'Useful if you swap your buttons around.' ) )
         
         self._shortcuts_merge_non_number_numpad = QW.QCheckBox( self )
-        self._shortcuts_merge_non_number_numpad.setToolTip( 'This means a "numpad" variant of Return/Home/Arrow etc.. is just counted as a normal one. Helps clear up a bunch of annoying keyboard mappings.' )
+        self._shortcuts_merge_non_number_numpad.setToolTip( ClientGUIFunctions.WrapToolTip( 'This means a "numpad" variant of Return/Home/Arrow etc.. is just counted as a normal one. Helps clear up a bunch of annoying keyboard mappings.' ) )
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
@@ -633,17 +635,17 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     def _ShowHelp( self ):
         
         message = 'I am in the process of converting the multiple old messy shortcut systems to this single unified engine. Many actions are not yet available here, and mouse support is very limited. I expect to overwrite the reserved shortcut sets back to (new and expanded) defaults at least once more, so don\'t remap everything yet unless you are ok with doing it again.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += '---'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'In hydrus, shortcuts are split into different sets that are active in different contexts. Depending on where the program focus is, multiple sets can be active at the same time. On a keyboard or mouse event, the active sets will be consulted one after another (typically from the smallest and most precise focus to the largest and broadest parent) until an action match is found.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'There are two kinds--ones built-in to hydrus, and custom sets that you turn on and off:'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'The built-in shortcut sets are always active in their contexts--the \'main_gui\' one is always consulted when you hit a key on the main gui window, for instance. They have limited actions to choose from, appropriate to their context. If you would prefer to, say, open the manage tags dialog with Ctrl+F3, edit or add that entry in the \'media\' set and that new shortcut will apply anywhere you are focused on some particular media.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Custom shortcuts sets are those you can create and rename at will. They are only ever active in the media viewer window, and only when you set them so from the top hover-window\'s keyboard icon. They are primarily meant for setting tags and ratings with shortcuts, and are intended to be turned on and off as you perform different \'filtering\' jobs--for instance, you might like to set the 1-5 keys to the different values of a five-star rating system, or assign a few simple keystrokes to a number of common tags.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'The built-in \'media\' set also supports tag and rating actions, if you would like some of those to always be active.'
         
         ClientGUIDialogsMessage.ShowInformation( self, message )

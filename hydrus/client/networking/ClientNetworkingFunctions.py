@@ -5,10 +5,66 @@ import typing
 import unicodedata
 import urllib.parse
 
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientGlobals as CG
+
+percent_encoding_re = re.compile( r'%[0-9A-Fa-f]{2}' )
+double_hex_re = re.compile( r'[0-9A-Fa-f]{2}' )
+PARAM_EXCEPTION_CHARS = "!$&'()*+,;=@:/?" # https://www.rfc-editor.org/rfc/rfc3986#section-3.4
+PATH_EXCEPTION_CHARS = "!$&'()*+,;=@:" # https://www.rfc-editor.org/rfc/rfc3986#section-3.3
+
+def ensure_component_is_encoded( mixed_encoding_string: str, safe_chars: str ) -> str:
+    
+    # this guy is supposed to be idempotent!
+    
+    # we do not want to double-encode %40 to %2540
+    # we do want to encode a % sign on its own
+    # so let's split by % and then join it up again somewhat cleverly
+    
+    # this function fails when called to examine a query text for "120%120%hello", the hit new anime series, but I think that's it
+    
+    parts_of_mixed_encoding_string = mixed_encoding_string.split( '%' )
+    
+    encoded_parts = []
+    
+    for ( i, part ) in enumerate( parts_of_mixed_encoding_string ):
+        
+        if i > 0:
+            
+            encoded_parts.append( '%' ) # we add the % back in
+            
+            if double_hex_re.match( part ) is None:
+                
+                # this part does not start with two hex chars, hence the preceding % character was not encoded, so we make the joiner '%25'
+                encoded_parts.append( '25' )
+                
+            
+        
+        encoded_parts.append( urllib.parse.quote( part, safe = safe_chars ) )
+        
+    
+    encoded_string = ''.join( encoded_parts )
+    
+    return encoded_string
+    
+
+def ensure_param_component_is_encoded( param_component: str ) -> str:
+    """
+    Either the key or the value. It can include a mix of encoded and non-encoded characters, it will be returned all encoded.
+    """
+    
+    return ensure_component_is_encoded( param_component, PARAM_EXCEPTION_CHARS )
+    
+
+def ensure_path_component_is_encoded( path_component: str ) -> str:
+    """
+    A single path component, no slashes. It can include a mix of encoded and non-encoded characters, it will be returned all encoded.
+    """
+    
+    return ensure_component_is_encoded( path_component, PATH_EXCEPTION_CHARS )
+    
+
 def AddCookieToSession( session, name, value, domain, path, expires, secure = False, rest = None ):
     
     version = 0
@@ -30,6 +86,7 @@ def AddCookieToSession( session, name, value, domain, path, expires, secure = Fa
     
     session.cookies.set_cookie( cookie )
     
+
 def ConvertDomainIntoAllApplicableDomains( domain, discard_www = True ):
     
     # is an ip address or localhost, possibly with a port
@@ -126,9 +183,6 @@ def ConvertPathTextToList( path: str ) -> typing.List[ str ]:
     
 
 def ConvertQueryDictToText( query_dict, single_value_parameters, param_order = None ):
-    
-    # we now do everything with requests, which does all the unicode -> %20 business naturally, phew
-    # we still want to call str explicitly to coerce integers and so on that'll slip in here and there
     
     if param_order is None:
         
@@ -227,32 +281,6 @@ def ConvertQueryTextToDict( query_text ):
     return ( query_dict, single_value_parameters, param_order )
     
 
-def EnsureURLInfoIsEncoded( path_components: typing.List[ str ], query_dict: typing.Dict[ str, str ], single_value_parameters: typing.List[ str ] ):
-    
-    # ok so the user just posted a URL at us, and this query dict could either be from a real url, like "tags=skirt%20blonde_hair", or it could be a pretty URL they typed or whatever, "tags=skirt blonde_hair"
-    # so, let's do our best to figure out if the thing was pre-encoded or not, and wash it through a safe encoding process so it is encoded when we give it back
-    # what's the potential problem? '+' is a special character that may or may not be encoded, e.g. "tags=6%2Bgirls+skirt" WEW
-    
-    percent_encoding_re = re.compile( r'%[0-9A-Fa-f]{2}' )
-    
-    all_gubbins = set( path_components )
-    all_gubbins.update( query_dict.keys() )
-    all_gubbins.update( query_dict.values() )
-    all_gubbins.update( single_value_parameters )
-    
-    there_are_percent_encoding_chars = True in ( percent_encoding_re.search( text ) is not None for text in all_gubbins )
-    
-    # if there are percent-encoded characters anywhere, we have to assume the whole URL is already encoded correctly!
-    if not there_are_percent_encoding_chars:
-        
-        path_components = [ urllib.parse.quote( value, safe = '+' ) for value in path_components ]
-        query_dict = { urllib.parse.quote( key, safe = '+' ) : urllib.parse.quote( value, safe = '+' ) for ( key, value ) in query_dict.items() }
-        single_value_parameters = [ urllib.parse.quote( value, safe = '+' ) for value in single_value_parameters ]
-        
-    
-    return ( path_components, query_dict, single_value_parameters )
-    
-
 def ConvertURLIntoDomain( url ):
     
     parser_result = ParseURL( url )
@@ -323,6 +351,7 @@ def GetCookie( cookies, search_domain, cookie_name_string_match ):
     
     raise HydrusExceptions.DataMissing( 'Cookie "' + cookie_name_string_match.ToString() + '" not found for domain ' + search_domain + '!' )
     
+
 def GetSearchURLs( url ):
     
     search_urls = set()
@@ -383,9 +412,9 @@ def GetSearchURLs( url ):
             netloc = 'www.' + netloc
             
         
-        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
+        adjusted_url = urllib.parse.urlunparse( ( scheme, netloc, path, params, query, fragment ) )
         
-        search_urls.add( r.geturl() )
+        search_urls.add( adjusted_url )
         
     
     for url in list( search_urls ):
@@ -466,7 +495,7 @@ def ParseURL( url: str ) -> urllib.parse.ParseResult:
         
     
 
-def WashURL( url: str, keep_fragment = True ) -> str:
+def EnsureURLIsEncoded( url: str, keep_fragment = True ) -> str:
     
     if not LooksLikeAFullURL( url ):
         
@@ -485,7 +514,9 @@ def WashURL( url: str, keep_fragment = True ) -> str:
         path_components = ConvertPathTextToList( p.path )
         ( query_dict, single_value_parameters, param_order ) = ConvertQueryTextToDict( p.query )
         
-        ( path_components, query_dict, single_value_parameters ) = EnsureURLInfoIsEncoded( path_components, query_dict, single_value_parameters )
+        path_components = [ ensure_path_component_is_encoded( path_component ) for path_component in path_components ]
+        query_dict = { ensure_param_component_is_encoded( name ) : ensure_param_component_is_encoded( value ) for ( name, value ) in query_dict.items() }
+        single_value_parameters = [ ensure_param_component_is_encoded( single_value_parameter ) for single_value_parameter in single_value_parameters ]
         
         path = '/' + '/'.join( path_components )
         query = ConvertQueryDictToText( query_dict, single_value_parameters )
@@ -495,9 +526,7 @@ def WashURL( url: str, keep_fragment = True ) -> str:
             fragment = ''
             
         
-        r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
-        
-        clean_url = r.geturl()
+        clean_url = urllib.parse.urlunparse( ( scheme, netloc, path, params, query, fragment ) )
         
         return clean_url
         

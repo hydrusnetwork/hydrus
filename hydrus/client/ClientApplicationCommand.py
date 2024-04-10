@@ -6,6 +6,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 
 SIMPLE_ARCHIVE_DELETE_FILTER_BACK = 0
@@ -161,6 +162,9 @@ SIMPLE_SELECT_FILES = 149
 SIMPLE_REARRANGE_THUMBNAILS = 150
 SIMPLE_MAC_QUICKLOOK = 151
 SIMPLE_COPY_URLS = 152
+SIMPLE_OPEN_FILE_IN_WEB_BROWSER = 153
+SIMPLE_OPEN_SELECTION_IN_NEW_DUPLICATES_FILTER_PAGE = 154
+SIMPLE_OPEN_SIMILAR_LOOKING_FILES = 155
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -265,8 +269,11 @@ simple_enum_to_str_lookup = {
     SIMPLE_NEW_WATCHER_DOWNLOADER_PAGE : 'open a new page: thread watcher',
     SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM : 'open file in external program',
     SIMPLE_OPEN_FILE_IN_FILE_EXPLORER : 'open file in file explorer',
+    SIMPLE_OPEN_FILE_IN_WEB_BROWSER : 'open file in web browser',
     SIMPLE_OPEN_KNOWN_URL : 'open known url',
     SIMPLE_OPEN_SELECTION_IN_NEW_PAGE : 'open files in a new page',
+    SIMPLE_OPEN_SELECTION_IN_NEW_DUPLICATES_FILTER_PAGE : 'open files in a new duplicates filter page',
+    SIMPLE_OPEN_SIMILAR_LOOKING_FILES : 'open similar looking files in a new page',
     SIMPLE_PAN_BOTTOM_EDGE : 'pan file to bottom edge',
     SIMPLE_PAN_DOWN : 'pan file down',
     SIMPLE_PAN_HORIZONTAL_CENTER : 'pan file left/right to center',
@@ -465,7 +472,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
     SERIALISABLE_NAME = 'Application Command'
-    SERIALISABLE_VERSION = 5
+    SERIALISABLE_VERSION = 6
     
     def __init__( self, command_type = None, data = None ):
         
@@ -656,6 +663,49 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             return ( 5, new_serialisable_info )
             
         
+        if version == 5:
+            
+            ( command_type, serialisable_data ) = old_serialisable_info
+            
+            if command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
+                
+                data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+                
+                simple_action = data_dict[ 'simple_action' ]
+                
+                if simple_action in ( SIMPLE_GET_SIMILAR_TO_EXACT, SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR, SIMPLE_GET_SIMILAR_TO_SIMILAR, SIMPLE_GET_SIMILAR_TO_SPECULATIVE ):
+                    
+                    hamming_distance = 0
+                    
+                    if simple_action == SIMPLE_GET_SIMILAR_TO_EXACT:
+                        
+                        hamming_distance = 0
+                        
+                    elif simple_action == SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR:
+                        
+                        hamming_distance = 2
+                        
+                    elif simple_action == SIMPLE_GET_SIMILAR_TO_SIMILAR:
+                        
+                        hamming_distance = 4
+                        
+                    elif simple_action == SIMPLE_GET_SIMILAR_TO_SPECULATIVE:
+                        
+                        hamming_distance = 8
+                        
+                    
+                    data_dict[ 'simple_action' ] = SIMPLE_OPEN_SIMILAR_LOOKING_FILES
+                    data_dict[ 'simple_data' ] = hamming_distance
+                    
+                
+                serialisable_data = data_dict.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( command_type, serialisable_data )
+            
+            return ( 6, new_serialisable_info )
+            
+        
     
     def GetCommandType( self ):
         
@@ -755,6 +805,19 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 ms_s = HydrusTime.TimeDeltaToPrettyTimeDelta( ms / 1000 )
                 
                 s = f'{s} ({direction_s} {ms_s})'
+                
+            elif action == SIMPLE_OPEN_SIMILAR_LOOKING_FILES:
+                
+                hamming_distance = self.GetSimpleData()
+                
+                if hamming_distance in CC.hamming_string_lookup:
+                    
+                    s = f'{s} ({hamming_distance} - {CC.hamming_string_lookup[ hamming_distance ]})'
+                    
+                else:
+                    
+                    s = f'{s} ({hamming_distance})'
+                    
                 
             elif action == SIMPLE_MOVE_THUMBNAIL_FOCUS:
                 

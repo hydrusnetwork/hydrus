@@ -4,6 +4,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -157,12 +158,7 @@ def THREADDownloadURL( job_status, url, url_string ):
     
     def status_hook( text ):
         
-        if len( text ) > 0:
-            
-            text = text.splitlines()[0]
-            
-        
-        job_status.SetStatusText( text )
+        job_status.SetStatusText( HydrusText.GetFirstLine( text ) )
         
     
     network_job_presentation_context_factory = GenerateSinglePopupNetworkJobPresentationContextFactory( job_status )
@@ -232,12 +228,7 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
     
     def status_hook( text ):
         
-        if len( text ) > 0:
-            
-            text = text.splitlines()[0]
-            
-        
-        job_status.SetStatusText( text, 2 )
+        job_status.SetStatusText( HydrusText.GetFirstLine( text ), 2 )
         
     
     network_job_presentation_context_factory = GenerateMultiplePopupNetworkJobPresentationContextFactory( job_status )

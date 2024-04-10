@@ -47,7 +47,7 @@ class NetworkJobControl( QW.QFrame ):
         self._cancel_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, self.Cancel )
         self._error_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().dump_fail, self._ShowErrorMenu )
         
-        self._error_button.setToolTip( 'Click here to see the last job\'s error.' )
+        self._error_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Click here to see the last job\'s error.' ) )
         
         self._error_button.hide()
         
@@ -343,7 +343,7 @@ class NetworkJobControl( QW.QFrame ):
             
             self._network_job = None
             
-            self._gauge.setToolTip( '' )
+            self._gauge.setToolTip( ClientGUIFunctions.WrapToolTip( '' ) )
             
             self._Update()
             
@@ -367,7 +367,7 @@ class NetworkJobControl( QW.QFrame ):
             
             self._network_job = network_job
             
-            self._gauge.setToolTip( self._network_job.GetURL() )
+            self._gauge.setToolTip( ClientGUIFunctions.WrapToolTip( self._network_job.GetURL() ) )
             
             self._Update()
             

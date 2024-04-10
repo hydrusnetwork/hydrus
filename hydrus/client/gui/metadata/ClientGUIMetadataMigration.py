@@ -272,7 +272,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
         elided_text = HydrusText.ElideText( text, 64 )
         
         self.setText( elided_text )
-        self.setToolTip( text )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( text ) )
         
     
     def GetValue( self ):

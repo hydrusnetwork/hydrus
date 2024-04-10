@@ -1358,7 +1358,7 @@ class DB( HydrusDB.HydrusDB ):
             
             ( exception_type, value, tb ) = sys.exc_info()
             
-            new_e = type( e )( os.linesep.join( traceback.format_exception( exception_type, value, tb ) ) )
+            new_e = type( e )( '\n'.join( traceback.format_exception( exception_type, value, tb ) ) )
             
             job.PutResult( new_e )
             

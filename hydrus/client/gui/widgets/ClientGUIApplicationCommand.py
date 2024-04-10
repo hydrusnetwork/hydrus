@@ -543,11 +543,27 @@ class SimpleSubPanel( QW.QWidget ):
         
         #
         
+        self._hamming_distance_panel = QW.QWidget( self )
+        
+        self._hamming_distance = ClientGUICommon.BetterSpinBox( self._hamming_distance_panel, min = 0, max = 64 )
+        
+        #
+        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._file_filter, CC.FLAGS_CENTER )
         
         self._file_filter_panel.setLayout( hbox )
+        
+        #
+        
+        rows = []
+        
+        rows.append( ( 'Search distance:', self._hamming_distance ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._hamming_distance_panel, rows )
+        
+        self._hamming_distance_panel.setLayout( gridbox )
         
         #
         
@@ -558,6 +574,7 @@ class SimpleSubPanel( QW.QWidget ):
         QP.AddToLayout( vbox, self._seek_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._thumbnail_move_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._file_filter_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._hamming_distance_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._thumbnail_rearrange_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
@@ -576,6 +593,7 @@ class SimpleSubPanel( QW.QWidget ):
         self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
         self._thumbnail_move_panel.setVisible( action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS )
         self._file_filter_panel.setVisible( action == CAC.SIMPLE_SELECT_FILES )
+        self._hamming_distance_panel.setVisible( action == CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES )
         
     
     def GetValue( self ):
@@ -615,6 +633,12 @@ class SimpleSubPanel( QW.QWidget ):
                 file_filter = self._file_filter.GetValue()
                 
                 simple_data = file_filter
+                
+            elif action == CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES:
+                
+                hamming_distance = self._hamming_distance.value()
+                
+                simple_data = hamming_distance
                 
             elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
                 
@@ -668,6 +692,12 @@ class SimpleSubPanel( QW.QWidget ):
             file_filter = command.GetSimpleData()
             
             self._file_filter.SetValue( file_filter )
+            
+        elif action == CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES:
+            
+            hamming_distance = command.GetSimpleData()
+            
+            self._hamming_distance.setValue( hamming_distance )
             
         elif action == CAC.SIMPLE_REARRANGE_THUMBNAILS:
             

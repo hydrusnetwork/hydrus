@@ -286,7 +286,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 
             except:
                 
-                e = Exception( 'Updating the ' + self._db_name + ' db to version ' + str( version + 1 ) + ' caused this error:' + os.linesep + traceback.format_exc() )
+                e = Exception( 'Updating the ' + self._db_name + ' db to version ' + str( version + 1 ) + ' caused this error:' + '\n' + traceback.format_exc() )
                 
                 try:
                     
@@ -384,7 +384,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     def _DisplayCatastrophicError( self, text ):
         
         message = 'The db encountered a serious error! This is going to be written to the log as well, but here it is for a screenshot:'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += text
         
         HydrusData.DebugPrint( message )
@@ -513,7 +513,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
             
         except Exception as e:
             
-            raise HydrusExceptions.DBAccessException( 'Could not connect to database! If the answer is not obvious to you, please let hydrus dev know. Error follows:' + os.linesep * 2 + str( e ) )
+            raise HydrusExceptions.DBAccessException( 'Could not connect to database! If the answer is not obvious to you, please let hydrus dev know. Error follows:' + '\n' * 2 + str( e ) )
             
         
         HydrusDBBase.TemporaryIntegerTableNameCache.instance().Clear()
@@ -550,7 +550,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 
                 message = 'The database seemed valid, but hydrus failed to read basic data from it. You may need to run the program in a different journal mode using --db_journal_mode. Full error information:'
                 
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += str( e )
                 
                 HydrusData.DebugPrint( message )

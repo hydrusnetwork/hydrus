@@ -11,6 +11,7 @@ from hydrus.client import ClientParsing
 from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -57,7 +58,7 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
         
         label = self._string_converter.ToString()
         
-        self.setToolTip( label )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( label ) )
         
         elided_label = HydrusText.ElideText( label, 64 )
         
@@ -177,7 +178,7 @@ class StringProcessorButton( ClientGUICommon.BetterButton ):
             
             statements = [ HydrusText.ElideText( statement, 64 ) for statement in statements ]
             
-            label = os.linesep.join( statements )
+            label = '\n'.join( statements )
             
         
         self.setText( label )

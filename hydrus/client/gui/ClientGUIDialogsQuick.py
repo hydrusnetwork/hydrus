@@ -4,12 +4,14 @@ import time
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
+from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -43,6 +45,7 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
             
         
     
+
 def GetFinishArchiveDeleteFilteringAnswer( win, kept_label, deletion_options ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, 'filtering done?' ) as dlg:
@@ -58,6 +61,7 @@ def GetFinishArchiveDeleteFilteringAnswer( win, kept_label, deletion_options ):
         return ( result, location_context, was_cancelled )
         
     
+
 def GetFinishFilteringAnswer( win, label ):
     
     with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, label ) as dlg:
@@ -162,6 +166,77 @@ def GetYesYesNo( win, message, title = 'Are you sure?', yes_tuples = None, no_la
         
     
 
+def OpenDocumentation( win: QW.QWidget, documentation_path: str ):
+    
+    local_path = os.path.join( HC.HELP_DIR, documentation_path )
+    remote_url = "/".join( ( HC.REMOTE_HELP.rstrip( '/' ), documentation_path.lstrip( '/' ) ) ) 
+    
+    local_launch_path = local_path
+    
+    if "#" in local_path:
+        
+        local_path = local_path[ : local_path.find( '#' ) ]
+        
+    
+    if os.path.isfile( local_path ):
+        
+        ClientPaths.LaunchPathInWebBrowser( local_launch_path )
+        
+    else:
+        
+        message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
+        
+        yes_tuples = []
+        
+        yes_tuples.append( ( 'open online help', 0 ) )
+        yes_tuples.append( ( 'open how to build guide', 1 ) )
+        
+        try:
+            
+            result = GetYesYesNo( win, message, yes_tuples = yes_tuples, no_label = 'forget it' )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if result == 0:
+            
+            url = remote_url
+            
+        else:
+            
+            url = '/'.join( ( HC.REMOTE_HELP.rstrip( '/' ), HC.DOCUMENTATION_ABOUT_DOCS.lstrip( '/' ) ) )
+            
+        
+        ClientPaths.LaunchURLInWebBrowser( url )
+        
+    
+
+def PresentClipboardParseError( win: QW.QWidget, content: str, expected_content_description: str, e: Exception ):
+    
+    MAX_CONTENT_SIZE = 1024
+    
+    log_message = 'Clipboard Error!\nI was expecting: {}'.format( expected_content_description )
+    
+    if len( content ) > MAX_CONTENT_SIZE:
+        
+        log_message += '\nFirst {} of content received (total was {}):\n'.format( HydrusData.ToHumanBytes( MAX_CONTENT_SIZE ), HydrusData.ToHumanBytes( len( content ) ) ) + content[:MAX_CONTENT_SIZE]
+        
+    else:
+        
+        log_message += '\nContent received ({}):\n'.format( HydrusData.ToHumanBytes( len( content ) ) ) + content[:MAX_CONTENT_SIZE]
+        
+    
+    HydrusData.DebugPrint( log_message )
+    
+    HydrusData.PrintException( e, do_wait = False )
+    
+    message = 'Sorry, I could not understand what was in the clipboard. I was expecting "{}" but received this text:\n\n{}\n\nMore details have been written to the log, but the general error was:\n\n{}'.format( expected_content_description, HydrusText.ElideText( content, 64 ), repr( e ) )
+    
+    ClientGUIDialogsMessage.ShowCritical( win, 'Clipboard Error!', message )
+    
+
 def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tuples = True ):
     
     if len( choice_tuples ) == 1:
@@ -189,6 +264,7 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
             
         
     
+
 def SelectFromListButtons( win, title, choice_tuples, message = '' ):
     
     if len( choice_tuples ) == 1:
@@ -216,6 +292,7 @@ def SelectFromListButtons( win, title, choice_tuples, message = '' ):
             
         
     
+
 def SelectMultipleFromList( win, title, choice_tuples ):
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
@@ -236,6 +313,7 @@ def SelectMultipleFromList( win, title, choice_tuples ):
             
         
     
+
 def SelectServiceKey( service_types = None, service_keys = None, unallowed = None, message = 'select service' ):
     
     if service_types is None:
@@ -285,52 +363,5 @@ def SelectServiceKey( service_types = None, service_keys = None, unallowed = Non
             
             return None
             
-        
-    
-
-def OpenDocumentation( win: QW.QWidget, documentation_path: str ):
-    
-    local_path = os.path.join( HC.HELP_DIR, documentation_path )
-    remote_url = "/".join( ( HC.REMOTE_HELP.rstrip( '/' ), documentation_path.lstrip( '/' ) ) ) 
-    
-    local_launch_path = local_path
-    
-    if "#" in local_path:
-        
-        local_path = local_path[ : local_path.find( '#' ) ]
-        
-    
-    if os.path.isfile( local_path ):
-        
-        ClientPaths.LaunchPathInWebBrowser( local_launch_path )
-        
-    else:
-        
-        message = 'You do not have a local help! Are you running from source? Would you like to open the online help or see a guide on how to build your own?'
-        
-        yes_tuples = []
-        
-        yes_tuples.append( ( 'open online help', 0 ) )
-        yes_tuples.append( ( 'open how to build guide', 1 ) )
-        
-        try:
-            
-            result = GetYesYesNo( win, message, yes_tuples = yes_tuples, no_label = 'forget it' )
-            
-        except HydrusExceptions.CancelledException:
-            
-            return
-            
-        
-        if result == 0:
-            
-            url = remote_url
-            
-        else:
-            
-            url = '/'.join( ( HC.REMOTE_HELP.rstrip( '/' ), HC.DOCUMENTATION_ABOUT_DOCS.lstrip( '/' ) ) )
-            
-        
-        ClientPaths.LaunchURLInWebBrowser( url )
         
     
