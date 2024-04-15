@@ -9,7 +9,6 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
@@ -38,9 +37,10 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.media import ClientGUIMediaSimpleActions
+from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientRatings
@@ -297,14 +297,14 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         if len( deletee_service_names ) > 0:
             
             message = 'You are about to delete the following services:'
-            message += os.linesep * 2
-            message += os.linesep.join( deletee_service_names )
-            message += os.linesep * 2
+            message += '\n' * 2
+            message += '\n'.join( deletee_service_names )
+            message += '\n' * 2
             message += 'Are you absolutely sure this is correct?'
             
             if tag_service_in_deletes:
                 
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'If the tag service you are deleting is very large, this operation may take a very very long time. You client will lock up until it is done.'
                 
             
@@ -933,10 +933,10 @@ class EditServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
                     unavailable_texts.append( text )
                     
                 
-                unavailable_text = os.linesep * 2
+                unavailable_text = '\n' * 2
                 unavailable_text += 'These other account types are currently in short supply and will be available after a delay:'
-                unavailable_text += os.linesep * 2
-                unavailable_text += os.linesep.join( unavailable_texts )
+                unavailable_text += '\n' * 2
+                unavailable_text += '\n'.join( unavailable_texts )
                 
             
             if len( available_account_types ) == 1:
@@ -1121,19 +1121,19 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._port = ClientGUICommon.BetterSpinBox( self._client_server_options_panel, min = 1, max = 65535 )
         
         self._allow_non_local_connections = QW.QCheckBox( self._client_server_options_panel )
-        self._allow_non_local_connections.setToolTip( 'Allow other computers on the network to talk to use service. If unchecked, only localhost can talk to it. On Windows, the first time you start a local service that allows non-local connections, you will get the Windows firewall popup dialog when you ok the main services dialog.' )
+        self._allow_non_local_connections.setToolTip( ClientGUIFunctions.WrapToolTip( 'Allow other computers on the network to talk to use service. If unchecked, only localhost can talk to it. On Windows, the first time you start a local service that allows non-local connections, you will get the Windows firewall popup dialog when you ok the main services dialog.' ) )
         
         self._use_https = QW.QCheckBox( self._client_server_options_panel )
-        self._use_https.setToolTip( 'Host the server using https instead of http. This uses a self-signed certificate, stored in your db folder, which is imperfect but better than straight http. Your software (e.g. web browser testing the Client API welcome page) may need to go through a manual \'approve this ssl certificate\' process before it can work. If you host your client on a real DNS domain and acquire your own signed certificate, you can replace the cert+key file pair with that.' )
+        self._use_https.setToolTip( ClientGUIFunctions.WrapToolTip( 'Host the server using https instead of http. This uses a self-signed certificate, stored in your db folder, which is imperfect but better than straight http. Your software (e.g. web browser testing the Client API welcome page) may need to go through a manual \'approve this ssl certificate\' process before it can work. If you host your client on a real DNS domain and acquire your own signed certificate, you can replace the cert+key file pair with that.' ) )
         
         self._support_cors = QW.QCheckBox( self._client_server_options_panel )
-        self._support_cors.setToolTip( 'Have this server support Cross-Origin Resource Sharing, which allows web browsers to access it off other domains. Turn this on if you want to access this service through a web-based wrapper (e.g. a booru wrapper) hosted on another domain.' )
+        self._support_cors.setToolTip( ClientGUIFunctions.WrapToolTip( 'Have this server support Cross-Origin Resource Sharing, which allows web browsers to access it off other domains. Turn this on if you want to access this service through a web-based wrapper (e.g. a booru wrapper) hosted on another domain.' ) )
         
         self._log_requests = QW.QCheckBox( self._client_server_options_panel )
-        self._log_requests.setToolTip( 'Hydrus server services will write a brief anonymous line to the log for every request made, but for the client services this tends to be a bit spammy. You probably want this off unless you are testing something.' )
+        self._log_requests.setToolTip( ClientGUIFunctions.WrapToolTip( 'Hydrus server services will write a brief anonymous line to the log for every request made, but for the client services this tends to be a bit spammy. You probably want this off unless you are testing something.' ) )
         
         self._use_normie_eris = QW.QCheckBox( self._client_server_options_panel )
-        self._use_normie_eris.setToolTip( 'Use alternate ASCII art on the root page of the server.' )
+        self._use_normie_eris.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use alternate ASCII art on the root page of the server.' ) )
         
         self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, none_phrase = 'do not forward port', max = 65535 )
         
@@ -1141,9 +1141,9 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
         self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
         
-        self._external_port_override.setToolTip( 'Setting this to a non-none empty string will forego the \':\' in the URL.' )
+        self._external_port_override.setToolTip( ClientGUIFunctions.WrapToolTip( 'Setting this to a non-none empty string will forego the \':\' in the URL.' ) )
         
-        self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self._client_server_options_panel, dictionary[ 'bandwidth_rules' ] )
+        self._bandwidth_rules = ClientGUIBandwidth.BandwidthRulesCtrl( self._client_server_options_panel, dictionary[ 'bandwidth_rules' ] )
         
         #
         
@@ -1487,13 +1487,13 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         interaction_panel = ClientGUIPanels.IPFSDaemonStatusAndInteractionPanel( self, self.parentWidget().GetValue )
         
-        tts = 'This is an *experimental* IPFS filestore that will not copy files when they are pinned. IPFS will refer to files using their original location (i.e. your hydrus client\'s file folder(s)).'
-        tts += os.linesep * 2
-        tts += 'Only turn this on if you know what it is.'
+        tt = 'This is an *experimental* IPFS filestore that will not copy files when they are pinned. IPFS will refer to files using their original location (i.e. your hydrus client\'s file folder(s)).'
+        tt += '\n' * 2
+        tt += 'Only turn this on if you know what it is.'
         
         self._use_nocopy = QW.QCheckBox( self )
         
-        self._use_nocopy.setToolTip( tts )
+        self._use_nocopy.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         portable_initial_dict = dict( dictionary[ 'nocopy_abs_path_translations' ] )
         
@@ -1529,17 +1529,17 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         self._multihash_prefix = QW.QLineEdit( self )
         
-        tts = 'When you tell the client to copy a ipfs multihash to your clipboard, it will prefix it with whatever is set here.'
-        tts += os.linesep * 2
-        tts += 'Use this if you want to copy a full gateway url. For instance, you could put here:'
-        tts += os.linesep * 2
-        tts += 'http://127.0.0.1:8080/ipfs/'
-        tts += os.linesep
-        tts += '-or-'
-        tts += os.linesep
-        tts += 'http://ipfs.io/ipfs/'
+        tt = 'When you tell the client to copy a ipfs multihash to your clipboard, it will prefix it with whatever is set here.'
+        tt += '\n' * 2
+        tt += 'Use this if you want to copy a full gateway url. For instance, you could put here:'
+        tt += '\n' * 2
+        tt += 'http://127.0.0.1:8080/ipfs/'
+        tt += '\n'
+        tt += '-or-'
+        tt += '\n'
+        tt += 'http://ipfs.io/ipfs/'
         
-        self._multihash_prefix.setToolTip( tts )
+        self._multihash_prefix.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1568,11 +1568,11 @@ class EditServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
     def _ShowHelp( self ):
         
         message = '\'nocopy\' is experimental and advanced!'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'In order to add a file through \'nocopy\', IPFS needs to be given a path that is beneath the directory in which its datastore is. Usually this is your USERDIR (default IPFS location is ~/.ipfs). Also, if your IPFS daemon runs on another computer, that path needs to be according to that machine\'s filesystem (and, perhaps, pointing to a shared folder that can stores your hydrus files).'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If your hydrus client_files directory is not already in your USERDIR, you will need to make some symlinks and then put these paths in the control so hydrus knows how to translate the paths when it pins.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'e.g. If you symlink E:\\hydrus\\files to C:\\users\\you\\ipfs_maps\\e_media, then put that same C:\\users\\you\\ipfs_maps\\e_media in the right column for that hydrus file location, and you _should_ be good.'
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
@@ -1623,7 +1623,7 @@ class ReviewServicePanel( QW.QWidget ):
         self._service = service
         
         self._id_button = ClientGUICommon.BetterButton( self, 'id', self._GetAndShowID )
-        self._id_button.setToolTip( 'Click to fetch your service\'s database id.' )
+        self._id_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Click to fetch your service\'s database id.' ) )
         
         width = ClientGUIFunctions.ConvertTextToPixelWidth( self._id_button, 4 )
         
@@ -2468,7 +2468,7 @@ class ReviewServiceRestrictedSubPanel( ClientGUICommon.StaticBox ):
         self._rule_widgets = []
         
         self._network_sync_paused_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().pause, self._PausePlayNetworkSync )
-        self._network_sync_paused_button.setToolTip( 'pause/play account sync' )
+        self._network_sync_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play account sync' ) )
         
         self._refresh_account_button = ClientGUICommon.BetterButton( self, 'refresh account', self._RefreshAccount )
         self._copy_account_key_button = ClientGUICommon.BetterButton( self, 'copy account id', self._CopyAccountKey )
@@ -2718,10 +2718,10 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         self._repo_options_st = ClientGUICommon.BetterStaticText( self._network_panel )
         
         tt = 'The update period is how often the repository bundles its recent uploads into a package for users to download. Anything you upload may take this long for other people to see.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'The anonymisation period is how long it takes for account information to be scrubbed from content. After this time, server admins/janitors cannot tell which account uploaded something.'
         
-        self._repo_options_st.setToolTip( tt )
+        self._repo_options_st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._metadata_st = ClientGUICommon.BetterStaticText( self._network_panel )
         
@@ -2731,7 +2731,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         self._download_progress = ClientGUICommon.TextAndGauge( self._network_panel )
         
         self._update_downloading_paused_button = ClientGUICommon.BetterBitmapButton( self._network_panel, CC.global_pixmaps().pause, self._PausePlayUpdateDownloading )
-        self._update_downloading_paused_button.setToolTip( 'pause/play update downloading' )
+        self._update_downloading_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play update downloading' ) )
         
         self._service_info_button = ClientGUICommon.BetterButton( self._network_panel, 'fetch service info', self._FetchServiceInfo )
         
@@ -2750,7 +2750,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         self._processing_panel = ClientGUICommon.StaticBox( self, 'processing sync' )
         
         self._update_processing_paused_button = ClientGUICommon.BetterBitmapButton( self._processing_panel, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing )
-        self._update_processing_paused_button.setToolTip( 'pause/play all update processing' )
+        self._update_processing_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play all update processing' ) )
         
         self._processing_definitions_progress = ClientGUICommon.TextAndGauge( self._processing_panel )
         
@@ -2765,7 +2765,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             processing_progress = ClientGUICommon.TextAndGauge( self._processing_panel )
             
             processing_paused_button = ClientGUICommon.BetterBitmapButton( self._processing_panel, CC.global_pixmaps().pause, self._PausePlayUpdateProcessing, content_type )
-            processing_paused_button.setToolTip( 'pause/play update processing for {}'.format( HC.content_type_string_lookup[ content_type ] ) )
+            processing_paused_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'pause/play update processing for {}'.format( HC.content_type_string_lookup[ content_type ] ) ) )
             
             self._content_types_to_gauges_and_buttons[ content_type ] = ( processing_progress, processing_paused_button )
             
@@ -2875,7 +2875,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         name = self._service.GetName()
         
         message = 'This will flag the client to resync the information about which update files it should download. It will occur on the next download sync.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This is useful if the metadata archive has become unsynced, either due to a bug or a service switch. If it is not needed, it will not make any changes.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -3007,12 +3007,12 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 
             
             message = 'Note that num file hashes and tags here include deleted content so will likely not line up with your review services value, which is only for current content.'
-            message += os.linesep * 2
+            message += '\n' * 2
             
             tuples = [ ( HC.service_info_enum_str_lookup[ info_type ], HydrusData.ToHumanInt( service_info_dict[ info_type ] ) ) for info_type in service_info_types if info_type in service_info_dict ]
             string_rows = [ '{}: {}'.format( info_type, info ) for ( info_type, info ) in tuples ]
             
-            message += os.linesep.join( string_rows )
+            message += '\n'.join( string_rows )
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
@@ -3145,14 +3145,14 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 
                 self._tag_filter_button.setEnabled( True )
                 
-                tt = 'See which tags this repository accepts. Summary:{}{}'.format( os.linesep * 2, tag_filter.ToPermittedString() )
+                tt = 'See which tags this repository accepts. Summary:{}{}'.format( '\n' * 2, tag_filter.ToPermittedString() )
                 
-                self._tag_filter_button.setToolTip( tt )
+                self._tag_filter_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
                 
             except HydrusExceptions.DataMissing:
                 
                 self._tag_filter_button.setEnabled( False )
-                self._tag_filter_button.setToolTip( 'Do not have a tag filter for this repository. Try refreshing your account, or, if your client is old, update it.' )
+                self._tag_filter_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Do not have a tag filter for this repository. Try refreshing your account, or, if your client is old, update it.' ) )
                 
             
         
@@ -3175,7 +3175,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         name = self._service.GetName()
         
         message = 'This will command the client to reprocess all definition updates for {}. It will not delete anything.'.format( name )
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This is a only useful as a debug tool for filling in \'gaps\'. If you do not understand what this does, turn back now.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -3207,7 +3207,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         name = self._service.GetName()
         
         message = 'This will command the client to reprocess ({}) for {}. It will not delete anything.'.format( ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in content_types ) ), name )
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This is a only useful as a debug tool for filling in \'gaps\' caused by processing bugs or database damage. If you do not understand what this does, turn back now.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -3222,7 +3222,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         
         name = self._service.GetName()
         
-        message = 'This will delete all the processed information for ' + name + ' from the database, including definitions.' + os.linesep * 2 + 'Once the service is reset, you will have to reprocess everything from your downloaded update files. The client will naturally do this in its idle time as before, just starting over from the beginning.' + os.linesep * 2 + 'This is a severe maintenance task that is only appropriate after trying to recover from critical database error. If you do not understand what this does, click no!'
+        message = 'This will delete all the processed information for ' + name + ' from the database, including definitions.' + '\n' * 2 + 'Once the service is reset, you will have to reprocess everything from your downloaded update files. The client will naturally do this in its idle time as before, just starting over from the beginning.' + '\n' * 2 + 'This is a severe maintenance task that is only appropriate after trying to recover from critical database error. If you do not understand what this does, click no!'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -3260,7 +3260,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
         name = self._service.GetName()
         
         message = 'You are about to delete and reprocess ({}) for {}.'.format( ', '.join( ( HC.content_type_string_lookup[ content_type ] for content_type in content_types ) ), name )
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'It may take some time to delete it all, and then future idle time to reprocess. It is only worth doing this if you believe there are logical problems in the initial process. If you just want to fill in gaps, use that simpler maintenance task, which runs much faster.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -3328,7 +3328,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
     def _SyncProcessingNow( self ):
         
         message = 'This will tell the database to process any possible outstanding update files right now.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'You can still use the client while it runs, but it may make some things like autocomplete lookup a bit juddery.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -3513,7 +3513,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
             
             multihash_prefix = self._service.GetMultihashPrefix()
             
-            text = os.linesep.join( ( multihash_prefix + multihash for multihash in multihashes ) )
+            text = '\n'.join( ( multihash_prefix + multihash for multihash in multihashes ) )
             
             CG.client_controller.pub( 'clipboard', 'text', text )
             
@@ -3778,7 +3778,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
             urls.append( url )
             
         
-        text = os.linesep.join( urls )
+        text = '\n'.join( urls )
         
         CG.client_controller.pub( 'clipboard', 'text', text )
         
@@ -3801,7 +3801,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
             urls.append( url )
             
         
-        text = os.linesep.join( urls )
+        text = '\n'.join( urls )
         
         CG.client_controller.pub( 'clipboard', 'text', text )
         
@@ -3970,7 +3970,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
     def _ClearRatings( self, advanced_action, action_description ):
         
         message = 'Delete any ratings on this service for {}? THIS CANNOT BE UNDONE'.format( action_description )
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Please note a client restart is needed to see the ratings disappear in media views.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -4142,7 +4142,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
     def _ClearTrash( self ):
         
         message = 'This will completely clear your trash of all its files, deleting them permanently from the client. This operation cannot be undone.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you have many files in your trash, it will take some time to complete and for all the files to eventually be deleted.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
@@ -4190,9 +4190,7 @@ class ReviewServiceTrashSubPanel( ClientGUICommon.StaticBox ):
                 
                 hashes = CG.client_controller.Read( 'trash_hashes' )
                 
-                from hydrus.client.gui import ClientGUIMediaActions
-                
-                ClientGUIMediaActions.UndeleteFiles( hashes )
+                ClientGUIMediaSimpleActions.UndeleteFiles( hashes )
                 
                 CG.client_controller.pub( 'service_updated', service )
                 

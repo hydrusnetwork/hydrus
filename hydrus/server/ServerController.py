@@ -106,7 +106,7 @@ def ShutdownSiblingInstance( db_dir ):
         except:
             
             text = 'Could not contact existing server\'s port ' + str( port ) + '!'
-            text += os.linesep
+            text += '\n'
             text += traceback.format_exc()
             
             raise HydrusExceptions.ShutdownException( text )
@@ -123,7 +123,7 @@ def ShutdownSiblingInstance( db_dir ):
             if not r.ok:
                 
                 text = 'When told to shut down, the existing server gave an error!'
-                text += os.linesep
+                text += '\n'
                 text += r.text
                 
                 raise HydrusExceptions.ShutdownException( text )

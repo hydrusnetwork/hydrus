@@ -12,7 +12,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
     def _DisplayCatastrophicError( self, text: str ):
         
         message = 'The db encountered a serious error! This is going to be written to the log as well, but here it is for a screenshot:'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += text
         
         HydrusData.DebugPrint( message )
@@ -25,7 +25,7 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         index_names = sorted( index_names )
         
         HydrusData.DebugPrint( 'The "{}" database module is missing the following indices:'.format( self.name ) )
-        HydrusData.DebugPrint( os.linesep.join( index_names ) )
+        HydrusData.DebugPrint( '\n'.join( index_names ) )
         
         message = 'Your "{}" database module was missing {} indices. More information has been written to the log. This may or may not be a big deal, and on its own it is completely recoverable. If you do not have further problems, hydev does not need to know about it. The indices will be regenerated once you proceed--it may take some time.'.format( self.name, len( index_names ) )
         
@@ -39,14 +39,14 @@ class ClientDBModule( HydrusDBModule.HydrusDBModule ):
         table_names = sorted( table_names )
         
         HydrusData.DebugPrint( 'The "{}" database module is missing the following tables:'.format( self.name ) )
-        HydrusData.DebugPrint( os.linesep.join( table_names ) )
+        HydrusData.DebugPrint( '\n'.join( table_names ) )
         
         message = 'Your "{}" database module was missing {} tables. More information has been written to the log. This is a serious problem.'.format( self.name, len( table_names ) )
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If this is happening on the first boot after an update, it is likely a fault in the update code. If you updated many versions in one go, kill the hydrus process now and update in a smaller version increment.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If this is just a normal boot, you most likely encountered hard drive damage. You should check "install_dir/db/help my db is broke.txt" for background reading. Whatever happens next, you need to check that your hard drive is healthy.'
-        message += os.linesep * 2
+        message += '\n' * 2
         
         if self.CAN_REPOPULATE_ALL_MISSING_DATA:
             

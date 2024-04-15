@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -16,6 +17,7 @@ from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
@@ -145,7 +147,7 @@ class BetterListCtrl( QW.QTreeWidget ):
                 
             
             self.headerItem().setText( i, name )
-            self.headerItem().setToolTip( i, name )
+            self.headerItem().setToolTip( i, ClientGUIFunctions.WrapToolTip( name ) )
             
             if i == last_column_index:
                 
@@ -237,13 +239,8 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             text = display_tuple[i]
             
-            if len( text ) > 0:
-                
-                text = text.splitlines()[0]
-                
-            
-            append_item.setText( i, text )
-            append_item.setToolTip( i, text )
+            append_item.setText( i, HydrusText.GetFirstLine( text ) )
+            append_item.setToolTip( i, ClientGUIFunctions.WrapToolTip( text ) )
             
         
         self.addTopLevelItem( append_item )
@@ -422,7 +419,7 @@ class BetterListCtrl( QW.QTreeWidget ):
                 
             
             self.headerItem().setText( i, name_for_title )
-            self.headerItem().setToolTip( i, name )
+            self.headerItem().setToolTip( i, ClientGUIFunctions.WrapToolTip( name ) )
             
         
     
@@ -523,19 +520,15 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         for ( column_index, value ) in enumerate( display_tuple ):
             
-            if len( value ) > 0:
-                
-                value = value.splitlines()[0]
-                
-            
             tree_widget_item = self.topLevelItem( index )
             
+            first_line = HydrusText.GetFirstLine( value )
             existing_value = tree_widget_item.text( column_index )
             
-            if existing_value != value:
+            if existing_value != first_line:
                 
-                tree_widget_item.setText( column_index, value )
-                tree_widget_item.setToolTip( column_index, value )
+                tree_widget_item.setText( column_index, first_line )
+                tree_widget_item.setToolTip( column_index, ClientGUIFunctions.WrapToolTip( value ) )
                 
             
         
@@ -1403,7 +1396,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
             except Exception as e:
                 
-                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
+                ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
                 
                 return
                 
@@ -1483,12 +1476,12 @@ class BetterListCtrlPanel( QW.QWidget ):
         if can_present_messages and len( bad_object_type_names ) > 0:
             
             message = 'The imported objects included these types:'
-            message += os.linesep * 2
-            message += os.linesep.join( bad_object_type_names )
-            message += os.linesep * 2
+            message += '\n' * 2
+            message += '\n'.join( bad_object_type_names )
+            message += '\n' * 2
             message += 'Whereas this control only allows:'
-            message += os.linesep * 2
-            message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+            message += '\n' * 2
+            message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
             
             ClientGUIDialogsMessage.ShowWarning( self, message )
             
@@ -1541,7 +1534,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                     
                     if len( paths ) > 1:
                         
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += 'If there are more objects in this import with similar load problems, they will now be skipped silently.'
                         
                     
@@ -1596,7 +1589,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                     
                     if len( paths ) > 1:
                         
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += 'If there are more objects in this import with similar load problems, they will now be skipped silently.'
                         
                     
@@ -1637,7 +1630,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if tooltip is not None:
             
-            button.setToolTip( tooltip )
+            button.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
             
         
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_only_on_single_selection = enabled_only_on_single_selection, enabled_check_func = enabled_check_func )
@@ -1651,7 +1644,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if tooltip is not None:
             
-            button.setToolTip( tooltip )
+            button.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
             
         
         self._AddButton( button, enabled_only_on_selection = enabled_only_on_selection, enabled_only_on_single_selection = enabled_only_on_single_selection, enabled_check_func = enabled_check_func )

@@ -663,7 +663,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         elif predicate_type == ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT:
             
             label = 'system:limit clips a large search result down to the given number of files. It is very useful for processing in smaller batches.'
-            label += os.linesep * 2
+            label += '\n' * 2
             label += 'For all the simpler sorts (filesize, duration, etc...), it will select the n largest/smallest in the result set appropriate for that sort. For complicated sorts like tags, it will sample randomly.'
             
             static_pred_buttons.append( ClientGUIPredicatesSingle.StaticSystemPredicateButton( self, ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_LIMIT, 64 ), ), show_remove_button = False ) )
@@ -892,7 +892,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             QW.QWidget.__init__( self, parent )
             
             self._defaults_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().star, self._DefaultsMenu )
-            self._defaults_button.setToolTip( 'Set a new default.' )
+            self._defaults_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set a new default.' ) )
             
             self._predicate_panel = predicate_panel_class( self, predicate )
             self._parent = parent
@@ -1032,7 +1032,7 @@ class TagContextButton( ClientGUICommon.BetterButton ):
             self.setText( label )
             
         
-        self.setToolTip( label )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( label ) )
         
         if self._tag_context != original_tag_context:
             

@@ -838,6 +838,27 @@ class MediaList( object ):
         return new_media
         
     
+    def AddMediaResults( self, media_results ):
+        
+        new_media = []
+        
+        for media_result in media_results:
+            
+            hash = media_result.GetHash()
+            
+            if hash in self._hashes:
+                
+                continue
+                
+            
+            new_media.append( self._GenerateMediaSingleton( media_result ) )
+            
+        
+        self.AddMedia( new_media )
+        
+        return new_media
+        
+    
     def Clear( self ):
         
         self._singleton_media = set()
@@ -1335,27 +1356,6 @@ class ListeningMediaList( MediaList ):
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
-        
-    
-    def AddMediaResults( self, media_results ):
-        
-        new_media = []
-        
-        for media_result in media_results:
-            
-            hash = media_result.GetHash()
-            
-            if hash in self._hashes:
-                
-                continue
-                
-            
-            new_media.append( self._GenerateMediaSingleton( media_result ) )
-            
-        
-        self.AddMedia( new_media )
-        
-        return new_media
         
     
 

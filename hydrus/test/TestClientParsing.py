@@ -40,7 +40,7 @@ class DummyFormula( ClientParsing.ParseFormula ):
     
     def ToPrettyMultilineString( self ):
         
-        return 'test dummy formula' + os.linesep + 'returns what you give it'
+        return 'test dummy formula' + '\n' + 'returns what you give it'
         
     
 

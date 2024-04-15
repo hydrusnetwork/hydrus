@@ -45,8 +45,9 @@ from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUIMenuButton
+from hydrus.client.gui.widgets import ClientGUITextInput
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -65,7 +66,7 @@ def EditNamespaceSort( win: QW.QWidget, sort_data ):
     edit_string = '-'.join( escaped_namespaces )
     
     message = 'Write the namespaces you would like to sort by here, separated by hyphens. Any namespace in any of your sort definitions will be added to the collect-by menu.'
-    message += os.linesep * 2
+    message += '\n' * 2
     message += 'If the namespace you want to add has a hyphen, like \'creator-id\', instead type it with a backslash escape, like \'creator\\-id-page\'.'
     
     with ClientGUIDialogs.DialogTextEntry( win, message, allow_blank = False, default = edit_string ) as dlg:
@@ -129,7 +130,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._write_autocomplete_tag_domain = ClientGUICommon.BetterChoice( self )
-        self._write_autocomplete_tag_domain.setToolTip( 'A manage tags autocomplete will start with this domain. Typically only useful with this service or "all known tags".' )
+        self._write_autocomplete_tag_domain.setToolTip( ClientGUIFunctions.WrapToolTip( 'A manage tags autocomplete will start with this domain. Typically only useful with this service or "all known tags".' ) )
         
         self._write_autocomplete_tag_domain.addItem( services_manager.GetName( CC.COMBINED_TAG_SERVICE_KEY ), CC.COMBINED_TAG_SERVICE_KEY )
         
@@ -139,33 +140,33 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._override_write_autocomplete_location_context = QW.QCheckBox( self )
-        self._override_write_autocomplete_location_context.setToolTip( 'If set, a manage tags dialog autocomplete will start with a different file domain than the one that launched the dialog.' )
+        self._override_write_autocomplete_location_context.setToolTip( ClientGUIFunctions.WrapToolTip( 'If set, a manage tags dialog autocomplete will start with a different file domain than the one that launched the dialog.' ) )
         
         self._write_autocomplete_location_context = ClientGUILocation.LocationSearchContextButton( self, tag_autocomplete_options.GetWriteAutocompleteLocationContext() )
-        self._write_autocomplete_location_context.setToolTip( 'A manage tags autocomplete will start with this domain. Normally only useful for "all known files" or "my files".' )
+        self._write_autocomplete_location_context.setToolTip( ClientGUIFunctions.WrapToolTip( 'A manage tags autocomplete will start with this domain. Normally only useful for "all known files" or "my files".' ) )
         
         self._write_autocomplete_location_context.SetAllKnownFilesAllowed( True, False )
         
         self._search_namespaces_into_full_tags = QW.QCheckBox( self )
-        self._search_namespaces_into_full_tags.setToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metroid". On large tag services, these searches are extremely slow.' )
+        self._search_namespaces_into_full_tags.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "ser" will return all "series:" results such as "series:metroid". On large tag services, these searches are extremely slow.' ) )
         
         self._unnamespaced_search_gives_any_namespace_wildcards = QW.QCheckBox( self )
-        self._unnamespaced_search_gives_any_namespace_wildcards.setToolTip( 'If on, an unnamespaced search like "sam" will return special wildcards for "sam* (any namespace)" and "sam (any namespace)", just as if you had typed "*:sam".' )
+        self._unnamespaced_search_gives_any_namespace_wildcards.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, an unnamespaced search like "sam" will return special wildcards for "sam* (any namespace)" and "sam (any namespace)", just as if you had typed "*:sam".' ) )
         
         self._namespace_bare_fetch_all_allowed = QW.QCheckBox( self )
-        self._namespace_bare_fetch_all_allowed.setToolTip( 'If on, a search for "series:" will return all "series:" results. On large tag services, these searches are extremely slow.' )
+        self._namespace_bare_fetch_all_allowed.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "series:" will return all "series:" results. On large tag services, these searches are extremely slow.' ) )
         
         self._namespace_fetch_all_allowed = QW.QCheckBox( self )
-        self._namespace_fetch_all_allowed.setToolTip( 'If on, a search for "series:*" will return all "series:" results. On large tag services, these searches are extremely slow.' )
+        self._namespace_fetch_all_allowed.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "series:*" will return all "series:" results. On large tag services, these searches are extremely slow.' ) )
         
         self._fetch_all_allowed = QW.QCheckBox( self )
-        self._fetch_all_allowed.setToolTip( 'If on, a search for "*" will return all tags. On large tag services, these searches are extremely slow.' )
+        self._fetch_all_allowed.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, a search for "*" will return all tags. On large tag services, these searches are extremely slow.' ) )
         
         self._fetch_results_automatically = QW.QCheckBox( self )
-        self._fetch_results_automatically.setToolTip( 'If on, results will load as you type. If off, you will have to hit a shortcut (default Ctrl+Space) to load results.' )
+        self._fetch_results_automatically.setToolTip( ClientGUIFunctions.WrapToolTip( 'If on, results will load as you type. If off, you will have to hit a shortcut (default Ctrl+Space) to load results.' ) )
         
         self._exact_match_character_threshold = ClientGUICommon.NoneableSpinCtrl( self, none_phrase = 'always autocomplete (only appropriate for small tag services)', min = 1, max = 256, unit = 'characters' )
-        self._exact_match_character_threshold.setToolTip( 'When the search text has <= this many characters, autocomplete will not occur and you will only get results that exactly match the input. Increasing this value makes autocomplete snappier but reduces the number of results.' )
+        self._exact_match_character_threshold.setToolTip( ClientGUIFunctions.WrapToolTip( 'When the search text has <= this many characters, autocomplete will not occur and you will only get results that exactly match the input. Increasing this value makes autocomplete snappier but reduces the number of results.' ) )
         
         #
         
@@ -366,9 +367,9 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         self._warning.setObjectName( 'HydrusWarning' )
         
         message = 'While a tag service normally only applies its own siblings and parents to itself, it does not have to. You can have other services\' rules apply (e.g. putting the PTR\'s siblings on your "my tags"), or no siblings/parents at all.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you apply multiple services and there are conflicts (e.g. disagreements on where siblings go, or loops), the services at the top of the list have precedence. If you want to overwrite some PTR rules, then make what you want on a local service and then put it above the PTR here. Also, siblings apply first, then parents.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If you make big changes here, it will take a long time for the client to recalculate everything. Check the sync progress panel under _tags->sibling/parent sync_ to see how it is going. If your client gets laggy doing the recalc, turn it off during "normal time".'
         
         self._message = ClientGUICommon.BetterStaticText( self, label = message )
@@ -636,7 +637,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
             if self._service_key == CC.COMBINED_TAG_SERVICE_KEY:
                 
                 message = 'These options apply to all tag services, or to where the tag domain is "all known tags".'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'This tag domain is the union of all other services, so it can be more computationally expensive. You most often see it on new search pages.'
                 
             else:
@@ -700,7 +701,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         self._show_all_panels_button = ClientGUICommon.BetterButton( self, 'show other panels', self._ShowAllPanels )
-        self._show_all_panels_button.setToolTip( 'This shows the whitelist and advanced panels, in case you want to craft a clever blacklist with \'except\' rules.' )
+        self._show_all_panels_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'This shows the whitelist and advanced panels, in case you want to craft a clever blacklist with \'except\' rules.' ) )
         
         show_the_button = self._only_show_blacklist and CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
@@ -1121,7 +1122,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Tag Filter object', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Tag Filter object', e )
             
             return
             
@@ -1176,7 +1177,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._advanced_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( self._advanced_blacklist_panel, read_only = self._read_only )
         
-        self._advanced_blacklist_input = ClientGUIControls.TextAndPasteCtrl( self._advanced_blacklist_panel, self._AdvancedAddBlacklistMultiple, allow_empty_input = True )
+        self._advanced_blacklist_input = ClientGUITextInput.TextAndPasteCtrl( self._advanced_blacklist_panel, self._AdvancedAddBlacklistMultiple, allow_empty_input = True )
         
         delete_blacklist_button = ClientGUICommon.BetterButton( self._advanced_blacklist_panel, 'delete', self._AdvancedDeleteBlacklistButton )
         blacklist_everything_button = ClientGUICommon.BetterButton( self._advanced_blacklist_panel, 'block everything', self._AdvancedBlacklistEverything )
@@ -1187,7 +1188,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._advanced_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( self._advanced_whitelist_panel, read_only = self._read_only )
         
-        self._advanced_whitelist_input = ClientGUIControls.TextAndPasteCtrl( self._advanced_whitelist_panel, self._AdvancedAddWhitelistMultiple, allow_empty_input = True )
+        self._advanced_whitelist_input = ClientGUITextInput.TextAndPasteCtrl( self._advanced_whitelist_panel, self._AdvancedAddWhitelistMultiple, allow_empty_input = True )
         
         delete_whitelist_button = ClientGUICommon.BetterButton( self._advanced_whitelist_panel, 'delete', self._AdvancedDeleteWhitelistButton )
         
@@ -1270,7 +1271,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_blacklist = ClientGUIListBoxes.ListBoxTagsFilter( self._simple_whitelist_panel, read_only = self._read_only )
         
-        self._simple_blacklist_input = ClientGUIControls.TextAndPasteCtrl( self._simple_whitelist_panel, self._SimpleAddBlacklistMultiple, allow_empty_input = True )
+        self._simple_blacklist_input = ClientGUITextInput.TextAndPasteCtrl( self._simple_whitelist_panel, self._SimpleAddBlacklistMultiple, allow_empty_input = True )
         
         delete_blacklist_button = ClientGUICommon.BetterButton( self._simple_whitelist_panel, 'remove', self._SimpleDeleteBlacklistButton )
         blacklist_everything_button = ClientGUICommon.BetterButton( self._simple_whitelist_panel, 'block everything', self._AdvancedBlacklistEverything )
@@ -1361,7 +1362,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._simple_whitelist = ClientGUIListBoxes.ListBoxTagsFilter( self._simple_whitelist_panel, read_only = self._read_only )
         
-        self._simple_whitelist_input = ClientGUIControls.TextAndPasteCtrl( self._simple_whitelist_panel, self._SimpleAddWhitelistMultiple, allow_empty_input = True )
+        self._simple_whitelist_input = ClientGUITextInput.TextAndPasteCtrl( self._simple_whitelist_panel, self._SimpleAddWhitelistMultiple, allow_empty_input = True )
         
         delete_whitelist_button = ClientGUICommon.BetterButton( self._simple_whitelist_panel, 'remove', self._SimpleDeleteWhitelistButton )
         
@@ -1475,9 +1476,9 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     def _ShowHelp( self ):
         
         help = 'Here you can set rules to filter tags for one purpose or another. The default is typically to permit all tags. Check the current filter summary text at the bottom-left of the panel to ensure you have your logic correct.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'The whitelist/blacklist/advanced tabs are different ways of looking at the same filter, so you can choose which works best for you. Sometimes it is more useful to think about a filter as a whitelist (where only the listed contents are kept) or a blacklist (where everything _except_ the listed contents are kept), while the advanced tab lets you do a more complicated combination of the two.'
-        help += os.linesep * 2
+        help += '\n' * 2
         help += 'As well as selecting entire namespaces with the checkboxes, you can type or paste the individual tags directly--just hit enter to add each one. Double-click an existing entry in a list to remove it.'
         
         ClientGUIDialogsMessage.ShowInformation( self, help )
@@ -1978,17 +1979,17 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._tag_in_reverse = QW.QCheckBox( self )
         tt = 'Tag the last file first and work backwards, e.g. for start=1, step=1 on five files, set 5, 4, 3, 2, 1.'
-        self._tag_in_reverse.setToolTip( tt )
+        self._tag_in_reverse.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         initial_start = self._GetInitialStart()
         
         self._start = ClientGUICommon.BetterSpinBox( self, initial = initial_start, min = -10000000, max = 10000000 )
         tt = 'If you initialise this dialog and the first file already has that namespace, this widget will start with that version! A little overlap/prep may help here!'
-        self._start.setToolTip( tt )
+        self._start.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._step = ClientGUICommon.BetterSpinBox( self, initial = 1, min = -10000, max = 10000 )
         tt = 'This sets how much the numerical tag should increment with each iteration. Negative values are fine and will decrement.'
-        self._step.setToolTip( tt )
+        self._step.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         label = 'initialising\n\ninitialising'
         self._summary_st = ClientGUICommon.BetterStaticText( self, label = label )
@@ -2613,10 +2614,10 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._remove_tags = ClientGUICommon.BetterButton( self._tags_box_sorter, text, self._RemoveTagsButton )
             
             self._copy_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().copy, self._Copy )
-            self._copy_button.setToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' )
+            self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy selected tags to the clipboard. If none are selected, copies all.' ) )
             
             self._paste_button = ClientGUICommon.BetterBitmapButton( self._tags_box_sorter, CC.global_pixmaps().paste, self._Paste )
-            self._paste_button.setToolTip( 'Paste newline-separated tags from the clipboard into here.' )
+            self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste newline-separated tags from the clipboard into here.' ) )
             
             self._show_deleted = False
             
@@ -2650,7 +2651,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             
             self._incremental_tagging_button = ClientGUICommon.BetterButton( self._tags_box_sorter, HC.UNICODE_PLUS_OR_MINUS, self._DoIncrementalTagging )
-            self._incremental_tagging_button.setToolTip( 'Incremental Tagging' )
+            self._incremental_tagging_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Incremental Tagging' ) )
             self._incremental_tagging_button.setVisible( len( media ) > 1 )
             
             width = ClientGUIFunctions.ConvertTextToPixelWidth( self._incremental_tagging_button, 5 )
@@ -2882,7 +2883,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         t_c_lines.append( 'and {} others'.format( HydrusData.ToHumanInt( len( tag_counts ) - 25 ) ) )
                         
                     
-                    tooltip = os.linesep.join( t_c_lines )
+                    tooltip = '\n'.join( t_c_lines )
                     
                     bdc_choices.append( ( text, data, tooltip ) )
                     
@@ -3066,7 +3067,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 tags = HydrusTags.SortNumericTags( tags )
                 
-                text = os.linesep.join( tags )
+                text = '\n'.join( tags )
                 
                 CG.client_controller.pub( 'clipboard', 'text', text )
                 
@@ -3192,7 +3193,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
             except Exception as e:
                 
-                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
+                ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of tags', e )
                 
             
         
@@ -3345,8 +3346,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     if len( tags ) < 10:
                         
                         message = 'Are you sure you want to remove these tags:'
-                        message += os.linesep * 2
-                        message += os.linesep.join( ( HydrusText.ElideText( tag, 64 ) for tag in tags ) )
+                        message += '\n' * 2
+                        message += '\n'.join( ( HydrusText.ElideText( tag, 64 ) for tag in tags ) )
                         
                     else:
                         
@@ -3505,10 +3506,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._pursue_whole_chain = QW.QCheckBox( self )
             
             tt = 'When you enter tags in the bottom boxes, the upper list is filtered to pertinent related relationships.'
-            tt += os.linesep * 2
+            tt += '\n' * 2
             tt += 'With this off, it will show all (grand)children and (grand)parents. With it on, it shows the full chain, including cousins. This can be overwhelming!'
             
-            self._pursue_whole_chain.setToolTip( tt )
+            self._pursue_whole_chain.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             # leave up here since other things have updates based on them
             self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
@@ -3558,7 +3559,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising' + HC.UNICODE_ELLIPSIS + os.linesep + '.' )
+            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising' + HC.UNICODE_ELLIPSIS + '\n' + '.' )
             self._sync_status_st = ClientGUICommon.BetterStaticText( self, '' )
             self._sync_status_st.setWordWrap( True )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
@@ -3689,10 +3690,10 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         else:
                             
-                            pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
+                            pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
                             
                         
-                        message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your request.'
+                        message = 'Enter a reason for:' + '\n' * 2 + pair_strings + '\n' * 2 + 'To be added. A janitor will review your request.'
                         
                         fixed_suggestions = [
                             'obvious by definition (a sword is a weapon)',
@@ -3734,157 +3735,154 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     affected_pairs.extend( new_pairs )
                     
                 
-            else:
+            
+            if len( current_pairs ) > 0:
                 
-                if len( current_pairs ) > 0:
-                    
-                    do_it = True
-                    
-                    if self._i_am_local_tag_service:
-                        
-                        reason = 'removed by user'
-                        
-                    else:
-                        
-                        if len( current_pairs ) > 10:
-                            
-                            pair_strings = 'The many pairs you entered.'
-                            
-                        else:
-                            
-                            pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
-                            
-                        
-                        if len( current_pairs ) > 1:
-                            
-                            message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Already exist.'
-                            
-                        else:
-                            
-                            message = 'The pair ' + pair_strings + ' already exists.'
-                            
-                        
-                        result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition to remove', no_label = 'do nothing' )
-                        
-                        if result == QW.QDialog.Accepted:
-                            
-                            if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
-                                
-                                reason = 'admin'
-                                
-                            else:
-                                
-                                message = 'Enter a reason for:'
-                                message += os.linesep * 2
-                                message += pair_strings
-                                message += os.linesep * 2
-                                message += 'to be removed. A janitor will review your petition.'
-                                
-                                fixed_suggestions = [
-                                    'obvious typo/mistake'
-                                ]
-                                
-                                suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE )
-                                
-                                suggestions.extend( fixed_suggestions )
-                                
-                                with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
-                                    
-                                    if dlg.exec() == QW.QDialog.Accepted:
-                                        
-                                        reason = dlg.GetValue()
-                                        
-                                        
-                                        if reason not in fixed_suggestions:
-                                            
-                                            CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, reason )
-                                            
-                                        
-                                    else:
-                                        
-                                        do_it = False
-                                        
-                                    
-                                
-                            
-                        else:
-                            
-                            do_it = False
-                            
-                        
-                    
-                    
-                    if do_it:
-                        
-                        for pair in current_pairs:
-                            
-                            self._pairs_to_reasons[ pair ] = reason
-                            
-                        
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
-                        
-                        affected_pairs.extend( current_pairs )
-                        
-                    
+                do_it = True
                 
-                if len( pending_pairs ) > 0:
-                
-                    if len( pending_pairs ) > 10:
+                if self._i_am_local_tag_service:
+                    
+                    reason = 'removed by user'
+                    
+                else:
+                    
+                    if len( current_pairs ) > 10:
                         
                         pair_strings = 'The many pairs you entered.'
                         
                     else:
                         
-                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
+                        pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
                         
                     
-                    if len( pending_pairs ) > 1:
+                    if len( current_pairs ) > 1:
                         
-                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
+                        message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Already exist.'
                         
                     else:
                         
-                        message = 'The pair ' + pair_strings + ' is pending.'
+                        message = 'The pair ' + pair_strings + ' already exists.'
                         
                     
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition to remove', no_label = 'do nothing' )
                     
                     if result == QW.QDialog.Accepted:
                         
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
-                        
-                        affected_pairs.extend( pending_pairs )
-                        
-                    
-                
-                if len( petitioned_pairs ) > 0:
-                
-                    if len( petitioned_pairs ) > 10:
-                        
-                        pair_strings = 'The many pairs you entered.'
+                        if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
+                            
+                            reason = 'admin'
+                            
+                        else:
+                            
+                            message = 'Enter a reason for:'
+                            message += '\n' * 2
+                            message += pair_strings
+                            message += '\n' * 2
+                            message += 'to be removed. A janitor will review your petition.'
+                            
+                            fixed_suggestions = [
+                                'obvious typo/mistake'
+                            ]
+                            
+                            suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE )
+                            
+                            suggestions.extend( fixed_suggestions )
+                            
+                            with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
+                                
+                                if dlg.exec() == QW.QDialog.Accepted:
+                                    
+                                    reason = dlg.GetValue()
+                                    
+                                    
+                                    if reason not in fixed_suggestions:
+                                        
+                                        CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, reason )
+                                        
+                                    
+                                else:
+                                    
+                                    do_it = False
+                                    
+                                
+                            
                         
                     else:
                         
-                        pair_strings = os.linesep.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
+                        do_it = False
                         
                     
-                    if len( petitioned_pairs ) > 1:
+                
+                if do_it:
+                    
+                    for pair in current_pairs:
                         
-                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
-                        
-                    else:
-                        
-                        message = 'The pair ' + pair_strings + ' is petitioned.'
+                        self._pairs_to_reasons[ pair ] = reason
                         
                     
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                     
-                    if result == QW.QDialog.Accepted:
-                        
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
-                        
-                        affected_pairs.extend( petitioned_pairs )
-                        
+                    affected_pairs.extend( current_pairs )
+                    
+                
+            
+            if len( pending_pairs ) > 0:
+                
+                if len( pending_pairs ) > 10:
+                    
+                    pair_strings = 'The many pairs you entered.'
+                    
+                else:
+                    
+                    pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
+                    
+                
+                if len( pending_pairs ) > 1:
+                    
+                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are pending.'
+                    
+                else:
+                    
+                    message = 'The pair ' + pair_strings + ' is pending.'
+                    
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
+                    
+                    affected_pairs.extend( pending_pairs )
+                    
+                
+            
+            if len( petitioned_pairs ) > 0:
+                
+                if len( petitioned_pairs ) > 10:
+                    
+                    pair_strings = 'The many pairs you entered.'
+                    
+                else:
+                    
+                    pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
+                    
+                
+                if len( petitioned_pairs ) > 1:
+                    
+                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are petitioned.'
+                    
+                else:
+                    
+                    message = 'The pair ' + pair_strings + ' is petitioned.'
+                    
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
+                    
+                    affected_pairs.extend( petitioned_pairs )
                     
                 
             
@@ -4024,6 +4022,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 pairs.append( pair )
                 
             
+            pairs = HydrusData.DedupeList( pairs )
+            
             return pairs
             
         
@@ -4062,7 +4062,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 tags.append( b )
                 
             
-            export_string = os.linesep.join( tags )
+            export_string = '\n'.join( tags )
             
             return export_string
             
@@ -4092,7 +4092,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
             except Exception as e:
                 
-                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of child-parent line-pairs', e )
+                ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of child-parent line-pairs', e )
                 
             
         
@@ -4383,7 +4383,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 self._current_statuses_to_pairs = current_statuses_to_pairs
                 
                 simple_status_text = 'Files with a tag on the left will also be given the tag on the right.'
-                simple_status_text += os.linesep
+                simple_status_text += '\n'
                 simple_status_text += 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.'
                 
                 self._status_st.setText( simple_status_text )
@@ -4451,7 +4451,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    s = os.linesep * 2
+                    s = '\n' * 2
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
                     
                 
@@ -4465,7 +4465,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _review services_.'
                         
-                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
                         
                     elif not account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ):
                         
@@ -4473,7 +4473,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         s = 'The account for this service does not seem to have permission to upload parents! You can edit them here for now, but the pending menu will not try to upload any changes you make.'
                         
-                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
                         
                     
                 
@@ -4861,7 +4861,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         else:
                             
-                            pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
+                            pair_strings = '\n'.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
                             
                         
                         fixed_suggestions = [
@@ -4873,7 +4873,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         suggestions.extend( fixed_suggestions )
                         
-                        message = 'Enter a reason for:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'To be added. A janitor will review your petition.'
+                        message = 'Enter a reason for:' + '\n' * 2 + pair_strings + '\n' * 2 + 'To be added. A janitor will review your petition.'
                         
                         with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
                             
@@ -4932,170 +4932,168 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                     
                 
-            else:
+            
+            if len( current_pairs ) > 0:
                 
-                if len( current_pairs ) > 0:
+                do_it = True
+                
+                if default_reason is not None:
                     
-                    do_it = True
+                    reason = default_reason
                     
-                    if default_reason is not None:
+                elif self._i_am_local_tag_service:
+                    
+                    reason = 'removed by user'
+                    
+                else:
+                    
+                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
                         
-                        reason = default_reason
-                        
-                    elif self._i_am_local_tag_service:
-                        
-                        reason = 'removed by user'
+                        reason = 'admin'
                         
                     else:
                         
-                        if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
+                        if len( current_pairs ) > 10:
                             
-                            reason = 'admin'
+                            pair_strings = 'The many pairs you entered.'
                             
                         else:
                             
-                            if len( current_pairs ) > 10:
+                            pair_strings = '\n'.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
+                            
+                        
+                        message = 'Enter a reason for:'
+                        message += '\n' * 2
+                        message += pair_strings
+                        message += '\n' * 2
+                        message += 'to be removed. You will see the delete as soon as you upload, but a janitor will review your petition to decide if all users should receive it as well.'
+                        
+                        fixed_suggestions = [
+                            'obvious typo/mistake',
+                            'disambiguation',
+                            'correcting to repository standard'
+                        ]
+                        
+                        suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE )
+                        
+                        suggestions.extend( fixed_suggestions )
+                        
+                        with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
+                            
+                            if dlg.exec() == QW.QDialog.Accepted:
                                 
-                                pair_strings = 'The many pairs you entered.'
+                                reason = dlg.GetValue()
+                                
+                                if reason not in fixed_suggestions:
+                                    
+                                    CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, reason )
+                                    
                                 
                             else:
                                 
-                                pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
+                                do_it = False
                                 
-                            
-                            message = 'Enter a reason for:'
-                            message += os.linesep * 2
-                            message += pair_strings
-                            message += os.linesep * 2
-                            message += 'to be removed. You will see the delete as soon as you upload, but a janitor will review your petition to decide if all users should receive it as well.'
-                            
-                            fixed_suggestions = [
-                                'obvious typo/mistake',
-                                'disambiguation',
-                                'correcting to repository standard'
-                            ]
-                            
-                            suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE )
-                            
-                            suggestions.extend( fixed_suggestions )
-                            
-                            with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
-                                
-                                if dlg.exec() == QW.QDialog.Accepted:
-                                    
-                                    reason = dlg.GetValue()
-                                    
-                                    if reason not in fixed_suggestions:
-                                        
-                                        CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, reason )
-                                        
-                                    
-                                else:
-                                    
-                                    do_it = False
-                                    
-                                
-                            
-                        
-                    
-                    if do_it:
-                        
-                        we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
-                        
-                        if we_are_autopetitioning:
-                            
-                            if self._i_am_local_tag_service:
-                                
-                                reason = 'REPLACEMENT: by user'
-                                
-                            else:
-                                
-                                reason = 'REPLACEMENT: {}'.format( reason )
-                                
-                            
-                        
-                        for pair in current_pairs:
-                            
-                            self._pairs_to_reasons[ pair ] = reason
-                            
-                        
-                        if we_are_autopetitioning:
-                            
-                            for ( p, r ) in list( self._pairs_to_reasons.items() ):
-                                
-                                if r == self.AUTO_PETITION_REASON:
-                                    
-                                    self._pairs_to_reasons[ p ] = reason
-                                    
-                                
-                            
-                        
-                        with self._current_pairs_lock:
-                            
-                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                             
                         
                     
                 
-                if len( pending_pairs ) > 0:
+                if do_it:
                     
-                    if len( pending_pairs ) > 10:
-                        
-                        pair_strings = 'The many pairs you entered.'
-                        
-                    else:
-                        
-                        pair_strings = os.linesep.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
-                        
+                    we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
                     
-                    if len( pending_pairs ) > 1:
+                    if we_are_autopetitioning:
                         
-                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are pending.'
-                        
-                    else:
-                        
-                        message = 'The pair ' + pair_strings + ' is pending.'
-                        
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
-                    
-                    if result == QW.QDialog.Accepted:
-                        
-                        with self._current_pairs_lock:
+                        if self._i_am_local_tag_service:
                             
-                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
+                            reason = 'REPLACEMENT: by user'
                             
+                        else:
+                            
+                            reason = 'REPLACEMENT: {}'.format( reason )
+                            
+                        
+                    
+                    for pair in current_pairs:
+                        
+                        self._pairs_to_reasons[ pair ] = reason
+                        
+                    
+                    if we_are_autopetitioning:
+                        
+                        for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                            
+                            if r == self.AUTO_PETITION_REASON:
+                                
+                                self._pairs_to_reasons[ p ] = reason
+                                
+                            
+                        
+                    
+                    with self._current_pairs_lock:
+                        
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
                         
                     
                 
-                if len( petitioned_pairs ) > 0:
+            
+            if len( pending_pairs ) > 0:
                 
-                    if len( petitioned_pairs ) > 10:
+                if len( pending_pairs ) > 10:
+                    
+                    pair_strings = 'The many pairs you entered.'
+                    
+                else:
+                    
+                    pair_strings = '\n'.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
+                    
+                
+                if len( pending_pairs ) > 1:
+                    
+                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are pending.'
+                    
+                else:
+                    
+                    message = 'The pair ' + pair_strings + ' is pending.'
+                    
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    with self._current_pairs_lock:
                         
-                        pair_strings = 'The many pairs you entered.'
-                        
-                    else:
-                        
-                        pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
                         
                     
-                    if len( petitioned_pairs ) > 1:
-                        
-                        message = 'The pairs:' + os.linesep * 2 + pair_strings + os.linesep * 2 + 'Are petitioned.'
-                        
-                    else:
-                        
-                        message = 'The pair ' + pair_strings + ' is petitioned.'
-                        
+                
+            
+            if len( petitioned_pairs ) > 0:
+                
+                if len( petitioned_pairs ) > 10:
                     
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
+                    pair_strings = 'The many pairs you entered.'
                     
-                    if result == QW.QDialog.Accepted:
+                else:
+                    
+                    pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
+                    
+                
+                if len( petitioned_pairs ) > 1:
+                    
+                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are petitioned.'
+                    
+                else:
+                    
+                    message = 'The pair ' + pair_strings + ' is petitioned.'
+                    
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    with self._current_pairs_lock:
                         
-                        with self._current_pairs_lock:
-                            
-                            self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
-                            
+                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
                         
                     
                 
@@ -5163,7 +5161,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         if next_new in seen_tags:
                             
                             message = 'The pair you mean to add seems to connect to a sibling loop already in your database! Please undo this loop manually. The tags involved in the loop are:'
-                            message += os.linesep * 2
+                            message += '\n' * 2
                             message += ', '.join( seen_tags )
                             
                             ClientGUIDialogsMessage.ShowCritical( self, 'Loop problem!', message )
@@ -5236,7 +5234,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     if next_new in seen_tags:
                         
                         message = 'The pair you mean to add seems to connect to a sibling loop already in your database! Please undo this loop first. The tags involved in the loop are:'
-                        message += os.linesep * 2
+                        message += '\n' * 2
                         message += ', '.join( seen_tags )
                         
                         ClientGUIDialogsMessage.ShowWarning( self, message )
@@ -5363,6 +5361,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 pairs.append( pair )
                 
             
+            pairs = HydrusData.DedupeList( pairs )
+            
             return pairs
             
         
@@ -5401,7 +5401,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 tags.append( b )
                 
             
-            export_string = os.linesep.join( tags )
+            export_string = '\n'.join( tags )
             
             return export_string
             
@@ -5435,7 +5435,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             except Exception as e:
                 
-                ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of lesser-ideal sibling line-pairs', e )
+                ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of lesser-ideal sibling line-pairs', e )
                 
             
         
@@ -5836,7 +5836,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    s = os.linesep * 2
+                    s = '\n' * 2
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
                     
                 
@@ -5850,7 +5850,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _review services_.'
                         
-                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
                         
                     elif not account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
                         
@@ -5858,7 +5858,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         s = 'The account for this service does not seem to have permission to upload parents! You can edit them here for now, but the pending menu will not try to upload any changes you make.'
                         
-                        status_text = '{}{}{}'.format( s, os.linesep * 2, status_text )
+                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
                         
                     
                 
@@ -6101,8 +6101,8 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 if len( status[ 'waiting_on_tag_repos' ] ) > 0:
                     
-                    message += os.linesep * 2
-                    message += os.linesep.join( status[ 'waiting_on_tag_repos' ] )
+                    message += '\n' * 2
+                    message += '\n'.join( status[ 'waiting_on_tag_repos' ] )
                     
                     sync_halted = True
                     
@@ -6267,7 +6267,7 @@ class TagFilterButton( ClientGUICommon.BetterButton ):
         
         self.setText( button_text )
         
-        self.setToolTip( tt )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
     
     def GetValue( self ):
@@ -6475,8 +6475,8 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
-        self._background_colour = ClientGUICommon.AlphaColourControl( edit_panel )
-        self._text_colour = ClientGUICommon.AlphaColourControl( edit_panel )
+        self._background_colour = ClientGUIColourPicker.AlphaColourControl( edit_panel )
+        self._text_colour = ClientGUIColourPicker.AlphaColourControl( edit_panel )
         
         self._namespaces_listbox = ClientGUIListBoxes.QueueListBox( edit_panel, 8, self._ConvertNamespaceToListBoxString, self._AddNamespaceInfo, self._EditNamespaceInfo )
         
@@ -6499,7 +6499,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
         self._text_colour.SetValue( text_colour )
         self._namespaces_listbox.AddDatas( namespace_info )
         self._separator.setText( separator )
-        self._example_tags.setPlainText( os.linesep.join( example_tags ) )
+        self._example_tags.setPlainText( '\n'.join( example_tags ) )
         
         self._UpdateTest()
         

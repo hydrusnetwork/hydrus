@@ -116,16 +116,6 @@ def GenerateLiveStatusText( text: str, paused: bool, currently_working: bool, no
     return text
     
 
-def NeatenStatusText( text: str ) -> str:
-    
-    if len( text ) > 0:
-        
-        text = text.splitlines()[0]
-        
-    
-    return text
-    
-
 def PageImporterShouldStopWorking( page_key: bytes ):
     
     return HG.started_shutdown or not CG.client_controller.PageAlive( page_key )

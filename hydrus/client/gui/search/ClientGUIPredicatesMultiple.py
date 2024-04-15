@@ -8,6 +8,7 @@ from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.search import ClientGUIPredicatesSingle
@@ -109,7 +110,7 @@ class PredicateSystemRatingLikeControl( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self.setToolTip( 'Set "is" and leave rating null to search for "unrated".' )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set "is" and leave rating null to search for "unrated".' ) )
         
         self._service_key = service_key
         
@@ -245,7 +246,7 @@ class PredicateSystemRatingNumericalControl( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self.setToolTip( 'Set "is" and leave rating null to search for "unrated".' )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set "is" and leave rating null to search for "unrated".' ) )
         
         self._service_key = service_key
         

@@ -11,6 +11,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIDialogs
+from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -83,7 +84,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._forced_note_name = ClientGUICommon.NoneableTextCtrl( self._forced_note_name_panel, message = 'Forced Note Name: ', none_phrase = 'use "name: text" format' )
         tt = 'Normally, the sidecar exporter is at this stage expecting notes in the format "name: text". If you only have the text, you can force the name here. This is only useful if you are parsing one note through here, or you will get all sorts of renaming conflicts.'
-        self._forced_note_name.setToolTip( tt )
+        self._forced_note_name.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._forced_note_name.SetValue( None )
         
@@ -105,7 +106,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._nested_object_names_list = ClientGUIListBoxes.QueueListBox( self, 4, str, self._AddObjectName, self._EditObjectName )
         tt = 'If you leave this empty, the strings will be exported as a simple list. If you set it as [files,tags], the exported string list will be placed under nested objects with keys "files"->"tags". Note that this will also update an existing file, so, if you are feeling clever, you can have multiple routers writing tags and URLs to different destinations in the same file!'
-        self._nested_object_names_list.setToolTip( tt )
+        self._nested_object_names_list.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         vbox = QP.VBoxLayout()
         
@@ -413,9 +414,9 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
     def _ShowSidecarHelp( self ):
         
         message = 'Sidecars are typically named just as their associated file but with the additional extension. \'image.jpg\' makes \'image.jpg.txt\', and so on.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Sidecar exporters will overwrite whatever is at their set destination, so be careful if you intend to set up multiple simultaneous exports, or the second will overwrite the first. You can safely export to two or more different locations in the same .json file, but if you export to .txt, use the \'suffix\' control to export to different files.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'If there is no content to write, no new file will be created.'
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
@@ -485,7 +486,7 @@ class SingleFileMetadataExporterButton( QW.QPushButton ):
         elided_text = HydrusText.ElideText( text, 64 )
         
         self.setText( elided_text )
-        self.setToolTip( text )
+        self.setToolTip( ClientGUIFunctions.WrapToolTip( text ) )
         
     
     def GetValue( self ):

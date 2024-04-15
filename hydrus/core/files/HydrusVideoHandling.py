@@ -96,13 +96,13 @@ def GetFFMPEGVersion():
     
     HydrusData.ShowText( message )
     
-    message += os.linesep * 2
+    message += '\n' * 2
     message += str( sbp_kwargs )
-    message += os.linesep * 2
+    message += '\n' * 2
     message += str( os.environ )
-    message += os.linesep * 2
+    message += '\n' * 2
     message += 'STDOUT Response: {}'.format( stdout )
-    message += os.linesep * 2
+    message += '\n' * 2
     message += 'STDERR Response: {}'.format( stderr )
     
     HydrusData.Print( message )
@@ -155,7 +155,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
         if not FFMPEG_MISSING_ERROR_PUBBED:
             
             message = 'FFMPEG, which hydrus uses to parse and render video, was not found! This may be due to it not being available on your system, or hydrus being unable to find it.'
-            message += os.linesep * 2
+            message += '\n' * 2
             
             if HC.PLATFORM_WINDOWS:
                 
@@ -166,7 +166,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
                 message += 'If you are certain that FFMPEG is installed on your OS and accessible in your PATH, please let hydrus_dev know, as this problem is likely due to an environment problem. You may be able to solve this problem immediately by putting a static build of the ffmpeg executable in your install_dir/bin folder.'
                 
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'You can check your current FFMPEG status through help->about.'
             
             HydrusData.ShowText( message )
@@ -188,18 +188,18 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
         if not FFMPEG_NO_CONTENT_ERROR_PUBBED:
             
             message = 'FFMPEG, which hydrus uses to parse and render video, did not return any data on a recent file metadata check! More debug info has been written to the log.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'You can check this info again through help->about.'
             
             HydrusData.ShowText( message )
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += str( sbp_kwargs )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += str( os.environ )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'STDOUT Response: {}'.format( stdout )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'STDERR Response: {}'.format( stderr )
             
             HydrusData.DebugPrint( message )
@@ -494,7 +494,7 @@ def RenderImageToImagePath( path, temp_image_path ):
         if not FFMPEG_MISSING_ERROR_PUBBED:
             
             message = 'FFMPEG, which hydrus uses to parse and render video, was not found! This may be due to it not being available on your system, or hydrus being unable to find it.'
-            message += os.linesep * 2
+            message += '\n' * 2
             
             if HC.PLATFORM_WINDOWS:
                 
@@ -505,7 +505,7 @@ def RenderImageToImagePath( path, temp_image_path ):
                 message += 'If you are certain that FFMPEG is installed on your OS and accessible in your PATH, please let hydrus_dev know, as this problem is likely due to an environment problem. You may be able to solve this problem immediately by putting a static build of the ffmpeg executable in your install_dir/bin folder.'
                 
             
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'You can check your current FFMPEG status through help->about.'
             
             HydrusData.ShowText( message )

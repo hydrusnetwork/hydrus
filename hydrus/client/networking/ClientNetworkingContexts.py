@@ -122,12 +122,12 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     def GetSummary( self ):
         
         summary = self.ToString()
-        summary += os.linesep * 2
+        summary += '\n' * 2
         summary += CC.network_context_type_description_lookup[ self.context_type ]
         
         if self.IsDefault():
             
-            summary += os.linesep * 2
+            summary += '\n' * 2
             summary += 'This is the \'default\' version of this context. It stands in when a domain or subscription has no specific rules set.'
             
         

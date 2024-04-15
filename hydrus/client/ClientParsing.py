@@ -104,7 +104,7 @@ def ConvertParseResultToPrettyString( result ):
         
         note_name = additional_info
         
-        return 'note "{}":{}{}'.format( note_name, os.linesep, parsed_text )
+        return 'note "{}":\n{}'.format( note_name, parsed_text )
         
     elif content_type == HC.CONTENT_TYPE_HASH:
         
@@ -393,7 +393,7 @@ def GetHTMLTagString( tag: bs4.Tag ):
             
             if sub_tag.name in ( 'br', 'p' ):
                 
-                all_strings.append( os.linesep )
+                all_strings.append( '\n' )
                 
                 continue
                 
@@ -765,7 +765,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
     
     def _GetParsePrettySeparator( self ):
         
-        return os.linesep
+        return '\n'
         
     
     def _ParseRawTexts( self, parsing_context, parsing_text, collapse_newlines: bool ):
@@ -982,9 +982,9 @@ class ParseFormulaCompound( ParseFormula ):
         
         s.append( 'and substitute into ' + self._sub_phrase )
         
-        separator = os.linesep * 2
+        separator = '\n' * 2
         
-        text = '--COMPOUND--' + os.linesep * 2 + separator.join( s )
+        text = '--COMPOUND--' + '\n' * 2 + separator.join( s )
         
         return text
         
@@ -1074,9 +1074,9 @@ class ParseFormulaContextVariable( ParseFormula ):
         
         s.append( 'fetch the "' + self._variable_name + '" variable from the parsing context' )
         
-        separator = os.linesep * 2
+        separator = '\n' * 2
         
-        text = '--CONTEXT VARIABLE--' + os.linesep * 2 + separator.join( s )
+        text = '--CONTEXT VARIABLE--' + '\n' * 2 + separator.join( s )
         
         return text
         
@@ -1137,11 +1137,11 @@ class ParseFormulaHTML( ParseFormula ):
         
         if self._content_to_fetch == HTML_CONTENT_HTML:
             
-            return os.linesep * 2
+            return '\n' * 2
             
         else:
             
-            return os.linesep
+            return '\n'
             
         
     
@@ -1428,9 +1428,9 @@ class ParseFormulaHTML( ParseFormula ):
         
         pretty_strings.extend( self._string_processor.GetProcessingStrings() )
         
-        separator = os.linesep + 'and then '
+        separator = '\n' + 'and then '
         
-        pretty_multiline_string = '--HTML--' + os.linesep + separator.join( pretty_strings )
+        pretty_multiline_string = '--HTML--' + '\n' + separator.join( pretty_strings )
         
         return pretty_multiline_string
         
@@ -1737,11 +1737,11 @@ class ParseFormulaJSON( ParseFormula ):
         
         if self._content_to_fetch == JSON_CONTENT_JSON:
             
-            return os.linesep * 2
+            return '\n' * 2
             
         else:
             
-            return os.linesep
+            return '\n'
             
         
     
@@ -2018,9 +2018,9 @@ class ParseFormulaJSON( ParseFormula ):
         
         pretty_strings.extend( self._string_processor.GetProcessingStrings() )
         
-        separator = os.linesep + 'and then '
+        separator = '\n' + 'and then '
         
-        pretty_multiline_string = '--JSON--' + os.linesep + separator.join( pretty_strings )
+        pretty_multiline_string = '--JSON--' + '\n' + separator.join( pretty_strings )
         
         return pretty_multiline_string
         
@@ -2389,7 +2389,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
                             
                         
                     
-                    clean_url = ClientNetworkingFunctions.WashURL( unclean_url )
+                    clean_url = ClientNetworkingFunctions.EnsureURLIsEncoded( unclean_url )
                     
                     clean_urls.append( clean_url )
                     
@@ -2452,7 +2452,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
         
         result_lines.append( '*** RESULTS END ***' )
         
-        results_text = os.linesep.join( result_lines )
+        results_text = '\n'.join( result_lines )
         
         return results_text
         
@@ -2786,9 +2786,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             
             all_parse_results = self.Parse( parsing_context, parsing_text )
             
-            pretty_groups_of_parse_results = [ os.linesep.join( [ ConvertParseResultToPrettyString( parse_result ) for parse_result in parse_results ] ) for parse_results in all_parse_results ]
+            pretty_groups_of_parse_results = [ '\n'.join( [ ConvertParseResultToPrettyString( parse_result ) for parse_result in parse_results ] ) for parse_results in all_parse_results ]
             
-            group_separator = os.linesep * 2 + '*** SEPARATE FILE RESULTS BREAK ***' + os.linesep * 2
+            group_separator = '\n' * 2 + '*** SEPARATE FILE RESULTS BREAK ***' + '\n' * 2
             
             pretty_parse_result_text = group_separator.join( pretty_groups_of_parse_results )
             
@@ -2801,13 +2801,13 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         result_lines = []
         
-        result_lines.append( '*** ' + HydrusData.ToHumanInt( len( all_parse_results ) ) + ' RESULTS BEGIN ***' + os.linesep )
+        result_lines.append( '*** ' + HydrusData.ToHumanInt( len( all_parse_results ) ) + ' RESULTS BEGIN ***' + '\n' )
         
         result_lines.append( pretty_parse_result_text )
         
-        result_lines.append( os.linesep + '*** RESULTS END ***' )
+        result_lines.append( '\n' + '*** RESULTS END ***' )
         
-        results_text = os.linesep.join( result_lines )
+        results_text = '\n'.join( result_lines )
         
         return results_text
         

@@ -226,7 +226,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             death_statement = 'Stopping if file velocity falls below ' + HydrusData.ToHumanInt( death_files_found ) + ' files per ' + HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta ) + '.'
             
         
-        return timing_statement + os.linesep * 2 + death_statement
+        return timing_statement + '\n' * 2 + death_statement
         
     
     def HasStaticCheckTime( self ):

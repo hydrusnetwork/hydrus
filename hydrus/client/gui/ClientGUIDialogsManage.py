@@ -68,10 +68,10 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
         
         self._copy_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().copy, self._Copy )
-        self._copy_button.setToolTip( 'Copy ratings to the clipboard.' )
+        self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy ratings to the clipboard.' ) )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( 'Paste ratings from the clipboard.' )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste ratings from the clipboard.' ) )
         
         self._apply = QW.QPushButton( 'apply', self )
         self._apply.clicked.connect( self.EventOK )
@@ -150,7 +150,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON pairs of service keys and rating values', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON pairs of service keys and rating values', e )
             
             return
             
@@ -885,7 +885,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
     def _Remove( self ):
         
         text = 'Remove these port mappings?'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'If a mapping does not disappear after a remove, it may be hard-added in the router\'s settings interface. In this case, you will have to go there to fix it.'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, text, yes_label = 'do it', no_label = 'forget it' )

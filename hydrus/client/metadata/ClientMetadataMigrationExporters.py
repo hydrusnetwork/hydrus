@@ -407,7 +407,7 @@ class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, Hydr
             
             try:
                 
-                url = ClientNetworkingFunctions.WashURL( row )
+                url = ClientNetworkingFunctions.EnsureURLIsEncoded( row )
                 
                 url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
                 
@@ -543,7 +543,7 @@ class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusS
                 except Exception as e:
                     
                     # TODO: we probably want custom importer/exporter exceptions here
-                    raise Exception( 'Could not read the existing JSON at {}!{}{}'.format( path, os.linesep, e ) )
+                    raise Exception( 'Could not read the existing JSON at {}!{}{}'.format( path, '\n', e ) )
                     
                 
             else:

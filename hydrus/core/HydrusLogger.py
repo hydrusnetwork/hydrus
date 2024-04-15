@@ -137,7 +137,7 @@ class HydrusLogger( object ):
         
         with self._lock:
             
-            if value in ( os.linesep, '\n' ):
+            if value in ( '\n', '\n' ):
                 
                 prefix = ''
                 

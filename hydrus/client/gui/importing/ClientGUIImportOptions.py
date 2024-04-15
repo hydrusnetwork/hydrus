@@ -25,7 +25,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import NoteImportOptions
@@ -64,12 +64,12 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._use_default_dropdown.addItem( 'set custom file import options just for this importer', False )
         
         tt = 'Normally, the client will refer to the defaults (as set under "options->importing") at the time of import.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'But if you are doing a one-time import that has some unusual file rules, set them here.'
         
-        self._use_default_dropdown.setToolTip( tt )
+        self._use_default_dropdown.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -86,10 +86,10 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._exclude_deleted = QW.QCheckBox( pre_import_panel )
         
         tt = 'By default, the client will not try to reimport files that it knows were deleted before. This is a good setting and should be left on in general.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'However, you might like to turn it off for a one-time job where you want to force an import of previously deleted files.'
         
-        self._exclude_deleted.setToolTip( tt )
+        self._exclude_deleted.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -109,25 +109,25 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         tt = 'DO NOT SET THESE AS THE EXPENSIVE "DO NOT CHECK" UNLESS YOU KNOW YOU NEED THEM FOR THIS ONE JOB'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'If hydrus recognises a file\'s URL or hash, it can determine that it is "already in db" or "previously deleted" and skip the download entirely, saving a huge amount of time and bandwidth. The logic behind this can get quite complicated, and it is usually best to let it work normally.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'If the checking is set to "dispositive", then if a match is found, that match will be trusted and the other match type is not consulted. Note that, for now, SHA256 hashes your client has never seen before will never count as "matches", just like an MD5 it has not seen before, so in all cases the import will defer to any set url check that says "already in db/previously deleted". (This is to deal with some cloud-storage in-transfer optimisation hash-changing. Novel SHA256 hashes are not always trustworthy.)'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'If you believe your clientside parser or url mappings are completely broken, and these logical tests are producing false positive "deleted" or "already in db" results, then set one or both of these to "do not check". Only ever do this for one-time manually fired jobs. Do not turn this on for a normal download or a subscription! You do not need to switch off checking for a file maintenance job that is filling in missing files, as missing files are automatically detected in the logic.'
         
-        self._preimport_hash_check_type.setToolTip( tt )
-        self._preimport_url_check_type.setToolTip( tt )
+        self._preimport_hash_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._preimport_url_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._preimport_url_check_looks_for_neighbours = QW.QCheckBox( pre_import_panel )
         
         tt = 'When a file-url mapping is found, and additional check can be performed to see if it is trustworthy.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'If the URL has a Post URL Class, and the file has multiple other URLs with the same domain & URL Class (basically the file has multiple URLs on the same site), then the mapping is assumed to be some parse spam and not trustworthy (leading to more "this file looks new" results in the pre-check).'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'This test is best left on unless you are doing a single job that is messed up by the logic.'
         
-        self._preimport_url_check_looks_for_neighbours.setToolTip( tt )
+        self._preimport_url_check_looks_for_neighbours.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -135,22 +135,22 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'This is an old setting, it basically just rejects all jpegs and pngs with more than a 1GB bitmap, or about 250-350 Megapixels. In can be useful if you have an older computer that will die at a 16,000x22,000 png.'
         
-        self._allow_decompression_bombs.setToolTip( tt )
+        self._allow_decompression_bombs.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._mimes = ClientGUIOptionsPanels.OptionsPanelMimesTree( pre_import_panel, HC.ALLOWED_MIMES )
         
-        self._min_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
+        self._min_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel )
         self._min_size.SetValue( 5 * 1024 )
         
-        self._max_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
+        self._max_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel )
         self._max_size.SetValue( 100 * 1024 * 1024 )
         
-        self._max_gif_size = ClientGUIControls.NoneableBytesControl( pre_import_panel )
+        self._max_gif_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel )
         self._max_gif_size.SetValue( 32 * 1024 * 1024 )
         
         tt = 'This catches most of those gif conversions of webms. These files are low quality but huge and mostly a waste of storage and bandwidth.'
         
-        self._max_gif_size.setToolTip( tt )
+        self._max_gif_size.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._min_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, num_dimensions = 2 )
         self._min_resolution.SetValue( ( 50, 50 ) )
@@ -160,8 +160,8 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'If either width or height is violated, the file will fail this test and be ignored. It does not have to be both.'
         
-        self._min_resolution.setToolTip( tt )
-        self._max_resolution.setToolTip( tt )
+        self._min_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._max_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -190,16 +190,16 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._associate_source_urls = QW.QCheckBox( post_import_panel )
         
         tt = 'Any URL in the \'chain\' to the file will be linked to it as a \'known url\' unless that URL has a matching URL Class that is set otherwise. Normally, since Gallery URL Classes are by default set not to associate, this means the file will get a visible Post URL and a less prominent direct File URL.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'If you are doing a one-off job and do not want to associate these URLs, disable it here. Do not unset this unless you have a reason to!'
         
-        self._associate_primary_urls.setToolTip( tt )
+        self._associate_primary_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         tt = 'If the parser discovers and additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'You should turn this off if the site supplies bad (incorrect or imprecise or malformed) source urls.'
         
-        self._associate_source_urls.setToolTip( tt )
+        self._associate_source_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -568,12 +568,12 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._use_default_dropdown.addItem( 'set custom note import options just for this importer', False )
         
         tt = 'Normally, the client will refer to the defaults (as set under "network->downloaders->manage default import options") at the time of import.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'But if you are doing a one-time import that has some unusual note merge rules, set them here.'
         
-        self._use_default_dropdown.setToolTip( tt )
+        self._use_default_dropdown.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -589,13 +589,13 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'Check this to get notes. Uncheck to disable it and get nothing.'
         
-        self._get_notes.setToolTip( tt )
+        self._get_notes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._extend_existing_note_if_possible = QW.QCheckBox( self._specific_options_panel )
         
         tt = 'If a note with the same name already exists on the file, but the new note text is just the same as what exists but with something new appended, should we just replace the existing note with the new extended one?'
         
-        self._extend_existing_note_if_possible.setToolTip( tt )
+        self._extend_existing_note_if_possible.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._conflict_resolution = ClientGUICommon.BetterChoice( self._specific_options_panel )
         
@@ -611,27 +611,27 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         tt = 'If a note with the same name already exists on the file and the above \'extend\' rule does not apply, what should we do?'
         
-        self._conflict_resolution.setToolTip( tt )
+        self._conflict_resolution.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._name_whitelist = ClientGUIListBoxes.AddEditDeleteListBox( self._specific_options_panel, 6, str, self._AddWhitelistItem, self._EditWhitelistItem )
         
         tt = 'If you only want some of the notes the parser provides, state them here. Leave this box blank to allow all notes.'
         
-        self._name_whitelist.setToolTip( tt )
+        self._name_whitelist.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._names_to_name_overrides = ClientGUIStringControls.StringToStringDictControl( self._specific_options_panel, dict(), min_height = 6, key_name = 'parser name', value_name = 'saved name' )
         
         tt = 'If you want to rename any of the notes the parser provides, set it up here.'
         
-        self._names_to_name_overrides.setToolTip( tt )
+        self._names_to_name_overrides.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._all_name_override = ClientGUICommon.NoneableTextCtrl( self._specific_options_panel, none_phrase = 'do not mass-rename' )
         
         tt = 'If you want a hacky way to rename one note that is not caught by the above rename rules, whatever it is originally called, set this.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'If multiple notes get renamed this way, then the note conflict rules will apply as they conflict with each other. New notes are processed in original name alphabetical order.'
         
-        self._all_name_override.setToolTip( tt )
+        self._all_name_override.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -680,7 +680,7 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( 'get notes: ', self._get_notes ) )
             rows.append( ( 'if possible, extend existing notes: ', self._extend_existing_note_if_possible ) )
             rows.append( ( 'if existing note conflict, what to do: ', self._conflict_resolution ) )
-            rows.append( ( 'only allow these note names' + os.linesep + '(leave blank for \'get all\'): ', self._name_whitelist ) )
+            rows.append( ( 'only allow these note names' + '\n' + '(leave blank for \'get all\'): ', self._name_whitelist ) )
             rows.append( ( 'rename these notes as they come in: ', self._names_to_name_overrides ) )
             rows.append( ( 'rename spare note(s) to this: ', self._all_name_override ) )
             
@@ -886,28 +886,28 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
             
         
         tt = 'All files means \'successful\' and \'already in db\'.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'New means only \'successful\'.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'None means this is a silent importer. This is rarely useful.'
         
-        self._presentation_status.setToolTip( tt )
+        self._presentation_status.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._presentation_inbox = ClientGUICommon.BetterChoice( self )
         
         tt = 'Inbox or archive means all files.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Must be in inbox means only inbox files _at the time of the presentation_. This can be neat as you process and revisit currently watched threads.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'Or in inbox (which only shows if you are set to only see new files) allows already in db results if they are currently in the inbox. Essentially you are just excluding already-in-archive files.'
         
-        self._presentation_inbox.setToolTip( tt )
+        self._presentation_inbox.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._presentation_location = ClientGUILocation.LocationSearchContextButton( self, presentation_import_options.GetLocationContext() )
         
         tt = 'This is mostly for technical purposes on hydev\'s end, but if you want, you can filter the presented files based on a location context.'
         
-        self._presentation_location.setToolTip( tt )
+        self._presentation_location.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1058,9 +1058,9 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         else:
             
             message = 'Here you can filter which tags are applied to the files being imported in this context. This typically means those tags on a booru file page beside the file, but other contexts provide tags from different locations and quality.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'The namespace checkboxes on the left are compiled from what all your current parsers say they can do and are simply for convenience. It is worth doing some smaller tests with a new download source to make sure you know what it can provide and what you actually want.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Once you are happy, you might want to say \'only "character:", "creator:" and "series:" tags\', or \'everything _except_ "species:" tags\'. This tag filter can get complicated if you want it to--check the help button in the top-right for more information.'
             
         
@@ -1131,11 +1131,11 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             namespaces = CG.client_controller.network_engine.domain_manager.GetParserNamespaces()
             
             message = 'If you do not want the \'only add tags that already exist\' option to apply to all tags coming in, set a filter here for the tags you _want_ to be exposed to this test.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'For instance, if you only want the wash of messy unnamespaced tags to be exposed to the test, then set a simple whitelist for only \'unnamespaced\'.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'This is obviously a complicated idea, so make sure you test it on a small scale before you try anything big.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Clicking ok on this dialog will automatically turn on the already-exists filter if it is off.'
             
             panel = ClientGUITags.EditTagFilterPanel( dlg, self._only_add_existing_tags_filter, namespaces = namespaces, message = message )
@@ -1249,7 +1249,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         #
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
-        help_button.setToolTip( 'Show help regarding these tag options.' )
+        help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding these tag options.' ) )
         
         #
         
@@ -1261,12 +1261,12 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._use_default_dropdown.addItem( 'set custom tag import options just for this importer', False )
         
         tt = 'Normally, the client will refer to the defaults (as set under "network->downloaders->manage default import options") for the appropriate tag import options at the time of import.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'It is easier to work this way, since you can change a single default setting and update all current and future downloaders that refer to those defaults, whereas having specific options for every subscription or downloader means you have to update every single one just to make a little change somewhere.'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'But if you are doing a one-time import that has some unusual tag rules, set them here.'
         
-        self._use_default_dropdown.setToolTip( tt )
+        self._use_default_dropdown.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -1284,36 +1284,36 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._fetch_tags_even_if_hash_recognised_and_file_already_in_db = QW.QCheckBox( downloader_options_panel )
         
         tt = 'I strongly recommend you uncheck this for normal use. When it is on, downloaders are inefficent!'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'This will force the client to download the metadata for a file even if it thinks it has visited its page before. Normally, hydrus will skip an URL in this case. It is useful to turn this on if you want to force a recheck of the tags in that page.'
         
-        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setToolTip( tt )
+        self._fetch_tags_even_if_url_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         tt = 'I strongly recommend you uncheck this for normal use.  When it is on, downloaders could be inefficent!'
-        tt += os.linesep * 2
+        tt += '\n' * 2
         tt += 'This will force the client to download the metadata for a file even if the gallery step has given a hash that the client thinks it recognises. Normally, hydrus will skip an URL in this case (although the hash-from-gallery case is rare, so this option rarely matters). This is mostly a debug complement to the url check option.'
         
-        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setToolTip( tt )
+        self._fetch_tags_even_if_hash_recognised_and_file_already_in_db.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         tag_blacklist = tag_import_options.GetTagBlacklist()
         
         message = 'If a file about to be downloaded has a tag on the site that this blacklist blocks, the file will not be downloaded and imported. If you want to stop \'scat\' or \'gore\', just type them into the list.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This system tests the all tags that are parsed from the site, not any other tags the files may have in different places. Siblings of all those tags will also be tested. If none of your tag services have excellent siblings, it is worth adding multiple versions of your tag, just to catch different sites terms. Link up \'gore\', \'guro\', \'violence\', etc...'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'Additionally, unnamespaced rules will apply to namespaced tags. \'metroid\' in the blacklist will catch \'series:metroid\' as parsed from a site.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'It is worth doing a small test here, just to make sure it is all set up how you want.'
         
         self._tag_blacklist_button = ClientGUITags.TagFilterButton( downloader_options_panel, message, tag_blacklist, only_show_blacklist = True )
         
-        self._tag_blacklist_button.setToolTip( 'A blacklist will ignore files if they have any of a certain list of tags.' )
+        self._tag_blacklist_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'A blacklist will ignore files if they have any of a certain list of tags.' ) )
         
         self._tag_whitelist = list( tag_import_options.GetTagWhitelist() )
         
         self._tag_whitelist_button = ClientGUICommon.BetterButton( downloader_options_panel, 'whitelist', self._EditWhitelist )
         
-        self._tag_blacklist_button.setToolTip( 'A whitelist will ignore files if they do not have any of a certain list of tags.' )
+        self._tag_blacklist_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'A whitelist will ignore files if they do not have any of a certain list of tags.' ) )
         
         self._UpdateTagWhitelistLabel()
         
@@ -1404,7 +1404,7 @@ class EditTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     def _EditWhitelist( self ):
         
         message = 'If you add tags here, then any file importing with these options must have at least one of these tags from the download source. You can mix it with a blacklist--both will apply in turn.'
-        message += os.linesep * 2
+        message += '\n' * 2
         message += 'This is usually easier and faster to do just by adding tags to the downloader query (e.g. "artistname desired_tag"), so reserve this for downloaders that do not work on tags or where you want to whitelist multiple tags.'
         
         with ClientGUIDialogs.DialogInputTags( self, CC.COMBINED_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, list( self._tag_whitelist ), message = message ) as dlg:
@@ -1779,7 +1779,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         action = QW.QAction()
         
         action.setText( 'import options' )
-        action.setToolTip( 'edit the different options for this importer' )
+        action.setToolTip( ClientGUIFunctions.WrapToolTip( 'edit the different options for this importer' ) )
         
         action.triggered.connect( self._EditOptions )
         
@@ -1885,7 +1885,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised File Import Options', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised File Import Options', e )
             
             return
             
@@ -1926,7 +1926,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Note Import Options', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Note Import Options', e )
             
             return
             
@@ -1967,7 +1967,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Tag Import Options', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Tag Import Options', e )
             
             return
             
@@ -2237,11 +2237,11 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         
         my_action.setText( label )
         
-        s = os.linesep * 2
+        s = '\n' * 2
         
         summary = s.join( summaries )
         
-        my_action.setToolTip( summary )
+        my_action.setToolTip( ClientGUIFunctions.WrapToolTip( summary ) )
         
     
     def _SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):

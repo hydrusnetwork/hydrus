@@ -10,7 +10,6 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -21,7 +20,6 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
-from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.networking import ClientNetworkingFunctions
 
 def AddGridboxStretchSpacer( win: QW.QWidget, layout: QW.QGridLayout ):
@@ -183,7 +181,7 @@ class ShortcutAwareToolTipMixin( object ):
         
         if self._simple_shortcut_command is not None:
             
-            tt += os.linesep * 2
+            tt += '\n' * 2
             tt += '----------'
             
             names_to_shortcuts = ClientGUIShortcuts.shortcuts_manager().GetNamesToShortcuts( self._simple_shortcut_command )
@@ -207,19 +205,19 @@ class ShortcutAwareToolTipMixin( object ):
                         pretty_name = name
                         
                     
-                    tt += os.linesep * 2
+                    tt += '\n' * 2
                     
                     tt += ', '.join( shortcut_strings )
-                    tt += os.linesep
+                    tt += '\n'
                     tt += '({}->{})'.format( pretty_name, CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
                     
                 
             else:
                 
-                tt += os.linesep * 2
+                tt += '\n' * 2
                 
                 tt += 'no shortcuts set'
-                tt += os.linesep
+                tt += '\n'
                 tt += '({})'.format( CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
                 
             
@@ -701,7 +699,7 @@ class BetterStaticText( QP.EllipsizedLabel ):
             
             if self._tooltip_label:
                 
-                self.setToolTip( text )
+                self.setToolTip( ClientGUIFunctions.WrapToolTip( text ) )
                 
             
         
@@ -935,47 +933,6 @@ class CheckboxManagerOptions( CheckboxManager ):
         
     
 
-class AlphaColourControl( QW.QWidget ):
-    
-    def __init__( self, parent ):
-        
-        QW.QWidget.__init__( self, parent )
-        
-        self._colour_picker = ClientGUIColourPicker.ColourPickerButton( self )
-        
-        self._alpha_selector = BetterSpinBox( self, min=0, max=255 )
-        
-        hbox = QP.HBoxLayout( spacing = 5 )
-        
-        QP.AddToLayout( hbox, self._colour_picker, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, BetterStaticText(self,'alpha:'), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._alpha_selector, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        hbox.addStretch( 1 )
-        
-        self.setLayout( hbox )
-        
-    
-    def GetValue( self ):
-        
-        colour = self._colour_picker.GetColour()
-        
-        a = self._alpha_selector.value()
-        
-        colour.setAlpha( a )
-        
-        return colour
-        
-    
-    def SetValue( self, colour: QG.QColor ):
-        
-        picker_colour = QG.QColor( colour.rgb() )
-        
-        self._colour_picker.SetColour( picker_colour )
-        
-        self._alpha_selector.setValue( colour.alpha() )
-        
-    
 class ExportPatternButton( BetterButton ):
     
     def __init__( self, parent ):
@@ -1008,6 +965,7 @@ class ExportPatternButton( BetterButton ):
         CGC.core().PopupMenu( self, menu )
         
     
+
 class Gauge( QW.QProgressBar ):
     
     def __init__( self, *args, **kwargs ):
@@ -1687,6 +1645,7 @@ class NoneableTextCtrl( QW.QWidget ):
         self._text.setReadOnly( value )
         self._checkbox.setEnabled( not value )
         
+    
     def setToolTip( self, text ):
         
         QW.QWidget.setToolTip( self, text )

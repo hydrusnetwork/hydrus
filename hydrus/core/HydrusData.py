@@ -690,6 +690,7 @@ def GenerateHumanTextSortKey():
     
     return split_alphanum
     
+
 HumanTextSortKey = GenerateHumanTextSortKey()
 
 def HumanTextSort( texts ):
@@ -906,8 +907,8 @@ def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
     if len( bad_hex_hashes ):
         
         m = 'Sorry, {} hashes should have {} hex characters! These did not:'.format( hash_type, expected_hex_length )
-        m += os.linesep * 2
-        m += os.linesep.join( ( '{} ({} characters)'.format( bad_hex_hash, len( bad_hex_hash ) ) for bad_hex_hash in bad_hex_hashes ) )
+        m += '\n' * 2
+        m += '\n'.join( ( '{} ({} characters)'.format( bad_hex_hash, len( bad_hex_hash ) ) for bad_hex_hash in bad_hex_hashes ) )
         
         raise Exception( m )
         
@@ -1015,7 +1016,7 @@ def RecordRunningStart( db_path, instance ):
         me = psutil.Process()
         
         record_string += str( me.pid )
-        record_string += os.linesep
+        record_string += '\n'
         record_string += str( me.create_time() )
         
     except psutil.Error:

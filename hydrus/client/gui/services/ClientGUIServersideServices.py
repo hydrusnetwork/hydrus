@@ -16,8 +16,9 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 
 class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
@@ -145,7 +146,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             bandwidth_rules = dictionary[ 'bandwidth_rules' ]
             
-            self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
+            self._bandwidth_rules = ClientGUIBandwidth.BandwidthRulesCtrl( self, bandwidth_rules )
             
             #
             
@@ -173,7 +174,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             ClientGUICommon.StaticBox.__init__( self, parent, 'file repository' )
             
             self._log_uploader_ips = QW.QCheckBox( self )
-            self._max_storage = ClientGUIControls.NoneableBytesControl( self, initial_value = 5 * 1024 * 1024 * 1024 )
+            self._max_storage = ClientGUIBytes.NoneableBytesControl( self, initial_value = 5 * 1024 * 1024 * 1024 )
             
             #
             
@@ -219,7 +220,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             bandwidth_rules = dictionary[ 'server_bandwidth_rules' ]
             
-            self._bandwidth_rules = ClientGUIControls.BandwidthRulesCtrl( self, bandwidth_rules )
+            self._bandwidth_rules = ClientGUIBandwidth.BandwidthRulesCtrl( self, bandwidth_rules )
             
             #
             

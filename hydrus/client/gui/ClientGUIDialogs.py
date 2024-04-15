@@ -349,9 +349,9 @@ class DialogInputLocalBooruShare( Dialog ):
         vbox = QP.VBoxLayout()
         
         intro = 'Sharing ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files.'
-        intro += os.linesep + 'Title and text are optional.'
+        intro += '\n' + 'Title and text are optional.'
         
-        if new_share: intro += os.linesep + 'The link will not work until you ok this dialog.'
+        if new_share: intro += '\n' + 'The link will not work until you ok this dialog.'
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -459,7 +459,7 @@ class DialogInputNamespaceRegex( Dialog ):
         
         vbox = QP.VBoxLayout()
         
-        intro = r'Put the namespace (e.g. page) on the left.' + os.linesep + r'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + os.linesep + r'All files will be tagged with "namespace:regex".'
+        intro = r'Put the namespace (e.g. page) on the left.' + '\n' + r'Put the regex (e.g. [1-9]+\d*(?=.{4}$)) on the right.' + '\n' + r'All files will be tagged with "namespace:regex".'
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -495,7 +495,7 @@ class DialogInputNamespaceRegex( Dialog ):
         except Exception as e:
             
             text = 'That regex would not compile!'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += str( e )
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Error', text )

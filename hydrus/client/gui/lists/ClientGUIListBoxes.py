@@ -23,6 +23,7 @@ from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIShortcuts
@@ -520,7 +521,7 @@ class AddEditDeleteListBox( QW.QWidget ):
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'JSON-serialised Hydrus Object(s)', e )
             
         
     
@@ -616,12 +617,12 @@ class AddEditDeleteListBox( QW.QWidget ):
             if len( bad_object_type_names ) > 0:
                 
                 message = 'The imported objects included these types:'
-                message += os.linesep * 2
-                message += os.linesep.join( bad_object_type_names )
-                message += os.linesep * 2
+                message += '\n' * 2
+                message += '\n'.join( bad_object_type_names )
+                message += '\n' * 2
                 message += 'Whereas this control only allows:'
-                message += os.linesep * 2
-                message += os.linesep.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
+                message += '\n' * 2
+                message += '\n'.join( ( HydrusData.GetTypeName( o ) for o in self._permitted_object_types ) )
                 
                 ClientGUIDialogsMessage.ShowWarning( self, message )
                 
@@ -629,8 +630,8 @@ class AddEditDeleteListBox( QW.QWidget ):
             if len( other_bad_errors ) > 0:
                 
                 message = 'The imported objects were wrong for this control:'
-                message += os.linesep * 2
-                message += os.linesep.join( other_bad_errors )
+                message += '\n' * 2
+                message += '\n'.join( other_bad_errors )
                 
                 ClientGUIDialogsMessage.ShowWarning( self, message )
                 
@@ -2555,7 +2556,7 @@ class ListBoxTags( ListBox ):
         
         if len( texts ) > 0:
             
-            text = os.linesep.join( texts )
+            text = '\n'.join( texts )
             
             CG.client_controller.pub( 'clipboard', 'text', text )
             

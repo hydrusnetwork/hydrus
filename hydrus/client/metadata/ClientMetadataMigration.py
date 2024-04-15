@@ -115,7 +115,12 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
         
         sidecar_importers = [ importer for importer in self._importers if isinstance( importer, ClientMetadataMigrationImporters.SingleFileMetadataImporterSidecar ) ]
         
-        possible_sidecar_paths = { importer.GetExpectedSidecarPath( path ) for importer in sidecar_importers }
+        possible_sidecar_paths = set()
+        
+        for importer in sidecar_importers:
+            
+            possible_sidecar_paths.update( importer.GetPossibleSidecarPaths( path ) )
+            
         
         return possible_sidecar_paths
         

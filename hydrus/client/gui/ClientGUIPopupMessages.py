@@ -228,7 +228,7 @@ class PopupMessage( PopupWindow ):
             
             new_text = 'The text is too long to display here. Here is the start of it (the rest is printed to the log):'
             
-            new_text += os.linesep * 2
+            new_text += '\n' * 2
             
             new_text += text[ : self.TEXT_CUTOFF ]
             
@@ -271,7 +271,7 @@ class PopupMessage( PopupWindow ):
         info = 'v{}, {}, {}'.format( HC.SOFTWARE_VERSION, sys.platform.lower(), 'frozen' if HC.RUNNING_FROM_FROZEN_BUILD else 'source' )
         trace = self._job_status.ToString()
         
-        full_text = info + os.linesep + trace
+        full_text = info + '\n' + trace
         
         CG.client_controller.pub( 'clipboard', 'text', full_text )
         

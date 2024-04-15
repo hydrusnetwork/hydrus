@@ -566,7 +566,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
                 from hydrus.client.gui import ClientGUIDialogsQuick
                 
                 message = 'It looks like another instance of this client is already running, so this instance cannot start.'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'If the old instance is closing and does not quit for a _very_ long time, it is usually safe to force-close it from task manager.'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self._splash, message, title = 'The client is already running.', yes_label = 'wait a bit, then try again', no_label = 'forget it' )
@@ -1686,9 +1686,9 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
                 path = dlg.GetPath()
                 
                 text = 'Are you sure you want to restore a backup from "{}"?'.format( path )
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += 'Everything in your current database will be deleted!'
-                text += os.linesep * 2
+                text += '\n' * 2
                 text += 'The gui will shut down, and then it will take a while to complete the restore. Once it is done, the client will restart.'
                 
                 result = ClientGUIDialogsQuick.GetYesNo( self.gui, text )

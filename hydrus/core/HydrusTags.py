@@ -226,7 +226,7 @@ def CleanTag( tag ):
     except Exception as e:
         
         text = 'Was unable to parse the tag: ' + str( tag )
-        text += os.linesep * 2
+        text += '\n' * 2
         text += str( e )
         
         raise Exception( text )
@@ -686,7 +686,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                 
                 rows = [ 'Added rule: {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToPrettyString( slice ) ) for ( slice, rule ) in new_rules ]
                 
-                summary_components.append( os.linesep.join( rows ) )
+                summary_components.append( '\n'.join( rows ) )
                 
             
         
@@ -700,7 +700,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                 
                 rows = [ 'Flipped rule: to {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToPrettyString( slice ) ) for ( slice, rule ) in changed_rules ]
                 
-                summary_components.append( os.linesep.join( rows ) )
+                summary_components.append( '\n'.join( rows ) )
                 
             
         
@@ -714,11 +714,11 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
                 
                 rows = [ 'Deleted rule: {} - {}'.format( HC.filter_black_white_str_lookup[ rule ], ConvertTagSliceToPrettyString( slice ) ) for ( slice, rule ) in deleted_rules ]
                 
-                summary_components.append( os.linesep.join( rows ) )
+                summary_components.append( '\n'.join( rows ) )
                 
             
         
-        return os.linesep.join( summary_components )
+        return '\n'.join( summary_components )
         
     
     def GetTagSlicesToRules( self ):

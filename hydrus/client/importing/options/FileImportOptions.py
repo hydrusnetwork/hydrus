@@ -508,7 +508,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        summary = os.linesep.join( statements )
+        summary = '\n'.join( statements )
         
         return summary
         

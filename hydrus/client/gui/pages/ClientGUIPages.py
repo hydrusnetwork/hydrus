@@ -1619,7 +1619,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             full_page_name = page.GetName()
             
-            full_page_name = full_page_name.replace( os.linesep, '' )
+            full_page_name = full_page_name.replace( '\n', '' )
             
         
         page_name = HydrusText.ElideText( full_page_name, max_page_name_chars )
@@ -2690,7 +2690,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     message = HydrusData.ToHumanInt( c ) + ' pages say:' + reason
                     
                 
-                message += os.linesep
+                message += '\n'
                 
             
             return message
@@ -3571,7 +3571,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         if statement is not None:
             
             message = 'Are you sure you want to close this page of pages?'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += statement
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )

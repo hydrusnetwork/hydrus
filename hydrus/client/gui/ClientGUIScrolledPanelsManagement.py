@@ -46,7 +46,7 @@ from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
-from hydrus.client.gui.widgets import ClientGUIControls
+from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -117,14 +117,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             tt = 'If unchecked, this media canvas will use the \'global\' audio volume slider. If checked, this media canvas will have its own separate one.'
-            tt += os.linesep * 2
+            tt += '\n' * 2
             tt += 'Keep this on if you would like the preview viewer to be quieter than the main media viewer.'
             
             #self._media_viewer_uses_its_own_audio_volume.setChecked( self._new_options.GetBoolean( 'media_viewer_uses_its_own_audio_volume' ) )
             self._preview_uses_its_own_audio_volume.setChecked( self._new_options.GetBoolean( 'preview_uses_its_own_audio_volume' ) )
             
-            #self._media_viewer_uses_its_own_audio_volume.setToolTip( tt )
-            self._preview_uses_its_own_audio_volume.setToolTip( tt )
+            #self._media_viewer_uses_its_own_audio_volume.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            self._preview_uses_its_own_audio_volume.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._has_audio_label.setText( self._new_options.GetString( 'has_audio_label' ) )
             
@@ -314,19 +314,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._max_connection_attempts_allowed = ClientGUICommon.BetterSpinBox( general, min = 1, max = 10 )
-            self._max_connection_attempts_allowed.setToolTip( 'This refers to timeouts when actually making the initial connection.' )
+            self._max_connection_attempts_allowed.setToolTip( ClientGUIFunctions.WrapToolTip( 'This refers to timeouts when actually making the initial connection.' ) )
             
             self._max_request_attempts_allowed_get = ClientGUICommon.BetterSpinBox( general, min = 1, max = 10 )
-            self._max_request_attempts_allowed_get.setToolTip( 'This refers to timeouts when waiting for a response to our GET requests, whether that is the start or an interruption part way through.' )
+            self._max_request_attempts_allowed_get.setToolTip( ClientGUIFunctions.WrapToolTip( 'This refers to timeouts when waiting for a response to our GET requests, whether that is the start or an interruption part way through.' ) )
             
             self._network_timeout = ClientGUICommon.BetterSpinBox( general, min = network_timeout_min, max = network_timeout_max )
-            self._network_timeout.setToolTip( 'If a network connection cannot be made in this duration or, once started, it experiences inactivity for six times this duration, it will be considered dead and retried or abandoned.' )
+            self._network_timeout.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a network connection cannot be made in this duration or, once started, it experiences inactivity for six times this duration, it will be considered dead and retried or abandoned.' ) )
             
             self._connection_error_wait_time = ClientGUICommon.BetterSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
-            self._connection_error_wait_time.setToolTip( 'If a network connection times out as above, it will wait increasing multiples of this base time before retrying.' )
+            self._connection_error_wait_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a network connection times out as above, it will wait increasing multiples of this base time before retrying.' ) )
             
             self._serverside_bandwidth_wait_time = ClientGUICommon.BetterSpinBox( general, min = error_wait_time_min, max = error_wait_time_max )
-            self._serverside_bandwidth_wait_time.setToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, the network job will wait increasing multiples of this base time before retrying.' )
+            self._serverside_bandwidth_wait_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If a server returns a failure status code indicating it is short on bandwidth, the network job will wait increasing multiples of this base time before retrying.' ) )
             
             self._domain_network_infrastructure_error_velocity = ClientGUITime.VelocityCtrl( general, 0, 100, 30, hours = True, minutes = True, seconds = True, per_phrase = 'within', unit = 'errors' )
             
@@ -491,10 +491,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._max_simultaneous_subscriptions = ClientGUICommon.BetterSpinBox( subscriptions, min=1, max=100 )
             
             self._subscription_file_error_cancel_threshold = ClientGUICommon.NoneableSpinCtrl( subscriptions, min = 1, max = 1000000, unit = 'errors' )
-            self._subscription_file_error_cancel_threshold.setToolTip( 'This is a simple patch and will be replaced with a better "retry network errors later" system at some point, but is useful to increase if you have subs to unreliable websites.' )
+            self._subscription_file_error_cancel_threshold.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a simple patch and will be replaced with a better "retry network errors later" system at some point, but is useful to increase if you have subs to unreliable websites.' ) )
             
             self._process_subs_in_random_order = QW.QCheckBox( subscriptions )
-            self._process_subs_in_random_order.setToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' )
+            self._process_subs_in_random_order.setToolTip( ClientGUIFunctions.WrapToolTip( 'Processing in random order is useful whenever bandwidth is tight, as it stops an \'aardvark\' subscription from always getting first whack at what is available. Otherwise, they will be processed in alphabetical order.' ) )
             
             checker_options = self._new_options.GetDefaultSubscriptionCheckerOptions()
             
@@ -536,25 +536,25 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             gallery_page_tt = 'Gallery page fetches are heavy requests with unusual fetch-time requirements. It is important they not wait too long, but it is also useful to throttle them:'
-            gallery_page_tt += os.linesep * 2
+            gallery_page_tt += '\n' * 2
             gallery_page_tt += '- So they do not compete with file downloads for bandwidth, leading to very unbalanced 20/4400-type queues.'
-            gallery_page_tt += os.linesep
+            gallery_page_tt += '\n'
             gallery_page_tt += '- So you do not get 1000 items in your queue before realising you did not like that tag anyway.'
-            gallery_page_tt += os.linesep
+            gallery_page_tt += '\n'
             gallery_page_tt += '- To give servers a break (some gallery pages can be CPU-expensive to generate).'
-            gallery_page_tt += os.linesep * 2
+            gallery_page_tt += '\n' * 2
             gallery_page_tt += 'These delays/lots are per-domain.'
-            gallery_page_tt += os.linesep * 2
+            gallery_page_tt += '\n' * 2
             gallery_page_tt += 'If you do not understand this stuff, you can just leave it alone.'
             
             self._gallery_page_wait_period_pages.setValue( self._new_options.GetInteger( 'gallery_page_wait_period_pages' ) )
-            self._gallery_page_wait_period_pages.setToolTip( gallery_page_tt )
+            self._gallery_page_wait_period_pages.setToolTip( ClientGUIFunctions.WrapToolTip( gallery_page_tt ) )
             self._gallery_file_limit.SetValue( HC.options['gallery_file_limit'] )
             
             self._highlight_new_query.setChecked( self._new_options.GetBoolean( 'highlight_new_query' ) )
             
             self._gallery_page_wait_period_subscriptions.setValue( self._new_options.GetInteger( 'gallery_page_wait_period_subscriptions' ) )
-            self._gallery_page_wait_period_subscriptions.setToolTip( gallery_page_tt )
+            self._gallery_page_wait_period_subscriptions.setToolTip( ClientGUIFunctions.WrapToolTip( gallery_page_tt ) )
             self._max_simultaneous_subscriptions.setValue( self._new_options.GetInteger( 'max_simultaneous_subscriptions' ) )
             
             self._subscription_file_error_cancel_threshold.SetValue( self._new_options.GetNoneableInteger( 'subscription_file_error_cancel_threshold' ) )
@@ -567,7 +567,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._show_deleted_on_file_seed_short_summary.setChecked( self._new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' ) )
             
             self._watcher_page_wait_period.setValue( self._new_options.GetInteger( 'watcher_page_wait_period' ) )
-            self._watcher_page_wait_period.setToolTip( gallery_page_tt )
+            self._watcher_page_wait_period.setToolTip( ClientGUIFunctions.WrapToolTip( gallery_page_tt ) )
             self._highlight_new_watcher.setChecked( self._new_options.GetBoolean( 'highlight_new_watcher' ) )
             
             self._subscription_network_error_delay.SetValue( self._new_options.GetInteger( 'subscription_network_error_delay' ) )
@@ -695,7 +695,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_comparison_score_nicer_ratio = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
             self._duplicate_comparison_score_has_audio = ClientGUICommon.BetterSpinBox( weights_panel, min=-100, max=100 )
             
-            self._duplicate_comparison_score_nicer_ratio.setToolTip( 'For instance, 16:9 vs 640:357.')
+            self._duplicate_comparison_score_nicer_ratio.setToolTip( ClientGUIFunctions.WrapToolTip( 'For instance, 16:9 vs 640:357.') )
             
             batches_panel = ClientGUICommon.StaticBox( self, 'duplicate filter batches' )
             
@@ -704,13 +704,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             colours_panel = ClientGUICommon.StaticBox( self, 'colours' )
             
             self._duplicate_background_switch_intensity_a = ClientGUICommon.NoneableSpinCtrl( colours_panel, none_phrase = 'do not change', min = 1, max = 9 )
-            self._duplicate_background_switch_intensity_a.setToolTip( 'This changes the background colour when you are looking at A. If you have a pure white/black background and do not have transparent images to show with checkerboard, it helps to highlight transparency vs opaque white/black image background.' )
+            self._duplicate_background_switch_intensity_a.setToolTip( ClientGUIFunctions.WrapToolTip( 'This changes the background colour when you are looking at A. If you have a pure white/black background and do not have transparent images to show with checkerboard, it helps to highlight transparency vs opaque white/black image background.' ) )
             
             self._duplicate_background_switch_intensity_b = ClientGUICommon.NoneableSpinCtrl( colours_panel, none_phrase = 'do not change', min = 1, max = 9 )
-            self._duplicate_background_switch_intensity_b.setToolTip( 'This changes the background colour when you are looking at B. Making it different to the A value helps to highlight switches between the two.' )
+            self._duplicate_background_switch_intensity_b.setToolTip( ClientGUIFunctions.WrapToolTip( 'This changes the background colour when you are looking at B. Making it different to the A value helps to highlight switches between the two.' ) )
             
             self._draw_transparency_checkerboard_media_canvas_duplicates = QW.QCheckBox( colours_panel )
-            self._draw_transparency_checkerboard_media_canvas_duplicates.setToolTip( 'Same as the setting in _media_, but only for the duplicate filter. Only applies if that _media_ setting is unchecked.' )
+            self._draw_transparency_checkerboard_media_canvas_duplicates.setToolTip( ClientGUIFunctions.WrapToolTip( 'Same as the setting in _media_, but only for the duplicate filter. Only applies if that _media_ setting is unchecked.' ) )
             
             #
             
@@ -749,7 +749,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             gridbox = ClientGUICommon.WrapInGrid( weights_panel, rows )
             
             label = 'When processing potential duplicate pairs in the duplicate filter, the client tries to present the \'best\' file first. It judges the two files on a variety of potential differences, each with a score. The file with the greatest total score is presented first. Here you can tinker with these scores.'
-            label += os.linesep * 2
+            label += '\n' * 2
             label += 'I recommend you leave all these as positive numbers, but if you wish, you can set a negative number to reduce the score.'
             
             st = ClientGUICommon.BetterStaticText( weights_panel, label )
@@ -858,9 +858,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             text = 'By default, when you ask to open a URL, hydrus will send it to your OS, and that figures out what your "default" web browser is. These OS launch commands can be buggy, though, and sometimes drop #anchor components. If this happens to you, set the specific launch command for your web browser here.'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'The command here must include a "%path%" component, normally ideally within those quote marks, which is where hydrus will place the URL when it executes the command. A good example would be:'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'C:\\program files\\firefox\\firefox.exe "%path%"'
             
             st = ClientGUICommon.BetterStaticText( browser_panel, text )
@@ -881,7 +881,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             text = 'Similarly, when you ask to open a file "externally", hydrus will send it to your OS, and that figures out your "default" program. This may fail or direct to a program you do not want for several reasons, so you can set a specific override here.'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'Again, make sure you include the "%path%" component. Most programs are going to be like \'program_exe "%path%"\', but some may need a profile switch or "-o" open command or similar.'
             
             st = ClientGUICommon.BetterStaticText( mime_panel, text )
@@ -927,9 +927,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             for ( mime, launch_path ) in self._mime_launch_listctrl.GetData( only_selected = True ):
                 
                 message = 'Enter the new launch path for {}'.format( HC.mime_string_lookup[ mime ] )
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'Hydrus will insert the file\'s full path wherever you put %path%, even multiple times!'
-                message += os.linesep * 2
+                message += '\n' * 2
                 message += 'Set as blank to reset to default.'
                 
                 if launch_path is None:
@@ -1016,13 +1016,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._export_location = QP.DirPickerCtrl( self )
             
             self._prefix_hash_when_copying = QW.QCheckBox( self )
-            self._prefix_hash_when_copying.setToolTip( 'If you often paste hashes into boorus, check this to automatically prefix with the type, like "md5:2496dabcbd69e3c56a5d8caabb7acde5".' )
+            self._prefix_hash_when_copying.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you often paste hashes into boorus, check this to automatically prefix with the type, like "md5:2496dabcbd69e3c56a5d8caabb7acde5".' ) )
             
             self._delete_to_recycle_bin = QW.QCheckBox( self )
             
             self._ms_to_wait_between_physical_file_deletes = ClientGUICommon.BetterSpinBox( self, min=20, max = 5000 )
             tt = 'Deleting a file from a hard disk can be resource expensive, so when files leave the trash, the actual physical file delete happens later, in the background. The operation is spread out so as not to give you lag spikes.'
-            self._ms_to_wait_between_physical_file_deletes.setToolTip( tt )
+            self._ms_to_wait_between_physical_file_deletes.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._confirm_trash = QW.QCheckBox( self )
             self._confirm_archive = QW.QCheckBox( self )
@@ -1044,13 +1044,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             advanced_file_deletion_panel = ClientGUICommon.StaticBox( self, 'advanced file deletion and custom reasons' )
             
             self._use_advanced_file_deletion_dialog = QW.QCheckBox( advanced_file_deletion_panel )
-            self._use_advanced_file_deletion_dialog.setToolTip( 'If this is set, the client will present a more complicated file deletion confirmation dialog that will permit you to set your own deletion reason and perform \'clean\' deletes that leave no deletion record (making later re-import easier).' )
+            self._use_advanced_file_deletion_dialog.setToolTip( ClientGUIFunctions.WrapToolTip( 'If this is set, the client will present a more complicated file deletion confirmation dialog that will permit you to set your own deletion reason and perform \'clean\' deletes that leave no deletion record (making later re-import easier).' ) )
             
             self._remember_last_advanced_file_deletion_special_action = QW.QCheckBox( advanced_file_deletion_panel )
-            self._remember_last_advanced_file_deletion_special_action.setToolTip( 'This will try to remember and restore the last action you set, whether that was trash, physical delete, or physical delete and clear history.')
+            self._remember_last_advanced_file_deletion_special_action.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will try to remember and restore the last action you set, whether that was trash, physical delete, or physical delete and clear history.') )
             
             self._remember_last_advanced_file_deletion_reason = QW.QCheckBox( advanced_file_deletion_panel )
-            self._remember_last_advanced_file_deletion_reason.setToolTip( 'This will remember and restore the last reason you set for a delete.' )
+            self._remember_last_advanced_file_deletion_reason.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will remember and restore the last reason you set for a delete.' ) )
             
             self._advanced_file_deletion_reasons = ClientGUIListBoxes.QueueListBox( advanced_file_deletion_panel, 5, str, add_callable = self._AddAFDR, edit_callable = self._EditAFDR )
             
@@ -1074,7 +1074,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._confirm_trash.setChecked( HC.options[ 'confirm_trash' ] )
             tt = 'If there is only one place to delete the file from, you will get no delete dialog--it will just be deleted immediately. Applies the same way to undelete.'
-            self._confirm_trash.setToolTip( tt )
+            self._confirm_trash.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._confirm_archive.setChecked( HC.options[ 'confirm_archive' ] )
             
@@ -1238,11 +1238,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_viewing_statistics_media_min_time = ClientGUICommon.NoneableSpinCtrl( self )
             self._file_viewing_statistics_media_max_time = ClientGUICommon.NoneableSpinCtrl( self )
             max_tt = 'If you view a file for a very long time, the amount of viewtime recorded is clipped to this. This stops an outrageous viewtime being saved because you left something open in the background. If the media you view has duration, like a video, the max viewtime is five times its length or this, whichever is larger.'
-            self._file_viewing_statistics_media_max_time.setToolTip( max_tt )
+            self._file_viewing_statistics_media_max_time.setToolTip( ClientGUIFunctions.WrapToolTip( max_tt ) )
             
             self._file_viewing_statistics_preview_min_time = ClientGUICommon.NoneableSpinCtrl( self )
             self._file_viewing_statistics_preview_max_time = ClientGUICommon.NoneableSpinCtrl( self )
-            self._file_viewing_statistics_preview_max_time.setToolTip( max_tt )
+            self._file_viewing_statistics_preview_max_time.setToolTip( ClientGUIFunctions.WrapToolTip( max_tt ) )
             
             self._file_viewing_stats_menu_display = ClientGUICommon.BetterChoice( self )
             
@@ -1311,7 +1311,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._main_gui_panel = ClientGUICommon.StaticBox( self, 'main window' )
             
             self._app_display_name = QW.QLineEdit( self._main_gui_panel )
-            self._app_display_name.setToolTip( 'This is placed in every window title, with current version name. Rename if you want to personalise or differentiate.' )
+            self._app_display_name.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is placed in every window title, with current version name. Rename if you want to personalise or differentiate.' ) )
             
             self._confirm_client_exit = QW.QCheckBox( self._main_gui_panel )
             
@@ -1319,7 +1319,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tt = 'Middle-clicking one or more tags in a taglist will cause the creation of a new search page for those tags. If you do this from the media viewer or a child manage tags dialog, do you want to switch immediately to the main gui?'
             
-            self._activate_window_on_tag_search_page_activation.setToolTip( tt )
+            self._activate_window_on_tag_search_page_activation.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -1327,40 +1327,40 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._always_show_iso_time = QW.QCheckBox( self._misc_panel )
             tt = 'In many places across the program (typically import status lists), the client will state a timestamp as "5 days ago". If you would prefer a standard ISO string, like "2018-03-01 12:40:23", check this.'
-            self._always_show_iso_time.setToolTip( tt )
+            self._always_show_iso_time.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._menu_choice_buttons_can_mouse_scroll = QW.QCheckBox( self._misc_panel )
             tt = 'Many buttons that produce menus when clicked are also "scrollable", so if you wheel your mouse over them, the selection will scroll through the underlying menu. If this is annoying for you, turn it off here!'
-            self._menu_choice_buttons_can_mouse_scroll.setToolTip( tt )
+            self._menu_choice_buttons_can_mouse_scroll.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._use_native_menubar = QW.QCheckBox( self._misc_panel )
             tt = 'macOS and some Linux allows to embed the main GUI menubar into the OS. This can be buggy! Requires restart.'
-            self._use_native_menubar.setToolTip( tt )
+            self._use_native_menubar.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._human_bytes_sig_figs = ClientGUICommon.BetterSpinBox( self._misc_panel, min = 1, max = 6 )
-            self._human_bytes_sig_figs.setToolTip( 'When the program presents a bytes size above 1KB, like 21.3KB or 4.11GB, how many total digits do we want in the number? 2 or 3 is best.')
+            self._human_bytes_sig_figs.setToolTip( ClientGUIFunctions.WrapToolTip( 'When the program presents a bytes size above 1KB, like 21.3KB or 4.11GB, how many total digits do we want in the number? 2 or 3 is best.') )
             
             self._discord_dnd_fix = QW.QCheckBox( self._misc_panel )
-            self._discord_dnd_fix.setToolTip( 'This makes small file drag-and-drops a little laggier in exchange for Discord support. It also lets you set custom filenames for drag and drop exports.' )
+            self._discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'This makes small file drag-and-drops a little laggier in exchange for Discord support. It also lets you set custom filenames for drag and drop exports.' ) )
             
             self._discord_dnd_filename_pattern = QW.QLineEdit( self._misc_panel )
-            self._discord_dnd_filename_pattern.setToolTip( 'When the above is enabled, this export phrase will rename your files. If no filename can be generated, hash will be used instead.' )
+            self._discord_dnd_filename_pattern.setToolTip( ClientGUIFunctions.WrapToolTip( 'When the above is enabled, this export phrase will rename your files. If no filename can be generated, hash will be used instead.' ) )
             
             self._secret_discord_dnd_fix = QW.QCheckBox( self._misc_panel )
-            self._secret_discord_dnd_fix.setToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' )
+            self._secret_discord_dnd_fix.setToolTip( ClientGUIFunctions.WrapToolTip( 'This saves the lag but is potentially dangerous, as it (may) treat the from-db-files-drag as a move rather than a copy and hence only works when the drop destination will not consume the files. It requires an additional secret Alternate key to unlock.' ) )
             
             self._do_macos_debug_dialog_menus = QW.QCheckBox( self._misc_panel )
-            self._do_macos_debug_dialog_menus.setToolTip( 'There is a bug in Big Sur Qt regarding interacting with some menus in dialogs. The menus show but cannot be clicked. This shows the menu items in a debug dialog instead.' )
+            self._do_macos_debug_dialog_menus.setToolTip( ClientGUIFunctions.WrapToolTip( 'There is a bug in Big Sur Qt regarding interacting with some menus in dialogs. The menus show but cannot be clicked. This shows the menu items in a debug dialog instead.' ) )
             
             self._use_qt_file_dialogs = QW.QCheckBox( self._misc_panel )
-            self._use_qt_file_dialogs.setToolTip( 'If you get crashes opening file/directory dialogs, try this.' )
+            self._use_qt_file_dialogs.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you get crashes opening file/directory dialogs, try this.' ) )
             
             #
             
             frame_locations_panel = ClientGUICommon.StaticBox( self, 'frame locations' )
             
             self._disable_get_safe_position_test = QW.QCheckBox( self._misc_panel )
-            self._disable_get_safe_position_test.setToolTip( 'If your windows keep getting \'rescued\' despite being in a good location, try this.' )
+            self._disable_get_safe_position_test.setToolTip( ClientGUIFunctions.WrapToolTip( 'If your windows keep getting \'rescued\' despite being in a good location, try this.' ) )
             
             self._frame_locations = ClientGUIListCtrl.BetterListCtrl( frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, data_to_tuples_func = lambda x: (self._GetPrettyFrameLocationInfo( x ), self._GetPrettyFrameLocationInfo( x )), activation_callback = self.EditFrameLocations )
             
@@ -1438,7 +1438,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._misc_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             text = 'Here you can override the current and default values for many frame and dialog sizing and positioning variables.'
-            text += os.linesep
+            text += '\n'
             text += 'This is an advanced control. If you aren\'t confident of what you are doing here, come back later!'
             
             st = ClientGUICommon.BetterStaticText( frame_locations_panel, label = text )
@@ -1565,15 +1565,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._only_save_last_session_during_idle = QW.QCheckBox( self._sessions_panel )
             
-            self._only_save_last_session_during_idle.setToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' )
+            self._only_save_last_session_during_idle.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is useful if you usually have a very large session (200,000+ files/import items open) and a client that is always on.' ) )
             
             self._number_of_gui_session_backups = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 32 )
             
-            self._number_of_gui_session_backups.setToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' )
+            self._number_of_gui_session_backups.setToolTip( ClientGUIFunctions.WrapToolTip( 'The client keeps multiple rolling backups of your gui sessions. If you have very large sessions, you might like to reduce this number.' ) )
             
             self._show_session_size_warnings = QW.QCheckBox( self._sessions_panel )
             
-            self._show_session_size_warnings.setToolTip( 'This will give you a once-per-boot warning popup if your active session contains more than 10M weight.' )
+            self._show_session_size_warnings.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will give you a once-per-boot warning popup if your active session contains more than 10M weight.' ) )
             
             #
             
@@ -1594,25 +1594,25 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
             
             self._page_drop_chase_normally = QW.QCheckBox( self._pages_panel )
-            self._page_drop_chase_normally.setToolTip( 'When you drop a page to a new location, should hydrus follow the page selection to the new location?' )
+            self._page_drop_chase_normally.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drop a page to a new location, should hydrus follow the page selection to the new location?' ) )
             self._page_drop_chase_with_shift = QW.QCheckBox( self._pages_panel )
-            self._page_drop_chase_with_shift.setToolTip( 'When you drop a page to a new location with shift held down, should hydrus follow the page selection to the new location?' )
+            self._page_drop_chase_with_shift.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drop a page to a new location with shift held down, should hydrus follow the page selection to the new location?' ) )
             
             self._page_drag_change_tab_normally = QW.QCheckBox( self._pages_panel )
-            self._page_drag_change_tab_normally.setToolTip( 'When you drag media or a page to a new location, should hydrus navigate and change tabs as you move the mouse around?' )
+            self._page_drag_change_tab_normally.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drag media or a page to a new location, should hydrus navigate and change tabs as you move the mouse around?' ) )
             self._page_drag_change_tab_with_shift = QW.QCheckBox( self._pages_panel )
-            self._page_drag_change_tab_with_shift.setToolTip( 'When you drag media or a page to a new location with shift held down, should hydrus navigate and change tabs as you move the mouse around?' )
+            self._page_drag_change_tab_with_shift.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you drag media or a page to a new location with shift held down, should hydrus navigate and change tabs as you move the mouse around?' ) )
             
             self._wheel_scrolls_tab_bar = QW.QCheckBox( self._pages_panel )
-            self._wheel_scrolls_tab_bar.setToolTip( 'When you scroll your mouse wheel over some tabs, the normal behaviour is to change the tab selection. If you often have overloaded tab bars, you might like to have the mouse wheel actually scroll the tab bar itself.' )
+            self._wheel_scrolls_tab_bar.setToolTip( ClientGUIFunctions.WrapToolTip( 'When you scroll your mouse wheel over some tabs, the normal behaviour is to change the tab selection. If you often have overloaded tab bars, you might like to have the mouse wheel actually scroll the tab bar itself.' ) )
             
             self._disable_page_tab_dnd = QW.QCheckBox( self._pages_panel )
             
-            self._disable_page_tab_dnd.setToolTip( 'Trying to debug some client hangs!' )
+            self._disable_page_tab_dnd.setToolTip( ClientGUIFunctions.WrapToolTip( 'Trying to debug some client hangs!' ) )
             
             self._force_hide_page_signal_on_new_page = QW.QCheckBox( self._pages_panel )
             
-            self._force_hide_page_signal_on_new_page.setToolTip( 'If your video still plays with sound in the preview viewer when you create a new page, please try this.' )
+            self._force_hide_page_signal_on_new_page.setToolTip( ClientGUIFunctions.WrapToolTip( 'If your video still plays with sound in the preview viewer when you create a new page, please try this.' ) )
             
             #
             
@@ -1736,16 +1736,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             page_names_gridbox = ClientGUICommon.WrapInGrid( self._page_names_panel, rows )
             
             label = 'If you have enough pages in a row, left/right arrows will appear to navigate them back and forth.'
-            label += os.linesep
+            label += '\n'
             label += 'Due to an unfortunate Qt issue, the tab bar will scroll so the current tab is right-most visible whenever you change page or a page is renamed. This is very annoying to live with.'
-            label += os.linesep
+            label += '\n'
             label += 'Therefore, do not put import pages in a long row of tabs, as it will reset scroll position on every progress update. Try to avoid long rows in general.'
-            label += os.linesep
+            label += '\n'
             label += 'Just make some nested \'page of pages\' so they are not all in the same row.'
             
             st = ClientGUICommon.BetterStaticText( self._page_names_panel, label )
             
-            st.setToolTip( 'https://bugreports.qt.io/browse/QTBUG-45381' )
+            st.setToolTip( ClientGUIFunctions.WrapToolTip( 'https://bugreports.qt.io/browse/QTBUG-45381' ) )
             
             st.setWordWrap( True )
             
@@ -1926,11 +1926,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._file_maintenance_active_throttle_velocity = ClientGUITime.VelocityCtrl( self._file_maintenance_panel, min_unit_value, max_unit_value, min_time_delta, minutes = True, seconds = True, per_phrase = 'every', unit = 'heavy work units' )
             
             tt = 'Different jobs will count for more or less weight. A file metadata reparse will count as one work unit, but quicker jobs like checking for file presence will count as fractions of one and will will work more frequently.'
-            tt += os.linesep * 2
+            tt += '\n' * 2
             tt += 'Please note that this throttle is not rigorous for long timescales, as file processing history is not currently saved on client exit. If you restart the client, the file manager thinks it has run 0 jobs and will be happy to run until the throttle kicks in again.'
             
-            self._file_maintenance_idle_throttle_velocity.setToolTip( tt )
-            self._file_maintenance_active_throttle_velocity.setToolTip( tt )
+            self._file_maintenance_idle_throttle_velocity.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            self._file_maintenance_active_throttle_velocity.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -1938,27 +1938,27 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._repository_processing_work_time_very_idle = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. Very Idle is after an hour of idle mode.'
-            self._repository_processing_work_time_very_idle.setToolTip( tt )
+            self._repository_processing_work_time_very_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._repository_processing_rest_percentage_very_idle = ClientGUICommon.BetterSpinBox( self._repository_processing_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. Very Idle is after an hour of idle mode.'
-            self._repository_processing_rest_percentage_very_idle.setToolTip( tt )
+            self._repository_processing_rest_percentage_very_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._repository_processing_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
-            self._repository_processing_work_time_idle.setToolTip( tt )
+            self._repository_processing_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._repository_processing_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._repository_processing_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
-            self._repository_processing_rest_percentage_idle.setToolTip( tt )
+            self._repository_processing_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._repository_processing_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._repository_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
-            self._repository_processing_work_time_normal.setToolTip( tt )
+            self._repository_processing_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._repository_processing_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._repository_processing_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Repository processing operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
-            self._repository_processing_rest_percentage_normal.setToolTip( tt )
+            self._repository_processing_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -1967,31 +1967,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._tag_display_maintenance_during_idle = QW.QCheckBox( self._tag_display_processing_panel )
             self._tag_display_maintenance_during_active = QW.QCheckBox( self._tag_display_processing_panel )
             tt = 'This can be a real killer. If you are catching up with the PTR and notice a lot of lag bumps, sometimes several seconds long, try turning this off.'
-            self._tag_display_maintenance_during_active.setToolTip( tt )
+            self._tag_display_maintenance_during_active.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._tag_display_processing_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
-            self._tag_display_processing_work_time_idle.setToolTip( tt )
+            self._tag_display_processing_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._tag_display_processing_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._tag_display_processing_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
-            self._tag_display_processing_rest_percentage_idle.setToolTip( tt )
+            self._tag_display_processing_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._tag_display_processing_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
-            self._tag_display_processing_work_time_normal.setToolTip( tt )
+            self._tag_display_processing_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._tag_display_processing_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._tag_display_processing_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
-            self._tag_display_processing_rest_percentage_normal.setToolTip( tt )
+            self._tag_display_processing_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._tag_display_processing_work_time_work_hard = ClientGUITime.TimeDeltaCtrl( self._tag_display_processing_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force it to work hard through the dialog.'
-            self._tag_display_processing_work_time_work_hard.setToolTip( tt )
+            self._tag_display_processing_work_time_work_hard.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._tag_display_processing_rest_percentage_work_hard = ClientGUICommon.BetterSpinBox( self._tag_display_processing_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Sibling/parent sync operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force it to work hard through the dialog.'
-            self._tag_display_processing_rest_percentage_work_hard.setToolTip( tt )
+            self._tag_display_processing_rest_percentage_work_hard.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -2001,11 +2001,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._potential_duplicates_search_work_time = ClientGUITime.TimeDeltaCtrl( self._duplicates_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this, and on large databases the minimum work time may be upwards of several seconds.'
-            self._potential_duplicates_search_work_time.setToolTip( tt )
+            self._potential_duplicates_search_work_time.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._potential_duplicates_search_rest_percentage = ClientGUICommon.BetterSpinBox( self._duplicates_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Potential search operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, as a percentage of the last work time.'
-            self._potential_duplicates_search_rest_percentage.setToolTip( tt )
+            self._potential_duplicates_search_rest_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -2013,27 +2013,27 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._deferred_table_delete_work_time_idle = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for idle mode.'
-            self._deferred_table_delete_work_time_idle.setToolTip( tt )
+            self._deferred_table_delete_work_time_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._deferred_table_delete_rest_percentage_idle = ClientGUICommon.BetterSpinBox( self._deferred_table_delete_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for idle mode.'
-            self._deferred_table_delete_rest_percentage_idle.setToolTip( tt )
+            self._deferred_table_delete_rest_percentage_idle.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._deferred_table_delete_work_time_normal = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force-start work from review services.'
-            self._deferred_table_delete_work_time_normal.setToolTip( tt )
+            self._deferred_table_delete_work_time_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._deferred_table_delete_rest_percentage_normal = ClientGUICommon.BetterSpinBox( self._deferred_table_delete_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force-start work from review services.'
-            self._deferred_table_delete_rest_percentage_normal.setToolTip( tt )
+            self._deferred_table_delete_rest_percentage_normal.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._deferred_table_delete_work_time_work_hard = ClientGUITime.TimeDeltaCtrl( self._deferred_table_delete_panel, min = 0.1, seconds = True, milliseconds = True )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should work for in each work packet. Actual work time will normally be a little larger than this. This is for when you force it to work hard through the dialog.'
-            self._deferred_table_delete_work_time_work_hard.setToolTip( tt )
+            self._deferred_table_delete_work_time_work_hard.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._deferred_table_delete_rest_percentage_work_hard = ClientGUICommon.BetterSpinBox( self._deferred_table_delete_panel, min = 0, max = 100000 )
             tt = 'DO NOT CHANGE UNLESS YOU KNOW WHAT YOU ARE DOING. Deferred table delete operates on a work-rest cycle. This setting determines how long it should wait before starting a new work packet, in multiples of the last work time. This is for when you force it to work hard through the dialog.'
-            self._deferred_table_delete_rest_percentage_work_hard.setToolTip( tt )
+            self._deferred_table_delete_rest_percentage_work_hard.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -2142,17 +2142,17 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             text = '***'
-            text += os.linesep
+            text += '\n'
             text +='If you are a new user or do not completely understand these options, please do not touch them! Do not set the client to be idle all the time unless you know what you are doing or are testing something and are prepared for potential problems!'
-            text += os.linesep
+            text += '\n'
             text += '***'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'Sometimes, the client needs to do some heavy maintenance. This could be reformatting the database to keep it running fast or processing a large number of tags from a repository. Typically, these jobs will not allow you to use the gui while they run, and on slower computers--or those with not much memory--they can take a long time to complete.'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'You can set these jobs to run only when the client is idle, or only during shutdown, or neither, or both. If you leave the client on all the time in the background, focusing on \'idle time\' processing is often ideal. If you have a slow computer, relying on \'shutdown\' processing (which you can manually start when convenient), is often better.'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'If the client switches from idle to not idle during a job, it will try to abandon it and give you back control. This is not always possible, and even when it is, it will sometimes take several minutes, particularly on slower machines or those on HDDs rather than SSDs.'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'If the client believes the system is busy, it will generally not start jobs.'
             
             st = ClientGUICommon.BetterStaticText( self._jobs_panel, label = text )
@@ -2390,7 +2390,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._animation_start_position = ClientGUICommon.BetterSpinBox( animations_panel, min=0, max=100 )
             
             self._always_loop_animations = QW.QCheckBox( animations_panel )
-            self._always_loop_animations.setToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' )
+            self._always_loop_animations.setToolTip( ClientGUIFunctions.WrapToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' ) )
             
             #
             
@@ -2399,10 +2399,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
             
             self._use_system_ffmpeg = QW.QCheckBox( system_panel )
-            self._use_system_ffmpeg.setToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' )
+            self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
             
             self._load_images_with_pil = QW.QCheckBox( system_panel )
-            self._load_images_with_pil.setToolTip( 'We are dropping CV and moving to PIL exclusively. If you want to help test, please turn this on and send hydev any images that render wrong!' )
+            self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are dropping CV and moving to PIL exclusively. If you want to help test, please turn this on and send hydev any images that render wrong!' ) )
             
             #
             
@@ -2411,7 +2411,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( media_viewer_panel, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
             
             self._media_zooms = QW.QLineEdit( media_viewer_panel )
-            self._media_zooms.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' )
+            self._media_zooms.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' ) )
             self._media_zooms.textChanged.connect( self.EventZoomsChanged )
             
             from hydrus.client.gui.canvas import ClientGUICanvasMedia
@@ -2425,16 +2425,16 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit before zooming.'
             
-            self._media_viewer_zoom_center.setToolTip( tt )
+            self._media_viewer_zoom_center.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_viewer_panel )
-            self._draw_transparency_checkerboard_media_canvas.setToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' )
+            self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
             
             self._hide_uninteresting_local_import_time = QW.QCheckBox( media_viewer_panel )
-            self._hide_uninteresting_local_import_time.setToolTip( 'If the file was imported at a similar time to when it was added to its current services (i.e. the number of seconds since both events differs by less than 10%), hide the import time in the top of the media viewer.' )
+            self._hide_uninteresting_local_import_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file was imported at a similar time to when it was added to its current services (i.e. the number of seconds since both events differs by less than 10%), hide the import time in the top of the media viewer.' ) )
             
             self._hide_uninteresting_modified_time = QW.QCheckBox( media_viewer_panel )
-            self._hide_uninteresting_modified_time.setToolTip( 'If the file has a modified time similar to its import time (i.e. the number of seconds since both events differs by less than 10%), hide the modified time in the top of the media viewer.' )
+            self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (i.e. the number of seconds since both events differs by less than 10%), hide the modified time in the top of the media viewer.' ) )
             
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( media_viewer_panel )
             self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( media_viewer_panel )
@@ -2444,28 +2444,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             slideshow_panel = ClientGUICommon.StaticBox( media_viewer_panel, 'slideshows' )
             
             self._slideshow_durations = QW.QLineEdit( slideshow_panel )
-            self._slideshow_durations.setToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' )
+            self._slideshow_durations.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' ) )
             self._slideshow_durations.textChanged.connect( self.EventSlideshowChanged )
             
             self._slideshow_always_play_duration_media_once_through = QW.QCheckBox( slideshow_panel )
-            self._slideshow_always_play_duration_media_once_through.setToolTip( 'If this is on, then a slideshow will not move on until the current duration-having media has played once through.' )
+            self._slideshow_always_play_duration_media_once_through.setToolTip( ClientGUIFunctions.WrapToolTip( 'If this is on, then a slideshow will not move on until the current duration-having media has played once through.' ) )
             self._slideshow_always_play_duration_media_once_through.clicked.connect( self.EventSlideshowChanged )
             
             self._slideshow_short_duration_loop_seconds = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, none_phrase = 'do not use', min = 1, max = 86400, unit = 's' )
             tt = '(Ensures very short loops play for a bit, but not five minutes) A slideshow will move on early if the current duration-having media has a duration less than this many seconds (and this is less than the overall slideshow period).'
-            self._slideshow_short_duration_loop_seconds.setToolTip( tt )
+            self._slideshow_short_duration_loop_seconds.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._slideshow_short_duration_loop_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, none_phrase = 'do not use', min = 1, max = 99, unit = '%' )
             tt = '(Ensures short videos play for a bit, but not twenty minutes) A slideshow will move on early if the current duration-having media has a duration less than this percentage of the overall slideshow period.'
-            self._slideshow_short_duration_loop_percentage.setToolTip( tt )
+            self._slideshow_short_duration_loop_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._slideshow_short_duration_cutoff_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, none_phrase = 'do not use', min = 1, max = 99, unit = '%' )
             tt = '(Ensures that slightly shorter videos move the slideshow cleanly along as soon as they are done) A slideshow will move on early if the current duration-having media will have played exactly once through between this many percent and 100% of the slideshow period.'
-            self._slideshow_short_duration_cutoff_percentage.setToolTip( tt )
+            self._slideshow_short_duration_cutoff_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._slideshow_long_duration_overspill_percentage = ClientGUICommon.NoneableSpinCtrl( slideshow_panel, none_phrase = 'do not use', min = 1, max = 500, unit = '%' )
             tt = '(Ensures slightly longer videos will not get cut off right at the end) A slideshow will delay moving on if playing the current duration-having media would stretch the overall slideshow period less than this amount.'
-            self._slideshow_long_duration_overspill_percentage.setToolTip( tt )
+            self._slideshow_long_duration_overspill_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -2923,7 +2923,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options = new_options
             
             self._start_note_editing_at_end = QW.QCheckBox( self )
-            self._start_note_editing_at_end.setToolTip( 'Otherwise, start the text cursor at the start of the document.' )
+            self._start_note_editing_at_end.setToolTip( ClientGUIFunctions.WrapToolTip( 'Otherwise, start the text cursor at the start of the document.' ) )
             
             self._start_note_editing_at_end.setChecked( self._new_options.GetBoolean( 'start_note_editing_at_end' ) )
             
@@ -2963,13 +2963,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._popup_message_force_min_width = QW.QCheckBox( self._popup_panel )
             
             self._freeze_message_manager_when_mouse_on_other_monitor = QW.QCheckBox( self._popup_panel )
-            self._freeze_message_manager_when_mouse_on_other_monitor.setToolTip( 'This is useful if you have a virtual desktop and find the popup manager restores strangely when you hop back to the hydrus display.' )
+            self._freeze_message_manager_when_mouse_on_other_monitor.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is useful if you have a virtual desktop and find the popup manager restores strangely when you hop back to the hydrus display.' ) )
             
             self._freeze_message_manager_when_main_gui_minimised = QW.QCheckBox( self._popup_panel )
-            self._freeze_message_manager_when_main_gui_minimised.setToolTip( 'This is useful if the popup toaster restores strangely after minimised changes.' )
+            self._freeze_message_manager_when_main_gui_minimised.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is useful if the popup toaster restores strangely after minimised changes.' ) )
             
             self._notify_client_api_cookies = QW.QCheckBox( self._popup_panel )
-            self._notify_client_api_cookies.setToolTip( 'This will make a short-lived popup message every time you get new cookie or http header information over the Client API.' )
+            self._notify_client_api_cookies.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will make a short-lived popup message every time you get new cookie or http header information over the Client API.' ) )
             
             #
             
@@ -3057,7 +3057,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             location_context = self._new_options.GetDefaultLocalLocationContext()
             
             self._default_local_location_context = ClientGUILocation.LocationSearchContextButton( self._read_autocomplete_panel, location_context )
-            self._default_local_location_context.setToolTip( 'This initialised into a bunch of dialogs across the program as a fallback. You can probably leave it alone forever, but if you delete or move away from \'my files\' as your main place to do work, please update it here.' )
+            self._default_local_location_context.setToolTip( ClientGUIFunctions.WrapToolTip( 'This initialised into a bunch of dialogs across the program as a fallback. You can probably leave it alone forever, but if you delete or move away from \'my files\' as your main place to do work, please update it here.' ) )
             
             self._default_local_location_context.SetOnlyImportableDomainsAllowed( True )
             
@@ -3065,21 +3065,21 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._default_search_synchronised = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'This refers to the button on the autocomplete dropdown that enables new searches to start. If this is on, then new search pages will search as soon as you enter the first search predicate. If off, no search will happen until you switch it back on.'
-            self._default_search_synchronised.setToolTip( tt )
+            self._default_search_synchronised.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._autocomplete_float_main_gui = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'The autocomplete dropdown can either \'float\' on top of the main window, or if that does not work well for you, it can embed into the parent page panel.'
-            self._autocomplete_float_main_gui.setToolTip( tt )
+            self._autocomplete_float_main_gui.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._ac_read_list_height_num_chars = ClientGUICommon.BetterSpinBox( self._read_autocomplete_panel, min = 1, max = 128 )
             
             self._always_show_system_everything = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'After users get some experience with the program and a larger collection, they tend to have less use for system:everything.'
-            self._always_show_system_everything.setToolTip( tt )
+            self._always_show_system_everything.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._filter_inbox_and_archive_predicates = QW.QCheckBox( self._read_autocomplete_panel )
             tt = 'If everything is current in the inbox (or archive), then there is no use listing it or its opposite--it either does not change the search or it produces nothing. If you find it jarring though, turn it off here!'
-            self._filter_inbox_and_archive_predicates.setToolTip( tt )
+            self._filter_inbox_and_archive_predicates.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -3096,7 +3096,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             misc_panel = ClientGUICommon.StaticBox( self, 'file search' )
             
             self._forced_search_limit = ClientGUICommon.NoneableSpinCtrl( misc_panel, '', min = 1, max = 100000 )
-            self._forced_search_limit.setToolTip( 'This is overruled if you set an explicit system:limit larger than it.' )
+            self._forced_search_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is overruled if you set an explicit system:limit larger than it.' ) )
             
             #
             
@@ -3283,9 +3283,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             sort_by_text = 'You can manage your namespace sorting schemes here.'
-            sort_by_text += os.linesep
+            sort_by_text += '\n'
             sort_by_text += 'The client will sort media by comparing their namespaces, moving from left to right until an inequality is found.'
-            sort_by_text += os.linesep
+            sort_by_text += '\n'
             sort_by_text += 'Any namespaces here will also appear in your collect-by dropdowns.'
             
             namespace_sorting_box.Add( ClientGUICommon.BetterStaticText( namespace_sorting_box, sort_by_text ), CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -3375,14 +3375,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             thumbnail_cache_panel = ClientGUICommon.StaticBox( self, 'thumbnail cache' )
             
-            self._thumbnail_cache_size = ClientGUIControls.BytesControl( thumbnail_cache_panel )
+            self._thumbnail_cache_size = ClientGUIBytes.BytesControl( thumbnail_cache_panel )
             self._thumbnail_cache_size.valueChanged.connect( self.EventThumbnailsUpdate )
             
             tt = 'When thumbnails are loaded from disk, their bitmaps are saved for a while in memory so near-future access is super fast. If the total store of thumbnails exceeds this size setting, the least-recent-to-be-accessed will be discarded until the total size is less than it again.'
-            tt += os.linesep * 2
+            tt += '\n' * 2
             tt += 'Most thumbnails are RGB, which means their size here is roughly [width x height x 3].'
             
-            self._thumbnail_cache_size.setToolTip( tt )
+            self._thumbnail_cache_size.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._estimated_number_thumbnails = QW.QLabel( '', thumbnail_cache_panel )
             
@@ -3390,18 +3390,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tt = 'The amount of not-accessed time after which a thumbnail will naturally be removed from the cache.'
             
-            self._thumbnail_cache_timeout.setToolTip( tt )
+            self._thumbnail_cache_timeout.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             image_cache_panel = ClientGUICommon.StaticBox( self, 'image cache' )
             
-            self._image_cache_size = ClientGUIControls.BytesControl( image_cache_panel )
+            self._image_cache_size = ClientGUIBytes.BytesControl( image_cache_panel )
             self._image_cache_size.valueChanged.connect( self.EventImageCacheUpdate )
             
             tt = 'When images are loaded from disk, their 100% zoom renders are saved for a while in memory so near-future access is super fast. If the total store of images exceeds this size setting, the least-recent-to-be-accessed will be discarded until the total size is less than it again.'
-            tt += os.linesep * 2
+            tt += '\n' * 2
             tt += 'Most images are RGB, which means their size here is roughly [width x height x 3], with those dimensions being at 100% zoom.'
             
-            self._image_cache_size.setToolTip( tt )
+            self._image_cache_size.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._estimated_number_fullscreens = QW.QLabel( '', image_cache_panel )
             
@@ -3409,76 +3409,76 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tt = 'The amount of not-accessed time after which a rendered image will naturally be removed from the cache.'
             
-            self._image_cache_timeout.setToolTip( tt )
+            self._image_cache_timeout.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._image_cache_storage_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 20, max = 50 )
             
             tt = 'This option sets how much of the cache can go towards one image. If an image\'s total size (usually width x height x 3) is too large compared to the cache, it should not be cached or it will just flush everything else out in one stroke.'
             
-            self._image_cache_storage_limit_percentage.setToolTip( tt )
+            self._image_cache_storage_limit_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._image_cache_storage_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
             
             tt = 'This represents the typical size we are talking about at this percentage level. Could be wider or taller, but overall should have the same number of pixels. Anything smaller will be saved in the cache after load, anything larger will be loaded on demand and forgotten as soon as you navigate away. If you want to have persistent fast access to images bigger than this, increase the total image cache size and/or the max % value permitted.'
             
-            self._image_cache_storage_limit_percentage_st.setToolTip( tt )
+            self._image_cache_storage_limit_percentage_st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._image_cache_prefetch_limit_percentage = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 5, max = 20 )
             
             tt = 'If you are browsing many big files, this option stops the prefetcher from overloading your cache by loading up seven or more gigantic images that each competitively flush each other out and need to be re-rendered over and over.'
             
-            self._image_cache_prefetch_limit_percentage.setToolTip( tt )
+            self._image_cache_prefetch_limit_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._image_cache_prefetch_limit_percentage_st = ClientGUICommon.BetterStaticText( image_cache_panel, label = '' )
             
             tt = 'This represents the typical size we are talking about at this percentage level. Could be wider or taller, but overall should have the same number of pixels. Anything smaller will be pre-fetched, anything larger will be loaded on demand. If you want images bigger than this to load fast as you browse, increase the total image cache size and/or the max % value permitted.'
             
-            self._image_cache_prefetch_limit_percentage_st.setToolTip( tt )
+            self._image_cache_prefetch_limit_percentage_st.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._media_viewer_prefetch_delay_base_ms = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 2000 )
             
             tt = 'How long to wait, after the current image is rendered, to start rendering neighbours. Does not matter so much any more, but if you have CPU lag, you can try boosting it a bit.'
             
-            self._media_viewer_prefetch_delay_base_ms.setToolTip( tt )
+            self._media_viewer_prefetch_delay_base_ms.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._media_viewer_prefetch_num_previous = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 50 )
             self._media_viewer_prefetch_num_next = ClientGUICommon.BetterSpinBox( image_cache_panel, min = 0, max = 50 )
             
             self._prefetch_label_warning = ClientGUICommon.BetterStaticText( image_cache_panel )
-            self._prefetch_label_warning.setToolTip( 'If you boost the prefetch numbers, make sure your image cache is big enough to handle it! Doubly so if you frequently load images that at 100% are far larger than your screen size. You really don\'t want to be prefetching more than your cache can hold!' )
+            self._prefetch_label_warning.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you boost the prefetch numbers, make sure your image cache is big enough to handle it! Doubly so if you frequently load images that at 100% are far larger than your screen size. You really don\'t want to be prefetching more than your cache can hold!' ) )
             
             image_tile_cache_panel = ClientGUICommon.StaticBox( self, 'image tile cache' )
             
-            self._image_tile_cache_size = ClientGUIControls.BytesControl( image_tile_cache_panel )
+            self._image_tile_cache_size = ClientGUIBytes.BytesControl( image_tile_cache_panel )
             self._image_tile_cache_size.valueChanged.connect( self.EventImageTilesUpdate )
             
             tt = 'Zooming and displaying an image is expensive. When an image is rendered to screen at a particular zoom, the client breaks the virtual canvas into tiles and only scales and draws the image onto the viewable ones. As you pan around, new tiles may be needed and old ones discarded. It is all cached so you can pan and zoom over the same areas quickly.'
             
-            self._image_tile_cache_size.setToolTip( tt )
+            self._image_tile_cache_size.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._estimated_number_image_tiles = QW.QLabel( '', image_tile_cache_panel )
             
             tt = 'You do not need to go crazy here unless you do a huge amount of zooming and really need multiple zoom levels cached for 10+ files you are comparing with each other.'
             
-            self._estimated_number_image_tiles.setToolTip( tt )
+            self._estimated_number_image_tiles.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._image_tile_cache_timeout = ClientGUITime.TimeDeltaButton( image_tile_cache_panel, min = 300, hours = True, minutes = True )
             
             tt = 'The amount of not-accessed time after which a rendered tile will naturally be removed from the cache.'
             
-            self._image_tile_cache_timeout.setToolTip( tt )
+            self._image_tile_cache_timeout.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._ideal_tile_dimension = ClientGUICommon.BetterSpinBox( image_tile_cache_panel, min = 256, max = 4096 )
             
             tt = 'This is the screen-visible square size the system will aim for. Smaller tiles are more memory efficient but prone to warping and other artifacts. Extreme values may waste CPU.'
             
-            self._ideal_tile_dimension.setToolTip( tt )
+            self._ideal_tile_dimension.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
             buffer_panel = ClientGUICommon.StaticBox( self, 'video buffer' )
             
-            self._video_buffer_size = ClientGUIControls.BytesControl( buffer_panel )
+            self._video_buffer_size = ClientGUIBytes.BytesControl( buffer_panel )
             self._video_buffer_size.valueChanged.connect( self.EventVideoBufferUpdate )
             
             self._estimated_number_video_frames = QW.QLabel( '', buffer_panel )
@@ -3568,7 +3568,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             text = 'Important if you want smooth navigation between different images in the media viewer. If you deal with huge images, bump up cache size and max size that can be cached or prefetched, but be prepared to pay the memory price.'
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'Allowing more prefetch is great, but it needs CPU.'
             
             st = ClientGUICommon.BetterStaticText( image_cache_panel, text )
@@ -3617,13 +3617,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             text = 'This old option does not apply to mpv! It only applies to the native hydrus animation renderer!'
-            text += os.linesep
+            text += '\n'
             text += 'Hydrus video rendering is CPU intensive.'
-            text += os.linesep
+            text += '\n'
             text += 'If you have a lot of memory, you can set a generous potential video buffer to compensate.'
-            text += os.linesep
+            text += '\n'
             text += 'If the video buffer can hold an entire video, it only needs to be rendered once and will play and loop very smoothly.'
-            text += os.linesep
+            text += '\n'
             text += 'PROTIP: Do not go crazy here.'
             
             st = ClientGUICommon.BetterStaticText( buffer_panel, text )
@@ -3919,10 +3919,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             tt = 'It sometimes takes a few seconds for your network adapter to reconnect after a wake. This adds a grace period after a detected wake-from-sleep to allow your OS to sort that out before Hydrus starts making requests.'
             
-            self._wake_delay_period.setToolTip( tt )
+            self._wake_delay_period.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._file_system_waits_on_wakeup = QW.QCheckBox( sleep_panel )
-            self._file_system_waits_on_wakeup.setToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' )
+            self._file_system_waits_on_wakeup.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is useful if your hydrus is stored on a NAS that takes a few seconds to get going after your machine resumes from sleep.' ) )
             
             #
             
@@ -4058,7 +4058,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._num_recent_petition_reasons = ClientGUICommon.BetterSpinBox( general_panel, initial = 5, min = 0, max = 100 )
             tt = 'In manage tags, tag siblings, and tag parents, you may be asked to provide a reason with a petition you make to a hydrus repository. There are some fixed reasons, but the dialog can also remember what you recently typed. This controls how many recent reasons it will remember.'
-            self._num_recent_petition_reasons.setToolTip( tt )
+            self._num_recent_petition_reasons.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._ac_select_first_with_count = QW.QCheckBox( general_panel )
             
@@ -4079,22 +4079,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
-            self._expand_parents_on_storage_taglists.setToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' )
+            self._expand_parents_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' ) )
             
             self._expand_parents_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
-            self._expand_parents_on_storage_autocomplete_taglists.setToolTip( 'This affects the autocomplete results taglist.' )
+            self._expand_parents_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
             
             self._show_parent_decorators_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'show_parent_decorators_on_storage_taglists' ) )
-            self._show_parent_decorators_on_storage_taglists.setToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents either hang below tags or summarise in a suffix.' )
+            self._show_parent_decorators_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents either hang below tags or summarise in a suffix.' ) )
             
             self._show_parent_decorators_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists' ) )
-            self._show_parent_decorators_on_storage_autocomplete_taglists.setToolTip( 'This affects the autocomplete results taglist.' )
+            self._show_parent_decorators_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
             
             self._show_sibling_decorators_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'show_sibling_decorators_on_storage_taglists' ) )
-            self._show_sibling_decorators_on_storage_taglists.setToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and siblings summarise in a suffix.' )
+            self._show_sibling_decorators_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and siblings summarise in a suffix.' ) )
             
             self._show_sibling_decorators_on_storage_autocomplete_taglists.setChecked( self._new_options.GetBoolean( 'show_sibling_decorators_on_storage_autocomplete_taglists' ) )
-            self._show_sibling_decorators_on_storage_autocomplete_taglists.setToolTip( 'This affects the autocomplete results taglist.' )
+            self._show_sibling_decorators_on_storage_autocomplete_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects the autocomplete results taglist.' ) )
             
             self._num_recent_petition_reasons.setValue( self._new_options.GetInteger( 'num_recent_petition_reasons' ) )
             
@@ -4203,32 +4203,32 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._show_namespaces = QW.QCheckBox( render_panel )
             self._show_number_namespaces = QW.QCheckBox( render_panel )
-            self._show_number_namespaces.setToolTip( 'This lets unnamespaced "16:9" show as that, not hiding the "16".' )
+            self._show_number_namespaces.setToolTip( ClientGUIFunctions.WrapToolTip( 'This lets unnamespaced "16:9" show as that, not hiding the "16".' ) )
             self._show_subtag_number_namespaces = QW.QCheckBox( render_panel )
-            self._show_subtag_number_namespaces.setToolTip( 'This lets unnamespaced "page:3" show as that, not hiding the "page" where it can get mixed with chapter etc...' )
+            self._show_subtag_number_namespaces.setToolTip( ClientGUIFunctions.WrapToolTip( 'This lets unnamespaced "page:3" show as that, not hiding the "page" where it can get mixed with chapter etc...' ) )
             self._namespace_connector = QW.QLineEdit( render_panel )
             self._sibling_connector = QW.QLineEdit( render_panel )
             
             self._fade_sibling_connector = QW.QCheckBox( render_panel )
             tt = 'If set, then if the sibling goes from one namespace to another, that colour will fade across the distance of the sibling connector. Just a bit of fun.'
-            self._fade_sibling_connector.setToolTip( tt )
+            self._fade_sibling_connector.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._sibling_connector_custom_namespace_colour = ClientGUICommon.NoneableTextCtrl( render_panel, none_phrase = 'use ideal tag colour' )
             tt = 'The sibling connector can use a particular namespace\'s colour.'
-            self._sibling_connector_custom_namespace_colour.setToolTip( tt )
+            self._sibling_connector_custom_namespace_colour.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._or_connector = QW.QLineEdit( render_panel )
             tt = 'When an OR predicate is rendered, it splits the components by this text.'
-            self._or_connector.setToolTip( tt )
+            self._or_connector.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._or_connector_custom_namespace_colour = QW.QLineEdit( render_panel )
             tt = 'The OR connector can use a particular namespace\'s colour.'
-            self._or_connector_custom_namespace_colour.setToolTip( tt )
+            self._or_connector_custom_namespace_colour.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._replace_tag_underscores_with_spaces = QW.QCheckBox( render_panel )
             
             self._replace_tag_emojis_with_boxes = QW.QCheckBox( render_panel )
-            self._replace_tag_emojis_with_boxes.setToolTip( 'This will replace emojis and weird symbols with □ in front-facing user views, in case you are getting crazy rendering. It may break some CJK punctuation.' )
+            self._replace_tag_emojis_with_boxes.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will replace emojis and weird symbols with □ in front-facing user views, in case you are getting crazy rendering. It may break some CJK punctuation.' ) )
             
             #
             
@@ -4482,7 +4482,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._related_tags_concurrence_threshold_percent = ClientGUICommon.BetterSpinBox( suggested_tags_related_panel, min = 1, max = 100 )
             tt = 'The related tags system looks for tags that tend to be used on the same files. Here you can set how strict it is. How many percent of tag A\'s files must tag B on for tag B to be a good suggestion? Higher numbers will mean fewer but more relevant suggestions.'
-            self._related_tags_concurrence_threshold_percent.setToolTip( tt )
+            self._related_tags_concurrence_threshold_percent.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             #
             
@@ -4492,7 +4492,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrl( search_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, self._ConvertTagSliceAndWeightToListCtrlTuples, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by the tag type that searched for them. Set to 0 to not search with that type of tag.'
-            self._search_tag_slices_weights.setToolTip( tt )
+            self._search_tag_slices_weights.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             search_tag_slices_weight_panel.SetListCtrl( self._search_tag_slices_weights )
             
@@ -4508,7 +4508,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrl( result_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, self._ConvertTagSliceAndWeightToListCtrlTuples, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by their tag type. Set to 0 to not suggest that type of tag at all.'
-            self._result_tag_slices_weights.setToolTip( tt )
+            self._result_tag_slices_weights.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             result_tag_slices_weight_panel.SetListCtrl( self._result_tag_slices_weights )
             
@@ -4939,22 +4939,22 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             # I tried <100%, but Qt seems to cap it to 1.0. Sad!
             self._thumbnail_dpr_percentage = ClientGUICommon.BetterSpinBox( self, min = 100, max = 800 )
             tt = 'If your OS runs at an UI scale greater than 100%, mirror it here and your thumbnails will look crisp. If you have multiple monitors at different UI scales, or you change UI scale regularly, set it to the largest one you use.'
-            tt += os.linesep * 2
+            tt += '\n' * 2
             tt += 'I believe the UI scale on the monitor this dialog opened on was {}'.format( HydrusData.ConvertFloatToPercentage( self.devicePixelRatio() ) )
-            self._thumbnail_dpr_percentage.setToolTip( tt )
+            self._thumbnail_dpr_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )
             
             self._thumbnail_visibility_scroll_percent = ClientGUICommon.BetterSpinBox( self, min=1, max=99 )
-            self._thumbnail_visibility_scroll_percent.setToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' )
+            self._thumbnail_visibility_scroll_percent.setToolTip( ClientGUIFunctions.WrapToolTip( 'Lower numbers will cause fewer scrolls, higher numbers more.' ) )
             
             self._allow_blurhash_fallback = QW.QCheckBox( self )
             tt = 'If hydrus does not have a thumbnail for a file (e.g. you are looking at a deleted file, or one unexpectedly missing), but it does know its blurhash, it will generate a blurry thumbnail based off that blurhash. Turning this behaviour off here will make it always show the default "hydrus" thumbnail.'
-            self._allow_blurhash_fallback.setToolTip( tt )
+            self._allow_blurhash_fallback.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._fade_thumbnails = QW.QCheckBox( self )
             tt = 'Whenever thumbnails change (appearing on a page, selecting, an icon or tag banner changes), they normally fade from the old to the new. If you would rather they change instantly, in one frame, uncheck this.'
-            self._fade_thumbnails.setToolTip( tt )
+            self._fade_thumbnails.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._focus_preview_on_ctrl_click = QW.QCheckBox( self )
             self._focus_preview_on_ctrl_click_only_static = QW.QCheckBox( self )
@@ -5196,7 +5196,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         urls = sorted( self._current_urls_count.keys() )
         
-        text = os.linesep.join( urls )
+        text = '\n'.join( urls )
         
         CG.client_controller.pub( 'clipboard', 'text', text )
         
@@ -5295,7 +5295,7 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
         except Exception as e:
             
-            ClientGUIFunctions.PresentClipboardParseError( self, raw_text, 'Lines of URLs', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of URLs', e )
             
         
     
@@ -5502,18 +5502,18 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._missing_subfolders_to_new_subfolders = {}
         
         text = 'This dialog has launched because some expected file storage directories were not found. This is a serious error. You have two options:'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += '1) If you know what these should be (e.g. you recently remapped their external drive to another location), update the paths here manually. For most users, this will be clicking _add a possibly correct location_ and then select the new folder where the subdirectories all went. You can repeat this if your folders are missing in multiple locations. Check everything reports _ok!_'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'Although it is best if you can find everything, you only _have_ to fix the subdirectories starting with \'f\', which store your original files. Those starting \'t\' and \'r\' are for your thumbnails, which can be regenerated with a bit of work.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += 'Then hit \'apply\', and the client will launch. You should double-check all your locations under \'database->move media files\' immediately.'
-        text += os.linesep * 2
+        text += '\n' * 2
         text += '2) If the locations are not available, or you do not know what they should be, or you wish to fix this outside of the program, hit \'cancel\' to gracefully cancel client boot. Feel free to contact hydrus dev for help. Regardless of the situation, the document at "install_dir/db/help my media files are broke.txt" may be useful background reading.'
         
         if self._only_thumbs:
             
-            text += os.linesep * 2
+            text += '\n' * 2
             text += 'SPECIAL NOTE FOR YOUR SITUATION: The only paths missing are thumbnail paths. If you cannot recover these folders, you can hit apply to create empty paths at the original or corrected locations and then run a maintenance routine to regenerate the thumbnails from their originals.'
             
         
@@ -5705,9 +5705,9 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         if thumb_problems:
             
             message = 'Some or all of your incorrect paths have not been corrected, but they are all thumbnail paths.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'Would you like instead to create new empty subdirectories at the previous (or corrected, if you have entered them) locations?'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += 'You can run database->regenerate->thumbnails to fill them up again.'
             
             result = ClientGUIDialogsQuick.GetYesNo( self, message )

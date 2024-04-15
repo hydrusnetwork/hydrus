@@ -13,6 +13,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientGlobals as CG
 
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import ClientGUIFunctions
 
 def AppendMenu( menu, submenu, label ):
     
@@ -262,11 +263,11 @@ def SetMenuTexts( menu_item: QW.QAction, label: str, description: str ):
     
     if label != elided_label:
         
-        menu_item.setToolTip( label )
+        menu_item.setToolTip( ClientGUIFunctions.WrapToolTip( label ) )
         
     elif description != label and description != '':
         
-        menu_item.setToolTip( description )
+        menu_item.setToolTip( ClientGUIFunctions.WrapToolTip( description ) )
         
     
     menu_item.setWhatsThis( description )

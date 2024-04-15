@@ -17,8 +17,6 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIMediaActions
-from hydrus.client.gui import ClientGUIMediaControls
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -28,6 +26,8 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.media import ClientGUIMediaModalActions
+from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientContentUpdates
@@ -630,7 +630,7 @@ class CanvasHoverFrame( QW.QFrame ):
             tuples.append( ( 'focus is good: ', focus_is_good ) )
             tuples.append( ( 'current focus tlw: ', current_focus_tlw ) )
             
-            message = os.linesep * 2 + os.linesep.join( ( a + str( b ) for ( a, b ) in tuples ) )
+            message = '\n' * 2 + '\n'.join( ( a + str( b ) for ( a, b ) in tuples ) )
             
             return message
             
@@ -742,15 +742,15 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._archive_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
-        self._trash_button.setToolTip( 'send to trash' )
+        self._trash_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send to trash' ) )
         self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._delete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().trash_delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
-        self._delete_button.setToolTip( 'delete completely' )
+        self._delete_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'delete completely' ) )
         self._delete_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._undelete_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().undelete, CG.client_controller.pub, 'canvas_undelete', self._canvas_key )
-        self._undelete_button.setToolTip( 'undelete' )
+        self._undelete_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'undelete' ) )
         self._undelete_button.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._archive_button, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -790,14 +790,14 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             
         
         shortcuts = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().keyboard, self._ShowShortcutMenu )
-        shortcuts.setToolTip( 'shortcuts' )
+        shortcuts.setToolTip( ClientGUIFunctions.WrapToolTip( 'shortcuts' ) )
         shortcuts.setFocusPolicy( QC.Qt.TabFocus )
         
         self._show_embedded_metadata_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().listctrl, self._ShowFileEmbeddedMetadata )
         self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.TabFocus )
         
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, CG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
-        fullscreen_switch.setToolTip( 'fullscreen switch' )
+        fullscreen_switch.setToolTip( ClientGUIFunctions.WrapToolTip( 'fullscreen switch' ) )
         fullscreen_switch.setFocusPolicy( QC.Qt.TabFocus )
         
         if HC.PLATFORM_MACOS:
@@ -812,12 +812,12 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         drag_button = QW.QPushButton( self )
         drag_button.setIcon( QG.QIcon( CC.global_pixmaps().drag ) )
         drag_button.setIconSize( CC.global_pixmaps().drag.size() )
-        drag_button.setToolTip( 'drag from here to export file' )
+        drag_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'drag from here to export file' ) )
         drag_button.pressed.connect( self.DragButtonHit )
         drag_button.setFocusPolicy( QC.Qt.TabFocus )
         
         close = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )
-        close.setToolTip( 'close' )
+        close.setToolTip( ClientGUIFunctions.WrapToolTip( 'close' ) )
         close.setFocusPolicy( QC.Qt.TabFocus )
         
         QP.AddToLayout( self._top_hbox, self._zoom_text, CC.FLAGS_CENTER_PERPENDICULAR )
@@ -838,13 +838,13 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         if self._current_media.HasInbox():
             
             ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.global_pixmaps().archive )
-            self._archive_button.setToolTip( 'archive' )
+            self._archive_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'archive' ) )
             
         else:
             
             ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.global_pixmaps().to_inbox )
             
-            self._archive_button.setToolTip( 'return to inbox' )
+            self._archive_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'return to inbox' ) )
             
         
     
@@ -903,7 +903,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
                 
                 tt = 'show {}'.format( ' and '.join( tt_components ) )
                 
-                self._show_embedded_metadata_button.setToolTip( tt )
+                self._show_embedded_metadata_button.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
                 
             
             # enabled, not visible, so it doesn't bounce the others around on scroll
@@ -970,7 +970,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
             return
             
         
-        ClientGUIMediaActions.ShowFileEmbeddedMetadata( self, self._current_media )
+        ClientGUIMediaModalActions.ShowFileEmbeddedMetadata( self, self._current_media )
         
     
     def _ShowShortcutMenu( self ):
@@ -1128,7 +1128,7 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
     def _ResetArchiveButton( self ):
         
         ClientGUIFunctions.SetBitmapButtonBitmap( self._archive_button, CC.global_pixmaps().archive )
-        self._archive_button.setToolTip( 'archive' )
+        self._archive_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'archive' ) )
         
     
 class CanvasHoverFrameTopNavigable( CanvasHoverFrameTop ):
@@ -1399,7 +1399,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                 
             else:
                 
-                remote_string = os.linesep.join( remote_strings )
+                remote_string = '\n'.join( remote_strings )
                 
                 self._file_repos.setText( remote_string )
                 
@@ -1618,7 +1618,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
     
     def _EditNotes( self, name ):
         
-        ClientGUIMediaActions.EditFileNotes( self, self._current_media, name_to_start_on = name )
+        ClientGUIMediaModalActions.EditFileNotes( self, self._current_media, name_to_start_on = name )
         
     
     def _GetIdealSizeAndPosition( self ):
@@ -1808,11 +1808,11 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         self._comparison_media = None
         
         self._show_in_a_page_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, self.showPairInPage.emit )
-        self._show_in_a_page_button.setToolTip( 'send pair to the duplicates media page, for later processing' )
+        self._show_in_a_page_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send pair to the duplicates media page, for later processing' ) )
         self._show_in_a_page_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._trash_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().delete, CG.client_controller.pub, 'canvas_delete', self._canvas_key )
-        self._trash_button.setToolTip( 'send to trash' )
+        self._trash_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'send to trash' ) )
         self._trash_button.setFocusPolicy( QC.Qt.TabFocus )
         
         menu_items = []
@@ -1832,7 +1832,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
         self._cog_button.setFocusPolicy( QC.Qt.TabFocus )
         
         close_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().stop, CG.client_controller.pub, 'canvas_close', self._canvas_key )
-        close_button.setToolTip( 'close filter' )
+        close_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'close filter' ) )
         close_button.setFocusPolicy( QC.Qt.TabFocus )
         
         self._back_a_pair = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().first, self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_DUPLICATE_FILTER_BACK ) )
@@ -1965,7 +1965,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                 
                 panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = message, none_phrase = 'do not change', min = 1, max = 9 )
                 
-                panel.setToolTip( tooltip )
+                panel.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
                 
                 dlg.SetPanel( panel )
                 

@@ -626,9 +626,9 @@ class ThumbnailCache( object ):
             self._thumbnail_error_occurred = True
             
             message = 'A thumbnail error has occurred. The problem thumbnail will appear with the default \'hydrus\' symbol. You may need to take hard drive recovery actions, and if the error is not obviously fixable, you can contact hydrus dev for additional help. Specific information for this first error follows. Subsequent thumbnail errors in this session will be silently printed to the log.'
-            message += os.linesep * 2
+            message += '\n' * 2
             message += str( e )
-            message += os.linesep * 2
+            message += '\n' * 2
             message += summary
             
             job_status = ClientThreading.JobStatus()

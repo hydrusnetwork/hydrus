@@ -7,9 +7,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageHandling
@@ -20,7 +18,6 @@ from hydrus.client import ClientData
 from hydrus.client import ClientDuplicates
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
-from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsManage
@@ -28,10 +25,6 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIMedia
-from hydrus.client.gui import ClientGUIMediaActions
-from hydrus.client.gui import ClientGUIMediaControls
-from hydrus.client.gui import ClientGUIMediaMenus
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
@@ -42,6 +35,10 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvasHoverFrames
 from hydrus.client.gui.canvas import ClientGUICanvasMedia
+from hydrus.client.gui.media import ClientGUIMediaSimpleActions
+from hydrus.client.gui.media import ClientGUIMediaModalActions
+from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.media import ClientGUIMediaMenus
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
@@ -368,7 +365,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         CG.client_controller.sub( self, 'ZoomIn', 'canvas_zoom_in' )
         CG.client_controller.sub( self, 'ZoomOut', 'canvas_zoom_out' )
         CG.client_controller.sub( self, 'ZoomSwitch', 'canvas_zoom_switch' )
-        CG.client_controller.sub( self, 'OpenExternally', 'canvas_open_externally' )
         CG.client_controller.sub( self, 'ManageTags', 'canvas_manage_tags' )
         CG.client_controller.sub( self, 'update', 'notify_new_colourset' )
         
@@ -405,7 +401,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        ClientGUIMedia.CopyHashesToClipboard( self, hash_type, [ self._current_media ] )
+        ClientGUIMediaModalActions.CopyHashesToClipboard( self, hash_type, [ self._current_media ] )
         
     
     def _CopyFileToClipboard( self ):
@@ -529,7 +525,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        ClientGUIMediaActions.EditFileNotes( self, self._current_media, name_to_start_on = name_to_start_on )
+        ClientGUIMediaModalActions.EditFileNotes( self, self._current_media, name_to_start_on = name_to_start_on )
         
     
     def _ManageRatings( self ):
@@ -594,7 +590,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        ClientGUIMediaActions.EditFileTimestamps( self, [ self._current_media ] )
+        ClientGUIMediaModalActions.EditFileTimestamps( self, [ self._current_media ] )
         
     
     def _ManageURLs( self ):
@@ -623,59 +619,9 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        mime = self._current_media.GetMime()
-        
         if self._current_media.HasDuration():
             
             self._media_container.Pause()
-            
-        
-    
-    def _OpenExternally( self ):
-        
-        if self._current_media is None:
-            
-            return
-            
-        
-        hash = self._current_media.GetHash()
-        mime = self._current_media.GetMime()
-        
-        client_files_manager = CG.client_controller.client_files_manager
-        
-        path = client_files_manager.GetFilePath( hash, mime )
-        
-        launch_path = self._new_options.GetMimeLaunch( mime )
-        
-        HydrusPaths.LaunchFile( path, launch_path )
-        
-        self._MediaFocusWentToExternalProgram()
-        
-    
-    def _OpenFileInWebBrowser( self ):
-        
-        if self._current_media is not None:
-            
-            hash = self._current_media.GetHash()
-            mime = self._current_media.GetMime()
-            
-            client_files_manager = CG.client_controller.client_files_manager
-            
-            path = client_files_manager.GetFilePath( hash, mime )
-            
-            ClientPaths.LaunchPathInWebBrowser( path )
-            
-            self._MediaFocusWentToExternalProgram()
-            
-        
-    
-    def _OpenFileLocation( self ):
-        
-        if self._current_media is not None:
-            
-            ClientGUIMedia.OpenFileLocation( self._current_media )
-            
-            self._MediaFocusWentToExternalProgram()
             
         
     
@@ -683,7 +629,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         if self._current_media is not None:
             
-            ClientGUIMedia.DoOpenKnownURLFromShortcut( self, self._current_media )
+            ClientGUIMediaModalActions.DoOpenKnownURLFromShortcut( self, self._current_media )
             
         
     
@@ -743,7 +689,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             return
             
         
-        ClientGUIMediaActions.UndeleteMedia( self, ( self._current_media, ) )
+        ClientGUIMediaModalActions.UndeleteMedia( self, (self._current_media,) )
         
     
     def CleanBeforeDestroy( self ):
@@ -841,14 +787,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             media_rect = self._media_container.rect()
             
             return media_rect.contains( media_mouse_pos )
-            
-        
-    
-    def OpenExternally( self, canvas_key ):
-        
-        if self._canvas_key == canvas_key:
-            
-            self._OpenExternally()
             
         
     
@@ -960,7 +898,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
                 if self._current_media is not None:
                     
-                    ClientGUIMedia.CopyMediaURLs( [ self._current_media ] )
+                    ClientGUIMediaSimpleActions.CopyMediaURLs( [ self._current_media ] )
                     
                 
             elif action == CAC.SIMPLE_DELETE_FILE:
@@ -977,11 +915,61 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_EXTERNAL_PROGRAM:
                 
-                self._OpenExternally()
+                it_worked = ClientGUIMediaSimpleActions.OpenExternally( self._current_media )
+                
+                if it_worked:
+                    
+                    self._MediaFocusWentToExternalProgram()
+                    
                 
             elif action == CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER:
                 
-                self._OpenFileLocation()
+                it_worked = ClientGUIMediaSimpleActions.OpenFileLocation( self._current_media )
+                
+                if it_worked:
+                    
+                    self._MediaFocusWentToExternalProgram()
+                    
+                
+            elif action == CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER:
+                
+                it_worked = ClientGUIMediaSimpleActions.OpenInWebBrowser( self._current_media )
+                
+                if it_worked:
+                    
+                    self._MediaFocusWentToExternalProgram()
+                    
+                
+            elif action == CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIMediaSimpleActions.ShowFilesInNewPage( [ hash ], self._location_context )
+                    
+                    self._MediaFocusWentToExternalProgram()
+                    
+                
+            elif action == CAC.SIMPLE_OPEN_SELECTION_IN_NEW_DUPLICATES_FILTER_PAGE:
+                
+                if self._current_media is not None:
+                    
+                    hash = self._current_media.GetHash()
+                    
+                    ClientGUIMediaSimpleActions.ShowFilesInNewDuplicatesFilterPage( [ hash ], self._location_context )
+                    
+                    self._MediaFocusWentToExternalProgram()
+                    
+                
+            elif action == CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES:
+                
+                if self._current_media is not None:
+                    
+                    hamming_distance = command.GetSimpleData()
+                    
+                    ClientGUIMediaSimpleActions.ShowSimilarFilesInNewPage( [ self._current_media ], self._location_context, hamming_distance )
+                    
                 
             elif action == CAC.SIMPLE_PAN_UP:
                 
@@ -1019,7 +1007,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     duplicate_type = command.GetSimpleData()
                     
-                    ClientGUIMedia.ShowDuplicatesInNewPage( self._location_context, hash, duplicate_type )
+                    ClientGUIMediaSimpleActions.ShowDuplicatesInNewPage( self._location_context, hash, duplicate_type )
                     
                 
             elif action == CAC.SIMPLE_DUPLICATE_MEDIA_CLEAR_FOCUSED_FALSE_POSITIVES:
@@ -1207,7 +1195,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 return
                 
             
-            command_processed = ClientGUIMediaActions.ApplyContentApplicationCommandToMedia( self, command, ( self._current_media, ) )
+            command_processed = ClientGUIMediaModalActions.ApplyContentApplicationCommandToMedia( self, command, (self._current_media,) )
             
         else:
             
@@ -1463,7 +1451,7 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMediaMenus.AddPrettyInfoLines( info_menu, info_lines )
             
-            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
+            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, (self._current_media,) )
             
             ClientGUIMenus.AppendMenu( menu, info_menu, top_line )
             
@@ -1533,7 +1521,7 @@ class CanvasPanel( Canvas ):
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaActions.SetFilesForcedFiletypes, self, [ self._current_media ] )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaModalActions.SetFilesForcedFiletypes, self, [ self._current_media ] )
             
             ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
@@ -1541,20 +1529,7 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            open_menu = ClientGUIMenus.GenerateMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( open_menu, 'in external program', 'Open this file in your OS\'s default program.', self._OpenExternally )
-            ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
-            ClientGUIMenus.AppendMenuItem( open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
-            
-            show_open_in_explorer = advanced_mode and ( HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS )
-            
-            if show_open_in_explorer:
-                
-                ClientGUIMenus.AppendMenuItem( open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
-                
-            
-            ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
+            ClientGUIMediaMenus.AddOpenMenu( self, menu, self._current_media, [ self._current_media ] )
             
             share_menu = ClientGUIMenus.GenerateMenu( menu )
             
@@ -4539,7 +4514,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             ClientGUIMenus.AppendSeparator( info_menu )
             
-            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, ( self._current_media, ) )
+            ClientGUIMediaMenus.AddFileViewingStatsMenu( info_menu, (self._current_media,) )
             
             filetype_summary = ClientMedia.GetMediasFiletypeSummaryString( [ self._current_media ] )
             size_summary = HydrusData.ToHumanBytes( self._current_media.GetSize() )
@@ -4683,39 +4658,33 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
             
             ClientGUIMenus.AppendMenuItem( manage_menu, 'times', 'Edit the timestamps for your files.', self._ManageTimestamps )
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaActions.SetFilesForcedFiletypes, self, [ self._current_media ] )
+            ClientGUIMenus.AppendMenuItem( manage_menu, 'force filetype', 'Force your files to appear as a different filetype.', ClientGUIMediaModalActions.SetFilesForcedFiletypes, self, [ self._current_media ] )
             
             ClientGUIMediaMenus.AddManageFileViewingStatsMenu( self, manage_menu, [ self._current_media ] )
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaActions.GetLocalFileActionServiceKeys( ( self._current_media, ) )
+            ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( (self._current_media,) )
             
             multiple_selected = False
             
-            ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
+            if len( local_duplicable_to_file_service_keys ) > 0 or len( local_moveable_from_and_to_file_service_keys ) > 0:
+                
+                files_menu = ClientGUIMenus.GenerateMenu( menu )
+                
+                ClientGUIMediaMenus.AddLocalFilesMoveAddToMenu( self, files_menu, local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys, multiple_selected, self.ProcessApplicationCommand )
+                
+                ClientGUIMenus.AppendMenu( menu, files_menu, 'files' )
+                
             
             ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
             
-            open_menu = ClientGUIMenus.GenerateMenu( menu )
-            
-            ClientGUIMenus.AppendMenuItem( open_menu, 'in external program', 'Open this file in the default external program.', self._OpenExternally )
-            ClientGUIMenus.AppendMenuItem( open_menu, 'in a new page', 'Show your current media in a simple new page.', self._ShowMediaInNewPage )
-            ClientGUIMenus.AppendMenuItem( open_menu, 'in web browser', 'Show this file in your OS\'s web browser.', self._OpenFileInWebBrowser )
-            
-            show_open_in_explorer = advanced_mode and ( HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS )
-            
-            if show_open_in_explorer:
-                
-                ClientGUIMenus.AppendMenuItem( open_menu, 'in file browser', 'Show this file in your OS\'s file browser.', self._OpenFileLocation )
-                
-            
-            ClientGUIMenus.AppendMenu( menu, open_menu, 'open' )
+            ClientGUIMediaMenus.AddOpenMenu( self, menu, self._current_media, [ self._current_media ] )
             
             share_menu = ClientGUIMenus.GenerateMenu( menu )
             
             copy_menu = ClientGUIMenus.GenerateMenu( share_menu )
-
+            
             ClientGUIMenus.AppendMenuItem( copy_menu, 'file', 'Copy this file to your clipboard.', self._CopyFileToClipboard )
             
             copy_hash_menu = ClientGUIMenus.GenerateMenu( copy_menu )

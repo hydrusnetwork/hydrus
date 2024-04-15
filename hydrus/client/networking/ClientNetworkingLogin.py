@@ -563,7 +563,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
             self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
             
-            HydrusData.ShowText( 'The login for "' + login_domain + '" failed! It will not be reattempted until the problem is fixed. The failure reason was:' + os.linesep * 2 + validity_error_text )
+            HydrusData.ShowText( 'The login for "' + login_domain + '" failed! It will not be reattempted until the problem is fixed. The failure reason was:' + '\n' * 2 + validity_error_text )
             
             self._SetDirty()
             
@@ -1672,6 +1672,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
             netloc = domain_to_hit
             path = self._path
             params = ''
+            query = ''
             fragment = ''
             
             single_value_parameters = []
@@ -1689,9 +1690,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                 test_result_body = ClientNetworkingFunctions.ConvertQueryDictToText( query_dict, single_value_parameters )
                 
             
-            r = urllib.parse.ParseResult( scheme, netloc, path, params, query, fragment )
-            
-            url = r.geturl()
+            url = urllib.parse.urlunparse( ( scheme, netloc, path, params, query, fragment ) )
             
             network_job = ClientNetworkingJobs.NetworkJob( self._method, url, body = body, referral_url = referral_url )
             
@@ -1699,9 +1698,7 @@ class LoginStep( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 p = ClientNetworkingFunctions.ParseURL( url )
                 
-                r = urllib.parse.ParseResult( p.scheme, p.netloc, '', '', '', '' )
-                
-                origin = r.geturl() # https://accounts.pixiv.net
+                origin = urllib.parse.urlunparse( ( p.scheme, p.netloc, '', '', '', '' ) ) # https://accounts.pixiv.net
                 
                 network_job.AddAdditionalHeader( 'origin', origin ) # GET/POST forms are supposed to have this for CSRF. we'll try it just with POST for now
                 
