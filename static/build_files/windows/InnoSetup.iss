@@ -45,6 +45,7 @@ Filename: {app}\hydrus_client.exe; Description: Open the client; Flags: postinst
 [Files]
 Source: dist\Hydrus Network\*; DestDir: {app}; Flags: ignoreversion recursesubdirs createallsubdirs
 [InstallDelete]
+;v571: I made this basically do a clean install every time. There is no nice way to say "delete all folders except db", so might need to add specific versioned foldernames in future!
 Name: {app}\Crypto; Type: filesandordirs; Components: install
 Name: {app}\cv2; Type: filesandordirs; Components: install
 Name: {app}\PySide6; Type: filesandordirs; Components: install
