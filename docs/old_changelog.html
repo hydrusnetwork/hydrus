@@ -35,6 +35,31 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_571"><a href="#version_571">version 571</a></h2>
+                    <ul>
+                        <li><h3>clean install</h3></li>
+                        <li>the recent 'future build' test went well, so I am rolling these updates into the normal release for everyone. on Windows and Linux, the built program is now running Python 3.11, and, on all platforms, updated versions of Qt (UI) and OpenCV (image-processing). there's nothing earth-shattering about these changes, but some things will work better and faster</li>
+                        <li>**because of the jump, v570 and v571 have dll conflicts! if you are on Windows or Linux and use the .zip or .tar.zst "Extract" release, you will need to a clean install as here**: https://hydrusnetwork.github.io/hydrus/getting_started_installing.html#clean_installs</li>
+                        <li>**if you are a Windows installer/macOS App/source user, you do not need to do a clean install, just update as normal**</li>
+                        <li><h3>misc</h3></li>
+                        <li>when you finish an archive/delete filter and there are several domains you could delete from, the 'commit' buttons are now disabled for 1.2 seconds. this catches you from accidentally spamming enter through a surprise complicated decision</li>
+                        <li>under _options-&gt;files and trash_, you can now say 'when finishing filtering, always delete from all possible domains', which makes the above decision always single domain. hit this if you do want to spam through this and are fine always deleting from everywhere</li>
+                        <li>the client will now, by default, attempt to load truncated images. this was previously off until you set it per-session-on in a debug menu, but is now a checkbox under _options-&gt;media_. some weird damaged jpegs and pngs should now load, fingers crossed</li>
+                        <li>the 'load images with PIL' setting is now default on for new users and no longer IN TESTING</li>
+                        <li>every normal single column text list across the program now copies text better if you explicitly hit ctrl+c/ctrl+insert. they now copy all selected rows (rather than just one), and when the display text differs from the underlying data/sort text, you'll now get the sort text (e.g. on manage urls launched on multiple files, you might see 'site.com/123456 (2)', but now, when it copies, that ' (1)' display cruft is omitted). I spammed this to 22 locations and tested 2 so there are definitely no weird string copy bugs anywhere</li>
+                        <li>fixed an issue opening/closing manage parsers, url classes, or url class links if you have url classes with invalid example urls or critically missing default values in your storage</li>
+                        <li>the server has a new 'restart_services' command, only triggerable by an admin with service modification ability, which tells all the services on all ports to stop and restart. if there's a new ssl cert, they load the new one</li>
+                        <li><h3>client api</h3></li>
+                        <li>the 'associate urls' command has a new 'normalise_urls' parameter (default true, which was the behaviour before) to let you force-add un-normalised URLs or URIs or whatever</li>
+                        <li>added some unit tests to test this new param</li>
+                        <li>client api version is now 64</li>
+                        <li><h3>help docs</h3></li>
+                        <li>wrote a new help document, 'help my db disappeared.txt' for the db directory that tells you what to do if you boot one day and suddenly get the 'this looks like the first time you ran this program' popup</li>
+                        <li>clarified the Windows 'running from source' help a little around 'git' and added a 'here is the Python version you want' link for Win 7 users</li>
+                        <li>gave the install help a very light pass, just fixing and updating a few things here and there. I also warn Linux users that the AUR package may throw errors if Arch updates a Qt library or something before we have had a chance to test it (as we have seen a couple times recently), and I generally suggest AUR people run from source manually if they can</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_570"><a href="#version_570">version 570</a></h2>
                     <ul>
                         <li><h3>UI stuff</h3></li>

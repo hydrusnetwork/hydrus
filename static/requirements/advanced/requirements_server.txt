@@ -12,7 +12,7 @@ Send2Trash>=1.5.0
 service-identity>=18.1.0
 Twisted>=20.3.0
 
-opencv-python-headless==4.7.0.72
+opencv-python-headless==4.8.1.78
 requests==2.31.0
 
-setuptools==65.5.1
+setuptools==69.1.1

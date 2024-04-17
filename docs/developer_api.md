@@ -886,8 +886,6 @@ Response:
 }
 ```
 
-        
-
 ### **POST `/add_urls/associate_url`** { id="add_urls_associate_url" }
 
 _Manage which URLs the client considers to be associated with which files._
@@ -902,23 +900,29 @@ Required Headers:
 
 Arguments (in JSON):
 :   
+    *   [files](#parameters_files)
     *   `url_to_add`: (optional, selective A, an url you want to associate with the file(s))
     *   `urls_to_add`: (optional, selective A, a list of urls you want to associate with the file(s))
     *   `url_to_delete`: (optional, selective B, an url you want to disassociate from the file(s))
     *   `urls_to_delete`: (optional, selective B, a list of urls you want to disassociate from the file(s))
-    *   [files](#parameters_files)
+    *   `normalise_urls`: (optional, default true, only affects the 'add' urls)
 
-    The single/multiple arguments work the same--just use whatever is convenient for you. Unless you really know what you are doing with URL Classes, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
+The single/multiple arguments work the same--just use whatever is convenient for you.
+
+Unless you really know what you are doing, I strongly recommend you stick to associating URLs with just one single 'hash' at a time. Multiple hashes pointing to the same URL is unusual and frequently unhelpful.
+
+By default, anything you throw at the 'add' side will be normalised nicely, but if you need to add some specific/weird URL text, or you need to add a URI, set `normalise_urls` to `false`. Anything you throw at the 'delete' side will not be normalised, so double-check you are deleting exactly what you mean to via [GET /get\_files/file\_metadata](#get_files_file_metadata) etc.. 
+
 ```json title="Example request body"
 {
   "url_to_add" : "https://rule34.xxx/index.php?id=2588418&page=post&s=view",
   "hash" : "3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba"
 }
 ```
-        
+
 Response: 
 :   200 with no content. Like when adding tags, this is safely idempotent--do not worry about re-adding URLs associations that already exist or accidentally trying to delete ones that don't.
-    
+
 
 ## Editing File Tags
 

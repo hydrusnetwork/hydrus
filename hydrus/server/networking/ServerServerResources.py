@@ -1312,6 +1312,7 @@ class HydrusResourceRestrictedUpdate( HydrusResourceRestricted ):
         return response_context
         
     
+
 class HydrusResourceRestrictedImmediateUpdate( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1332,6 +1333,7 @@ class HydrusResourceRestrictedImmediateUpdate( HydrusResourceRestricted ):
         return response_context
         
     
+
 class HydrusResourceRestrictedMetadataUpdate( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
@@ -1352,6 +1354,24 @@ class HydrusResourceRestrictedMetadataUpdate( HydrusResourceRestricted ):
         return response_context
         
     
+
+class HydrusResourceRestrictedRestartServices( HydrusResourceRestricted ):
+    
+    def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        request.hydrus_account.CheckPermission( HC.CONTENT_TYPE_SERVICES, HC.PERMISSION_ACTION_MODERATE )
+        
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        HG.server_controller.CallLater( 1.0, HG.server_controller.RestartServices )
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
 class HydrusResourceRestrictedVacuum( HydrusResourceRestricted ):
     
     def _checkAccountPermissions( self, request: HydrusServerRequest.HydrusRequest ):

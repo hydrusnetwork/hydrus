@@ -205,7 +205,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._regexes_panel = ClientGUICommon.StaticBox( self, 'regexes' )
             
-            self._regexes = QW.QListWidget( self._regexes_panel )
+            self._regexes = ClientGUIListBoxes.BetterQListWidget( self._regexes_panel )
             self._regexes.itemDoubleClicked.connect( self.EventRemoveRegex )
             
             self._regex_box = QW.QLineEdit()

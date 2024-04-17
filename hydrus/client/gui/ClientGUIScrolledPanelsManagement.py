@@ -38,6 +38,7 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIImport
 from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.lists import ClientGUIListBook
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
@@ -63,7 +64,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._new_options = CG.client_controller.new_options
         self._original_new_options = self._new_options.Duplicate()
         
-        self._listbook = ClientGUICommon.ListBook( self )
+        self._listbook = ClientGUIListBook.ListBook( self )
         
         self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
         self._listbook.AddPage( 'gui pages', 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
@@ -1030,6 +1031,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._confirm_multiple_local_file_services_copy = QW.QCheckBox( self )
             self._confirm_multiple_local_file_services_move = QW.QCheckBox( self )
             
+            self._only_show_delete_from_all_local_domains_when_filtering = QW.QCheckBox( self )
+            tt = 'When you finish filtering, if the files you chose to delete are in multiple local file domains, you are usually given the option of where you want to delete them from. If you always want to delete them from all locations and do not want the more complicated confirmation dialog, check this.'
+            self._only_show_delete_from_all_local_domains_when_filtering.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
             self._remove_filtered_files = QW.QCheckBox( self )
             self._remove_trashed_files = QW.QCheckBox( self )
             self._remove_local_domain_moved_files = QW.QCheckBox( self )
@@ -1081,6 +1086,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._confirm_multiple_local_file_services_copy.setChecked( self._new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' ) )
             self._confirm_multiple_local_file_services_move.setChecked( self._new_options.GetBoolean( 'confirm_multiple_local_file_services_move' ) )
             
+            self._only_show_delete_from_all_local_domains_when_filtering.setChecked( self._new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) )
+            
             self._remove_filtered_files.setChecked( HC.options[ 'remove_filtered_files' ] )
             self._remove_trashed_files.setChecked( HC.options[ 'remove_trashed_files' ] )
             self._remove_local_domain_moved_files.setChecked( self._new_options.GetBoolean( 'remove_local_domain_moved_files' ) )
@@ -1117,6 +1124,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Confirm when moving files across local file services: ', self._confirm_multiple_local_file_services_move ) )
             rows.append( ( 'When physically deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
             rows.append( ( 'When maintenance physically deletes files, wait this many ms between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
+            rows.append( ( 'When finishing filtering, always delete from all possible domains: ', self._only_show_delete_from_all_local_domains_when_filtering ) )
             rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
             rows.append( ( 'Remove files from view when they are moved to another local file domain: ', self._remove_local_domain_moved_files ) )
@@ -1207,6 +1215,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'remove_local_domain_moved_files', self._remove_local_domain_moved_files.isChecked() )
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
             HC.options[ 'trash_max_size' ] = self._trash_max_size.GetValue()
+            
+            self._new_options.SetBoolean( 'only_show_delete_from_all_local_domains_when_filtering', self._only_show_delete_from_all_local_domains_when_filtering.isChecked() )
             
             self._new_options.SetInteger( 'ms_to_wait_between_physical_file_deletes', self._ms_to_wait_between_physical_file_deletes.value() )
             
@@ -2402,7 +2412,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
             
             self._load_images_with_pil = QW.QCheckBox( system_panel )
-            self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are dropping CV and moving to PIL exclusively. If you want to help test, please turn this on and send hydev any images that render wrong!' ) )
+            self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are expecting to drop CV and move to PIL exclusively. This used to be a test option but is now default true and may soon be retired.' ) )
+            
+            self._enable_truncated_images_pil = QW.QCheckBox( system_panel )
+            self._enable_truncated_images_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should PIL be allowed to load broken images that are missing some data? This is usually fine, but some years ago we had stability problems when this was mixed with OpenCV. Now it is default on, but if you need to, you can disable it here.' ) )
             
             #
             
@@ -2487,6 +2500,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._hide_uninteresting_local_import_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_local_import_time' ) )
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
+            self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
             self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
             self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
@@ -2588,7 +2602,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
-            rows.append( ( 'IN TESTING: Load images with PIL:', self._load_images_with_pil ) )
+            rows.append( ( 'Allow loading of truncated images:', self._enable_truncated_images_pil ) )
+            rows.append( ( 'Load images with PIL:', self._load_images_with_pil ) )
             
             gridbox = ClientGUICommon.WrapInGrid( system_panel, rows )
             
@@ -2827,6 +2842,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'hide_uninteresting_local_import_time', self._hide_uninteresting_local_import_time.isChecked() )
             self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
+            self._new_options.SetBoolean( 'enable_truncated_images_pil', self._enable_truncated_images_pil.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
             self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
@@ -5142,10 +5158,11 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             self._multiple_files_warning.hide()
             
         
-        self._urls_listbox = QW.QListWidget( self )
+        self._urls_listbox = ClientGUIListBoxes.BetterQListWidget( self )
         self._urls_listbox.setSortingEnabled( True )
         self._urls_listbox.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
         self._urls_listbox.itemDoubleClicked.connect( self.EventListDoubleClick )
+        
         self._listbox_event_filter = QP.WidgetEventFilter( self._urls_listbox )
         self._listbox_event_filter.EVT_KEY_DOWN( self.EventListKeyDown )
         
@@ -5363,9 +5380,11 @@ class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 label = '{} ({})'.format( url, count )
                 
+            
             item = QW.QListWidgetItem()
             item.setText( label )
             item.setData( QC.Qt.UserRole, url )
+            
             self._urls_listbox.addItem( item )
             
         

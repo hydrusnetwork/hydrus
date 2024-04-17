@@ -2443,6 +2443,8 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
+        normalise_urls = request.parsed_request_args.GetValue( 'normalise_urls', bool, default_value = True )
+        
         urls_to_add = []
         
         if 'url_to_add' in request.parsed_request_args:
@@ -2480,13 +2482,16 @@ class HydrusResourceClientAPIRestrictedAddURLsAssociateURL( HydrusResourceClient
         
         domain_manager = CG.client_controller.network_engine.domain_manager
         
-        try:
+        if normalise_urls:
             
-            urls_to_add = [ domain_manager.NormaliseURL( url ) for url in urls_to_add ]
-            
-        except HydrusExceptions.URLClassException as e:
-            
-            raise HydrusExceptions.BadRequestException( e )
+            try:
+                
+                urls_to_add = [ domain_manager.NormaliseURL( url ) for url in urls_to_add ]
+                
+            except HydrusExceptions.URLClassException as e:
+                
+                raise HydrusExceptions.BadRequestException( e )
+                
             
         
         if len( urls_to_add ) == 0 and len( urls_to_delete ) == 0:

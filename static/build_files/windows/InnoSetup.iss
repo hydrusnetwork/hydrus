@@ -45,9 +45,12 @@ Filename: {app}\hydrus_client.exe; Description: Open the client; Flags: postinst
 [Files]
 Source: dist\Hydrus Network\*; DestDir: {app}; Flags: ignoreversion recursesubdirs createallsubdirs
 [InstallDelete]
+;v571: I made this basically do a clean install every time. There is no nice way to say "delete all folders except db", so might need to add specific versioned foldernames in future!
 Name: {app}\Crypto; Type: filesandordirs; Components: install
 Name: {app}\cv2; Type: filesandordirs; Components: install
+Name: {app}\PySide6; Type: filesandordirs; Components: install
 Name: {app}\tcl; Type: filesandordirs; Components: install
+Name: {app}\tcl8; Type: filesandordirs; Components: install
 Name: {app}\tk; Type: filesandordirs; Components: install
 Name: {app}\wx; Type: filesandordirs; Components: install
 Name: {app}\lz4-3.0.2-py3.7.egg-info; Type: filesandordirs; Components: install
@@ -58,23 +61,6 @@ Name: {app}\lib2to3; Type: filesandordirs; Components: install
 Name: {app}\mpl-data; Type: filesandordirs; Components: install
 Name: {app}\matplotlib; Type: filesandordirs; Components: install
 Name: {app}\cryptography; Type: filesandordirs; Components: install
-Name: {app}\client.exe; Type: files; Components: install
-Name: {app}\server.exe; Type: files; Components: install
-Name: {app}\opencv_ffmpeg344_64.dll; Type: files; Components: install
-Name: {app}\opencv_ffmpeg400_64.dll; Type: files; Components: install
-Name: {app}\opencv_ffmpeg410_64.dll; Type: files; Components: install
-Name: {app}\opencv_videoio_ffmpeg411_64.dll; Type: files; Components: install
-Name: {app}\opencv_videoio_ffmpeg412_64.dll; Type: files; Components: install
-Name: {app}\opencv_videoio_ffmpeg420_64.dll; Type: files; Components: install
-Name: {app}\opencv_videoio_ffmpeg440_64.dll; Type: files; Components: install
-Name: {app}\wxmsw30u_core_vc140_x64.dll; Type: files; Components: install
-Name: {app}\wxmsw30u_adv_vc140_x64.dll; Type: files; Components: install
-Name: {app}\wxbase30u_vc140_x64.dll; Type: files; Components: install
-Name: {app}\wxbase30u_net_vc140_x64.dll; Type: files; Components: install
-Name: {app}\tk86t.dll; Type: files; Components: install
-Name: {app}\tcl86t.dll; Type: files; Components: install
-Name: {app}\_tkinter.pyd; Type: files; Components: install
-Name: {app}\_yaml.cp36-win_amd64.pyd; Type: files; Components: install
-Name: {app}\_yaml.cp37-win_amd64.pyd; Type: files; Components: install
-Name: {app}\_cffi_backend.cp36-win_amd64.pyd; Type: files; Components: install
-Name: {app}\_distutils_findvs.pyd; Type: files; Components: install
+Name: {app}\*.exe; Type: files; Components: install
+Name: {app}\*.pyd; Type: files; Components: install
+Name: {app}\*.dll; Type: files; Components: install

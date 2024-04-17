@@ -3266,6 +3266,15 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True ), {} ) ] )
         
+    
+    def _test_associate_urls( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
         # associate url
         
         HG.test_controller.ClearWrites( 'content_updates' )
@@ -3363,6 +3372,101 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response.status, 200 )
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( [ url ], { hash } ) ) ] )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+        
+        # normalisation - True
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        unnormalised_url = 'https://rule34.xxx/index.php?page=post&id=2588418&s=view'
+        normalised_url = 'https://rule34.xxx/index.php?id=2588418&page=post&s=view'
+        
+        request_dict = { 'urls_to_add' : [ unnormalised_url ], 'hashes' : [ hash.hex() ] }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ normalised_url ], { hash } ) ) ] )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+        
+        # normalisation - False
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        unnormalised_url = 'https://rule34.xxx/index.php?page=post&id=2588418&s=view'
+        
+        request_dict = { 'urls_to_add' : [ unnormalised_url ], 'hashes' : [ hash.hex() ], 'normalise_urls' : False }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ unnormalised_url ], { hash } ) ) ] )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+        
+        # normalisation - crazy url error
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        crazy_nonsense = 'hello'
+        
+        request_dict = { 'urls_to_add' : [ crazy_nonsense ], 'hashes' : [ hash.hex() ] }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 400 )
+        
+        # normalisation - crazy url ok
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        hash = bytes.fromhex( '3b820114f658d768550e4e3d4f1dced3ff8db77443472b5ad93700647ad2d3ba' )
+        crazy_nonsense = 'hello'
+        
+        request_dict = { 'urls_to_add' : [ crazy_nonsense ], 'hashes' : [ hash.hex() ], 'normalise_urls' : False }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/associate_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( [ crazy_nonsense ], { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         
@@ -6390,6 +6494,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_tags_search_tags( connection, set_up_permissions )
         self._test_add_tags_get_tag_siblings_and_parents( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
+        self._test_associate_urls( connection, set_up_permissions )
         self._test_manage_duplicates( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_headers( connection, set_up_permissions )

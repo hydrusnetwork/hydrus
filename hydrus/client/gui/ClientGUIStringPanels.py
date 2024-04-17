@@ -8,8 +8,6 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -38,11 +36,11 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
         
         self._string_processor = string_processor
         
-        self._test_data = QW.QListWidget( self )
+        self._test_data = ClientGUIListBoxes.BetterQListWidget( self )
         
         self._test_data.setSelectionMode( QW.QListWidget.SingleSelection )
         
-        self._result_data = QW.QListWidget( self )
+        self._result_data = ClientGUIListBoxes.BetterQListWidget( self )
         
         self._result_data.setSelectionMode( QW.QListView.NoSelection )
         
@@ -215,7 +213,7 @@ class SingleStringConversionTestPanel( QW.QWidget ):
                 stop_now = True
                 
             
-            results_list = QW.QListWidget( self._example_results )
+            results_list = ClientGUIListBoxes.BetterQListWidget( self._example_results )
             results_list.setSelectionMode( QW.QListWidget.NoSelection )  
             
             if len( results ) == 0:
@@ -1193,10 +1191,10 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
         
-        self._example_strings = QW.QListWidget( self._example_panel )
+        self._example_strings = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
         self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
         
-        self._example_strings_joined = QW.QListWidget( self._example_panel )
+        self._example_strings_joined = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
         self._example_strings_joined.setSelectionMode( QW.QListWidget.NoSelection )
         
         #
@@ -1571,10 +1569,10 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
         
-        self._example_strings = QW.QListWidget( self._example_panel )
+        self._example_strings = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
         self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
         
-        self._example_strings_sliced = QW.QListWidget( self._example_panel )
+        self._example_strings_sliced = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
         self._example_strings_sliced.setSelectionMode( QW.QListWidget.NoSelection )
         
         #
@@ -1767,10 +1765,10 @@ class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_panel = ClientGUICommon.StaticBox( self, 'test results' )
         
-        self._example_strings = QW.QListWidget( self._example_panel )
+        self._example_strings = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
         self._example_strings.setSelectionMode( QW.QListWidget.NoSelection )
         
-        self._example_strings_sorted = QW.QListWidget( self._example_panel )
+        self._example_strings_sorted = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
         self._example_strings_sorted.setSelectionMode( QW.QListWidget.NoSelection )
         
         #
@@ -1915,7 +1913,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._example_string = QW.QLineEdit( self._example_panel )
         
-        self._example_string_splits = QW.QListWidget( self._example_panel )
+        self._example_string_splits = ClientGUIListBoxes.BetterQListWidget( self._example_panel )
         self._example_string_splits.setSelectionMode( QW.QListWidget.NoSelection )
         
         #

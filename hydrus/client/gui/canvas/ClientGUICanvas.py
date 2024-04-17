@@ -3839,6 +3839,13 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                 
                 location_contexts_to_present_options_for = HydrusData.DedupeList( location_contexts_to_present_options_for )
                 
+                only_allow_all_media_files = len( location_contexts_to_present_options_for ) > 1 and CG.client_controller.new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) and True in ( location_context.IsAllMediaFiles() for location_context in location_contexts_to_present_options_for )
+                
+                if only_allow_all_media_files:
+                    
+                    location_contexts_to_present_options_for = [ ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY ) ]
+                    
+                
                 for location_context in location_contexts_to_present_options_for:
                     
                     file_service_keys = location_context.current_service_keys

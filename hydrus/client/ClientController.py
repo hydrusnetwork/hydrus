@@ -1326,6 +1326,10 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.CallBlockingToQt( self._splash, qt_code_style )
         
+        from hydrus.core.files.images import HydrusImageHandling
+        
+        HydrusImageHandling.SetEnableLoadTruncatedImages( self.new_options.GetBoolean( 'enable_truncated_images_pil' ) )
+        
         def qt_code_pregui():
             
             shortcut_sets = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SHORTCUT_SET )
@@ -1368,7 +1372,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         if self.db.IsFirstStart():
             
-            message = 'Hi, this looks like the first time you have started the hydrus client.'
+            message = 'Hi, this looks like the first time you have started the hydrus client. If this is not the first time you have run this client install, please check the help documentation under "install_dir/db".'
             message += '\n' * 2
             message += 'Don\'t forget to check out the help if you haven\'t already, by clicking help->help--it has an extensive \'getting started\' section, including how to update and the importance of backing up your database.'
             message += '\n' * 2

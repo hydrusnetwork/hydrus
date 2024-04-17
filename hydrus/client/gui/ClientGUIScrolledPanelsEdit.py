@@ -35,6 +35,7 @@ from hydrus.client.gui import QtInit
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.importing import ClientGUIImportOptions
+from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -3726,13 +3727,14 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         return self._regexes.GetData()
         
     
+
 class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, choice_tuples: list, value_to_select = None, sort_tuples = True ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
-        self._list = QW.QListWidget( self )
+        self._list = ClientGUIListBoxes.BetterQListWidget( self )
         self._list.itemDoubleClicked.connect( self.EventSelect )
         
         #

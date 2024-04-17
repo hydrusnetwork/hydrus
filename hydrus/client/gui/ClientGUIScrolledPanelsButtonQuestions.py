@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client import ClientConstants as CC
+from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIScrolledPanels
@@ -114,6 +115,9 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
                 QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
                 
             
+            delay_delete_buttons = len( deletion_options ) > 0
+            delayed_delete_buttons = []
+            
             for ( location_context, delete_label ) in deletion_options:
                 
                 label = '{}?'.format( delete_label )
@@ -133,6 +137,25 @@ class QuestionArchiveDeleteFinishFilteringPanel( ClientGUIScrolledPanels.Resizin
                     
                     first_commit = commit
                     
+                
+                if delay_delete_buttons:
+                    
+                    delayed_delete_buttons.append( commit )
+                    commit.setEnabled( False )
+                    
+                
+            
+            def do_it():
+                
+                for b in delayed_delete_buttons:
+                    
+                    b.setEnabled( True )
+                    
+                
+            
+            if len( delayed_delete_buttons ) > 0:
+                
+                CG.client_controller.CallLaterQtSafe( self, 1.2, 'delayed button enable', do_it )
                 
             
         
