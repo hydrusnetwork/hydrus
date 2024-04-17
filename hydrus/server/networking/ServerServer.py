@@ -55,6 +55,7 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         root.putChild( b'backup', ServerServerResources.HydrusResourceRestrictedBackup( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'lock_on', ServerServerResources.HydrusResourceRestrictedLockOn( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'lock_off', ServerServerResources.HydrusResourceRestrictedLockOff( self._service, HydrusServer.REMOTE_DOMAIN ) )
+        root.putChild( b'restart_services', ServerServerResources.HydrusResourceRestrictedRestartServices( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'services', ServerServerResources.HydrusResourceRestrictedServices( self._service, HydrusServer.REMOTE_DOMAIN ) )
         root.putChild( b'shutdown', ServerServerResources.HydrusResourceShutdown( self._service, HydrusServer.LOCAL_DOMAIN ) )
         root.putChild( b'vacuum', ServerServerResources.HydrusResourceRestrictedVacuum( self._service, HydrusServer.REMOTE_DOMAIN ) )
@@ -62,6 +63,7 @@ class HydrusServiceAdmin( HydrusServiceRestricted ):
         return root
         
     
+
 class HydrusServiceRepository( HydrusServiceRestricted ):
     
     def _InitRoot( self ):

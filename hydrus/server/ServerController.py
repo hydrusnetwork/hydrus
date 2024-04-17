@@ -301,7 +301,7 @@ class Controller( HydrusController.HydrusController ):
             
         else:
             
-            self.SetRunningTwistedServices( self._services )
+            self.RestartServices()
             
         
         #
@@ -356,6 +356,11 @@ class Controller( HydrusController.HydrusController ):
     def ReportRequestUsed( self ):
         
         self._admin_service.ServerReportRequestUsed()
+        
+    
+    def RestartServices( self ):
+        
+        self.SetRunningTwistedServices( self._services )
         
     
     def Run( self ):
@@ -570,7 +575,7 @@ class Controller( HydrusController.HydrusController ):
         
         [ self._admin_service ] = [ service for service in self._services if service.GetServiceType() == HC.SERVER_ADMIN ]
         
-        self.SetRunningTwistedServices( self._services )
+        self.RestartServices()
         
     
     def ShutdownView( self ):

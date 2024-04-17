@@ -25,6 +25,8 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
 
 === "Windows"
 
+    **First of all, you will need git.** If you are just a normal Windows user, you will not have it. Get it:
+    
     ??? info "Git for Windows"
         Git is an excellent tool for synchronising code across platforms. Instead of downloading and extracting the whole .zip every time you want to update, it allows you to just run one line and all the code updates are applied in about three seconds. You can also run special versions of the program, or test out changes I committed two minutes ago without having to wait for me to make a whole build. You don't have to, but I recommend you get it.
         
@@ -45,27 +47,29 @@ There are now setup scripts that make this easy on Windows and Linux. You do not
             - Do `Enable file system caching`/Do not `Enable symbolic links`
             - Do not enable experimental stuff
         
-        Git should now be installed on your system. Any new terminal window (shift+right-click on any folder and hit 'Open in terminal') now has the `git` command!
+        Git should now be installed on your system. Any new terminal/command line/powershell window (shift+right-click on any folder and hit something like 'Open in terminal') now has the `git` command!
         
     
-    First of all, you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
+    Then you will need to install Python. Get 3.10 or 3.11 [here](https://www.python.org/downloads/windows/) (or, if you are Win 7, I think you'll want [this](https://www.python.org/downloads/release/python-3810/)). During the install process, make sure it has something like 'Add Python to PATH' checked. This makes Python available everywhere in Windows.  
     
 
 === "Linux"
 
-    You should already have a fairly new python. Ideally, you want at least 3.9.
+    You should already have a fairly new python. Ideally, you want at least 3.9. You can find out what version you have just by opening a new terminal and typing 'python'.
 
 === "macOS"
 
-    You should already have python of about the correct version.
+    You should already have a fairly new python. Ideally, you want at least 3.9. You can find out what version you have just by opening a new terminal and typing 'python'.
 
-If you are already on a very new python, like 3.12+, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on a much older version of python, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
+If you are already on newer python, like 3.12+, that's ok--you might need to select the 'advanced' setup later on and choose the '(t)est' options. If you are stuck on a much older version of python, try the same thing, but with the '(o)lder' options (but I can't promise it will work!).
 
-Then, get the hydrus source. It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then enter:
+Then, get the hydrus source. It is best to get it with Git: make a new folder somewhere, open a terminal in it, and then paste:
 
     git clone https://github.com/hydrusnetwork/hydrus
 
-The whole repository will be copied to that location. If Git is not available, then just go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere.
+The whole repository will be copied to that location--this is now your install dir. You can move it if you like.
+
+If Git is not available, then just go to the [latest release](https://github.com/hydrusnetwork/hydrus/releases/latest) and download and extract the source code .zip somewhere.
 
 !!! warning "Read-only install locations"
     Make sure the install directory has convenient write permissions (e.g. on Windows, don't put it in "Program Files"). Extracting straight to a spare drive, something like "D:\Hydrus Network", is ideal.

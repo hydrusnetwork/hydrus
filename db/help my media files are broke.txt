@@ -56,3 +56,5 @@ Note these files do not have URLs, so if you are an advanced user and try to run
 You should now be done! If you get weird file counts on autocomplete results or more missing file errors, let me know.
 
 I recommend you take a breath, pour yourself a drink, and make a job for tomorrow to think about your backup routine.
+
+https://hydrusnetwork.github.io/hydrus/after_disaster.html

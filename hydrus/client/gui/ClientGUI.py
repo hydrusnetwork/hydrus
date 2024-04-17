@@ -1832,16 +1832,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
     
-    def _EnableLoadTruncatedImages( self ):
-        
-        result = HydrusImageHandling.EnableLoadTruncatedImages()
-        
-        if not result:
-            
-            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Could not turn on--perhaps your version of PIL does not support it?' )
-            
-        
-    
     def _ExportDownloader( self ):
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export downloaders' ) as dlg:
@@ -3001,6 +2991,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         ClientGUIMenus.AppendSeparator( submenu )
                         
                         ClientGUIMenus.AppendMenuItem( submenu, 'manage services' + HC.UNICODE_ELLIPSIS, 'Add, edit, and delete this server\'s services.', self._ManageServer, service_key )
+                        ClientGUIMenus.AppendMenuItem( submenu, 'restart server services', 'Command the server to disconnect and restart its services.', self._RestartServerServices, service_key )
                         ClientGUIMenus.AppendSeparator( submenu )
                         ClientGUIMenus.AppendMenuItem( submenu, 'backup server', 'Command the server to temporarily pause and back up its database.', self._BackupServer, service_key )
                         ClientGUIMenus.AppendSeparator( submenu )
@@ -3479,7 +3470,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( data_actions, 'show scheduled jobs', 'Print some information about the currently scheduled jobs log.', self._DebugShowScheduledJobs )
         ClientGUIMenus.AppendMenuItem( data_actions, 'subscription manager snapshot', 'Have the subscription system show what it is doing.', self._controller.subscriptions_manager.ShowSnapshot )
         ClientGUIMenus.AppendMenuItem( data_actions, 'flush log', 'Command the log to write any buffered contents to hard drive.', HydrusData.DebugPrint, 'Flushing log' )
-        ClientGUIMenus.AppendMenuItem( data_actions, 'enable truncated image loading', 'Enable the truncated image loading to test out broken jpegs.', self._EnableLoadTruncatedImages )
         ClientGUIMenus.AppendSeparator( data_actions )
         ClientGUIMenus.AppendMenuItem( data_actions, 'simulate program exit signal', 'Kill the program via a QApplication exit.', QW.QApplication.instance().exit )
         
@@ -4427,6 +4417,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._controller.pub( 'refresh_page_name' )
         self._controller.pub( 'notify_new_colourset' )
         self._controller.pub( 'notify_new_favourite_tags' )
+        
+        HydrusImageHandling.SetEnableLoadTruncatedImages( self._controller.new_options.GetBoolean( 'enable_truncated_images_pil' ) )
         
         self._menu_item_help_darkmode.setChecked( CG.client_controller.new_options.GetString( 'current_colourset' ) == 'darkmode' )
         
@@ -5544,6 +5536,63 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
             
             self._controller.Write( 'repopulate_tag_display_mappings_cache', tag_service_key = tag_service_key )
+            
+        
+    
+    def _RestartServerServices( self, service_key ):
+        
+        def do_it( service ):
+            
+            started = HydrusTime.GetNow()
+            
+            service.Request( HC.POST, 'restart_services' )
+            
+            HydrusData.ShowText( 'Server service restart started!' )
+            
+            time_started = HydrusTime.GetNowMS()
+            
+            working_now = False
+            
+            while not working_now:
+                
+                if HG.view_shutdown:
+                    
+                    return
+                    
+                
+                time.sleep( 5 )
+                
+                try:
+                    
+                    result_bytes = service.Request( HC.GET, 'busy' )
+                    
+                    working_now = True
+                    
+                except:
+                    
+                    pass
+                    
+                
+                if HydrusTime.TimeHasPassedMS( time_started + ( 60 * 1000 ) ):
+                    
+                    HydrusData.ShowText( 'It has been a minute and the server is not back up. Abandoning check--something is super delayed/not working!' )
+                    
+                    return
+                    
+                
+            
+            HydrusData.ShowText( 'Server is back up!' )
+            
+        
+        message = 'This will tell the server to restart its services. If you have swapped in a new ssl cert, this will load that new one.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            service = self._controller.services_manager.GetService( service_key )
+            
+            self._controller.CallToThread( do_it, service )
             
         
     
@@ -6925,9 +6974,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HydrusData.ShowText( 'Server vacuum started!' )
             
-            time.sleep( 10 )
-            
-            result_bytes = service.Request( HC.GET, 'busy' )
+            result_bytes = b'1'
             
             while result_bytes == b'1':
                 
@@ -6936,7 +6983,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                     return
                     
                 
-                time.sleep( 10 )
+                time.sleep( 5 )
                 
                 result_bytes = service.Request( HC.GET, 'busy' )
                 

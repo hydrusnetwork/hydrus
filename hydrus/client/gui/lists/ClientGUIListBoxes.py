@@ -176,6 +176,54 @@ class BetterQListWidget( QW.QListWidget ):
         return len( indices )
         
     
+    def keyPressEvent( self, event: QG.QKeyEvent ):
+        
+        if event.modifiers() & QC.Qt.ControlModifier and event.key() in ( QC.Qt.Key_C, QC.Qt.Key_Insert ):
+            
+            event.accept()
+            
+            try:
+                
+                texts_to_copy = []
+                
+                for list_widget_item in self.selectedItems():
+                    
+                    user_role_data = list_widget_item.data( QC.Qt.UserRole )
+                    
+                    if isinstance( user_role_data, str ):
+                        
+                        text = user_role_data
+                        
+                    else:
+                        
+                        text = list_widget_item.text()
+                        
+                    
+                    texts_to_copy.append( text )
+                    
+                
+                if len( texts_to_copy ) == 0:
+                    
+                    return
+                    
+                
+                copyable_text = '\n'.join( texts_to_copy )
+                
+                CG.client_controller.pub( 'clipboard', 'text', copyable_text )
+                
+            except Exception as e:
+                
+                HydrusData.ShowText( 'Could not copy some text from a list!' )
+                
+                HydrusData.ShowException( e )
+                
+            
+        else:
+            
+            QW.QListWidget.keyPressEvent( self, event )
+            
+        
+    
     def MoveSelected( self, distance: int ):
         
         if distance == 0:

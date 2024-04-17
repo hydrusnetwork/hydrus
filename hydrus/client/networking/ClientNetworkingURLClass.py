@@ -44,7 +44,14 @@ def ConvertURLClassesIntoAPIPairs( url_classes ):
         
         example_url = url_class.GetExampleURL()
         
-        api_url = url_class.GetAPIURL( example_url )
+        try:
+            
+            api_url = url_class.GetAPIURL( example_url )
+            
+        except:
+            
+            continue
+            
         
         for other_url_class in url_classes:
             
