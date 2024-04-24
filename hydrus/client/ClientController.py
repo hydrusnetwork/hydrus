@@ -2437,6 +2437,21 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             self.CallToThreadLongRunning( THREADWait )
             
+        elif data_type == 'thumbnail_bmp':
+            
+            media = data
+            
+            if media.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
+                
+                return
+                
+            
+            thumbnail = self.GetCache( 'thumbnail' ).GetThumbnail( media )
+            
+            qt_image = thumbnail.GetQtImage().copy()
+            
+            QW.QApplication.clipboard().setImage( qt_image )
+            
         
     
     def UnclosePageKeys( self, page_keys ):

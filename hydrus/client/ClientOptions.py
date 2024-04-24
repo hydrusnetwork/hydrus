@@ -126,6 +126,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         self._dictionary[ 'booleans' ][ 'advanced_mode' ] = False
         
+        self._dictionary[ 'booleans' ][ 'remove_filtered_files_even_when_skipped' ] = False
+        
         self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
         
         self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False

@@ -17,14 +17,14 @@ SIMPLE_ARCHIVE_FILE = 4
 SIMPLE_CHECK_ALL_IMPORT_FOLDERS = 5
 SIMPLE_CLOSE_MEDIA_VIEWER = 6
 SIMPLE_CLOSE_PAGE = 7
-SIMPLE_COPY_BMP = 8
-SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE = 9
-SIMPLE_COPY_FILE = 10
-SIMPLE_COPY_MD5_HASH = 11
-SIMPLE_COPY_PATH = 12
-SIMPLE_COPY_SHA1_HASH = 13
-SIMPLE_COPY_SHA256_HASH = 14
-SIMPLE_COPY_SHA512_HASH = 15
+LEGACY_SIMPLE_COPY_BMP = 8
+LEGACY_SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE = 9
+SIMPLE_COPY_FILES = 10
+LEGACY_SIMPLE_COPY_MD5_HASH = 11
+SIMPLE_COPY_FILE_PATHS = 12
+LEGACY_SIMPLE_COPY_SHA1_HASH = 13
+LEGACY_SIMPLE_COPY_SHA256_HASH = 14
+LEGACY_SIMPLE_COPY_SHA512_HASH = 15
 SIMPLE_DELETE_FILE = 16
 SIMPLE_DUPLICATE_FILTER_ALTERNATES = 17
 SIMPLE_DUPLICATE_FILTER_BACK = 18
@@ -46,10 +46,10 @@ SIMPLE_EXPORT_FILES_QUICK_AUTO_EXPORT = 33
 SIMPLE_FLIP_DARKMODE = 34
 SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS = 35
 SIMPLE_FOCUS_MEDIA_VIEWER = 36
-SIMPLE_GET_SIMILAR_TO_EXACT = 37
-SIMPLE_GET_SIMILAR_TO_SIMILAR = 38
-SIMPLE_GET_SIMILAR_TO_SPECULATIVE = 39
-SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR = 40
+LEGACY_SIMPLE_GET_SIMILAR_TO_EXACT = 37
+LEGACY_SIMPLE_GET_SIMILAR_TO_SIMILAR = 38
+LEGACY_SIMPLE_GET_SIMILAR_TO_SPECULATIVE = 39
+LEGACY_SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR = 40
 SIMPLE_GLOBAL_AUDIO_MUTE = 41
 SIMPLE_GLOBAL_AUDIO_MUTE_FLIP = 42
 SIMPLE_GLOBAL_AUDIO_UNMUTE = 43
@@ -156,7 +156,7 @@ SIMPLE_ZOOM_DEFAULT = 143
 SIMPLE_SHOW_DUPLICATES = 144
 SIMPLE_MANAGE_FILE_TIMESTAMPS = 145
 SIMPLE_OPEN_FILE_IN_FILE_EXPLORER = 146
-SIMPLE_COPY_LITTLE_BMP = 147
+LEGACY_SIMPLE_COPY_LITTLE_BMP = 147
 SIMPLE_MOVE_THUMBNAIL_FOCUS = 148
 SIMPLE_SELECT_FILES = 149
 SIMPLE_REARRANGE_THUMBNAILS = 150
@@ -165,6 +165,10 @@ SIMPLE_COPY_URLS = 152
 SIMPLE_OPEN_FILE_IN_WEB_BROWSER = 153
 SIMPLE_OPEN_SELECTION_IN_NEW_DUPLICATES_FILTER_PAGE = 154
 SIMPLE_OPEN_SIMILAR_LOOKING_FILES = 155
+SIMPLE_COPY_FILE_HASHES = 156
+SIMPLE_COPY_FILE_BITMAP = 157
+SIMPLE_COPY_FILE_ID = 158
+SIMPLE_COPY_FILE_SERVICE_FILENAMES = 159
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -199,6 +203,26 @@ selection_status_enum_to_str_lookup = {
     SELECTION_STATUS_SHIFT : 'shift-select'
 }
 
+FILE_COMMAND_TARGET_FOCUSED_FILE = 0
+FILE_COMMAND_TARGET_SELECTED_FILES = 1
+
+file_command_target_enum_to_str_lookup = {
+    FILE_COMMAND_TARGET_FOCUSED_FILE : 'focused file',
+    FILE_COMMAND_TARGET_SELECTED_FILES : 'selected files'
+}
+
+BITMAP_TYPE_FULL = 0
+BITMAP_TYPE_SOURCE_LOOKUPS = 1
+BITMAP_TYPE_FULL_OR_FILE = 2
+BITMAP_TYPE_THUMBNAIL = 3
+
+bitmap_type_enum_to_str_lookup = {
+    BITMAP_TYPE_FULL : 'full bitmap of image',
+    BITMAP_TYPE_SOURCE_LOOKUPS : '1024x1024 scaled for quick source lookups',
+    BITMAP_TYPE_FULL_OR_FILE : 'full bitmap; otherwise copy file',
+    BITMAP_TYPE_THUMBNAIL : 'thumbnail bitmap',
+}
+
 simple_enum_to_str_lookup = {
     SIMPLE_ARCHIVE_DELETE_FILTER_BACK : 'archive/delete filter: back',
     SIMPLE_ARCHIVE_DELETE_FILTER_DELETE : 'archive/delete filter: delete',
@@ -208,15 +232,19 @@ simple_enum_to_str_lookup = {
     SIMPLE_CHECK_ALL_IMPORT_FOLDERS : 'check all import folders now',
     SIMPLE_CLOSE_MEDIA_VIEWER : 'close media viewer',
     SIMPLE_CLOSE_PAGE : 'close page',
-    SIMPLE_COPY_BMP : 'copy bmp of image',
-    SIMPLE_COPY_LITTLE_BMP : 'copy small bmp of image for quick source lookups',
-    SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE : 'copy bmp of image; otherwise copy file',
-    SIMPLE_COPY_FILE : 'copy file',
-    SIMPLE_COPY_MD5_HASH : 'copy md5 hash',
-    SIMPLE_COPY_PATH : 'copy file paths',
-    SIMPLE_COPY_SHA1_HASH : 'copy sha1 hash',
-    SIMPLE_COPY_SHA256_HASH : 'copy sha256 hash',
-    SIMPLE_COPY_SHA512_HASH : 'copy sha512 hash',
+    LEGACY_SIMPLE_COPY_BMP : 'copy bmp of image',
+    LEGACY_SIMPLE_COPY_LITTLE_BMP : 'copy small bmp of image for quick source lookups',
+    LEGACY_SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE : 'copy bmp of image; otherwise copy file',
+    SIMPLE_COPY_FILES : 'copy file',
+    SIMPLE_COPY_FILE_PATHS : 'copy file paths',
+    LEGACY_SIMPLE_COPY_MD5_HASH : 'copy md5 hash',
+    LEGACY_SIMPLE_COPY_SHA1_HASH : 'copy sha1 hash',
+    LEGACY_SIMPLE_COPY_SHA256_HASH : 'copy sha256 hash',
+    LEGACY_SIMPLE_COPY_SHA512_HASH : 'copy sha512 hash',
+    SIMPLE_COPY_FILE_SERVICE_FILENAMES : 'copy ipfs multihash',
+    SIMPLE_COPY_FILE_HASHES : 'copy file hashes',
+    SIMPLE_COPY_FILE_ID : 'copy file id',
+    SIMPLE_COPY_FILE_BITMAP : 'copy file bitmap',
     SIMPLE_DELETE_FILE : 'delete file',
     SIMPLE_DUPLICATE_FILTER_ALTERNATES : 'duplicate filter: set as alternates',
     SIMPLE_DUPLICATE_FILTER_BACK : 'duplicate filter: back',
@@ -238,10 +266,10 @@ simple_enum_to_str_lookup = {
     SIMPLE_FLIP_DARKMODE : 'flip darkmode (will be replaced by style/qss soon)',
     SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS : 'force debug idle mode (do not use this!)',
     SIMPLE_FOCUS_MEDIA_VIEWER : 'keyboard focus: to the media viewer',
-    SIMPLE_GET_SIMILAR_TO_EXACT : 'show similar files: 0 (exact)',
-    SIMPLE_GET_SIMILAR_TO_SIMILAR : 'show similar files: 4 (similar)',
-    SIMPLE_GET_SIMILAR_TO_SPECULATIVE : 'show similar files: 8 (speculative)',
-    SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR : 'show similar files: 2 (very similar)',
+    LEGACY_SIMPLE_GET_SIMILAR_TO_EXACT : 'show similar files: 0 (exact)',
+    LEGACY_SIMPLE_GET_SIMILAR_TO_SIMILAR : 'show similar files: 4 (similar)',
+    LEGACY_SIMPLE_GET_SIMILAR_TO_SPECULATIVE : 'show similar files: 8 (speculative)',
+    LEGACY_SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR : 'show similar files: 2 (very similar)',
     SIMPLE_GLOBAL_AUDIO_MUTE : 'mute global audio',
     SIMPLE_GLOBAL_AUDIO_MUTE_FLIP : 'mute/unmute global audio',
     SIMPLE_GLOBAL_AUDIO_UNMUTE : 'unmute global audio',
@@ -367,14 +395,14 @@ legacy_simple_str_to_enum_lookup = {
     'check_all_import_folders' : SIMPLE_CHECK_ALL_IMPORT_FOLDERS,
     'close_media_viewer' : SIMPLE_CLOSE_MEDIA_VIEWER,
     'close_page' : SIMPLE_CLOSE_PAGE,
-    'copy_bmp' : SIMPLE_COPY_BMP,
-    'copy_bmp_or_file_if_not_bmpable' : SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE,
-    'copy_file' : SIMPLE_COPY_FILE,
-    'copy_md5_hash' : SIMPLE_COPY_MD5_HASH,
-    'copy_path' : SIMPLE_COPY_PATH,
-    'copy_sha1_hash' : SIMPLE_COPY_SHA1_HASH,
-    'copy_sha256_hash' : SIMPLE_COPY_SHA256_HASH,
-    'copy_sha512_hash' : SIMPLE_COPY_SHA512_HASH,
+    'copy_bmp' : LEGACY_SIMPLE_COPY_BMP,
+    'copy_bmp_or_file_if_not_bmpable' : LEGACY_SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE,
+    'copy_file' : SIMPLE_COPY_FILES,
+    'copy_md5_hash' : LEGACY_SIMPLE_COPY_MD5_HASH,
+    'copy_path' : SIMPLE_COPY_FILE_PATHS,
+    'copy_sha1_hash' : LEGACY_SIMPLE_COPY_SHA1_HASH,
+    'copy_sha256_hash' : LEGACY_SIMPLE_COPY_SHA256_HASH,
+    'copy_sha512_hash' : LEGACY_SIMPLE_COPY_SHA512_HASH,
     'delete_file' : SIMPLE_DELETE_FILE,
     'duplicate_filter_alternates' : SIMPLE_DUPLICATE_FILTER_ALTERNATES,
     'duplicate_filter_back' : SIMPLE_DUPLICATE_FILTER_BACK,
@@ -397,10 +425,10 @@ legacy_simple_str_to_enum_lookup = {
     'flip_darkmode' : SIMPLE_FLIP_DARKMODE,
     'flip_debug_force_idle_mode_do_not_set_this' : SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS,
     'focus_media_viewer' : SIMPLE_FOCUS_MEDIA_VIEWER,
-    'get_similar_to_exact' : SIMPLE_GET_SIMILAR_TO_EXACT,
-    'get_similar_to_similar' : SIMPLE_GET_SIMILAR_TO_SIMILAR,
-    'get_similar_to_speculative' : SIMPLE_GET_SIMILAR_TO_SPECULATIVE,
-    'get_similar_to_very_similar' : SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR,
+    'get_similar_to_exact' : LEGACY_SIMPLE_GET_SIMILAR_TO_EXACT,
+    'get_similar_to_similar' : LEGACY_SIMPLE_GET_SIMILAR_TO_SIMILAR,
+    'get_similar_to_speculative' : LEGACY_SIMPLE_GET_SIMILAR_TO_SPECULATIVE,
+    'get_similar_to_very_similar' : LEGACY_SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR,
     'global_audio_mute' : SIMPLE_GLOBAL_AUDIO_MUTE,
     'global_audio_mute_flip' : SIMPLE_GLOBAL_AUDIO_MUTE_FLIP,
     'global_audio_unmute' : SIMPLE_GLOBAL_AUDIO_UNMUTE,
@@ -472,7 +500,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_TYPE_APPLICATION_COMMAND
     SERIALISABLE_NAME = 'Application Command'
-    SERIALISABLE_VERSION = 6
+    SERIALISABLE_VERSION = 7
     
     def __init__( self, command_type = None, data = None ):
         
@@ -501,6 +529,19 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     def __hash__( self ):
         
+        if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
+            
+            ( simple_action, simple_data ) = self._data
+            
+            # we are out here
+            if simple_action == SIMPLE_COPY_FILE_SERVICE_FILENAMES:
+                
+                comparison_simple_data = tuple( sorted( simple_data.items() ) )
+                
+                return ( self._command_type, ( simple_action, comparison_simple_data ) ).__hash__()
+                
+            
+        
         return ( self._command_type, self._data ).__hash__()
         
     
@@ -515,6 +556,13 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
         # I don't _think_ this was an overcomplicated mistake, but it is a little ugly atm
         # it'll be better when all working on the same system. perhaps command_type too
         # and maybe ditch the object's self._data variable too, which is crushed as anything. maybe just have a serialisable dict mate
+        #
+        # 2024-04 update: I'd also like a way to store arbitrary numbers of bytes objects! if we can store service_key(s!) or whatever without extra effort, in a SerialisableBytesDict,
+        # we can have all sorts of service or 'load favourite search' stuff without the headache
+        # So yeah I think ditch the _data thing, move more towards a SerialisableDict as our normal data-holding guy, and then we refer to that as we do jobs
+        # yeah if I instead move to a kwargs init for this whole object, then I can store whatever as long as it is serialisable. ditch the tuples, move to words
+        #
+        # also update __hash__ to be non-borked in this situation
         
         if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
             
@@ -673,23 +721,23 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                 
                 simple_action = data_dict[ 'simple_action' ]
                 
-                if simple_action in ( SIMPLE_GET_SIMILAR_TO_EXACT, SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR, SIMPLE_GET_SIMILAR_TO_SIMILAR, SIMPLE_GET_SIMILAR_TO_SPECULATIVE ):
+                if simple_action in ( LEGACY_SIMPLE_GET_SIMILAR_TO_EXACT, LEGACY_SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR, LEGACY_SIMPLE_GET_SIMILAR_TO_SIMILAR, LEGACY_SIMPLE_GET_SIMILAR_TO_SPECULATIVE ):
                     
                     hamming_distance = 0
                     
-                    if simple_action == SIMPLE_GET_SIMILAR_TO_EXACT:
+                    if simple_action == LEGACY_SIMPLE_GET_SIMILAR_TO_EXACT:
                         
                         hamming_distance = 0
                         
-                    elif simple_action == SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR:
+                    elif simple_action == LEGACY_SIMPLE_GET_SIMILAR_TO_VERY_SIMILAR:
                         
                         hamming_distance = 2
                         
-                    elif simple_action == SIMPLE_GET_SIMILAR_TO_SIMILAR:
+                    elif simple_action == LEGACY_SIMPLE_GET_SIMILAR_TO_SIMILAR:
                         
                         hamming_distance = 4
                         
-                    elif simple_action == SIMPLE_GET_SIMILAR_TO_SPECULATIVE:
+                    elif simple_action == LEGACY_SIMPLE_GET_SIMILAR_TO_SPECULATIVE:
                         
                         hamming_distance = 8
                         
@@ -704,6 +752,75 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             new_serialisable_info = ( command_type, serialisable_data )
             
             return ( 6, new_serialisable_info )
+            
+        
+        if version == 6:
+            
+            ( command_type, serialisable_data ) = old_serialisable_info
+            
+            if command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
+                
+                data_dict = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_data )
+                
+                simple_action = data_dict[ 'simple_action' ]
+                
+                if simple_action in ( LEGACY_SIMPLE_COPY_SHA256_HASH, LEGACY_SIMPLE_COPY_MD5_HASH, LEGACY_SIMPLE_COPY_SHA1_HASH, LEGACY_SIMPLE_COPY_SHA512_HASH ):
+                    
+                    file_command_target = FILE_COMMAND_TARGET_SELECTED_FILES
+                    
+                    hash_type = 'sha256'
+                    
+                    if simple_action == LEGACY_SIMPLE_COPY_SHA256_HASH:
+                        
+                        hash_type = 'sha256'
+                        
+                    elif simple_action == LEGACY_SIMPLE_COPY_MD5_HASH:
+                        
+                        hash_type = 'md5'
+                        
+                    elif simple_action == LEGACY_SIMPLE_COPY_SHA1_HASH:
+                        
+                        hash_type = 'sha1'
+                        
+                    elif simple_action == LEGACY_SIMPLE_COPY_SHA512_HASH:
+                        
+                        hash_type = 'sha512'
+                        
+                    
+                    data_dict[ 'simple_action' ] = SIMPLE_COPY_FILE_HASHES
+                    data_dict[ 'simple_data' ] = ( file_command_target, hash_type )
+                    
+                elif simple_action in ( LEGACY_SIMPLE_COPY_BMP, LEGACY_SIMPLE_COPY_LITTLE_BMP, LEGACY_SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE ):
+                    
+                    bitmap_type = BITMAP_TYPE_FULL
+                    
+                    if simple_action == LEGACY_SIMPLE_COPY_BMP:
+                        
+                        bitmap_type = BITMAP_TYPE_FULL
+                        
+                    elif simple_action == LEGACY_SIMPLE_COPY_LITTLE_BMP:
+                        
+                        bitmap_type = BITMAP_TYPE_SOURCE_LOOKUPS
+                        
+                    elif simple_action == LEGACY_SIMPLE_COPY_BMP_OR_FILE_IF_NOT_BMPABLE:
+                        
+                        bitmap_type = BITMAP_TYPE_FULL_OR_FILE
+                        
+                    
+                    data_dict[ 'simple_action' ] = SIMPLE_COPY_FILE_BITMAP
+                    data_dict[ 'simple_data' ] = bitmap_type
+                    
+                elif simple_action in ( SIMPLE_COPY_FILES, SIMPLE_COPY_FILE_PATHS ):
+                    
+                    data_dict[ 'simple_data' ] = FILE_COMMAND_TARGET_SELECTED_FILES
+                    
+                
+                serialisable_data = data_dict.GetSerialisableTuple()
+                
+            
+            new_serialisable_info = ( command_type, serialisable_data )
+            
+            return ( 7, new_serialisable_info )
             
         
     
@@ -818,6 +935,50 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                     
                     s = f'{s} ({hamming_distance})'
                     
+                
+            elif action == SIMPLE_COPY_FILE_HASHES:
+                
+                ( file_command_target, hash_type ) = self.GetSimpleData()
+                
+                s = f'{s} ({hash_type}, {file_command_target_enum_to_str_lookup[ file_command_target ]})'
+                
+            elif action == SIMPLE_COPY_FILE_BITMAP:
+                
+                bitmap_type = self.GetSimpleData()
+                
+                s = f'{s} ({bitmap_type_enum_to_str_lookup[ bitmap_type ]})'
+                
+            elif action in ( SIMPLE_COPY_FILES, SIMPLE_COPY_FILE_PATHS, SIMPLE_COPY_FILE_ID ):
+                
+                file_command_target = self.GetSimpleData()
+                
+                s = f'{s} ({file_command_target_enum_to_str_lookup[ file_command_target ]})'
+                
+            elif action == SIMPLE_COPY_FILE_SERVICE_FILENAMES:
+                
+                hacky_ipfs_dict = self.GetSimpleData()
+                
+                try:
+                    
+                    file_command_target_string = file_command_target_enum_to_str_lookup[ hacky_ipfs_dict[ 'file_command_target' ] ]
+                    
+                except:
+                    
+                    file_command_target_string = 'unknown'
+                    
+                
+                try:
+                    
+                    ipfs_service_key = hacky_ipfs_dict[ 'ipfs_service_key' ]
+                    
+                    name = CG.client_controller.services_manager.GetName( ipfs_service_key )
+                    
+                except:
+                    
+                    name = 'unknown service'
+                    
+                
+                s = f'{s} ({name}, {file_command_target_string})'
                 
             elif action == SIMPLE_MOVE_THUMBNAIL_FOCUS:
                 
