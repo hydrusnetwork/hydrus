@@ -313,7 +313,7 @@ def GetDefaultShortcuts():
     
     media.SetCommand(
         ClientGUIShortcuts.Shortcut( ClientGUIShortcuts.SHORTCUT_TYPE_KEYBOARD_CHARACTER, ord( 'C' ), ClientGUIShortcuts.SHORTCUT_PRESS_TYPE_PRESS, [ ClientGUIShortcuts.SHORTCUT_MODIFIER_CTRL ] ),
-        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE ) 
+        CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES ) 
     )
     
     shortcuts.append( media )

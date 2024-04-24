@@ -7,6 +7,43 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 572](https://github.com/hydrusnetwork/hydrus/releases/tag/v572)
+
+### misc
+
+* added a new checkbox to _options-&gt;files and trash_ to say 'include skipped files when you remove files after archive/delete'
+* thanks to a user, we now have an 'e621' stylsheet in _options-&gt;style_. this is the first default stylesheet that uses assets (some checkbox etc.. svgs), which means some users--I think just those who run from source--will need to be careful that their CWD is the hydrus install dir when they boot, or this won't load properly! if you try it and get errors in your log as it tries to load the svgs, let me know!
+
+### share menu
+
+* like the 'open' menu a couple weeks ago, the 'share' menu off of thumbnails or the media viewer is rewritten to nicer code. no major differences, but it has a clearer, universal layout, provides more options for 'the currently focused file' vs 'all selected files', is more careful about only providing commands it can deliver on (e.g. no file copy for remote files), and now everything it does is mappable in the shortcut system under the 'media' shortcut set
+* you can now copy a file's thumbnail as a bitmap from this menu!
+* the canvas now supports 'export files'. the 'export files' window just pops on top of it with the one file
+* 'copy file id' is no longer hidden by advanced mode--go nuts!
+* the share menu no longer has 'share on local booru'. the local booru service was an interesting experiment, but I could never find time to properly dev it and there are better answers with the Client API or simple third-party image hosting services that you can drag and drop to. thus, I am finally sunsetting it. I'll strip away its features over the coming weeks until it is completely removed
+
+### shortcut updates
+
+* the 'copy file hash' shortcut actions, which used to be four separate things, have been collapsed to one action that has a 'hash type' dropdown (and a 'target' dropdown to select either all selected files or just the currently focused file, which will default to 'all selected' on update, which was the previous behaviour). you can also now set 'pixel_hash' or 'blurhash' as the hash type
+* the 'copy file bitmap' shortcuts have similarly been collapsed down to one action with a dropdown, also with the new 'copy thumbnail' command
+* the 'copy files', 'copy file paths', and 'copy file id' shortcuts now have a dropdown for whether you want all selected files or just the currently focused file. updated commands will default to 'all selected', which was the previous behaviour
+* added a 'copy ipfs multihash' shortcut action, which has this new 'focused vs all selected' parameter and the ipfs service to copy from as its options
+
+### boring code cleanup
+
+* wrote a new command for copying arbitrary file hashes, with a new 'file command target'
+* simplified the media hash copying code
+* wrote a new command for copying arbitrary bitmap types
+* combined the bitmap copying code into one shared function call and simplified the surrounding code
+* combined the file and path copying code into shared functions, simplified the code, and added tech for focused vs all selected targeting
+* and the same thing for copying ipfs multihashes
+* wrote a routine to copy a file's thumbnail in the normal clipboard copying pubsub
+* with the recent rounds of simplication, the core thumbnail menu call is now but a mere 600 lines of spaghetti code
+* misc renaming of some enums here so they are more in agreement ('xxx files' instead of 'xxx file', etc...)
+* renamed the various simple commands I have replaced in the past few weeks as 'legacy', so we don't accidentally refer to them again in real code
+* the unit test for 'dateparser decode' is no longer run if dateparser is not in the environment
+* fixed the file metadata parsing unit tests to account for newer ffmpeg, which sees a -10ms different duration on one of the test files, and made the various tests +/-20% lenient to handle this stuff if it comes up again in future
+
 ## [Version 571](https://github.com/hydrusnetwork/hydrus/releases/tag/v571)
 
 ### clean install

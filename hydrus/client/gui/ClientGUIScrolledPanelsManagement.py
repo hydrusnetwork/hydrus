@@ -1036,6 +1036,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._only_show_delete_from_all_local_domains_when_filtering.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._remove_filtered_files = QW.QCheckBox( self )
+            self._remove_filtered_files.setToolTip( 'This will remove all archived/deleted files from the source thumbnail page when you commit your archive/delete filter run.' )
+            
+            self._remove_filtered_files_even_when_skipped = QW.QCheckBox( self )
             self._remove_trashed_files = QW.QCheckBox( self )
             self._remove_local_domain_moved_files = QW.QCheckBox( self )
             
@@ -1089,6 +1092,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._only_show_delete_from_all_local_domains_when_filtering.setChecked( self._new_options.GetBoolean( 'only_show_delete_from_all_local_domains_when_filtering' ) )
             
             self._remove_filtered_files.setChecked( HC.options[ 'remove_filtered_files' ] )
+            self._remove_filtered_files_even_when_skipped.setChecked( self._new_options.GetBoolean( 'remove_filtered_files_even_when_skipped' ) )
             self._remove_trashed_files.setChecked( HC.options[ 'remove_trashed_files' ] )
             self._remove_local_domain_moved_files.setChecked( self._new_options.GetBoolean( 'remove_local_domain_moved_files' ) )
             self._trash_max_age.SetValue( HC.options[ 'trash_max_age' ] )
@@ -1125,7 +1129,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'When physically deleting files or folders, send them to the OS\'s recycle bin: ', self._delete_to_recycle_bin ) )
             rows.append( ( 'When maintenance physically deletes files, wait this many ms between each delete: ', self._ms_to_wait_between_physical_file_deletes ) )
             rows.append( ( 'When finishing filtering, always delete from all possible domains: ', self._only_show_delete_from_all_local_domains_when_filtering ) )
-            rows.append( ( 'Remove files from view when they are filtered: ', self._remove_filtered_files ) )
+            rows.append( ( 'Remove files from view when they are archive/delete filtered: ', self._remove_filtered_files ) )
+            rows.append( ( '--even skipped files: ', self._remove_filtered_files_even_when_skipped ) )
             rows.append( ( 'Remove files from view when they are sent to the trash: ', self._remove_trashed_files ) )
             rows.append( ( 'Remove files from view when they are moved to another local file domain: ', self._remove_local_domain_moved_files ) )
             rows.append( ( 'Number of hours a file can be in the trash before being deleted: ', self._trash_max_age ) )
@@ -1167,6 +1172,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self.setLayout( vbox )
             
+            self._remove_filtered_files.clicked.connect( self._UpdateRemoveFiltered )
+            
+            self._UpdateRemoveFiltered()
+            
         
         def _AddAFDR( self ):
             
@@ -1201,6 +1210,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._advanced_file_deletion_reasons.setEnabled( advanced_enabled )
             
         
+        def _UpdateRemoveFiltered( self ):
+            
+            self._remove_filtered_files_even_when_skipped.setEnabled( self._remove_filtered_files.isChecked() )
+            
+        
         def UpdateOptions( self ):
             
             HC.options[ 'export_path' ] = HydrusPaths.ConvertAbsPathToPortablePath( self._export_location.GetPath() )
@@ -1211,6 +1225,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             HC.options[ 'confirm_trash' ] = self._confirm_trash.isChecked()
             HC.options[ 'confirm_archive' ] = self._confirm_archive.isChecked()
             HC.options[ 'remove_filtered_files' ] = self._remove_filtered_files.isChecked()
+            self._new_options.SetBoolean( 'remove_filtered_files_even_when_skipped', self._remove_filtered_files_even_when_skipped.isChecked() )
             HC.options[ 'remove_trashed_files' ] = self._remove_trashed_files.isChecked()
             self._new_options.SetBoolean( 'remove_local_domain_moved_files', self._remove_local_domain_moved_files.isChecked() )
             HC.options[ 'trash_max_age' ] = self._trash_max_age.GetValue()
@@ -3850,6 +3865,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
             text += '\n' * 2
             text += 'Note that there are several colours not handled by this yet. Check out the "colours" page of this options to change them.'
+            text += '\n' * 2
+            text += 'Also, if you run from source and you select e621 or another stylesheet that includes external (svg) assets, you must make sure that your CWD is the hydrus install folder when you boot.'
             
             st = ClientGUICommon.BetterStaticText( self, label = text )
             

@@ -550,6 +550,7 @@ class SerialisableDictionary( SerialisableBase, dict ):
 
 SERIALISABLE_TYPES_TO_OBJECT_TYPES[ SERIALISABLE_TYPE_DICTIONARY ] = SerialisableDictionary
 
+# yo now that SerialisableDict can handle bytes anywhere, is this guy obsolete?
 class SerialisableBytesDictionary( SerialisableBase, dict ):
     
     SERIALISABLE_TYPE = SERIALISABLE_TYPE_BYTES_DICT

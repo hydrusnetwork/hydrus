@@ -848,7 +848,7 @@ class ThumbnailCache( object ):
             
         
     
-    def GetThumbnail( self, media ):
+    def GetThumbnail( self, media ) -> ClientRendering.HydrusBitmap:
         
         display_media = media.GetDisplayMedia()
         

@@ -3689,6 +3689,7 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
         self._my_updater = ClientGUIAsync.FastThreadToGUIUpdater( self, self._Refresh )
         
         self._service_status = ClientGUICommon.BetterStaticText( self )
+        self._service_status.setWordWrap( True )
         
         booru_share_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -3896,6 +3897,8 @@ class ReviewServiceLocalBooruSubPanel( ClientGUICommon.StaticBox ):
                 status += ' It should be open via UPnP on external port {}.'.format( upnp_port )
                 
             
+        
+        status += ' NOTE: I am sunsetting this service in the coming weeks, everything will be removed.'
         
         self._service_status.setText( status )
         

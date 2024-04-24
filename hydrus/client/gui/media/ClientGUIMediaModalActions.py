@@ -27,6 +27,7 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
@@ -154,6 +155,11 @@ def ClearDeleteRecord( win, media ):
 
 
 def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Sequence[ ClientMedia.Media ] ):
+    
+    if len( medias ) == 0:
+        
+        return
+        
     
     hex_it = True
     
@@ -458,6 +464,22 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
                     
                 
             
+        
+    
+
+def ExportFiles( win: QW.QWidget, medias: typing.Collection[ ClientMedia.Media ], do_export_and_then_quit = False ):
+    
+    flat_media = ClientMedia.FlattenMedia( medias )
+    
+    flat_media = [ m for m in flat_media if m.GetLocationsManager().IsLocal() ]
+    
+    if len( flat_media ) > 0:
+        
+        frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'export files' )
+        
+        panel = ClientGUIExport.ReviewExportFilesPanel( frame, flat_media, do_export_and_then_quit = do_export_and_then_quit )
+        
+        frame.SetPanel( panel )
         
     
 

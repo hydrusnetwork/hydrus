@@ -307,7 +307,7 @@ class Media( object ):
         return self.__hash__() != other.__hash__()
         
     
-    def GetDisplayMedia( self ) -> 'Media':
+    def GetDisplayMedia( self ) -> 'MediaSingleton':
         
         raise NotImplementedError()
         

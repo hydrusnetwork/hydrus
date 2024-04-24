@@ -1,3 +1,4 @@
+import collections
 import os
 import random
 import typing
@@ -7,6 +8,8 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusData
+from hydrus.core import HydrusSerialisable
+from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -779,4 +782,196 @@ def AddServiceKeysToMenu( menu, service_keys, submenu_name, description, bare_ca
         
     
     ClientGUIMenus.AppendMenuOrItem( menu, submenu_name, menu_tuples )
+    
+
+def AddShareMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional[ ClientMedia.Media ], selected_media: typing.Collection[ ClientMedia.Media ] ):
+    
+    if focused_media is not None:
+        
+        focused_media = focused_media.GetDisplayMedia()
+        
+    
+    ipfs_service_keys = set( CG.client_controller.services_manager.GetServiceKeys( ( HC.IPFS, ) ) )
+    
+    selected_media = ClientMedia.FlattenMedia( selected_media )
+    
+    focused_is_local = focused_media is not None and focused_media.GetLocationsManager().IsLocal()
+    
+    selection_is_useful = len( selected_media ) > 0 and not ( len( selected_media ) == 1 and focused_media in selected_media )
+    
+    local_selection = [ m for m in selected_media if m.GetLocationsManager().IsLocal() ]
+    
+    local_selection_is_useful = len( local_selection ) > 0 and not ( len( local_selection ) == 1 and focused_media in local_selection )
+    
+    if not focused_is_local and len( local_selection ) == 0:
+        
+        # nothing to share!
+        return
+        
+    
+    share_menu = ClientGUIMenus.GenerateMenu( menu )
+    
+    ClientGUIMenus.AppendMenuItem( share_menu, 'export files', 'Export the selected files to an external folder.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_EXPORT_FILES ) )
+    
+    ClientGUIMenus.AppendSeparator( share_menu )
+    
+    if local_selection_is_useful:
+        
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy files', 'Copy these files to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        
+    
+    if local_selection_is_useful:
+        
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy paths', 'Copy these files\' paths to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        
+    
+    if selection_is_useful:
+        
+        ipfs_service_keys_to_num_filenames = collections.Counter()
+        
+        for media in selected_media:
+            
+            ipfs_service_keys_to_num_filenames.update( ipfs_service_keys.intersection( media.GetLocationsManager().GetCurrent() ) )
+            
+        
+        ipfs_service_keys_in_order = sorted( ipfs_service_keys_to_num_filenames.keys(), key = CG.client_controller.services_manager.GetName )
+        
+        for ipfs_service_key in ipfs_service_keys_in_order:
+            
+            name = CG.client_controller.services_manager.GetName( ipfs_service_key )
+            
+            hacky_ipfs_dict = HydrusSerialisable.SerialisableDictionary()
+            
+            hacky_ipfs_dict[ 'file_command_target' ] = CAC.FILE_COMMAND_TARGET_SELECTED_FILES
+            hacky_ipfs_dict[ 'ipfs_service_key' ] = ipfs_service_key
+            
+            application_command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES, simple_data = hacky_ipfs_dict )
+            
+            ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihashes ({HydrusData.ToHumanInt(ipfs_service_keys_to_num_filenames[ipfs_service_key])} hashes)', 'Copy the selected files\' multihashes to the clipboard.', win.ProcessApplicationCommand, application_command )
+            
+        
+    
+    if selection_is_useful:
+        
+        copy_hash_menu = ClientGUIMenus.GenerateMenu( share_menu )
+        
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256', 'Copy these files\' SHA256 hashes to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha256' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy these files\' MD5 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'md5' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy these files\' SHA1 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha1' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy these files\' SHA512 hashes to your clipboard. Your client may not know all of these.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'sha512' ) ) )
+        
+        blurhashes = [ media.GetFileInfoManager().blurhash for media in selected_media ]
+        blurhashes = [ b for b in blurhashes if b is not None ]
+        
+        if len( blurhashes ) > 0:
+            
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({HydrusData.ToHumanInt(len(blurhashes))} hashes)', 'Copy these files\' blurhashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'blurhash' ) ) )
+            
+        
+        pixel_hashes = [ media.GetFileInfoManager().pixel_hash for media in selected_media ]
+        pixel_hashes = [ p for p in pixel_hashes if p is not None ]
+        
+        if len( pixel_hashes ):
+            
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel hashes ({HydrusData.ToHumanInt(len(pixel_hashes))} hashes)', 'Copy these files\' pixel hashes.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, 'pixel_hash' ) ) )
+            
+        
+        ClientGUIMenus.AppendMenu( share_menu, copy_hash_menu, 'copy hashes' )
+        
+    
+    if selection_is_useful:
+        
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file ids', 'Copy these files\' internal file/hash_ids.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_SELECTED_FILES ) )
+        
+    
+    if focused_media is not None and selection_is_useful:
+        
+        ClientGUIMenus.AppendSeparator( share_menu )
+        
+    
+    if focused_is_local:
+        
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file', 'Copy this file to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILES, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
+        
+    
+    if focused_is_local:
+        
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy path', 'Copy this file\'s path to your clipboard, just as raw text.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_PATHS, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
+        
+    
+    if focused_media is not None:
+        
+        for ipfs_service_key in ipfs_service_keys.intersection( focused_media.GetLocationsManager().GetCurrent() ):
+            
+            name = CG.client_controller.services_manager.GetName( ipfs_service_key )
+            
+            multihash = focused_media.GetLocationsManager().GetServiceFilename( ipfs_service_key )
+            
+            hacky_ipfs_dict = HydrusSerialisable.SerialisableDictionary()
+            
+            hacky_ipfs_dict[ 'file_command_target' ] = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE
+            hacky_ipfs_dict[ 'ipfs_service_key' ] = ipfs_service_key
+            
+            application_command = CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES, simple_data = hacky_ipfs_dict )
+            
+            ClientGUIMenus.AppendMenuItem( share_menu, f'copy {name} multihash ({multihash})', 'Copy the selected file\'s multihash to the clipboard.', win.ProcessApplicationCommand, application_command )
+            
+        
+    
+    if focused_media is not None:
+        
+        copy_hash_menu = ClientGUIMenus.GenerateMenu( share_menu )
+        
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha256 ({})'.format( focused_media.GetHash().hex() ), 'Copy this file\'s SHA256 hash to your clipboard.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha256' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'md5', 'Copy this file\'s MD5 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'md5' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha1', 'Copy this file\'s SHA1 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha1' ) ) )
+        ClientGUIMenus.AppendMenuItem( copy_hash_menu, 'sha512', 'Copy this file\'s SHA512 hash to your clipboard. Your client may not know this.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'sha512' ) ) )
+        
+        file_info_manager = focused_media.GetMediaResult().GetFileInfoManager()
+        
+        if file_info_manager.blurhash is not None:
+            
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'blurhash ({file_info_manager.blurhash})', 'Copy this file\'s blurhash.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'blurhash' ) ) )
+            
+        
+        if file_info_manager.pixel_hash is not None:
+            
+            ClientGUIMenus.AppendMenuItem( copy_hash_menu, f'pixel hash ({file_info_manager.pixel_hash.hex()})', 'Copy this file\'s pixel hash.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_HASHES, simple_data = ( CAC.FILE_COMMAND_TARGET_FOCUSED_FILE, 'pixel_hash' ) ) )
+            
+        
+        ClientGUIMenus.AppendMenu( share_menu, copy_hash_menu, 'copy hash' )
+        
+    
+    if focused_media is not None:
+        
+        hash_id_str = HydrusData.ToHumanInt( focused_media.GetHashId() )
+        
+        ClientGUIMenus.AppendMenuItem( share_menu, 'copy file id ({})'.format( hash_id_str ), 'Copy this file\'s internal file/hash_id.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_ID, simple_data = CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) )
+        
+    
+    if focused_is_local:
+        
+        if focused_media.IsStaticImage():
+            
+            ClientGUIMenus.AppendMenuItem( share_menu, 'copy bitmap', 'Copy this file\'s bitmap.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_FULL ) )
+            
+            ( width, height ) = focused_media.GetResolution()
+            
+            if width is not None and height is not None and ( width > 1024 or height > 1024 ):
+                
+                target_resolution = HydrusImageHandling.GetThumbnailResolution( focused_media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                
+                ClientGUIMenus.AppendMenuItem( share_menu, 'copy source lookup bitmap ({}x{})'.format( target_resolution[0], target_resolution[1] ), 'Copy a smaller bitmap of this file, for quicker lookup on source-finding websites.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_SOURCE_LOOKUPS ) )
+                
+            
+        
+        if focused_media.GetMime() in HC.MIMES_WITH_THUMBNAILS:
+            
+            ClientGUIMenus.AppendMenuItem( share_menu, 'copy thumbnail bitmap', 'Copy this file\'s thumbnail\'s bitmap.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_COPY_FILE_BITMAP, simple_data = CAC.BITMAP_TYPE_THUMBNAIL ) )
+            
+        
+    
+    #
+    
+    ClientGUIMenus.AppendMenu( menu, share_menu, 'share' )
     

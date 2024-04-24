@@ -1,12 +1,13 @@
 import collections
 import itertools
-import os
 import typing
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusData
+from hydrus.core.files.images import HydrusImageHandling
 
+from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
@@ -14,6 +15,116 @@ from hydrus.client import ClientPaths
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.search import ClientSearch
+
+def GetLocalMediaPaths( medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    medias = ClientMedia.FlattenMedia( medias )
+    
+    client_files_manager = CG.client_controller.client_files_manager
+    
+    paths = []
+    
+    for media in medias:
+        
+        if not media.GetLocationsManager().IsLocal():
+            
+            continue
+            
+        
+        hash = media.GetHash()
+        mime = media.GetMime()
+        
+        path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
+        
+        paths.append( path )
+        
+    
+    return paths
+    
+
+def CopyFilesToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    paths = GetLocalMediaPaths( medias )
+    
+    if len( paths ) > 0:
+        
+        CG.client_controller.pub( 'clipboard', 'paths', paths )
+        
+    
+
+def CopyFileIdsToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    flat_media = ClientMedia.FlattenMedia( medias )
+    
+    ids = [ media.GetMediaResult().GetHashId() for media in flat_media ]
+    
+    if len( ids ) > 0:
+        
+        text = '\n'.join( ( str( id ) for id in ids ) )
+        
+        CG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+
+def CopyFilePathsToClipboard( medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    paths = GetLocalMediaPaths( medias )
+    
+    if len( paths ) > 0:
+        
+        text = '\n'.join( paths )
+        
+        CG.client_controller.pub( 'clipboard', 'text', text )
+        
+    
+
+def CopyMediaBitmap( media: ClientMedia.MediaSingleton, bitmap_type: int ):
+    
+    if bitmap_type == CAC.BITMAP_TYPE_THUMBNAIL:
+        
+        if media.GetMime() not in HC.MIMES_WITH_THUMBNAILS:
+            
+            return
+            
+        
+        CG.client_controller.pub( 'clipboard', 'thumbnail_bmp', media )
+        
+    else:
+        
+        if not media.GetLocationsManager().IsLocal():
+            
+            return
+            
+        
+        copied = False
+        
+        if media.IsStaticImage():
+            
+            ( width, height ) = media.GetResolution()
+            
+            if width is not None and height is not None:
+                
+                if bitmap_type == CAC.BITMAP_TYPE_SOURCE_LOOKUPS and ( width > 1024 or height > 1024 ):
+                    
+                    target_resolution = HydrusImageHandling.GetThumbnailResolution( media.GetResolution(), ( 1024, 1024 ), HydrusImageHandling.THUMBNAIL_SCALE_TO_FIT, 100 )
+                    
+                    CG.client_controller.pub( 'clipboard', 'bmp', ( media, target_resolution ) )
+                    
+                else:
+                    
+                    CG.client_controller.pub( 'clipboard', 'bmp', ( media, None ) )
+                    
+                
+                copied = True
+                
+            
+        
+        if bitmap_type == CAC.BITMAP_TYPE_FULL_OR_FILE and not copied:
+            
+            CopyFilesToClipboard( [ media ] )
+            
+        
+    
 
 def CopyMediaURLs( medias ):
     
@@ -56,6 +167,46 @@ def CopyMediaURLClassURLs( medias, url_class ):
     urls_string = '\n'.join( urls )
     
     CG.client_controller.pub( 'clipboard', 'text', urls_string )
+    
+
+def CopyServiceFilenamesToClipboard( service_key: bytes, medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    flat_media = ClientMedia.FlattenMedia( medias )
+    
+    flat_media = [ m for m in flat_media if service_key in m.GetLocationsManager().GetCurrent() ]
+    
+    if len( flat_media ) == 0:
+        
+        HydrusData.ShowText( 'Could not find any files with the requested service!' )
+        
+        return
+        
+    
+    prefix = ''
+    
+    service = CG.client_controller.services_manager.GetService( service_key )
+    
+    if service.GetServiceType() == HC.IPFS:
+        
+        prefix = service.GetMultihashPrefix()
+        
+    
+    filenames_or_none = [ media.GetLocationsManager().GetServiceFilename( service_key ) for media in flat_media ]
+    
+    filenames = [ f for f in filenames_or_none if f is not None ]
+    
+    lines = [ prefix + filename for filename in filenames ]
+    
+    if len( lines ) > 0:
+        
+        text = '\n'.join( lines )
+        
+        CG.client_controller.pub( 'clipboard', 'text', text )
+        
+    else:
+        
+        HydrusData.ShowText( 'Could not find any service filenames for that selection!' )
+        
     
 
 def GetLocalFileActionServiceKeys( media: typing.Collection[ ClientMedia.MediaSingleton ] ):

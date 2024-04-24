@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -431,6 +432,12 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._duplicate_type = ClientGUICommon.BetterRadioBox( self._duplicates_type_panel, choices = choices )
         
+        vbox = QP.VBoxLayout()
+        
+        QP.AddToLayout( vbox, self._duplicate_type, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._duplicates_type_panel.setLayout( vbox )
+        
         #
         
         self._thumbnail_rearrange_panel = QW.QWidget( self )
@@ -448,21 +455,11 @@ class SimpleSubPanel( QW.QWidget ):
             self._thumbnail_rearrange_type.addItem( CAC.move_enum_to_str_lookup[ rearrange_type ], rearrange_type )
             
         
-        #
-        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._thumbnail_rearrange_type, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self._thumbnail_rearrange_panel.setLayout( vbox )
-        
-        #
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._duplicate_type, CC.FLAGS_EXPAND_BOTH_WAYS )
-        
-        self._duplicates_type_panel.setLayout( vbox )
         
         #
         
@@ -478,14 +475,10 @@ class SimpleSubPanel( QW.QWidget ):
         self._seek_duration_s = ClientGUICommon.BetterSpinBox( self._seek_panel, max=3599, width = 60 )
         self._seek_duration_ms = ClientGUICommon.BetterSpinBox( self._seek_panel, max=999, width = 60 )
         
-        #
-        
         self._seek_duration_s.setValue( 5 )
         self._seek_duration_ms.setValue( 0 )
         
         self._seek_duration_s.value() * 1000 + self._seek_duration_ms.value()
-        
-        #
         
         hbox = QP.HBoxLayout()
         
@@ -514,8 +507,6 @@ class SimpleSubPanel( QW.QWidget ):
             self._move_direction.addItem( CAC.move_enum_to_str_lookup[ m ], m )
             
         
-        #
-        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._selection_status, CC.FLAGS_CENTER )
@@ -541,14 +532,6 @@ class SimpleSubPanel( QW.QWidget ):
             self._file_filter.addItem( file_filter.ToString(), file_filter )
             
         
-        #
-        
-        self._hamming_distance_panel = QW.QWidget( self )
-        
-        self._hamming_distance = ClientGUICommon.BetterSpinBox( self._hamming_distance_panel, min = 0, max = 64 )
-        
-        #
-        
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, self._file_filter, CC.FLAGS_CENTER )
@@ -557,6 +540,10 @@ class SimpleSubPanel( QW.QWidget ):
         
         #
         
+        self._hamming_distance_panel = QW.QWidget( self )
+        
+        self._hamming_distance = ClientGUICommon.BetterSpinBox( self._hamming_distance_panel, min = 0, max = 64 )
+        
         rows = []
         
         rows.append( ( 'Search distance:', self._hamming_distance ) )
@@ -564,6 +551,102 @@ class SimpleSubPanel( QW.QWidget ):
         gridbox = ClientGUICommon.WrapInGrid( self._hamming_distance_panel, rows )
         
         self._hamming_distance_panel.setLayout( gridbox )
+        
+        #
+        
+        self._file_command_target_panel = QW.QWidget( self )
+        
+        choices = [ ( CAC.file_command_target_enum_to_str_lookup[ file_command_target ], file_command_target ) for file_command_target in ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) ]
+        
+        self._file_command_target = ClientGUICommon.BetterRadioBox( self._file_command_target_panel, choices = choices )
+        
+        self._file_command_target.SetValue( CAC.FILE_COMMAND_TARGET_SELECTED_FILES )
+        
+        self._file_command_target.setToolTip( 'This is only important in the thumbnail view, where the "focused file" means the one currently in the preview view, usually the one you last clicked on. In the media viewer, actions are always applied to the current file.' )
+        
+        rows = []
+        
+        rows.append( ( 'Files to apply to:', self._file_command_target ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._file_command_target_panel, rows )
+        
+        self._file_command_target_panel.setLayout( gridbox )
+        
+        #
+        
+        self._bitmap_type_panel = QW.QWidget( self )
+        
+        self._bitmap_type = ClientGUICommon.BetterChoice( self._bitmap_type_panel )
+        
+        for bitmap_type in (
+            CAC.BITMAP_TYPE_FULL,
+            CAC.BITMAP_TYPE_SOURCE_LOOKUPS,
+            CAC.BITMAP_TYPE_THUMBNAIL,
+            CAC.BITMAP_TYPE_FULL_OR_FILE
+        ):
+            
+            self._bitmap_type.addItem( CAC.bitmap_type_enum_to_str_lookup[ bitmap_type ], bitmap_type )
+            
+        
+        self._bitmap_type.SetValue( CAC.BITMAP_TYPE_FULL )
+        
+        rows = []
+        
+        rows.append( ( 'Bitmap to copy:', self._bitmap_type ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._bitmap_type_panel, rows )
+        
+        self._bitmap_type_panel.setLayout( gridbox )
+        
+        #
+        
+        self._hash_type_panel = QW.QWidget( self )
+        
+        self._hash_type = ClientGUICommon.BetterChoice( self._hash_type_panel )
+        
+        for hash_type in (
+            'sha256',
+            'md5',
+            'sha1',
+            'sha512',
+            'blurhash',
+            'pixel_hash'
+        ):
+            
+            self._hash_type.addItem( hash_type, hash_type )
+            
+        
+        self._hash_type.SetValue( 'sha256' )
+        
+        rows = []
+        
+        rows.append( ( 'Hash type to copy:', self._hash_type ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._hash_type_panel, rows )
+        
+        self._hash_type_panel.setLayout( gridbox )
+        
+        #
+        
+        self._ipfs_service_panel = QW.QWidget( self )
+        
+        self._ipfs_service_key = ClientGUICommon.BetterChoice( self._ipfs_service_panel )
+        
+        for service in CG.client_controller.services_manager.GetServices( ( HC.IPFS, ) ):
+            
+            name = service.GetName()
+            service_key = service.GetServiceKey()
+            
+            self._ipfs_service_key.addItem( name, service_key )
+            
+        
+        rows = []
+        
+        rows.append( ( 'Service to copy:', self._ipfs_service_key ) )
+        
+        gridbox = ClientGUICommon.WrapInGrid( self._ipfs_service_panel, rows )
+        
+        self._ipfs_service_panel.setLayout( gridbox )
         
         #
         
@@ -576,6 +659,10 @@ class SimpleSubPanel( QW.QWidget ):
         QP.AddToLayout( vbox, self._file_filter_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._hamming_distance_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         QP.AddToLayout( vbox, self._thumbnail_rearrange_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._file_command_target_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._bitmap_type_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._hash_type_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._ipfs_service_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
         
@@ -588,12 +675,24 @@ class SimpleSubPanel( QW.QWidget ):
         
         action = self._simple_actions.GetValue()
         
+        file_command_target_actions = {
+            CAC.SIMPLE_COPY_FILES,
+            CAC.SIMPLE_COPY_FILE_PATHS,
+            CAC.SIMPLE_COPY_FILE_ID,
+            CAC.SIMPLE_COPY_FILE_HASHES,
+            CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES
+        }
+        
         self._thumbnail_rearrange_panel.setVisible( action == CAC.SIMPLE_REARRANGE_THUMBNAILS )
         self._duplicates_type_panel.setVisible( action == CAC.SIMPLE_SHOW_DUPLICATES )
         self._seek_panel.setVisible( action == CAC.SIMPLE_MEDIA_SEEK_DELTA )
         self._thumbnail_move_panel.setVisible( action == CAC.SIMPLE_MOVE_THUMBNAIL_FOCUS )
         self._file_filter_panel.setVisible( action == CAC.SIMPLE_SELECT_FILES )
         self._hamming_distance_panel.setVisible( action == CAC.SIMPLE_OPEN_SIMILAR_LOOKING_FILES )
+        self._hash_type_panel.setVisible( action == CAC.SIMPLE_COPY_FILE_HASHES )
+        self._ipfs_service_panel.setVisible( action == CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES )
+        self._file_command_target_panel.setVisible( action in file_command_target_actions )
+        self._bitmap_type_panel.setVisible( action == CAC.SIMPLE_COPY_FILE_BITMAP )
         
     
     def GetValue( self ):
@@ -645,6 +744,37 @@ class SimpleSubPanel( QW.QWidget ):
                 rearrange_type = self._thumbnail_rearrange_type.GetValue()
                 
                 simple_data = ( CAC.REARRANGE_THUMBNAILS_TYPE_COMMAND, rearrange_type )
+                
+            elif action in ( CAC.SIMPLE_COPY_FILES, CAC.SIMPLE_COPY_FILE_PATHS, CAC.SIMPLE_COPY_FILE_ID ):
+                
+                file_command_target = self._file_command_target.GetValue()
+                
+                simple_data = file_command_target
+                
+            elif action == CAC.SIMPLE_COPY_FILE_BITMAP:
+                
+                bitmap_type = self._bitmap_type.GetValue()
+                
+                simple_data = bitmap_type
+                
+            elif action == CAC.SIMPLE_COPY_FILE_HASHES:
+                
+                file_command_target = self._file_command_target.GetValue()
+                hash_type = self._hash_type.GetValue()
+                
+                simple_data = ( file_command_target, hash_type )
+                
+            elif action == CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES:
+                
+                file_command_target = self._file_command_target.GetValue()
+                ipfs_service_key = self._ipfs_service_key.GetValue()
+                
+                hacky_ipfs_dict = HydrusSerialisable.SerialisableDictionary()
+                
+                hacky_ipfs_dict[ 'file_command_target' ] = file_command_target
+                hacky_ipfs_dict[ 'ipfs_service_key' ] = ipfs_service_key
+                
+                simple_data = hacky_ipfs_dict
                 
             else:
                 
@@ -705,10 +835,37 @@ class SimpleSubPanel( QW.QWidget ):
             
             self._thumbnail_rearrange_type.SetValue( rearrange_data )
             
+        elif action in ( CAC.SIMPLE_COPY_FILES, CAC.SIMPLE_COPY_FILE_PATHS, CAC.SIMPLE_COPY_FILE_ID ):
+            
+            file_command_target = command.GetSimpleData()
+            
+            self._file_command_target.SetValue( file_command_target )
+            
+        elif action == CAC.SIMPLE_COPY_FILE_BITMAP:
+            
+            bitmap_type = command.GetSimpleData()
+            
+            self._bitmap_type.SetValue( bitmap_type )
+            
+        elif action == CAC.SIMPLE_COPY_FILE_HASHES:
+            
+            ( file_command_target, hash_type ) = command.GetSimpleData()
+            
+            self._file_command_target.SetValue( file_command_target )
+            self._hash_type.SetValue( hash_type )
+            
+        elif action == CAC.SIMPLE_COPY_FILE_SERVICE_FILENAMES:
+            
+            hacky_ipfs_dict = command.GetSimpleData()
+            
+            self._file_command_target.SetValue( hacky_ipfs_dict[ 'file_command_target' ] )
+            self._ipfs_service_key.SetValue( hacky_ipfs_dict[ 'ipfs_service_key' ] )
+            
         
         self._UpdateControls()
         
     
+
 class TagSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):

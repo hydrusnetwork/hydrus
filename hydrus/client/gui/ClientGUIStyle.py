@@ -87,6 +87,7 @@ def InitialiseDefaults():
     ORIGINAL_STYLESHEET = QW.QApplication.instance().styleSheet()
     CURRENT_STYLESHEET = ORIGINAL_STYLESHEET
     
+
 def SetStyleFromName( name: str ):
     
     if QtInit.WE_ARE_QT5:
@@ -118,6 +119,7 @@ def SetStyleFromName( name: str ):
             
         
     
+
 def SetStyleSheet( stylesheet, prepend_hydrus = True ):
     
     stylesheet_to_use = stylesheet
@@ -138,6 +140,7 @@ def SetStyleSheet( stylesheet, prepend_hydrus = True ):
         CURRENT_STYLESHEET = stylesheet_to_use
         
     
+
 def SetStylesheetFromPath( filename ):
     
     path = os.path.join( STYLESHEET_DIR, filename )
