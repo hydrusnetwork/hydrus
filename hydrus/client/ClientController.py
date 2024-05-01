@@ -1180,8 +1180,6 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         #
         
-        self.local_booru_manager = ClientCaches.LocalBooruCache( self )
-        
         self.file_viewing_stats_manager = ClientManagers.FileViewingStatsManager( self )
         
         #
@@ -1672,7 +1670,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
     
     def RestartClientServerServices( self ):
         
-        services = [ self.services_manager.GetService( service_key ) for service_key in ( CC.LOCAL_BOORU_SERVICE_KEY, CC.CLIENT_API_SERVICE_KEY ) ]
+        services = [ self.services_manager.GetService( service_key ) for service_key in ( CC.CLIENT_API_SERVICE_KEY, ) ]
         
         services = [ service for service in services if service.GetPort() is not None ]
         
@@ -1922,11 +1920,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
                         
                         from hydrus.client.networking import ClientLocalServer
                         
-                        if service_type == HC.LOCAL_BOORU:
-                            
-                            http_factory = ClientLocalServer.HydrusServiceBooru( service, allow_non_local_connections = allow_non_local_connections )
-                            
-                        elif service_type == HC.CLIENT_API_SERVICE:
+                        if service_type == HC.CLIENT_API_SERVICE:
                             
                             http_factory = ClientLocalServer.HydrusServiceClientAPI( service, allow_non_local_connections = allow_non_local_connections )
                             

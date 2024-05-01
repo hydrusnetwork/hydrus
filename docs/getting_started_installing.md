@@ -14,9 +14,6 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 
 ## Installing
 
-!!! warning ""
-    The hydrus releases are 64-bit only. If you are a python expert, there is the slimmest chance you'll be able to get it running from source on a 32-bit machine, but it would be easier just to find a newer computer to run it on.
-
 === "Windows"
 
     *   If you want the easy solution, download the .exe installer. Run it, hit ok several times.
@@ -40,9 +37,17 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
     
     !!! warning "Wayland"
         Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. [Running from source](running_from_source.md) may improve the situation, but some of these issues seem to be intractable for now. X11 is much happier with hydrus. 
-
+    
+    !!! note "XCB Qt compatibility"
+        
+        If you run into trouble running Qt6, usually with an XCB-related error like `qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found.`, try installing the packages `libicu-dev` and `libxcb-cursor-dev`. With `apt` that will be:
+        
+        * `sudo apt-get install libicu-dev`
+        * `sudo apt-get install libxcb-cursor-dev`
+        
+    
     *   Get the .tag.gz. Extract it somewhere useful and create shortcuts to 'client' and 'server' as you like. The build is made on Ubuntu, so if you run something else, compatibility is hit and miss.
-    *   If you have problems running the Ubuntu build, users with some python experience generally find running from source works well.
+    *   If you have problems running the Ubuntu build, [running from source](running_from_source.md) is usually an improvement, and it is easy to set up these days.
     *   You might need to get 'libmpv1' to get mpv working and playing video/audio. This is the mpv _library_, not the necessarily the player. Check _help->about_ to see if it is available--if not, see if you can get it like so:
         * `apt-get install libmpv1`
         * Use _options->media_ to set your audio/video/animations to 'show using mpv' once you have it installed.

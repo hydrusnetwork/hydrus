@@ -36,7 +36,6 @@ nav:
     - database_migration.md
     - launch_arguments.md
     - ipfs.md
-    - local_booru.md
     - server.md
     - Alternate Installations:
       - docker.md

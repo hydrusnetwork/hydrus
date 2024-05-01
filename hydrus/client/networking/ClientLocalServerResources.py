@@ -61,9 +61,6 @@ from hydrus.client.search import ClientSearchAutocomplete
 from hydrus.client.search import ClientSearchParseSystemPredicates
 from hydrus.client.gui import ClientGUIPopupMessages
 
-
-local_booru_css = FileResource( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), defaultType = 'text/css' )
-
 LOCAL_BOORU_INT_PARAMS = set()
 LOCAL_BOORU_BYTE_PARAMS = { 'share_key', 'hash' }
 LOCAL_BOORU_STRING_PARAMS = set()

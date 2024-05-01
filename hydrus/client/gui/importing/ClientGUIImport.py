@@ -455,6 +455,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._tag_autocomplete_all.movePageLeft.connect( self.movePageLeft )
             self._tag_autocomplete_all.movePageRight.connect( self.movePageRight )
             
+            self._tags.tagsChanged.connect( self._tag_autocomplete_all.SetContextTags )
+            
             self._tags_paste_button = ClientGUICommon.BetterButton( self._tags_panel, 'paste tags', self._PasteTags )
             
             #
@@ -471,6 +473,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._tag_autocomplete_selection.movePageLeft.connect( self.movePageLeft )
             self._tag_autocomplete_selection.movePageRight.connect( self.movePageRight )
+            
+            self._single_tags.tagsChanged.connect( self._tag_autocomplete_selection.SetContextTags )
             
             self.SetSelectedPaths( [] )
             

@@ -17,17 +17,18 @@ from hydrus.client.gui.widgets import ClientGUICommon
 
 class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, all_known_files_allowed: bool, only_local_file_domains_allowed: bool ):
+    def __init__( self, parent: QW.QWidget, location_context: ClientLocation.LocationContext, all_known_files_allowed: bool, only_importable_domains_allowed: bool, only_local_file_domains_allowed: bool ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._original_location_context = location_context
         self._all_known_files_allowed = all_known_files_allowed
+        self._only_importable_domains_allowed = only_importable_domains_allowed
         self._only_local_file_domains_allowed = only_local_file_domains_allowed
         
         self._location_list = ClientGUICommon.BetterCheckBoxList( self )
         
-        services = ClientLocation.GetPossibleFileDomainServicesInOrder( all_known_files_allowed, only_local_file_domains_allowed )
+        services = ClientLocation.GetPossibleFileDomainServicesInOrder( all_known_files_allowed, only_importable_domains_allowed, only_local_file_domains_allowed )
         
         for service in services:
             
@@ -41,7 +42,7 @@ class EditMultipleLocationContextPanel( ClientGUIScrolledPanels.EditPanel ):
         
         advanced_mode = CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
-        if advanced_mode and not only_local_file_domains_allowed:
+        if advanced_mode and not ( only_local_file_domains_allowed or only_importable_domains_allowed ):
             
             for service in services:
                 
@@ -142,13 +143,14 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         self._all_known_files_allowed = True
         self._all_known_files_allowed_only_in_advanced_mode = False
         self._only_importable_domains_allowed = False
+        self._only_local_file_domains_allowed = False
         
         self.SetValue( location_context, force_label = True )
         
     
     def _EditLocation( self ):
         
-        services = ClientLocation.GetPossibleFileDomainServicesInOrder( self._IsAllKnownFilesServiceTypeAllowed(), self._only_importable_domains_allowed )
+        services = ClientLocation.GetPossibleFileDomainServicesInOrder( self._IsAllKnownFilesServiceTypeAllowed(), self._only_importable_domains_allowed, self._only_local_file_domains_allowed )
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
@@ -222,7 +224,7 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit multiple location' ) as dlg:
             
-            panel = EditMultipleLocationContextPanel( dlg, self._location_context, self._IsAllKnownFilesServiceTypeAllowed(), self._only_importable_domains_allowed )
+            panel = EditMultipleLocationContextPanel( dlg, self._location_context, self._IsAllKnownFilesServiceTypeAllowed(), self._only_importable_domains_allowed, self._only_local_file_domains_allowed )
             
             dlg.SetPanel( panel )
             
@@ -262,6 +264,11 @@ class LocationSearchContextButton( ClientGUICommon.BetterButton ):
     def SetOnlyImportableDomainsAllowed( self, only_importable_domains_allowed: bool ):
         
         self._only_importable_domains_allowed = only_importable_domains_allowed
+        
+    
+    def SetOnlyLocalFileDomainsAllowed( self, only_local_file_domains_allowed: bool ):
+        
+        self._only_local_file_domains_allowed = only_local_file_domains_allowed
         
     
     def SetAllKnownFilesAllowed( self, all_known_files_allowed: bool, all_known_files_allowed_only_in_advanced_mode: bool ):

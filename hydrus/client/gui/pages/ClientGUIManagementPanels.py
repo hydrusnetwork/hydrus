@@ -544,8 +544,8 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
             synchronised = True
             
         
-        self._tag_autocomplete_1 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context_1, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, allow_all_known_files = False, synchronised = synchronised, force_system_everything = True )
-        self._tag_autocomplete_2 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context_2, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, allow_all_known_files = False, synchronised = synchronised, force_system_everything = True )
+        self._tag_autocomplete_1 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context_1, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, allow_all_known_files = False, only_allow_local_file_domains = True, synchronised = synchronised, force_system_everything = True )
+        self._tag_autocomplete_2 = ClientGUIACDropdown.AutoCompleteDropdownTagsRead( self._filtering_panel, self._page_key, file_search_context_2, media_sort_widget = self._media_sort_widget, media_collect_widget = self._media_collect_widget, allow_all_known_files = False, only_allow_local_file_domains = True, synchronised = synchronised, force_system_everything = True )
         
         self._dupe_search_type = ClientGUICommon.BetterChoice( self._filtering_panel )
         

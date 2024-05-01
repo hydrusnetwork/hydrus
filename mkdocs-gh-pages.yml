@@ -43,7 +43,6 @@ plugins:
         'help/introduction.md': 'introduction.md'
         'help/ipfs.md': 'ipfs.md'
         'help/launch_arguments.md': 'launch_arguments.md'
-        'help/local_booru.md': 'local_booru.md'
         'help/privacy.md': 'privacy.md'
         'help/reducing_lag.md': 'reducing_lag.md'
         'help/running_from_source.md': 'running_from_source.md'

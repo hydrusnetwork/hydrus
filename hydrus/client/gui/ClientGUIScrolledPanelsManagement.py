@@ -4109,6 +4109,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._favourites = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( favourites_panel, CC.COMBINED_TAG_SERVICE_KEY, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE )
             self._favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( favourites_panel, self._favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
             
+            self._favourites.tagsChanged.connect( self._favourites_input.SetContextTags )
+            
             #
             
             self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
@@ -4502,6 +4504,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._suggested_favourites_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( suggested_tags_favourites_panel, self._suggested_favourites.AddTags, default_location_context, CC.COMBINED_TAG_SERVICE_KEY, show_paste_button = True )
+            
+            self._suggested_favourites.tagsChanged.connect( self._suggested_favourites_input.SetContextTags )
             
             #
             

@@ -23,7 +23,7 @@ service-identity>=18.1.0
 Twisted>=20.3.0
 
 opencv-python-headless==4.8.1.78
-python-mpv==1.0.5
+mpv==1.0.6
 requests==2.31.0
 
 QtPy==2.4.1

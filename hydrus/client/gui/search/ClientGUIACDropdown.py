@@ -20,6 +20,7 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
@@ -36,6 +37,7 @@ from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.search import ClientGUISearch
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientTags
+from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.search import ClientSearch
 from hydrus.client.search import ClientSearchAutocomplete
 from hydrus.client.search import ClientSearchParseSystemPredicates
@@ -1548,11 +1550,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._last_prefetch_job_status = None
         
+        self._current_context_tags = {}
         self._tag_service_key = tag_service_key
         
         AutoCompleteDropdown.__init__( self, parent )
-        
-        tag_service = CG.client_controller.services_manager.GetService( self._tag_service_key )
         
         self._location_context_button = ClientGUILocation.LocationSearchContextButton( self._dropdown_window, location_context, is_paired_with_tag_domain = True )
         self._location_context_button.setMinimumWidth( 20 )
@@ -1568,6 +1569,12 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._dropdown_notebook.addTab( self._favourites_list, 'favourites' )
         
+        self._children_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
+        self._tags_to_children_cache = dict()
+        self._children_list_needs_updating = True
+        
+        self._dropdown_notebook.addTab( self._children_list, 'children' )
+        
         #
         
         self._location_context_button.locationChanged.connect( self._LocationContextJustChanged )
@@ -1575,6 +1582,8 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         CG.client_controller.sub( self, 'RefreshFavouriteTags', 'notify_new_favourite_tags' )
         CG.client_controller.sub( self, 'NotifyNewServices', 'notify_new_services' )
+        
+        self._dropdown_notebook.currentChanged.connect( self._UpdateChildrenListIfNeeded )
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
@@ -1622,6 +1631,13 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self.locationChanged.emit( location_context )
         
         self._SetListDirty()
+        
+    
+    def _NotifyChildrenListNeedsUpdating( self ):
+        
+        self._children_list_needs_updating = True
+        
+        self._UpdateChildrenListIfNeeded()
         
     
     def _SetLocationContext( self, location_context: ClientLocation.LocationContext ):
@@ -1719,6 +1735,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._search_results_list.SetTagServiceKey( self._tag_service_key )
         self._favourites_list.SetTagServiceKey( self._tag_service_key )
+        self._children_list.SetTagServiceKey( self._tag_service_key )
+        
+        self._tags_to_children_cache = dict()
+        self._NotifyChildrenListNeedsUpdating()
         
         self.tagServiceChanged.emit( self._tag_service_key )
         
@@ -1730,6 +1750,88 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     def _TakeResponsibilityForEnter( self, shift_down ):
         
         raise NotImplementedError()
+        
+    
+    def _UpdateChildrenListIfNeeded( self ):
+        
+        if self._children_list_needs_updating and self._dropdown_notebook.currentWidget() == self._children_list:
+            
+            tag_service_key = self._tag_service_key
+            context_tags = set( self._current_context_tags )
+            tags_to_children_cache = dict( self._tags_to_children_cache )
+            
+            def work_callable():
+                
+                uncached_context_tags = { tag for tag in context_tags if tag not in tags_to_children_cache }
+                
+                if len( uncached_context_tags ) > 0:
+                    
+                    new_tags_to_children = CG.client_controller.Read( 'tag_descendants_lookup', tag_service_key, uncached_context_tags )
+                    
+                else:
+                    
+                    new_tags_to_children = dict()
+                    
+                
+                child_tags = set()
+                
+                for tag in context_tags:
+                    
+                    if tag in tags_to_children_cache:
+                        
+                        child_tags.update( tags_to_children_cache[ tag ] )
+                        
+                    elif tag in new_tags_to_children:
+                        
+                        child_tags.update( new_tags_to_children[ tag ] )
+                        
+                    
+                
+                child_tags.difference_update( context_tags )
+                
+                return ( tag_service_key, child_tags, new_tags_to_children )
+                
+            
+            def publish_callable( result ):
+                
+                ( job_tag_service_key, child_tags, new_tags_to_children ) = result
+                
+                if job_tag_service_key != self._tag_service_key:
+                    
+                    self._children_list.SetPredicates( [] )
+                    
+                    return
+                    
+                
+                child_tags = list( child_tags )
+                
+                self._tags_to_children_cache.update( new_tags_to_children )
+                
+                tag_sort = ClientTagSorting.TagSort( sort_type = ClientTagSorting.SORT_BY_HUMAN_TAG, sort_order = CC.SORT_ASC )
+                
+                ClientTagSorting.SortTags( tag_sort, child_tags )
+                
+                predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in child_tags ]
+                
+                self._children_list.SetPredicates( predicates, preserve_single_selection = True )
+                
+                self._children_list_needs_updating = False
+                
+            
+            def errback_callable( etype, value, tb ):
+                
+                self._children_list.SetPredicates( [] )
+                
+                self._children_list_needs_updating = False
+                
+                HydrusData.ShowText( 'Trying to load some child tags failed, please send this to hydev:' )
+                HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+                
+            
+            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+            
+            job.start()
+            
         
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
@@ -1794,6 +1896,16 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             
         
     
+    def SetContextTags( self, tags: typing.Collection[ str ] ):
+        """
+        The search context or the taglist we are editing just changed, so let's tell anything in here that wants to filter or do lookups based on that.
+        """
+        
+        self._current_context_tags = set( tags )
+        
+        self._NotifyChildrenListNeedsUpdating()
+        
+    
     def SetTagServiceKey( self, tag_service_key ):
         
         self._SetTagService( tag_service_key )
@@ -1804,7 +1916,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     searchChanged = QC.Signal( ClientSearch.FileSearchContext )
     searchCancelled = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
+    def __init__( self, parent: QW.QWidget, page_key, file_search_context: ClientSearch.FileSearchContext, media_sort_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaSortControl ] = None, media_collect_widget: typing.Optional[ ClientGUIResultsSortCollect.MediaCollectControl ] = None, media_callable = None, synchronised = True, include_unusual_predicate_types = True, allow_all_known_files = True, only_allow_local_file_domains = False, force_system_everything = False, hide_favourites_edit_actions = False, fixed_results_list_height = None ):
         
         self._page_key = page_key
         
@@ -1833,6 +1945,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         
         AutoCompleteDropdownTags.__init__( self, parent, location_context, tag_context.service_key )
         
+        self._location_context_button.SetOnlyLocalFileDomainsAllowed( only_allow_local_file_domains )
         self._location_context_button.SetAllKnownFilesAllowed( allow_all_known_files, True )
         
         #
@@ -1917,6 +2030,12 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._include_current_tags.valueChanged.connect( self._IncludeCurrentChanged )
         self._include_pending_tags.valueChanged.connect( self._IncludePendingChanged )
         self._search_pause_play.valueChanged.connect( self._SynchronisedChanged )
+        
+        predicates = self._file_search_context.GetPredicates()
+        
+        tags = [ predicate.GetValue() for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG ]
+        
+        self.SetContextTags( tags )
         
     
     def _AdvancedORInput( self ):
@@ -2362,7 +2481,13 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
     
     def _NotifyPredicatesBoxChanged( self ):
         
-        self._file_search_context.SetPredicates( self._predicates_listbox.GetPredicates() )
+        predicates = self._predicates_listbox.GetPredicates()
+        
+        self._file_search_context.SetPredicates( predicates )
+        
+        tags = [ predicate.GetValue() for predicate in predicates if predicate.GetType() == ClientSearch.PREDICATE_TYPE_TAG ]
+        
+        self.SetContextTags( tags )
         
         self._SignalNewSearchState()
         
@@ -2845,14 +2970,11 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
     nullEntered = QC.Signal()
     tagsPasted = QC.Signal( list )
     
-    def __init__( self, parent, chosen_tag_callable, location_context, tag_service_key, tag_service_key_changed_callable = None, show_paste_button = False ):
+    def __init__( self, parent, chosen_tag_callable, location_context, tag_service_key, show_paste_button = False ):
         
         self._display_tag_service_key = tag_service_key
         
         self._chosen_tag_callable = chosen_tag_callable
-        self._tag_service_key_changed_callable = tag_service_key_changed_callable
-        
-        service = CG.client_controller.services_manager.GetService( tag_service_key )
         
         tag_autocomplete_options = CG.client_controller.tag_display_manager.GetTagAutocompleteOptions( tag_service_key )
         
@@ -2895,16 +3017,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
         self._ClearInput()
-        
-    
-    def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
-        
-        it_changed = AutoCompleteDropdownTags._TagContextJustChanged( self, tag_context )
-        
-        if it_changed and self._tag_service_key_changed_callable is not None:
-            
-            self._tag_service_key_changed_callable( self._tag_service_key )
-            
         
     
     def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:

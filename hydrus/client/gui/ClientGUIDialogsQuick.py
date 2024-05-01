@@ -46,49 +46,6 @@ def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key =
         
     
 
-def GetFinishArchiveDeleteFilteringAnswer( win, kept_label, deletion_options ):
-    
-    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, 'filtering done?' ) as dlg:
-        
-        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionArchiveDeleteFinishFilteringPanel( dlg, kept_label, deletion_options )
-        
-        dlg.SetPanel( panel )
-        
-        result = dlg.exec()
-        location_context = panel.GetLocationContext()
-        was_cancelled = dlg.WasCancelled()
-        
-        return ( result, location_context, was_cancelled )
-        
-    
-
-def GetFinishFilteringAnswer( win, label ):
-    
-    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, label ) as dlg:
-        
-        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionFinishFilteringPanel( dlg, label )
-        
-        dlg.SetPanel( panel )
-        
-        result = ( dlg.exec(), dlg.WasCancelled() )
-        
-        return result
-        
-    
-def GetInterstitialFilteringAnswer( win, label ):
-    
-    with ClientGUITopLevelWindowsPanels.DialogCustomButtonQuestion( win, label ) as dlg:
-        
-        panel = ClientGUIScrolledPanelsButtonQuestions.QuestionCommitInterstitialFilteringPanel( dlg, label )
-        
-        dlg.SetPanel( panel )
-        
-        result = dlg.exec()
-        
-        return result
-        
-    
-
 def run_auto_yes_no_gubbins( dlg: QW.QDialog, time_to_fire, original_title, action_description, end_state ):
     
     def qt_set_title():

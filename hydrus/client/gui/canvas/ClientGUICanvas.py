@@ -26,6 +26,7 @@ from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
+from hydrus.client.gui import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIShortcuts
@@ -2973,7 +2974,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     label = 'commit {} and continue?'.format( ' and '.join( components ) )
                     
-                    result = ClientGUIDialogsQuick.GetInterstitialFilteringAnswer( self, label )
+                    result = ClientGUIScrolledPanelsCommitFiltering.GetInterstitialFilteringAnswer( self, label )
                     
                     if result == QW.QDialog.Accepted:
                         
@@ -3272,7 +3273,7 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             label = 'commit {}?'.format( ' and '.join( components ) )
             
-            ( result, cancelled ) = ClientGUIDialogsQuick.GetFinishFilteringAnswer( self, label )
+            ( result, cancelled ) = ClientGUIScrolledPanelsCommitFiltering.GetFinishFilteringAnswer( self, label )
             
             if cancelled:
                 
@@ -3792,7 +3793,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                     
                 
             
-            ( result, deletee_location_context, cancelled ) = ClientGUIDialogsQuick.GetFinishArchiveDeleteFilteringAnswer( self, kept_label, deletion_options )
+            ( result, deletee_location_context, cancelled ) = ClientGUIScrolledPanelsCommitFiltering.GetFinishArchiveDeleteFilteringAnswer( self, kept_label, deletion_options )
             
             if cancelled:
                 

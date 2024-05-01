@@ -275,6 +275,56 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
             
         '''
     
+    def GetDescendantsForTags( self, service_key, tags ):
+        
+        if service_key == CC.COMBINED_TAG_SERVICE_KEY:
+            
+            tag_services = self.modules_services.GetServices( HC.REAL_TAG_SERVICES )
+            
+            search_service_keys = [ tag_service.GetServiceKey() for tag_service in tag_services ]
+            
+        else:
+            
+            search_service_keys = [ service_key ]
+            
+        
+        tags_to_descendants = collections.defaultdict( set )
+        
+        for service_key in search_service_keys:
+            
+            tag_service_id = self.modules_services.GetServiceId( service_key )
+            
+            existing_tags = { tag for tag in tags if self.modules_tags.TagExists( tag ) }
+            
+            existing_tag_ids_to_tags = self.modules_tags.GetTagIdsToTags( tags = existing_tags )
+            
+            existing_tag_ids = set( existing_tag_ids_to_tags.keys() )
+            
+            tag_ids_to_ideal_tag_ids = self.modules_tag_siblings.GetTagIdsToIdealTagIds( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, existing_tag_ids )
+            
+            ideal_tag_ids = set( tag_ids_to_ideal_tag_ids.values() )
+            
+            ideal_tag_ids_to_descendant_tag_ids = self.modules_tag_parents.GetTagsToDescendants( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ideal_tag_ids )
+            
+            all_tag_ids = set()
+            
+            all_tag_ids.update( itertools.chain.from_iterable( ideal_tag_ids_to_descendant_tag_ids.values() ) )
+            
+            tag_ids_to_tags = self.modules_tags_local_cache.GetTagIdsToTags( tag_ids = all_tag_ids )
+            
+            for ( tag_id, tag ) in existing_tag_ids_to_tags.items():
+                
+                ideal_tag_id = tag_ids_to_ideal_tag_ids[ tag_id ]
+                descendant_tag_ids = ideal_tag_ids_to_descendant_tag_ids[ ideal_tag_id ]
+                descendants = { tag_ids_to_tags[ descendant_tag_id ] for descendant_tag_id in descendant_tag_ids }
+                
+                tags_to_descendants[ tag ].update( descendants )
+                
+            
+        
+        return tags_to_descendants
+        
+    
     def GetImpliedBy( self, display_type, tag_service_id, tag_id ) -> typing.Set[ int ]:
         
         ideal_tag_id = self.modules_tag_siblings.GetIdealTagId( display_type, tag_service_id, tag_id )

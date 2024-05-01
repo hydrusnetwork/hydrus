@@ -3742,6 +3742,8 @@ class ListBoxTagsFilter( ListBoxTags ):
     
 class ListBoxTagsDisplayCapable( ListBoxTags ):
     
+    tagsChanged = QC.Signal( list )
+    
     def __init__( self, parent, service_key = None, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, **kwargs ):
         
         if service_key is None:
@@ -3754,6 +3756,8 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         has_async_text_info = tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
         ListBoxTags.__init__( self, parent, has_async_text_info = has_async_text_info, tag_display_type = tag_display_type, **kwargs )
+        
+        self.listBoxChanged.connect( self._NotifyListBoxChanged )
         
     
     def _ApplyAsyncInfoToTerm( self, term, info ) -> typing.Tuple[ bool, bool ]:
@@ -3831,6 +3835,14 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
         return ( pre_work_callable, work_callable )
         
     
+    def _NotifyListBoxChanged( self ):
+        
+        # we only want the top tags here, not all parents and so on
+        tags = [ term.GetTag() for term in self._ordered_terms ]
+        
+        self.tagsChanged.emit( list( self._GetTagsFromTerms( self._ordered_terms ) ) )
+        
+    
     def _SelectFilesWithTags( self, and_or_or ):
         
         if self._page_key is not None:
@@ -3858,7 +3870,10 @@ class ListBoxTagsDisplayCapable( ListBoxTags ):
             
         
     
+
 class ListBoxTagsStrings( ListBoxTagsDisplayCapable ):
+    
+    tagsChanged = QC.Signal( list )
     
     def __init__( self, parent, service_key = None, sort_tags = True, **kwargs ):
         
@@ -3866,10 +3881,17 @@ class ListBoxTagsStrings( ListBoxTagsDisplayCapable ):
         
         ListBoxTagsDisplayCapable.__init__( self, parent, service_key = service_key, **kwargs )
         
+        self.listBoxChanged.connect( self._NotifyListBoxChanged )
+        
     
     def _GenerateTermFromTag( self, tag: str ) -> ClientGUIListBoxesData.ListBoxItemTextTag:
         
         return ClientGUIListBoxesData.ListBoxItemTextTag( tag )
+        
+    
+    def _NotifyListBoxChanged( self ):
+        
+        self.tagsChanged.emit( list( self.GetTags() ) )
         
     
     def GetTags( self ):
