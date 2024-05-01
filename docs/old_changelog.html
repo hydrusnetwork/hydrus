@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_573"><a href="#version_573">version 573</a></h2>
+                    <ul>
+                        <li><h3>new autocomplete tab, children</h3></li>
+                        <li>**this is an experiment. it is jank in form and workflow and may be buggy**</li>
+                        <li>the search/edit tag autocomplete dropdowns now have a third tab, 'children', which shows the tag children of the current tag context, whether that is the current search tags or what you are editing</li>
+                        <li>the idea is you type 'series:evangelion' but can't remember the character names; now you have a nice list of a bunch of stuff related to what was already entered</li>
+                        <li>note you can select this tab real quick just by hitting 'left arrow' on an empty text input</li>
+                        <li>this is a first draft, and I would like feedback and ideas, mostly around workflow improvement ideas. it seems to work ok if you have one or two tags with interesting children, but against a big list of stuff, it just becomes another multi-hundred list of spam blah that is difficult to navigate. maybe I could filter it to (and sort by?) the top n most count-heavy results?</li>
+                        <li>I wonder if it could also show children on the same level, so if you have 'shinji', it'll also show 'rei' and 'asuka'. I would call this relationship 'siblings', but then we'd be in an even bigger semantic mess</li>
+                        <li>also obviously please let me know if this fails anywhere. I think I have it hooked up correct, but some of the code around here is a bit old/messy so some scenario may not update properly</li>
+                        <li>don't worry about background lag if you regularly manage lots of tags--it only actually fetches the list of children when you switch to the tab, so you're only spending CPU if you actively engage with it</li>
+                        <li><h3>misc</h3></li>
+                        <li>a user and I figured out a new twitter tweet downloader using the excellent fxtwitter mirror service. it doesn't do search, but dropping a tweet URL on the client should work again. should handle quoted media and works for multi/mixed-image/video posts, too. note it will nest-pursue quoted tweets, so if there's like fifty in the nested chain, it'll get them all--let me know if this is a big pain and I'll figure out a different solution. I learned that there is another twitter downloader made by a different user on the discord; I have made the update code check for this and not replace it with this if you have it already, and I expect I'll integrate what that can do into these defaults next week</li>
+                        <li>the archive/delete and duplicate filters now yes/no confirm when you say to 'forget' at the end of a filtering run</li>
+                        <li>the duplicate filter page now only allows you to set the search location to local file domains--so it'll only ever try to search and show pairs for files you actually have</li>
+                        <li>fixed the system predicate parsing of `system:duration: has duration` and `system:duration: no duration` when entered by hand, and added a unit test to catch it in future</li>
+                        <li>the manage siblings/parents dialogs now have a little shorter minimum height</li>
+                        <li>updated some text around the PTR processing in the help--it is only the database proper, the .db files normally in `install_dir/db`, that needs to be on an SSD, and temporary processing slowdowns to 1 row/s are normal</li>
+                        <li>touched up some of the 'installing' and 'running from source' help, particularly for some Linux vagaries</li>
+                        <li><h3>some build stuff</h3></li>
+                        <li>all the builds and the setup_venv scripts are moved from 'python-mpv' to 'mpv', the new name for this library, and the version is updated to 1.0.6, which supports libmpv version &gt;=0.38.x. if you are a windows user and want to live on the edge, feel free to try out this very new libmpv2.dll here, which I have been testing and seems to work well: https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20240421-git-b364e4a.7z/download</li>
+                        <li>updated the setup_venv scripts' Qt step to better talk about which Qt version to use for which Python version. it turns out Python 3.12 cannot run something I was recommending for &gt;=3.11, so the whole thing is a lot clearer now</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>refactored some question/button dialog stuff</li>
+                        <li>fixed up some file domain filtering code in the autocomplete filter and variable names to better specify what is being filtered where</li>
+                        <li><h3>local booru deconstruction</h3></li>
+                        <li>_reminder: I am removing the local booru, an ancient, mostly undocumented experiment._ if you used it, please check out https://github.com/floogulinc/hyshare for a replacement!</li>
+                        <li>the local booru service no longer boots as a server</li>
+                        <li>deleted the local booru share cache</li>
+                        <li>the local booru review services panel no longer shows nor allows management of its shares</li>
+                        <li>deleted the local booru unit tests</li>
+                        <li>deleted the local booru help and ancient screenshots</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_572"><a href="#version_572">version 572</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

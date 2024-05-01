@@ -570,6 +570,13 @@ def parse_value( string: str, spec ):
             
         
     elif spec == Value.TIME_SEC_MSEC:
+        
+        # 'has duration'
+        if string.startswith( 'has' ) or string.startswith( 'no' ):
+            
+            return '', ( 0, 0 )
+            
+        
         match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
         if match and (match.group( 'sec' ) or match.group( 'msec' )):
             seconds = int( match.group( 'sec' ) ) if match.group( 'sec' ) else 0
@@ -724,7 +731,9 @@ def parse_operator( string: str, spec ):
     if spec is None:
         return string, None
     elif spec in ( Operators.RELATIONAL, Operators.RELATIONAL_EXACT, Operators.RELATIONAL_TIME ):
+        
         exact = spec == Operators.RELATIONAL_EXACT
+        
         ops = [ '=', '<', '>' ]
         
         if spec == Operators.RELATIONAL_TIME:
@@ -735,8 +744,6 @@ def parse_operator( string: str, spec ):
                 
                 op_string = string[ : re_result.start() ]
                 string_result = re_result.group()
-                
-                invert_ops = not string_looks_like_date( string_result )
                 
                 looks_like_date = string_looks_like_date( string_result )
                 invert_ops = not looks_like_date

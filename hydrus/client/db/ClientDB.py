@@ -6818,6 +6818,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'services': result = self.modules_services.GetServices( *args, **kwargs )
         elif action == 'similar_files_maintenance_status': result = self.modules_similar_files.GetMaintenanceStatus( *args, **kwargs )
         elif action == 'related_tags': result = self._GetRelatedTags( *args, **kwargs )
+        elif action == 'tag_descendants_lookup': result = self.modules_tag_display.GetDescendantsForTags( *args, **kwargs )
         elif action == 'tag_display_application': result = self.modules_tag_display.GetApplication( *args, **kwargs )
         elif action == 'tag_display_maintenance_status': result = self._CacheTagDisplayGetApplicationStatusNumbers( *args, **kwargs )
         elif action == 'tag_parents': result = self.modules_tag_parents.GetTagParents( *args, **kwargs )
@@ -10192,6 +10193,57 @@ class DB( HydrusDB.HydrusDB ):
                 #
                 
                 self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 572:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                parsers = domain_manager.GetParsers()
+                
+                parser_names = { parser.GetName() for parser in parsers }
+                
+                # checking for floog's downloader
+                if 'fxtwitter api status parser' not in parser_names and 'vxtwitter api status parser' not in parser_names:
+                    
+                    domain_manager.DeleteURLClasses( [
+                        'twitter tweet (i/web/status)',
+                        'twitter tweet',
+                        'twitter syndication api tweet-result',
+                        'twitter syndication api timeline-profile'
+                    ])
+                    
+                    domain_manager.OverwriteDefaultParsers( [
+                        'fxtwitter tweet api parser'
+                    ] )
+                    
+                    domain_manager.OverwriteDefaultURLClasses( [
+                        'x post',
+                        'twitter tweet',
+                        'fxtwitter tweet api'
+                    ] )
+                    
+                    #
+                    
+                    domain_manager.TryToLinkURLClassesAndParsers()
+                    
+                    #
+                    
+                    self.modules_serialisable.SetJSONDump( domain_manager )
+                    
                 
             except Exception as e:
                 

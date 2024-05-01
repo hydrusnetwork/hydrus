@@ -83,7 +83,7 @@ elif [ "$install_type" = "a" ]; then
 
     if [ "$qt" = "a" ]; then
         echo
-        echo "If you cannot boot with the normal Qt6, try \"o\" on Python ^<=3.10 or \"m\" on Python ^>=3.11."
+        echo "If you cannot boot with the normal Qt6, try \"o\" on Python 3.9 or \"m\" on Python 3.10."
         echo "Do you want Qt6 (o)lder, Qt6 (m)iddle, Qt6 (t)est, or (w)rite your own? "
         read -r qt
         if [ "$qt" = "o" ]; then
@@ -102,9 +102,13 @@ elif [ "$install_type" = "a" ]; then
 
     if [ "$qt" = "w" ]; then
         echo
-        echo "Enter the exact PySide6 version you want, e.g. '6.6.0': "
+        echo "Enter the exact PySide6 version you want, e.g. '6.6.0':"
+        echo "- For Python 3.10, your earliest available version is 6.2.0"
+        echo "- For Python 3.11, your earliest available version is 6.4.0.1"
+        echo "- For Python 3.12, your earliest available version is 6.6.0"
+        echo "Version: "
         read -r qt_custom_pyside6
-        echo "Enter the exact qtpy version you want (probably '2.4.1'): "
+        echo "Enter the exact qtpy version you want (probably '2.4.1'; if older try '2.3.1'): "
         read -r qt_custom_qtpy
     fi
 

@@ -36,13 +36,13 @@ def FilterOutRedundantMetaServices( list_of_service_keys: typing.List[ bytes ] )
     return list_of_service_keys
     
 
-def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_local_file_domains_allowed: bool ):
+def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_importable_domains_allowed: bool, only_local_file_domains_allowed: bool ):
     
     services_manager = CG.client_controller.services_manager
     
     service_types_in_order = [ HC.LOCAL_FILE_DOMAIN ]
     
-    if not only_local_file_domains_allowed:
+    if not only_importable_domains_allowed:
         
         advanced_mode = CG.client_controller.new_options.GetBoolean( 'advanced_mode' )
         
@@ -62,15 +62,21 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_lo
             
             service_types_in_order.append( HC.COMBINED_LOCAL_FILE )
             
-            service_types_in_order.append( HC.COMBINED_DELETED_FILE )
-            
         
-        service_types_in_order.append( HC.FILE_REPOSITORY )
-        service_types_in_order.append( HC.IPFS )
-        
-        if all_known_files_allowed:
+        if not only_local_file_domains_allowed:
             
-            service_types_in_order.append( HC.COMBINED_FILE )
+            if advanced_mode:
+                
+                service_types_in_order.append( HC.COMBINED_DELETED_FILE )
+                
+            
+            service_types_in_order.append( HC.FILE_REPOSITORY )
+            service_types_in_order.append( HC.IPFS )
+            
+            if all_known_files_allowed:
+                
+                service_types_in_order.append( HC.COMBINED_FILE )
+                
             
         
     
@@ -81,7 +87,7 @@ def GetPossibleFileDomainServicesInOrder( all_known_files_allowed: bool, only_lo
 
 def SortFileServiceKeysNicely( list_of_service_keys ):
     
-    services_in_nice_order = GetPossibleFileDomainServicesInOrder( False, False )
+    services_in_nice_order = GetPossibleFileDomainServicesInOrder( False, False, False )
     
     service_keys_in_nice_order = [ service.GetServiceKey() for service in services_in_nice_order ]
     

@@ -58,8 +58,6 @@ class TestServer( unittest.TestCase ):
         cls._clientside_tag_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVICE_PORT, cls._access_key ) )
         cls._clientside_admin_service.SetCredentials( HydrusNetwork.Credentials( '127.0.0.1', HC.DEFAULT_SERVER_ADMIN_PORT, cls._access_key ) )
         
-        cls._local_booru = ClientServices.GenerateService( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' )
-        
         services_manager = HG.test_controller.services_manager
         
         services_manager._keys_to_services[ cls._clientside_file_service.GetServiceKey() ] = cls._clientside_file_service
@@ -94,8 +92,6 @@ class TestServer( unittest.TestCase ):
             reactor.listenSSL( HC.DEFAULT_SERVER_ADMIN_PORT, ServerServer.HydrusServiceAdmin( cls._serverside_admin_service ), context_factory )
             reactor.listenSSL( HC.DEFAULT_SERVICE_PORT + 1, ServerServer.HydrusServiceRepositoryFile( cls._serverside_file_service ), context_factory )
             reactor.listenSSL( HC.DEFAULT_SERVICE_PORT, ServerServer.HydrusServiceRepositoryTag( cls._serverside_tag_service ), context_factory )
-            
-            reactor.listenTCP( 45866, ClientLocalServer.HydrusServiceBooru( cls._local_booru, allow_non_local_connections = False ) )
             
         
         reactor.callFromThread( TWISTEDSetup )
@@ -243,144 +239,6 @@ class TestServer( unittest.TestCase ):
         
         try: os.remove( path )
         except: pass
-        
-    
-    def _test_local_booru( self, host, port ):
-        
-        #
-        
-        connection = http.client.HTTPConnection( host, port, timeout = 10 )
-        
-        #
-        
-        with open( os.path.join( HC.STATIC_DIR, 'local_booru_style.css' ), 'rb' ) as f:
-            
-            css = f.read()
-            
-        
-        connection.request( 'GET', '/style.css' )
-        
-        response = connection.getresponse()
-        
-        data = response.read()
-        
-        self.assertEqual( data, css )
-        
-        #
-        
-        share_key = HydrusData.GenerateKey()
-        hashes = [ HydrusData.GenerateKey() for i in range( 5 ) ]
-        
-        client_files_default = os.path.join( TestController.DB_DIR, 'client_files' )
-        
-        hash_encoded = hashes[0].hex()
-        
-        prefix = hash_encoded[:2]
-        
-        file_path =  os.path.join( client_files_default, 'f' + prefix, hash_encoded + '.jpg' )
-        thumbnail_path = os.path.join( client_files_default, 't' + prefix, hash_encoded + '.thumbnail' )
-        
-        with open( file_path, 'wb' ) as f:
-            
-            f.write( EXAMPLE_FILE )
-            
-        
-        with open( thumbnail_path, 'wb' ) as f:
-            
-            f.write( EXAMPLE_THUMBNAIL )
-            
-        
-        local_booru_manager = CG.client_controller.local_booru_manager
-        
-        #
-        
-        self._test_local_booru_requests( connection, share_key, hashes[0], 404 )
-        
-        #
-        
-        info = {
-            'name' : 'name',
-            'text' : 'text',
-            'timeout' : 0,
-            'hashes' : hashes
-        }
-        
-        media_results = []
-        
-        for hash in hashes:
-            
-            file_info_manager = ClientMediaManagers.FileInfoManager( 1, hash, 500, HC.IMAGE_JPEG, 640, 480 )
-            
-            times_manager = ClientMediaManagers.TimesManager()
-            
-            notes_manager = ClientMediaManagers.NotesManager( {} )
-            
-            file_viewing_stats_manager = ClientMediaManagers.FileViewingStatsManager.STATICGenerateEmptyManager( times_manager )
-            
-            media_result = ClientMediaResult.MediaResult(
-                file_info_manager,
-                ClientMediaManagers.TagsManager( {}, {} ),
-                times_manager,
-                ClientMediaManagers.LocationsManager( set(), set(), set(), set(), times_manager ),
-                ClientMediaManagers.RatingsManager( {} ),
-                notes_manager,
-                file_viewing_stats_manager
-            )
-            
-            media_results.append( media_result )
-            
-        
-        HG.test_controller.SetRead( 'local_booru_share_keys', [ share_key ] )
-        HG.test_controller.SetRead( 'local_booru_share', info )
-        HG.test_controller.SetRead( 'media_results', media_results )
-        
-        local_booru_manager.RefreshShares()
-        
-        #
-        
-        self._test_local_booru_requests( connection, share_key, hashes[0], 404 )
-        
-        #
-        
-        info[ 'timeout' ] = None
-        HG.test_controller.SetRead( 'local_booru_share', info )
-        
-        local_booru_manager.RefreshShares()
-        
-        #
-        
-        self._test_local_booru_requests( connection, share_key, hashes[0], 200 )
-        
-        #
-        
-        HG.test_controller.SetRead( 'local_booru_share_keys', [] )
-        
-        local_booru_manager.RefreshShares()
-        
-        #
-        
-        self._test_local_booru_requests( connection, share_key, hashes[0], 404 )
-        
-    
-    def _test_local_booru_requests( self, connection, share_key, hash, expected_result ):
-        
-        requests = []
-        
-        requests.append( '/gallery?share_key=' + share_key.hex() )
-        requests.append( '/page?share_key=' + share_key.hex() + '&hash=' + hash.hex() )
-        requests.append( '/file?share_key=' + share_key.hex() + '&hash=' + hash.hex() )
-        requests.append( '/thumbnail?share_key=' + share_key.hex() + '&hash=' + hash.hex() )
-        
-        for request in requests:
-            
-            connection.request( 'GET', request )
-            
-            response = connection.getresponse()
-            
-            data = response.read()
-            
-            self.assertEqual( response.status, expected_result )
-            
         
     
     def _test_repo( self, service ):
@@ -687,15 +545,6 @@ class TestServer( unittest.TestCase ):
         self._test_basics( host, port )
         self._test_restricted( self._clientside_admin_service )
         self._test_server_admin( self._clientside_admin_service )
-        
-    
-    def test_local_booru( self ):
-        
-        host = '127.0.0.1'
-        port = 45866
-        
-        self._test_basics( host, port, https = False )
-        self._test_local_booru( host, port )
         
     
     '''

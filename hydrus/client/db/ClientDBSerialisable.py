@@ -206,18 +206,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             
         else:
             
-            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.hex()
-            
             self._Execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
-            
-        
-        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
-            
-            service_id = self.modules_services.GetServiceId( CC.LOCAL_BOORU_SERVICE_KEY )
-            
-            self._Execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
-            
-            CG.client_controller.pub( 'refresh_local_booru_shares' )
             
         
     
@@ -929,15 +918,6 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             HydrusData.Print( ( dump_type, dump_name, data ) )
             
             raise
-            
-        
-        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
-            
-            service_id = self.modules_services.GetServiceId( CC.LOCAL_BOORU_SERVICE_KEY )
-            
-            self._Execute( 'DELETE FROM service_info WHERE service_id = ? AND info_type = ?;', ( service_id, HC.SERVICE_INFO_NUM_SHARES ) )
-            
-            CG.client_controller.pub( 'refresh_local_booru_shares' )
             
         
     

@@ -54,5 +54,4 @@ If you would like to try hydrus, I _**strongly**_ recommend you check out the **
 [![](images/screenshot_gunnerkrigg_collect_thumb.png)](images/screenshot_gunnerkrigg_collect.png "Files can be sorted and collected by their tags.") 
 [![](images/screenshot_fullscreen_blame_thumb.png)](images/screenshot_fullscreen_blame.png "The media viewer can work as a resizable window or completely fullscreen. It is clean and fast.") 
 [![](images/screenshot_video_thumb.png)](images/screenshot_video.png "Many file formats are supported.") 
-[![](images/screenshot_booru_thumb.png)](images/screenshot_booru.png "You can run your own (simple!) booru") 
 [![](images/screenshot_advanced_autocomplete_thumb.png)](images/screenshot_advanced_autocomplete.png "The client can get complicated if you want it to. This screenshot shows a tag sibling, where one tag is immediately swapped with another, and a non-local search, where results that are known but not on the computer are shown.")

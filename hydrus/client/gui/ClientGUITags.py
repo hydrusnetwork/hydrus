@@ -2670,6 +2670,8 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._add_tag_box.nullEntered.connect( self.OK )
             
+            self._tags_box.tagsChanged.connect( self._add_tag_box.SetContextTags )
+            
             self._tags_box.SetTagServiceKey( self._tag_service_key )
             
             self._suggested_tags = ClientGUITagSuggestions.SuggestedTagsPanel( self, self._tag_service_key, self._tag_presentation_location, len( media ) == 1, self.AddTags )
@@ -3512,12 +3514,12 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             self._pursue_whole_chain.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             # leave up here since other things have updates based on them
-            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
-            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+            self._children = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
+            self._parents = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 6, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_parents )
             
@@ -3556,6 +3558,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, default_location_context, service_key, show_paste_button = True )
             self._parent_input.setEnabled( False )
+            
+            self._children.tagsChanged.connect( self._child_input.SetContextTags )
+            self._parents.tagsChanged.connect( self._parent_input.SetContextTags )
             
             #
             
@@ -4451,7 +4456,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    s = '\n' * 2
+                    s = '\n'
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
                     
                 
@@ -4669,12 +4674,12 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             self._show_all = QW.QCheckBox( self )
             
             # leave up here since other things have updates based on them
-            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL )
+            self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
             self._new_sibling = ClientGUICommon.BetterStaticText( self )
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 8, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 6, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_siblings )
             
@@ -4712,6 +4717,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, default_location_context, service_key )
             self._new_input.setEnabled( False )
+            
+            self._old_siblings.tagsChanged.connect( self._old_input.SetContextTags )
             
             #
             
@@ -5836,7 +5843,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    s = '\n' * 2
+                    s = '\n'
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
                     
                 

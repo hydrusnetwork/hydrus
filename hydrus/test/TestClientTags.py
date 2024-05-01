@@ -2046,6 +2046,8 @@ class TestTagObjects( unittest.TestCase ):
             ( 'system:duration: has duration', "system:has_duration" ),
             ( 'system:duration: no duration', "   system:no_duration" ),
             ( 'system:duration: no duration', "system:no duration" ),
+            ( 'system:duration: has duration', "system:duration: has duration" ),
+            ( 'system:duration: no duration', "system:duration: no duration" ),
             ( 'system:is the best quality file of its duplicate group', "system:is the best quality file  of its group" ),
             ( 'system:is not the best quality file of its duplicate group', "system:isn't the best quality file of its duplicate group" ),
             ( 'system:is not the best quality file of its duplicate group', 'system:is not the best quality file of its duplicate group' ),

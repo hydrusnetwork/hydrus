@@ -120,7 +120,7 @@ goto :parse_fail
 :question_qt_advanced
 
 ECHO:
-ECHO If you have multi-monitor menu position bugs with the normal Qt6, try "o" on Python ^<=3.10 or "m" on Python ^>=3.11.
+ECHO If you have multi-monitor menu position bugs with the normal Qt6, try "o" on Python 3.9 or "m" on Python 3.10.
 SET /P qt="Do you want Qt6 (o)lder, Qt6 (m)iddle, Qt6 (t)est, or (w)rite your own? "
 
 IF "%qt%" == "o" goto :question_mpv
@@ -132,8 +132,12 @@ goto :parse_fail
 :question_qt_custom
 
 ECHO:
-SET /P qt_custom_pyside6="Enter the exact PySide6 version you want, e.g. '6.6.0': "
-SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.1'): "
+ECHO Enter the exact PySide6 version you want, e.g. '6.6.0':
+ECHO - For Python 3.10, your earliest available version is 6.2.0
+ECHO - For Python 3.11, your earliest available version is 6.4.0.1
+ECHO - For Python 3.12, your earliest available version is 6.6.0
+SET /P qt_custom_pyside6="Version: "
+SET /P qt_custom_qtpy="Enter the exact qtpy version you want (probably '2.4.1'; if older try '2.3.1'): "
 
 goto :question_mpv
 

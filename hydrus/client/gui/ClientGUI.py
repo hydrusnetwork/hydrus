@@ -991,7 +991,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         text += '\n' * 2
         text += 'Over the coming weeks, your client will download updates and then process them into your database in idle time, and the PTR\'s tags will increasingly appear across your files. If you decide to upload tags, it is just a couple of clicks (under services->manage services again) to generate your own account that has permission to do so.'
         text += '\n' * 2
-        text += 'Be aware that the PTR has been growing since 2011 and now has more than a billion mappings. As of 2021-06, it requires about 6GB of bandwidth and file storage, and your database itself will grow by 50GB! Processing also takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work in reasonable time if your hydrus database is on an SSD.'
+        text += 'Be aware that the PTR has been growing since 2011 and now has more than two billion mappings. As of 2021-06, it requires about 6GB of bandwidth and file storage, and your database itself will grow by 50GB! Processing also takes a lot of CPU and HDD work, and, due to the unavoidable mechanical latency of HDDs, will only work if your hydrus database (the .db files, normally in install_dir/db) is on an SSD.'
         text += '\n' * 2
         text += '++++If you are on a mechanical HDD or will not be able to free up enough space on your SSD, cancel out now.++++'
         
