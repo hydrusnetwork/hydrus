@@ -13,6 +13,10 @@ DOCX_XPATH = ".//{*}Override[@PartName='/word/document.xml'][@ContentType='appli
 XLSX_XPATH = ".//{*}Override[@PartName='/xl/workbook.xml'][@ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml']"
 PPTX_XPATH = ".//{*}Override[@PartName='/ppt/presentation.xml'][@ContentType='application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml']"
 
+DOCX_XPATH_DEFAULT = ".//{*}Default[@Extension='xml'][@ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml']"
+XLSX_XPATH_DEFAULT = ".//{*}Default[@Extension='xml'][@ContentType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml']"
+PPTX_XPATH_DEFAULT = ".//{*}Default[@Extension='xml'][@ContentType='application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml']"
+
 def MimeFromMicrosoftOpenXMLDocument(path: str):
     
     try:
@@ -30,6 +34,18 @@ def MimeFromMicrosoftOpenXMLDocument(path: str):
             return HC.APPLICATION_XLSX
             
         elif root.find(PPTX_XPATH) is not None:
+            
+            return HC.APPLICATION_PPTX
+        
+        if root.find(DOCX_XPATH_DEFAULT) is not None:
+            
+            return HC.APPLICATION_DOCX
+            
+        elif root.find(XLSX_XPATH_DEFAULT) is not None:
+            
+            return HC.APPLICATION_XLSX
+            
+        elif root.find(PPTX_XPATH_DEFAULT) is not None:
             
             return HC.APPLICATION_PPTX
             
