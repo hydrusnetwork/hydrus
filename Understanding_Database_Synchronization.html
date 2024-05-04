@@ -16,7 +16,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.20">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.21">
     
     
       
@@ -2060,18 +2060,18 @@
 <li>This is a tutorial for advanced users who have read and understood this document and the risk/recovery procedure.</li>
 <li>It is nearly always safe to use <code>--db_synchronous_override=1</code> on any modern filesystem and this is the default.</li>
 <li>It is always more expensive to access the disk than doing things in memory. SSDs are 10-100x as slow as memory, and HDDs are 1000-10000x as slow as memory.</li>
-<li>If you turn synchronization to <code>0</code> you are gambling, but it is a safe gamble if you have a backup and <strong>know exactly</strong> what you are doing</li>
+<li>If you turn synchronization to <code>0</code> you are gambling, but it is a safe gamble if you have a backup and <strong>know exactly</strong> what you are doing.</li>
 <li>After running with synchronization set to zero you must either:</li>
 <li>Exit hydrus normally and let the OS flush disk caches (either by letting the system run/"idle" for a while, running <code>sync</code> on *NIX systems, or normal shutdown), or</li>
 <li>Restore the sqlite database files backup if <strong>the OS shutdown abnormally</strong>.</li>
-<li>Because of the potential for a lot of outstanding writes when using <code>synchronous=0</code>, other I/O on your system will slow down as the pending writes are interleaved.  Normal shutdown may also take abnormally long because the system is flushing these pending writes, but you must allow it to take its time as explained in the section below.</li>
+<li>Because of the potential for a lot of outstanding writes when using <code>synchronous=0</code>, other I/O on your system will slow down as the pending writes are interleaved.  Normal shutdown may also take abnormally long because the system is syncing these pending writes, but you must allow it to take its time as explained in the section below.</li>
 </ul>
 <p><strong>Note:</strong> In historical versions of hydrus (<code>synchronous=2</code>), performance was terrible because hydrus would agressively (it was arguably somewhat paranoid) write changes to disk.</p>
 <h2 id="the_secret_sauce">The Secret Sauce<a class="headerlink" href="#the_secret_sauce" title="Permanent link">&para;</a></h2>
 <p>Setting the synchronous to 0 lets the database engine defer writing to disk as long as physically possible.  In the normal operation of your system, files are constantly being partially transfered to disk, even if the OS pretends they have been fully written to disk.  This is called write cache and it is really important to use it or your system's performance would be terrible.  The caveat is that until you have "<code>synced</code>" the disk cache, the changes to files are not actually in permanent storage.  One purpose of a normal shutdown of the operating system is to make sure all disk caches have been flushed and synced.  A program can also request that a file it has just written to be flushed or synced, and it will wait until that is done before continuing.</p>
 <p>When not in synchronous 0 mode, the database engine syncs at regular intervals to make sure data has been written.<br />
 - Setting synchronous to 0 is generally safe <strong>if and only if</strong> the system also shuts down normally, allowing any of these pending writes to be flushed.
-- The database can back out of partial changes if hydrus crashes <strong>even if</strong> <code>synchronous=0</code>, so your database will not go corrupt from hydrus shutting down abnormally, only from the system shutting down abnormally.</p>
+- The database can back out of partial changes if hydrus crashes <strong>even if</strong> <code>synchronous=0</code>, so <strong>your database will not go corrupt from hydrus shutting down abnormally</strong>, <strong>only from the system shutting down abnormally</strong>.</p>
 <h2 id="technical_explanation">Technical Explanation<a class="headerlink" href="#technical_explanation" title="Permanent link">&para;</a></h2>
 <p>Programmers are responsible for handling partially written files, but this is tedious for large complex data, so they use a database engine which handles all of this.  The database ensures that any partially written data is reversible to a known state (called a rollback).</p>
 <p>An existing file may be in 3 possible states:</p>
@@ -2080,8 +2080,8 @@
 <li><strong>Flushed</strong>: Pending write to permenant storage but memory has been transfered to the operating system. Data will not be lost if the calling program crashes, since the OS promises it will "eventually" arrive on disk before returning from <code>fflush()</code>. When you "safely shutdown:, you are instructing the OS among other things to sync the flushed files.  If someone decides to read a file before it has been synced the OS will read the contents up until the flush from the flush buffer, and return that instead of what is actually on disk.  If the OS crashes due to error or power failure, data that are flushed but not synced will be lost.</li>
 <li><strong>Synced</strong>: Written to permenant storage. A programmer may request that the contents of the file be synced, or it is done gradually over time to free the OS buffers</li>
 </ul>
-<p>To ensure the consistency of the database and rollback when needed, the database engine keeps a <strong>journal</strong> of what it is doing.  Each transaction ends in a <code>flush</code> followed by a <code>sync</code>.  The <em>flush</em> ensures that everything written before the flush will occur before the line that indicats the transaction completed.  The <em>sync</em> ensures that the entire contents of the transaction has been written to permenant storage before proceeding. The OS is not obligated to write chunks of the database file in the order it recieves them.  It only guarantees that if you flush everything before the flush happens first, and everything after happens next.</p>
-<p>The sync is what is controlled by the <code>synchronous</code> switch.  Allowing the database to ignore whether sync actually completes is the magic that makes <code>synchronous=0</code> so dang fast.</p>
+<p>To ensure the consistency of the database and rollback when needed, the database engine keeps a <strong>journal</strong> of what it is doing.  Each transaction ends in a <code>flush</code> which may be followed by a <code>sync</code>. In <code>synchronous=2</code> there is a sync after EVERY <code>COMMIT</code>, for <code>synchronous=1</code> it depends on the journal mode, often enough to maintian consistanc, but not after every commit.  The <strong>flush</strong> ensures that everything written before the flush will occur before the line that indicates the transaction completed.  The <strong>sync</strong> ensures that the entire contents of the transaction has been written to permenant storage before proceeding. The OS is not obligated to write chunks of the database file in the order it recieves them.  It only guarantees that if you flush, everything submitted before the flush happens first, and everything submitted after the flush happens next.</p>
+<p>The <strong>sync</strong> is what is controlled by the <code>synchronous</code> switch.  Allowing the database to ignore whether sync actually completes is the magic that makes <code>synchronous=0</code> so dang fast.</p>
 <h3 id="an_example_journal">An example journal<a class="headerlink" href="#an_example_journal" title="Permanent link">&para;</a></h3>
 <ol>
 <li>Begin Transaction 1</li>
@@ -2100,7 +2100,7 @@
 <p>When the database resumes it will start scanning the journal at step 1.  Since it will reach the end without seeing <code>End Transaction 1</code> it knows that data was only partialy written, and can put the data back in the state before transaction 1 began.  This property of a database is called <strong>atomicity</strong> in the sense that something <strong>atomic</strong> is "indivisible"; either all of the steps in transaction 1 occur or non of them occur.</p>
 <p>Hydrus is structured in such a way that the database is written to to keep track of your file catalog only once the file has been fully imported and moved where it is supposed to be.  Thus every action hydrus takes is kept "atomic" or "repeatable" (redo existing work that was partway through).  If hydrus crashes in the middle of importing a file, then when it resumes, as far as it is aware, it didn't even start importing the file.  It will repeat the steps from the start until the file catalog is "consistent" with what is on disk.</p>
 <h3 id="where_synchronization_comes_in">Where synchronization comes in<a class="headerlink" href="#where_synchronization_comes_in" title="Permanent link">&para;</a></h3>
-<p>Lets revisit the journal, this time with two transactions.  Note that the database is syncing on step 8 and thus will have to wait for the OS to write to disk before proceeding, holding up transaction 2, and any other access to the database.</p>
+<p>Let's revisit the journal, this time with two transactions.  Note that the database is syncing on step 8 and thus will have to wait for the OS to write to disk before proceeding, holding up transaction 2, and any other access to the database.</p>
 <ol>
 <li>Begin Transaction 1</li>
 <li>Write Change 1</li>
@@ -2119,28 +2119,32 @@
 <li>End Transaction 2</li>
 <li>SYNC</li>
 </ol>
-<p><strong>What happens if we remove step 6 and 8 and then die at step 11?</strong></p>
+<p><strong>What happens if we remove step 8 and then die at step 11?</strong></p>
 <ol>
 <li>Begin Transaction 1</li>
 <li>Write Change 1</li>
 <li>Write Change 2</li>
 <li>Read data</li>
 <li>Write Change 3</li>
-<li><del>FLUSH</del></li>
+<li>FLUSH</li>
 <li>End Transaction 1</li>
 <li><del>SYNC</del></li>
 <li>Begin Transaction 2</li>
 <li>Write Change 2</li>
 <li>Write Ch</li>
 </ol>
-<p>What if we crash and step, <code>End Transaction</code> has not been written to disk.  Now not only do we need to repeat transaction 2, we also need to repeat transaction 1.  Note that <strong>this just increaeses the ammount of repeatable work, and actually is fully recoverable</strong> (assuming a file you were downloading didn't cease to exist in the interim).</p>
+<p>What if we crash , <code>End Transaction 1</code> possibly has not been written to disk.  Now not only do we need to repeat transaction 2, we also need to repeat transaction 1.  Note that <strong>this just increases the ammount of repeatable work, and actually is fully recoverable</strong> (assuming a file you were downloading didn't cease to exist in the interim).</p>
 <p><strong>Now what happens if we do the above and the OS crashes?</strong>
-The OS is not obligated to write chunks of the database file in the order you give them to it, in fact for harddrives it is optimal to scatter chunks of the file around the spinning disks so it might arbitrarily reorder your write calls.  </p>
-<ul>
-<li>The only way you can be certain that all of the changes in the transaction have been written before writing <code>END Transaction</code> is to <code>flush()</code></li>
-<li>The only way you can be sure <code>END Transaction</code> was written before doing more changes is to <code>sync()</code>.</li>
-</ul>
-<p>Thus if the OS crashes at the exact wrong moment, there is no way to be sure that the journal is correct if flushing was skipped (<code>synchronous=0</code>).  <strong>This means there is no way for you to determine whether the database file is correct after a system crash if you had synchronous 0, and you MUST restore your files from backup as this will be the ONLY WAY to know they are in a known good state.</strong></p>
+As written we are actually glossing over a number of steps that happen in step 8. Actually the database must make a few syncs to be sure the database is reversible.  The steps are roughly speaking</p>
+<ol>
+<li>Write and sync rollback</li>
+<li>Update database file with changes</li>
+<li>Sync database file</li>
+<li>Remove rollback/update WAL checkpoint</li>
+</ol>
+<p>If sqlite crashes, but the OS doesn't that's fine all of this in flight data is in the OS write buffer and the OS will pretend as if it is on disc.  But what if We haven't even finished creating a rollback for the changes made in step 1 and step 2 starts partially changing the database file?  Then bam power failure.  We now can't revert the database because we don't have a complete rollback, but we also can't move forward in time either because we don't have a marker showing the completion of transaction 2.  So we are stuck in the middle of an incomplete transaction, and have lost the data necessary to leave either end.</p>
+<p>See also: https://www.sqlite.org/atomiccommit.html#section_6_2</p>
+<p>Thus if the OS crashes at the exact wrong moment, there is no way to be sure that the journal is correct if syncing was skipped (<code>synchronous=0</code>).  <strong>This means there is no way for you to determine whether the database file is correct after a system crash if you had synchronous 0, and you MUST restore your files from backup as this will be the ONLY WAY to know they are in a known good state.</strong></p>
 <p>So, setting <code>synchronous=0</code> gets you a pretty huge speed boost, but you are gambling that everything goes perfectly and will pay the price of a manual restore every time it doesn't.</p>
 
 
@@ -2162,7 +2166,7 @@ The OS is not obligated to write chunks of the database file in the order you gi
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">March 13, 2022</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">May 4, 2024</span>
   </span>
 
     
@@ -2287,7 +2291,7 @@ The OS is not obligated to write chunks of the database file in the order you gi
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.dd8806f2.min.js"></script>
+      <script src="assets/javascripts/bundle.a7c05c9e.min.js"></script>
       
     
   </body>
