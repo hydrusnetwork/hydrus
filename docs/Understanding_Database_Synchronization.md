@@ -7,11 +7,11 @@ Tuning your database synchronization using the `--db_synchronous_override=0` lau
 - This is a tutorial for advanced users who have read and understood this document and the risk/recovery procedure.
 - It is nearly always safe to use `--db_synchronous_override=1` on any modern filesystem and this is the default.
 - It is always more expensive to access the disk than doing things in memory. SSDs are 10-100x as slow as memory, and HDDs are 1000-10000x as slow as memory.
-- If you turn synchronization to `0` you are gambling, but it is a safe gamble if you have a backup and **know exactly** what you are doing
+- If you turn synchronization to `0` you are gambling, but it is a safe gamble if you have a backup and **know exactly** what you are doing.
 - After running with synchronization set to zero you must either:
    - Exit hydrus normally and let the OS flush disk caches (either by letting the system run/"idle" for a while, running `sync` on *NIX systems, or normal shutdown), or
    - Restore the sqlite database files backup if **the OS shutdown abnormally**.
-- Because of the potential for a lot of outstanding writes when using `synchronous=0`, other I/O on your system will slow down as the pending writes are interleaved.  Normal shutdown may also take abnormally long because the system is flushing these pending writes, but you must allow it to take its time as explained in the section below.
+- Because of the potential for a lot of outstanding writes when using `synchronous=0`, other I/O on your system will slow down as the pending writes are interleaved.  Normal shutdown may also take abnormally long because the system is syncing these pending writes, but you must allow it to take its time as explained in the section below.
 
 **Note:** In historical versions of hydrus (`synchronous=2`), performance was terrible because hydrus would agressively (it was arguably somewhat paranoid) write changes to disk.
 
@@ -21,7 +21,7 @@ Setting the synchronous to 0 lets the database engine defer writing to disk as l
 
 When not in synchronous 0 mode, the database engine syncs at regular intervals to make sure data has been written.  
 - Setting synchronous to 0 is generally safe **if and only if** the system also shuts down normally, allowing any of these pending writes to be flushed.
-- The database can back out of partial changes if hydrus crashes **even if** `synchronous=0`, so your database will not go corrupt from hydrus shutting down abnormally, only from the system shutting down abnormally.
+- The database can back out of partial changes if hydrus crashes **even if** `synchronous=0`, so **your database will not go corrupt from hydrus shutting down abnormally**, **only from the system shutting down abnormally**.
 
 ## Technical Explanation
 
@@ -33,9 +33,9 @@ An existing file may be in 3 possible states:
 - **Flushed**: Pending write to permenant storage but memory has been transfered to the operating system. Data will not be lost if the calling program crashes, since the OS promises it will "eventually" arrive on disk before returning from `fflush()`. When you "safely shutdown:, you are instructing the OS among other things to sync the flushed files.  If someone decides to read a file before it has been synced the OS will read the contents up until the flush from the flush buffer, and return that instead of what is actually on disk.  If the OS crashes due to error or power failure, data that are flushed but not synced will be lost.
 - **Synced**: Written to permenant storage. A programmer may request that the contents of the file be synced, or it is done gradually over time to free the OS buffers
 
-To ensure the consistency of the database and rollback when needed, the database engine keeps a **journal** of what it is doing.  Each transaction ends in a `flush` followed by a `sync`.  The *flush* ensures that everything written before the flush will occur before the line that indicats the transaction completed.  The *sync* ensures that the entire contents of the transaction has been written to permenant storage before proceeding. The OS is not obligated to write chunks of the database file in the order it recieves them.  It only guarantees that if you flush everything before the flush happens first, and everything after happens next.
+To ensure the consistency of the database and rollback when needed, the database engine keeps a **journal** of what it is doing.  Each transaction ends in a `flush` which may be followed by a `sync`. In `synchronous=2` there is a sync after EVERY `COMMIT`, for `synchronous=1` it depends on the journal mode, often enough to maintian consistanc, but not after every commit.  The **flush** ensures that everything written before the flush will occur before the line that indicates the transaction completed.  The **sync** ensures that the entire contents of the transaction has been written to permenant storage before proceeding. The OS is not obligated to write chunks of the database file in the order it recieves them.  It only guarantees that if you flush, everything submitted before the flush happens first, and everything submitted after the flush happens next.
 
-The sync is what is controlled by the `synchronous` switch.  Allowing the database to ignore whether sync actually completes is the magic that makes `synchronous=0` so dang fast.
+The **sync** is what is controlled by the `synchronous` switch.  Allowing the database to ignore whether sync actually completes is the magic that makes `synchronous=0` so dang fast.
 
 ### An example journal
 
@@ -58,7 +58,7 @@ Hydrus is structured in such a way that the database is written to to keep track
 
 ### Where synchronization comes in
 
-Lets revisit the journal, this time with two transactions.  Note that the database is syncing on step 8 and thus will have to wait for the OS to write to disk before proceeding, holding up transaction 2, and any other access to the database.
+Let's revisit the journal, this time with two transactions.  Note that the database is syncing on step 8 and thus will have to wait for the OS to write to disk before proceeding, holding up transaction 2, and any other access to the database.
 
 1. Begin Transaction 1
 2. Write Change 1
@@ -77,28 +77,34 @@ Lets revisit the journal, this time with two transactions.  Note that the databa
 15. End Transaction 2
 16. SYNC
 
-**What happens if we remove step 6 and 8 and then die at step 11?**
+**What happens if we remove step 8 and then die at step 11?**
 
 1. Begin Transaction 1
 2. Write Change 1
 3. Write Change 2
 4. Read data
 5. Write Change 3
-6. ~~FLUSH~~
+6. FLUSH
 7. End Transaction 1
 8. ~~SYNC~~
 9. Begin Transaction 2
 10. Write Change 2
 11. Write Ch
 
-What if we crash and step, `End Transaction` has not been written to disk.  Now not only do we need to repeat transaction 2, we also need to repeat transaction 1.  Note that **this just increaeses the ammount of repeatable work, and actually is fully recoverable** (assuming a file you were downloading didn't cease to exist in the interim).
+What if we crash , `End Transaction 1` possibly has not been written to disk.  Now not only do we need to repeat transaction 2, we also need to repeat transaction 1.  Note that **this just increases the ammount of repeatable work, and actually is fully recoverable** (assuming a file you were downloading didn't cease to exist in the interim).
 
 **Now what happens if we do the above and the OS crashes?**
-The OS is not obligated to write chunks of the database file in the order you give them to it, in fact for harddrives it is optimal to scatter chunks of the file around the spinning disks so it might arbitrarily reorder your write calls.  
+As written we are actually glossing over a number of steps that happen in step 8. Actually the database must make a few syncs to be sure the database is reversible.  The steps are roughly speaking
 
-- The only way you can be certain that all of the changes in the transaction have been written before writing `END Transaction` is to `flush()`
-- The only way you can be sure `END Transaction` was written before doing more changes is to `sync()`.
+1. Write and sync rollback
+2. Update database file with changes
+3. Sync database file
+4. Remove rollback/update WAL checkpoint
 
-Thus if the OS crashes at the exact wrong moment, there is no way to be sure that the journal is correct if flushing was skipped (`synchronous=0`).  **This means there is no way for you to determine whether the database file is correct after a system crash if you had synchronous 0, and you MUST restore your files from backup as this will be the ONLY WAY to know they are in a known good state.**
+If sqlite crashes, but the OS doesn't that's fine all of this in flight data is in the OS write buffer and the OS will pretend as if it is on disc.  But what if We haven't even finished creating a rollback for the changes made in step 1 and step 2 starts partially changing the database file?  Then bam power failure.  We now can't revert the database because we don't have a complete rollback, but we also can't move forward in time either because we don't have a marker showing the completion of transaction 2.  So we are stuck in the middle of an incomplete transaction, and have lost the data necessary to leave either end.
+
+See also: https://www.sqlite.org/atomiccommit.html#section_6_2
+
+Thus if the OS crashes at the exact wrong moment, there is no way to be sure that the journal is correct if syncing was skipped (`synchronous=0`).  **This means there is no way for you to determine whether the database file is correct after a system crash if you had synchronous 0, and you MUST restore your files from backup as this will be the ONLY WAY to know they are in a known good state.**
 
 So, setting `synchronous=0` gets you a pretty huge speed boost, but you are gambling that everything goes perfectly and will pay the price of a manual restore every time it doesn't.
