@@ -248,7 +248,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
     
     def _GetUPnPServices( self ):
         
-        return self.services_manager.GetServices( ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) )
+        return self.services_manager.GetServices( ( HC.CLIENT_API_SERVICE, ) )
         
     
     def _GetWakeDelayPeriodMS( self ):
@@ -967,6 +967,15 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         return self.new_options
         
     
+    def GetImportSensitiveDirectories( self ):
+        
+        dirs_that_allow_internal_work = [ HC.BASE_DIR, self.db_dir ]
+        
+        dirs_that_cannot_be_touched = self.client_files_manager.GetAllDirectoriesInUse()
+        
+        return ( dirs_that_allow_internal_work, dirs_that_cannot_be_touched )
+        
+    
     def InitClientFilesManager( self ):
         
         def qt_code( missing_subfolders ):
@@ -1004,6 +1013,15 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             missing_subfolders = self.CallBlockingToQt( self._splash, qt_code, missing_subfolders )
             
+        
+    
+    def ReinitGlobalSettings( self ):
+        
+        from hydrus.core.files.images import HydrusImageHandling
+        from hydrus.core.files.images import HydrusImageNormalisation
+        
+        HydrusImageHandling.SetEnableLoadTruncatedImages( self.new_options.GetBoolean( 'enable_truncated_images_pil' ) )
+        HydrusImageNormalisation.SetDoICCProfileNormalisation( self.new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
         
     
     def InitModel( self ):
@@ -1324,9 +1342,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.CallBlockingToQt( self._splash, qt_code_style )
         
-        from hydrus.core.files.images import HydrusImageHandling
-        
-        HydrusImageHandling.SetEnableLoadTruncatedImages( self.new_options.GetBoolean( 'enable_truncated_images_pil' ) )
+        self.ReinitGlobalSettings()
         
         def qt_code_pregui():
             
@@ -2068,7 +2084,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             previous_services = self.services_manager.GetServices()
             
-            upnp_services = [ service for service in services if service.GetServiceType() in ( HC.LOCAL_BOORU, HC.CLIENT_API_SERVICE ) ]
+            upnp_services = [ service for service in services if service.GetServiceType() in ( HC.CLIENT_API_SERVICE, ) ]
             
             self.CallToThreadLongRunning( self.services_upnp_manager.SetServices, upnp_services )
             

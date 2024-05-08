@@ -83,6 +83,8 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pre_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'pre-import checks' )
         
+        filetype_selector_panel = ClientGUICommon.StaticBox( pre_import_panel, 'allowed filetypes' )
+        
         self._exclude_deleted = QW.QCheckBox( pre_import_panel )
         
         tt = 'By default, the client will not try to reimport files that it knows were deleted before. This is a good setting and should be left on in general.'
@@ -131,13 +133,15 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimesTree( pre_import_panel, HC.ALLOWED_MIMES )
+        
+        #
+        
         self._allow_decompression_bombs = QW.QCheckBox( pre_import_panel )
         
         tt = 'This is an old setting, it basically just rejects all jpegs and pngs with more than a 1GB bitmap, or about 250-350 Megapixels. In can be useful if you have an older computer that will die at a 16,000x22,000 png.'
         
         self._allow_decompression_bombs.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-        
-        self._mimes = ClientGUIOptionsPanels.OptionsPanelMimesTree( pre_import_panel, HC.ALLOWED_MIMES )
         
         self._min_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel )
         self._min_size.SetValue( 5 * 1024 )
@@ -224,6 +228,12 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        filetype_selector_panel.Add( self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        pre_import_panel.Add( filetype_selector_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        #
+        
         rows = []
         
         rows.append( ( 'exclude previously deleted files: ', self._exclude_deleted ) )
@@ -241,7 +251,6 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             self._preimport_url_check_looks_for_neighbours.setVisible( False )
             
         
-        rows.append( ( 'allowed filetypes: ', self._mimes ) )
         rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
         rows.append( ( 'minimum filesize: ', self._min_size ) )
         rows.append( ( 'maximum filesize: ', self._max_size ) )
@@ -281,13 +290,13 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        presentation_static_box.Add( self._presentation_import_options_edit_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        presentation_static_box.Add( self._presentation_import_options_edit_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         #
         
         specific_vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( specific_vbox, pre_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( specific_vbox, pre_import_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( specific_vbox, destination_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, post_import_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( specific_vbox, presentation_static_box, CC.FLAGS_EXPAND_PERPENDICULAR )
@@ -301,9 +310,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, default_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        
-        vbox.addStretch( 1 )
+        QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         
@@ -929,18 +936,18 @@ class EditPresentationImportOptions( ClientGUIScrolledPanels.EditPanel ):
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, self._presentation_status, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._presentation_inbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( hbox, self._presentation_location, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( hbox, self._presentation_status, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._presentation_inbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._presentation_location, CC.FLAGS_CENTER_PERPENDICULAR )
         
         #
         
         QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
-        vbox.addStretch( 1 )
-        
         self.widget().setLayout( vbox )
+        
+        vbox.addStretch( 1 )
         
         #
         

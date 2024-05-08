@@ -2023,7 +2023,7 @@ class TestClientDB( unittest.TestCase ):
         
         #
         
-        NUM_DEFAULT_SERVICES = 14
+        NUM_DEFAULT_SERVICES = 13
         
         services = self._read( 'services' )
         

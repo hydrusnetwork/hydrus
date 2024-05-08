@@ -108,15 +108,15 @@ class DialogPageChooser( ClientGUIDialogs.Dialog ):
         
         gridbox = QP.GridLayout( cols = 3 )
         
-        QP.AddToLayout( gridbox, self._button_7 )
-        QP.AddToLayout( gridbox, self._button_8 )
-        QP.AddToLayout( gridbox, self._button_9 )
-        QP.AddToLayout( gridbox, self._button_4 )
-        QP.AddToLayout( gridbox, self._button_5 )
-        QP.AddToLayout( gridbox, self._button_6 )
-        QP.AddToLayout( gridbox, self._button_1 )
-        QP.AddToLayout( gridbox, self._button_2 )
-        QP.AddToLayout( gridbox, self._button_3 )
+        QP.AddToLayout( gridbox, self._button_7, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_8, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_9, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_4, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_5, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_6, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_1, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_2, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( gridbox, self._button_3, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( gridbox )
         

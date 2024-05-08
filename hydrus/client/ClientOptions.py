@@ -317,6 +317,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         self._dictionary[ 'booleans' ][ 'slideshow_always_play_duration_media_once_through' ] = False
         
         self._dictionary[ 'booleans' ][ 'enable_truncated_images_pil' ] = True
+        self._dictionary[ 'booleans' ][ 'do_icc_profile_normalisation' ] = True
         
         from hydrus.client.gui.canvas import ClientGUIMPV
         

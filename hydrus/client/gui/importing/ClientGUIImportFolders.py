@@ -476,9 +476,24 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             ClientGUIDialogsMessage.ShowWarning( self, f'The path you have entered--"{path}"--does not exist! The dialog will not force you to correct it, but this import folder will do no work as long as the location is missing!' )
             
         
-        if HC.BASE_DIR.startswith( path ) or CG.client_controller.GetDBDir().startswith( path ):
+        ( dirs_that_allow_internal_work, dirs_that_cannot_be_touched ) = CG.client_controller.GetImportSensitiveDirectories()
+        
+        sensitive_paths = list( dirs_that_allow_internal_work ) + list( dirs_that_cannot_be_touched )
+        
+        for sensitive_path in sensitive_paths:
             
-            raise HydrusExceptions.VetoException( 'You cannot set an import path that includes your install or database directory!' )
+            if sensitive_path.startswith( path ):
+                
+                raise HydrusExceptions.VetoException( f'You cannot set an import path that includes certain sensitive directories. The problem directory in this case was "{sensitive_path}". Please choose another location.' )
+                
+            
+            if sensitive_path not in dirs_that_allow_internal_work:
+                
+                if path.startswith( sensitive_path ):
+                    
+                    raise HydrusExceptions.VetoException( f'You cannot set an import path that is inside certain sensitive directories. The problem directory in this case was "{sensitive_path}". Please choose another location.' )
+                    
+                
             
         
         if self._action_successful.GetValue() == CC.IMPORT_FOLDER_MOVE:

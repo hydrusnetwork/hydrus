@@ -1274,6 +1274,7 @@ class PopupMessageManager( QW.QFrame ):
             
         
     
+
 # This was originally a reviewpanel subclass which is a scroll area subclass, but having it in a scroll area didn't work out with dynamically updating size as the widget contents change.
 class PopupMessageDialogPanel( QW.QWidget ):
     
@@ -1291,7 +1292,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._message_window )
+        QP.AddToLayout( vbox, self._message_window, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( vbox )
         

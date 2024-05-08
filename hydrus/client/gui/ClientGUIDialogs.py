@@ -401,7 +401,7 @@ class DialogInputTags( Dialog ):
             
         
         QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._tag_autocomplete )
+        QP.AddToLayout( vbox, self._tag_autocomplete, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )

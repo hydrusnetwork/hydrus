@@ -218,7 +218,6 @@ class Controller( object ):
         
         self._name_read_responses = {}
         
-        self._name_read_responses[ 'local_booru_share_keys' ] = []
         self._name_read_responses[ 'messaging_sessions' ] = []
         self._name_read_responses[ 'options' ] = ClientDefaults.GetClientDefaultOptions()
         self._name_read_responses[ 'file_system_predicates' ] = []
@@ -670,6 +669,11 @@ class Controller( object ):
         
     
     def JustWokeFromSleep( self ):
+        
+        return False
+        
+    
+    def LastShutdownWasBad( self ):
         
         return False
         

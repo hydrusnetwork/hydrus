@@ -33,6 +33,7 @@ from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files import HydrusPSDHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageHandling
+from hydrus.core.files.images import HydrusImageNormalisation
 from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -3233,8 +3234,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendSeparator( regen_submenu )
         
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'all deleted files' + HC.UNICODE_ELLIPSIS, 'Resynchronise the store of all known deleted files.', self._RegenerateCombinedDeletedFiles )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local hash cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local tag cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local hashes cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'local tags cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
         
         ClientGUIMenus.AppendSeparator( regen_submenu )
         
@@ -3480,7 +3481,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( memory_actions, 'run fast memory maintenance', 'Tell all the fast caches to maintain themselves.', self._controller.MaintainMemoryFast )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'run slow memory maintenance', 'Tell all the slow caches to maintain themselves.', self._controller.MaintainMemorySlow )
         ClientGUIMenus.AppendMenuItem( memory_actions, 'clear all rendering caches', 'Tell the image rendering system to forget all current images, tiles, and thumbs. This will often free up a bunch of memory immediately.', self._controller.ClearCaches )
-        ClientGUIMenus.AppendMenuItem( memory_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'reset_thumbnail_cache' )
+        ClientGUIMenus.AppendMenuItem( memory_actions, 'clear thumbnail cache', 'Tell the thumbnail cache to forget everything and redraw all current thumbs.', self._controller.pub, 'clear_thumbnail_cache' )
         
         if HydrusMemory.PYMPLER_OK:
             
@@ -4418,7 +4419,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._controller.pub( 'notify_new_colourset' )
         self._controller.pub( 'notify_new_favourite_tags' )
         
-        HydrusImageHandling.SetEnableLoadTruncatedImages( self._controller.new_options.GetBoolean( 'enable_truncated_images_pil' ) )
+        CG.client_controller.ReinitGlobalSettings()
         
         self._menu_item_help_darkmode.setChecked( CG.client_controller.new_options.GetString( 'current_colourset' ) == 'darkmode' )
         
@@ -5231,9 +5232,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _RegenerateLocalHashCache( self ):
         
-        message = 'This will delete and then recreate the local hash cache, which keeps a small record of hashes for files on your hard drive. It isn\'t super important, but it speeds most operations up, and this routine fixes it when broken.'
+        message = 'This will check and repair any bad rows in the local hashes cache, which keeps a small record of hashes for files on your hard drive. The cache isn\'t super important, but it speeds most operations up, and this routine fixes it when broken/desynced.'
         message += '\n' * 2
-        message += 'If you have a lot of files, it can take a long time, during which the gui may hang.'
+        message += 'If you have a lot of files, it can take a minute, during which the gui may hang.'
         message += '\n' * 2
         message += 'If you do not have a specific reason to run this, it is pointless.'
         
@@ -6681,7 +6682,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             HG.blurhash_mode = not HG.blurhash_mode
             
-            self._controller.pub( 'reset_thumbnail_cache' )
+            self._controller.pub( 'clear_thumbnail_cache' )
             
         elif name == 'cache_report_mode':
             

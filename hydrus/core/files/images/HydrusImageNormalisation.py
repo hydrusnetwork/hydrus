@@ -9,6 +9,7 @@ from PIL import ImageCms as PILImageCms
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageMetadata
 
@@ -19,6 +20,21 @@ try:
 except:
     
     PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
+    
+
+DO_ICC_PROFILE_NORMALISATION = True
+
+def SetDoICCProfileNormalisation( value: bool ):
+    
+    global DO_ICC_PROFILE_NORMALISATION
+    
+    if value != DO_ICC_PROFILE_NORMALISATION:
+        
+        DO_ICC_PROFILE_NORMALISATION = value
+        
+        HG.controller.pub( 'clear_image_cache' )
+        HG.controller.pub( 'clear_image_tile_cache' )
+        
     
 
 def NormaliseNumPyImageToUInt8( numpy_image: numpy.array ):
@@ -110,7 +126,7 @@ def DequantizeFreshlyLoadedNumPyImage( numpy_image: numpy.array ) -> numpy.array
 
 def DequantizePILImage( pil_image: PILImage.Image ) -> PILImage.Image:
     
-    if HydrusImageMetadata.HasICCProfile( pil_image ):
+    if HydrusImageMetadata.HasICCProfile( pil_image ) and DO_ICC_PROFILE_NORMALISATION:
         
         try:
             

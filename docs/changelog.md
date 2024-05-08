@@ -7,6 +7,37 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 574](https://github.com/hydrusnetwork/hydrus/releases/tag/v574)
+
+### local hashes cache
+
+* we finally figured out the 'update 404' issue that some PTR-syncing users were getting, where PTR processing would halt with an error about an update file not being available on the server. long story short, SQLite was sometimes crossing a wire in the database on a crash, and this week I add some new maintenance code to fix this and catch it in future
+* the local hash cache has a bunch of new resync/recovery code. it can now efficiently recover from missing hash_ids, excess hash_ids, desynced hash_ids, and even repopulate the master hash table if that guy has missing hash_ids (which can happen after severe db damage due to hard drive failure). it records all recovery info to the log
+* the normal _database-&gt;regenerate-&gt;local hashes cache_ function now works entirely in this new resync code, making it significantly faster (previously it just deleted and re-added everything). this job also gets a nicer popup with a summary of any problems found
+* when the client recovers from a bad shutdown, it now runs a quick sync on the latest hash_ids added to the local hashes cache to ensure that desync did not occur. fingers crossed, this will work super fast and ensure that we don't get the 404 problem (or related hash_id cross-wire problems) again
+* on repository processing failure and a scheduling of update file maintenance, we now resync the update files in the local hash cache, meaning the 404 problem, if it does happen again, will now fix itself in the normal recovery code
+* on update, everyone is going to get a full local hash cache resync, just to catch any lingering issues here. it should now work super fast!
+* fixed an issue where the local hash and tags caches would not fully reset desynced results on a 'regenerate' call until a client restart
+
+### misc
+
+* thanks to a user, the default twitter downloader I added last week now gets full-size images. if you spammed a bunch of URLs last week, I apologise: please do a search for 'imported within the last 7 days/has a twitter url/height=1200px' and then copy/paste the results' tweet URLs into a new urls downloader. because of some special twitter settings, you shouldn't have to set 'download the file even if known url match' in the file import options; the downloader will discover the larger versions and download the full size files with no special settings needed. once done, assuming the file count is the same on both pages, go back to your first page and delete the 1200px tall files. then repeat for width=1200px!
+* the filetype selector in system:filetype now expands to eat extra vertical space if the dialog is resized
+* the filetype selector in file import options is moved a bit and also now expands to eat extra vertical space
+* thanks to a user, the Microsoft document recognition now has fewer false negatives (it was detecting some docs as zips)
+* when setting up an import folder, the dialog will now refuse to OK if you set a path that is 1) above the install dir or db dir or 2) above or below any of your file storage locations. shouldn't be possible to set up an import from your own file storage folder by accident any more
+* added a new 'apply image ICC Profile colour adjustments' checkbox to _options-&gt;media_. this simply turns off ICC profile loading and application, for debug purposes
+
+### boring cleanup
+
+* the default SQLite page size is now 4096 bytes on Linux, the SQLite default. it was 1024 previously, but SQLite now recommend 4096 for all platforms. the next time Linux users vacuum any of their databases, they will get fixed. I do not think this is a big deal, so don't rush to force this
+* fixed the last couple dozen missing layout flags across the program, which were ancient artifacts from the wx-&gt;Qt conversion
+* fixed the WTFPL licence to be my copyright, lol
+* deleted the local booru service management/UI code
+* deleted the local booru service db/init code
+* deleted the local booru service network code
+* on update, the local booru service will be deleted from the database
+
 ## [Version 573](https://github.com/hydrusnetwork/hydrus/releases/tag/v573)
 
 ### new autocomplete tab, children
@@ -393,53 +424,3 @@ title: Changelog
 * wrote new widgets to edit `NumberTest`s of various sorts and spammed them to these (operator, value) system predicate UI panels. we are finally clearing out some 8+-year-old jank here
 * rewrote the `num_notes` database search logic to use `NumberTest`s
 * the system preds for height, width, and framerate now say 'has x' and 'no x' when set to `>0` or `=0`, although what these really mean is not perfectly defined
-
-## [Version 563](https://github.com/hydrusnetwork/hydrus/releases/tag/v563)
-
-### macOS improvements
-
-* Thanks to a user, we have multiple improvements for macOS!
-* There is a new icon for the macOS .app build of hydrus
-* The macOS app will now appear as "Hydrus" in the menu bar instead of "Hydrus Network"
-* - Use the native global menu bar on macOS and some Linux desktop environments
-* - "options" will now appear as "Preferences..." and be under the Hydrus menu on macOS
-* - "exit" will now appear as "Quit Hydrus" and be under the Hydrus menu on macOS
-* "exit and force shutdown maintenance", "restart", and "shortcuts" will now be under the Hydrus menu on macOS
-* The hydrus system tray icon is now enabled for macOS and "minimise to system tray" will be in the Hydrus menu when in advanced mode
-* macOS debug dialog menus are now disabled by default
-* The macOS build of hydrus now uses pyoxidizer 0.24.0 and Python 3.10
-* The command palette and hyperlinks colors in the default Qt stylesheet now use palette based colors that should change based on the Qt style
-* one thing hydev did: on macOS, Cmd+W _should_ now close any dialog or non-main-gui window, just like the Escape key
-
-### shortcuts
-
-* by default, Alt+Home/End/Left/Right now does the new thumbnail rearranging. **assuming they do not conflict with an existing mapping, all users will recieve this on update**
-* by default, the shortcuts system now converts all non-number 'numpad' inputs (e.g. 'numpad Home', 'numpad Return', 'numpad Left') to just be normal inputs. a bunch of different keyboards have whack numpad assignments for non-numpad keys, so if it isn't a number, let's not, by default, make a fuss over the distinction. you can return to the old behaviour by unchecking the new checkbox under _file->shortcuts_
-* the default shortcuts now no longer spam numpad variants anywhere. existing users can delete the surplus mappings (under 'thumbnails' and maybe some of the 'media' sets) if they like
-
-### some UI QoL
-
-* the _tag service_ menu button that appears in the autocomplete panel and sometimes some other places in advanced mode now shows a proper check mark in its menu beside its current value
-* the _location context_ menu button on the other side of an autocomplete panel and some other places also now shows a check mark in its menu beside its current value
-* the `OR` button on search autocomplete that creates new OR predicates now inherits the current file search domain. it was previously defaulting at all times to the fallback file domain and 'all known tags'
-* the current search predicates list also now inherits the file search domain when you edit an OR predicate currently in use, same deal
-* removed the 'favourites' submenu from the taglist menu when no tags are selected
-* in any import context, the file log's arrow menu now supports deleting all the 'unknown' (outstanding, unstarted) items or setting them all to 'skipped'. the 'abort imports' button (with the stop icon) in HDD and urls import pages is removed
-
-### misc
-
-* fixed yet another dumb problem with the datetime control's paste button--although the paste was now 'working' on the UI side, the control wasn't saving that result on dialog ok. the fixes both the datetime button and the modified/file service time multi-column list editing
-* a core asynchronous thread-checking timer in the program has been rewritten from a 20ms-resolution busy-wait to a <1ms proper wait/notify system. a bunch of stuff that works in a thread is now much faster to recognise that blocking UI work is done, and it is more thread-polite about how it does it!
-* in the `setup_venv` scripts, if it needs to delete an old venv directory but fails to do so, the script now dumps out with an error saying 'hey, you probably have it open in a terminal/IDE, please close that and try again'. previously, it would just charge on and produce an odd file permission error as, e.g., the new venv setup tried to overwrite the in-use python exe
-* added a `help->debug->gui->isolate existing mpv widgets` command to force regeneration of mpv windows and help test-out/hack-fix various 'every other of my mpv views has no audio' and 'my mpv loses xxx property after a system sleep/wake cycle' problems. if I've been working with you on this stuff, please give it a go and let me know if new mpv window creation is good or what!
-* added a `BUGFIX: Disable off-screen window rescue` checkbox to `options->gui` that stops windows that think they are spawning off-screen from repositioning to a known safe screen. several Qt versions have had trouble with enumerating all the screens in a multiple monitor setup and thus the safe coordinate space, so if you have been hit by false positives here, you can now turn it off! (issue #1511)
-* fixed another couple instances of error texts with empty formatting braces `{}`
-
-### tag repository
-
-* mapping petitions fetched from the server will now max out at 500k mapping rows or 10k unique tags or ten seconds of construction time. we had a 250k-unique-tag petition this last week and it broke something, so I'm slapping a bunch of safety rails on. let me know if these are too strict, too liberal, or if it messes with the fetch workflow at all--I don't _think_ it will, but we'll see
-
-### build stuff
-
-* now they have had time to breathe, I optimised the recently split Github build scripts. the 'send to an ubuntu runner and then upload' step is now removed from all three, so they are natively uploaded in the first runner step. it works just a little nicer and faster now, although it did require learning how to truncate and export a variable to the Github Environment Variables file in Powershell, aiiieeeee
-* also, Github is moving from Node 16 to Node 20 soon, and I have moved two of the four actions we rely on to their newer v20 versions. a third action should be ready to update next week, and another, a general download file function, I have replaced with curl (for macOS) and Powershell's magical Invoke-WebRequest adventure

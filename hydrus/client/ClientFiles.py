@@ -1567,6 +1567,18 @@ class ClientFilesManager( object ):
             
         
     
+    def GetAllDirectoriesInUse( self ):
+        
+        with self._file_storage_rwlock.read:
+            
+            subfolders = self._GetAllSubfolders()
+            
+            directories = { subfolder.base_location.path for subfolder in subfolders }
+            
+        
+        return directories
+        
+    
     def GetCurrentFileBaseLocations( self ):
         
         with self._file_storage_rwlock.read:

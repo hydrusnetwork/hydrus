@@ -41,9 +41,14 @@ def SetEnableLoadTruncatedImages( value: bool ):
     
     if hasattr( PILImageFile, 'LOAD_TRUNCATED_IMAGES' ):
         
-        # this can now cause load hangs due to the trunc load code adding infinite fake EOFs to the file stream, wew lad
-        # hence debug only
-        PILImageFile.LOAD_TRUNCATED_IMAGES = value
+        if PILImageFile.LOAD_TRUNCATED_IMAGES != value:
+            
+            # this has previously caused load hangs due to the trunc load code adding infinite fake EOFs to the file stream, wew lad
+            PILImageFile.LOAD_TRUNCATED_IMAGES = value
+            
+            HG.controller.pub( 'clear_image_cache' )
+            HG.controller.pub( 'clear_image_tile_cache' )
+            
         
         return True
         

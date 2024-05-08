@@ -769,8 +769,8 @@ class DateTimesCtrl( QW.QWidget ):
         
         button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( button_hbox, self._copy_button )
-        QP.AddToLayout( button_hbox, self._paste_button )
+        QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         QP.AddToLayout( vbox, button_hbox, CC.FLAGS_ON_RIGHT )
         

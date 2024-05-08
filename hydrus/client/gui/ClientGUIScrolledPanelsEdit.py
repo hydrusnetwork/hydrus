@@ -1982,11 +1982,11 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
         
         button_hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( button_hbox, self._add_button )
-        QP.AddToLayout( button_hbox, self._edit_button )
-        QP.AddToLayout( button_hbox, self._delete_button )
-        QP.AddToLayout( button_hbox, self._copy_button )
-        QP.AddToLayout( button_hbox, self._paste_button )
+        QP.AddToLayout( button_hbox, self._add_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._edit_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
@@ -2520,8 +2520,8 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
             self._copy_button.hide()
             
         
-        QP.AddToLayout( button_hbox, self._copy_button )
-        QP.AddToLayout( button_hbox, self._paste_button )
+        QP.AddToLayout( button_hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( button_hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         

@@ -1,8 +1,7 @@
            DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE
                      Version 3, May 2010
 
-Copyright (C) 2010 by Kris Craig
-Olympia, WA USA
+Copyright (C) 2011 Hydrus Developer
 
 Everyone is permitted to copy and distribute verbatim or modified
 copies of this license document, and changing it is allowed as long

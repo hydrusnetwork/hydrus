@@ -90,7 +90,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                     
                     if hash_id not in uncached_hash_ids_to_hashes:
                         
-                        # TODO: ultimately move this to the 'recover from missing definitions' stuff I am building in ClientDB, since the local hash cache may have it
+                        # TODO: ultimately move this to the 'recover from missing definitions' stuff I am building in ClientDB, since the local hashes cache may have it
                         # for now though, screw it
                         
                         # I shouldn't be able to see this here, but this is emergency code, screw it.
@@ -120,7 +120,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
                                 pubbed_error = True
                                 
                             
-                            HydrusData.DebugPrint( 'Database master hash definition error: hash_id {} was missing! Recovered from local hash cache with hash {}.'.format( hash_id, hash.hex() ) )
+                            HydrusData.DebugPrint( 'Database master hash definition error: hash_id {} was missing! Recovered from local hashes cache with hash {}.'.format( hash_id, hash.hex() ) )
                             
                         
                         self._Execute( 'INSERT OR IGNORE INTO hashes ( hash_id, hash ) VALUES ( ?, ? );', ( hash_id, sqlite3.Binary( hash ) ) )

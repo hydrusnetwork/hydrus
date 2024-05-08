@@ -1670,9 +1670,7 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
         hbox = QP.HBoxLayout()
         
         QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, 'system:filetype' ), CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._mimes, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        hbox.addStretch( 1 )
+        QP.AddToLayout( hbox, self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
         

@@ -1278,7 +1278,6 @@ class DB( HydrusDB.HydrusDB ):
             ( CC.TRASH_SERVICE_KEY, HC.LOCAL_FILE_TRASH_DOMAIN, 'trash' ),
             ( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'my tags' ),
             ( CC.DEFAULT_LOCAL_DOWNLOADER_TAG_SERVICE_KEY, HC.LOCAL_TAG, 'downloader tags' ),
-            ( CC.LOCAL_BOORU_SERVICE_KEY, HC.LOCAL_BOORU, 'local booru' ),
             ( CC.LOCAL_NOTES_SERVICE_KEY, HC.LOCAL_NOTES, 'local notes' ),
             ( CC.DEFAULT_FAVOURITES_RATING_SERVICE_KEY, HC.LOCAL_RATING_LIKE, 'favourites' ),
             ( CC.CLIENT_API_SERVICE_KEY, HC.CLIENT_API_SERVICE, 'client api' )
@@ -4630,10 +4629,6 @@ class DB( HydrusDB.HydrusDB ):
             
             info_types = { HC.SERVICE_INFO_NUM_FILE_HASHES }
             
-        elif service_type == HC.LOCAL_BOORU:
-            
-            info_types = { HC.SERVICE_INFO_NUM_SHARES }
-            
         else:
             
             info_types = set()
@@ -4764,13 +4759,6 @@ class DB( HydrusDB.HydrusDB ):
                     if info_type == HC.SERVICE_INFO_NUM_FILE_HASHES:
                         
                         info = self.modules_ratings.GetIncDecServiceCount( service_id )
-                        
-                    
-                elif service_type == HC.LOCAL_BOORU:
-                    
-                    if info_type == HC.SERVICE_INFO_NUM_SHARES:
-                        
-                        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM yaml_dumps WHERE dump_type = ?;', ( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, ) ).fetchone()
                         
                     
                 
@@ -6786,9 +6774,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'inbox_hashes': result = self._FilterInboxHashes( *args, **kwargs )
         elif action == 'is_an_orphan': result = self._IsAnOrphan( *args, **kwargs )
         elif action == 'last_shutdown_work_time': result = self.modules_db_maintenance.GetLastShutdownWorkTime( *args, **kwargs )
-        elif action == 'local_booru_share_keys': result = self.modules_serialisable.GetYAMLDumpNames( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU )
-        elif action == 'local_booru_share': result = self.modules_serialisable.GetYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
-        elif action == 'local_booru_shares': result = self.modules_serialisable.GetYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU )
         elif action == 'maintenance_due': result = self._GetMaintenanceDue( *args, **kwargs )
         elif action == 'media_predicates': result = self.modules_tag_display.GetMediaPredicates( *args, **kwargs )
         elif action == 'media_result': result = self._GetMediaResultFromHash( *args, **kwargs )
@@ -6933,22 +6918,20 @@ class DB( HydrusDB.HydrusDB ):
         
         try:
             
-            job_status.SetStatusTitle( 'regenerating local hash cache' )
+            job_status.SetStatusTitle( 'resynchronising local hashes cache' )
             
             self._controller.pub( 'modal_message', job_status )
             
-            message = 'generating local hash cache'
+            message = 'generating local hashes cache'
             
             job_status.SetStatusText( message )
             self._controller.frame_splash_status.SetSubtext( message )
             
-            self.modules_hashes_local_cache.Repopulate()
+            self.modules_hashes_local_cache.Resync( job_status )
             
         finally:
             
-            job_status.SetStatusText( 'done!' )
-            
-            job_status.FinishAndDismiss( 5 )
+            job_status.Finish()
             
         
     
@@ -10255,6 +10238,89 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 573:
+            
+            try:
+                
+                self.modules_hashes_local_cache.Resync()
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to force a local hashes resync failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                parsers = domain_manager.GetParsers()
+                
+                parser_names = { parser.GetName() for parser in parsers }
+                
+                # checking for floog's downloader
+                if 'fxtwitter api status parser' not in parser_names and 'vxtwitter api status parser' not in parser_names:
+                    
+                    domain_manager.OverwriteDefaultURLClasses( [
+                        'twitter image (with format)',
+                        'twitter image (without format)'
+                    ])
+                    
+                    #
+                    
+                    domain_manager.TryToLinkURLClassesAndParsers()
+                    
+                    #
+                    
+                    self.modules_serialisable.SetJSONDump( domain_manager )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                service_id = self.modules_services.GetServiceId( CC.LOCAL_BOORU_SERVICE_KEY )
+                
+                try:
+                    
+                    self._DeleteService( service_id )
+                    
+                except Exception as e:
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'Trying to delete the local booru stub failed! Please let hydrus dev know!'
+                    
+                    self.pub_initial_message( message )
+                    
+                
+            except HydrusExceptions.DataMissing:
+                
+                # idempotency
+                pass
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to delete the local booru stub failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10744,7 +10810,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'content_updates': self._ProcessContentUpdatePackage( *args, **kwargs )
         elif action == 'cull_file_viewing_statistics': self.modules_files_viewing_stats.CullFileViewingStatistics( *args, **kwargs )
         elif action == 'db_integrity': self.modules_db_maintenance.CheckDBIntegrity( *args, **kwargs )
-        elif action == 'delete_local_booru_share': self.modules_serialisable.DeleteYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'delete_pending': self._DeletePending( *args, **kwargs )
         elif action == 'delete_serialisable_named': self.modules_serialisable.DeleteJSONDumpNamed( *args, **kwargs )
         elif action == 'delete_service_info': self._DeleteServiceInfo( *args, **kwargs )
@@ -10764,7 +10829,6 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'ideal_client_files_locations': self.modules_files_physical_storage.SetIdealClientFilesLocations( *args, **kwargs )
         elif action == 'import_file': result = self._ImportFile( *args, **kwargs )
         elif action == 'import_update': self._ImportUpdate( *args, **kwargs )
-        elif action == 'local_booru_share': self.modules_serialisable.SetYAMLDump( ClientDBSerialisable.YAML_DUMP_ID_LOCAL_BOORU, *args, **kwargs )
         elif action == 'maintain_hashed_serialisables': result = self.modules_serialisable.MaintainHashedStorage( *args, **kwargs )
         elif action == 'maintain_similar_files_search_for_potential_duplicates': result = self._PerceptualHashesSearchForPotentialDuplicates( *args, **kwargs )
         elif action == 'maintain_similar_files_tree': self.modules_similar_files.MaintainTree( *args, **kwargs )

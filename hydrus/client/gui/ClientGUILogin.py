@@ -83,7 +83,7 @@ class EditLoginCredentialsPanel( ClientGUIScrolledPanels.EditPanel ):
             hbox = QP.HBoxLayout()
             
             QP.AddToLayout( hbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( hbox, control_st )
+            QP.AddToLayout( hbox, control_st, CC.FLAGS_CENTER_PERPENDICULAR )
             
             rows.append( ( credential_definition.GetName() + ': ', hbox ) )
             

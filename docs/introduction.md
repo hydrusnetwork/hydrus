@@ -52,7 +52,7 @@ If, after a few months, you find you enjoy the software and would like to furthe
 
 ## license
 
-These programs are free software. Everything I, hydrus dev, have made is under the Do What The Fuck You Want To Public License, Version 3, [as published](https://github.com/sirkris/WTFPL/blob/master/WTFPL.md) by Kris Craig.
+These programs are free software. Everything I, hydrus dev, have made is under the Do What The Fuck You Want To Public License, Version 3:
 
 ``` title="license.txt"
 --8<-- "license.txt"

@@ -139,6 +139,7 @@ class ImageRendererCache( object ):
         self._data_cache = ClientCachesBase.DataCache( self._controller, 'image cache', cache_size, timeout = cache_timeout )
         
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
+        self._controller.sub( self, 'Clear', 'clear_image_cache' )
         
     
     def Clear( self ):
@@ -301,7 +302,7 @@ class ThumbnailCache( object ):
         
         self._controller.CallToThreadLongRunning( self.MainLoop )
         
-        self._controller.sub( self, 'Clear', 'reset_thumbnail_cache' )
+        self._controller.sub( self, 'Clear', 'clear_thumbnail_cache' )
         self._controller.sub( self, 'ClearThumbnails', 'clear_thumbnails' )
         self._controller.sub( self, 'NotifyNewOptions', 'notify_new_options' )
         

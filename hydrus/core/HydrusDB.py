@@ -108,16 +108,11 @@ def VacuumDB( db_path ):
         c.execute( 'PRAGMA journal_mode = TRUNCATE;' )
         
     
-    if HC.PLATFORM_WINDOWS:
-        
-        ideal_page_size = 4096
-        
-    else:
-        
-        ideal_page_size = 1024
-        
+    # this used to be 1024 for Linux users, so we do want to check and coerce back to SQLite default, 4096
     
     ( page_size, ) = c.execute( 'PRAGMA page_size;' ).fetchone()
+    
+    ideal_page_size = 4096
     
     if page_size != ideal_page_size:
         
@@ -131,6 +126,7 @@ def VacuumDB( db_path ):
     
     c.execute( 'PRAGMA journal_mode = {};'.format( HG.db_journal_mode ) )
     
+
 class HydrusDB( HydrusDBBase.DBBase ):
     
     READ_WRITE_ACTIONS = []
@@ -676,6 +672,14 @@ class HydrusDB( HydrusDBBase.DBBase ):
         for module in self._modules:
             
             module.Repair( version, self._cursor_transaction_wrapper )
+            
+        
+        if HG.controller.LastShutdownWasBad():
+            
+            for module in self._modules:
+                
+                module.DoLastShutdownWasBadWork()
+                
             
         
     

@@ -68,6 +68,11 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         self._Execute( create_query_without_name.format( table_name ) )
         
     
+    def _DoLastShutdownWasBadWork( self ):
+        
+        pass
+        
+    
     def _GetCriticalTableNames( self ) -> typing.Collection[ str ]:
         
         return set()
@@ -160,6 +165,11 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
             
             self._CreateTable( create_query_without_name, table_name )
             
+        
+    
+    def DoLastShutdownWasBadWork( self ):
+        
+        self._DoLastShutdownWasBadWork()
         
     
     def GetExpectedServiceTableNames( self ) -> typing.Collection[ str ]:

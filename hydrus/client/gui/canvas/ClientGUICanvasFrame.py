@@ -3,6 +3,7 @@ from qtpy import QtCore as QC
 from hydrus.core import HydrusConstants as HC
 
 from hydrus.client import ClientApplicationCommand as CAC
+from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
@@ -167,7 +168,7 @@ class CanvasFrame( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindow
         
         vbox = QP.VBoxLayout( margin = 0 )
         
-        QP.AddToLayout( vbox, self._canvas_window )
+        QP.AddToLayout( vbox, self._canvas_window, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.setLayout( vbox )
         

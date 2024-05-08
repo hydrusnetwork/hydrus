@@ -6,11 +6,11 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBMappingsCounts
 from hydrus.client.db import ClientDBMaster
@@ -31,6 +31,15 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         self._hash_ids_to_hashes_cache = {}
         
         ClientDBModule.ClientDBModule.__init__( self, 'client hashes local cache', cursor )
+        
+    
+    def _DoLastShutdownWasBadWork( self ):
+        
+        # We just had a crash, oh no! There is a chance we are desynced here, so let's see what was recently added and make sure we are good.
+        
+        last_twenty_hash_ids = self._STL( self._Execute( 'SELECT hash_id FROM local_hashes_cache ORDER BY hash_id DESC LIMIT 20;' ) )
+        
+        self.SyncHashIds( last_twenty_hash_ids )
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:
@@ -87,7 +96,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
     
     def _RepairRepopulateTables( self, table_names, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper ):
         
-        self.Repopulate()
+        self.Resync()
         
         cursor_transaction_wrapper.CommitAndBegin()
         
@@ -102,6 +111,8 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
     def ClearCache( self ):
         
         self._Execute( 'DELETE FROM local_hashes_cache;' )
+        
+        self._hash_ids_to_hashes_cache = {}
         
     
     def DropHashIdsFromCache( self, hash_ids ):
@@ -175,6 +186,8 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
     
     def GetHashIdsToHashes( self, hash_ids = None, hashes = None, create_new_hash_ids = True ) -> typing.Dict[ int, bytes ]:
         
+        hash_ids_to_hashes = {}
+        
         if hash_ids is not None:
             
             self._PopulateHashIdsToHashesCache( hash_ids )
@@ -215,23 +228,149 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
-    def Repopulate( self ):
+    def Resync( self, job_status = None ):
         
-        self.ClearCache()
+        if job_status is None:
+            
+            job_status = ClientThreading.JobStatus( cancellable = True )
+            
         
-        CG.client_controller.frame_splash_status.SetSubtext( 'reading local file data' )
+        text = 'fetching local file hashes'
         
-        local_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
+        job_status.SetStatusText( text )
+        CG.client_controller.frame_splash_status.SetSubtext( text )
+        
+        all_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM local_hashes_cache;' ) )
+        
+        all_hash_ids.update( self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id ) )
+        
+        self.SyncHashIds( all_hash_ids, job_status = job_status )
+        
+    
+    def SyncHashIds( self, all_hash_ids: typing.Collection[ int ], job_status = None ):
+        
+        if job_status is None:
+            
+            job_status = ClientThreading.JobStatus( cancellable = True )
+            
+        
+        if not isinstance( all_hash_ids, list ):
+            
+            all_hash_ids = list( all_hash_ids )
+            
         
         BLOCK_SIZE = 10000
-        num_to_do = len( local_hash_ids )
+        num_to_do = len( all_hash_ids )
         
-        for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( local_hash_ids, BLOCK_SIZE ) ):
+        all_excess_hash_ids = set()
+        all_missing_hash_ids = set()
+        all_incorrect_hash_ids = set()
+        
+        for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( all_hash_ids, BLOCK_SIZE ) ):
             
-            CG.client_controller.frame_splash_status.SetSubtext( 'caching local file data {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) ) )
+            if job_status.IsCancelled():
+                
+                break
+                
             
-            self.AddHashIdsToCache( block_of_hash_ids )
+            block_of_hash_ids = set( block_of_hash_ids )
             
+            text = 'syncing local hashes {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+            
+            CG.client_controller.frame_splash_status.SetSubtext( text )
+            job_status.SetStatusText( text )
+            
+            with self._MakeTemporaryIntegerTable( block_of_hash_ids, 'hash_id' ) as temp_table_name:
+                
+                table_join = self.modules_files_storage.GetTableJoinLimitedByFileDomain( self.modules_services.combined_local_file_service_id, temp_table_name, HC.CONTENT_STATUS_CURRENT )
+                
+                local_hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {table_join};' ) )
+                
+            
+            excess_hash_ids = block_of_hash_ids.difference( local_hash_ids )
+            
+            if len( excess_hash_ids ) > 0:
+                
+                self.DropHashIdsFromCache( excess_hash_ids )
+                
+                all_excess_hash_ids.update( excess_hash_ids )
+                
+            
+            missing_hash_ids = { hash_id for hash_id in local_hash_ids if not self.HasHashId( hash_id ) }
+            
+            if len( missing_hash_ids ) > 0:
+                
+                self.AddHashIdsToCache( missing_hash_ids )
+                
+                all_missing_hash_ids.update( missing_hash_ids )
+                
+            
+            present_local_hash_ids = local_hash_ids.difference( missing_hash_ids )
+            
+            my_hash_ids_to_hashes = self.GetHashIdsToHashes( hash_ids = present_local_hash_ids )
+            master_hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = present_local_hash_ids )
+            
+            incorrect_hash_ids = { hash_id for hash_id in list( my_hash_ids_to_hashes.keys() ) if my_hash_ids_to_hashes[ hash_id ] != master_hash_ids_to_hashes[ hash_id ] }
+            
+            if len( incorrect_hash_ids ) > 0:
+                
+                self.DropHashIdsFromCache( incorrect_hash_ids )
+                self.AddHashIdsToCache( incorrect_hash_ids )
+                
+                all_incorrect_hash_ids.update( incorrect_hash_ids )
+                
+            
+        
+        status_text_info = []
+        
+        if len( all_excess_hash_ids ) > 0:
+            
+            bad_hash_ids_text = ', '.join( ( str( hash_id ) for hash_id in sorted( all_excess_hash_ids ) ) )
+            
+            HydrusData.Print( f'Deleted excess desynced local hash_ids: {bad_hash_ids_text}' )
+            
+            status_text_info.append( f'{HydrusData.ToHumanInt( len( all_excess_hash_ids ) ) } excess hash records' )
+            
+        
+        if len( all_missing_hash_ids ) > 0:
+            
+            bad_hash_ids_text = ', '.join( ( str( hash_id ) for hash_id in sorted( all_missing_hash_ids ) ) )
+            
+            HydrusData.Print( f'Added missing desynced local hash_ids: {bad_hash_ids_text}' )
+            
+            status_text_info.append( f'{HydrusData.ToHumanInt( len( all_missing_hash_ids ) ) } missing hash records' )
+            
+        
+        if len( all_incorrect_hash_ids ) > 0:
+            
+            bad_hash_ids_text = ', '.join( ( str( hash_id ) for hash_id in sorted( all_incorrect_hash_ids ) ) )
+            
+            HydrusData.Print( f'Fixed incorrect desynced local hash_ids: {bad_hash_ids_text}' )
+            
+            status_text_info.append( f'{HydrusData.ToHumanInt( len( all_incorrect_hash_ids ) ) } incorrect hash records' )
+            
+        
+        if len( status_text_info ) > 0:
+            
+            job_status.SetStatusText( '\n'.join( status_text_info ) )
+            
+        else:
+            
+            job_status.SetStatusText( 'Done with no errors found!' )
+            
+        
+        job_status.Finish()
+        
+    
+    def SyncHashes( self, hashes: typing.Collection[ bytes ] ):
+        """
+        This guy double-checks the hashes against the local store and the master store, because they may well differ in a desync!
+        """
+        
+        all_hash_ids = set( self.GetHashIds( hashes ) )
+        all_hash_ids.update( self.modules_hashes.GetHashIds( hashes ) )
+        
+        self.SyncHashIds( all_hash_ids )
         
     
 
@@ -320,6 +459,8 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
         
         self._Execute( 'DELETE FROM local_tags_cache;' )
         
+        self._tag_ids_to_tags_cache = {}
+        
     
     def DropTagIdsFromCache( self, tag_ids ):
         
@@ -368,6 +509,8 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
         
     
     def GetTagIdsToTags( self, tag_ids = None, tags = None ) -> typing.Dict[ int, str ]:
+        
+        tag_ids_to_tags = {}
         
         if tag_ids is not None:
             

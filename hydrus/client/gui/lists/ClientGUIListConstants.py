@@ -522,6 +522,7 @@ class COLUMN_LIST_LOCAL_BOORU_SHARES( COLUMN_LIST_DEFINITION ):
     INFO = 1
     EXPIRES = 2
     FILES = 3
+    
 
 column_list_type_name_lookup[ COLUMN_LIST_LOCAL_BOORU_SHARES.ID ] = 'local booru shares'
 

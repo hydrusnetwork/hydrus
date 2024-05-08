@@ -350,7 +350,7 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
             self._panels.append( EditServiceTagSubPanel( self, self._dictionary ) )
             
         
-        if self._service_type in ( HC.CLIENT_API_SERVICE, HC.LOCAL_BOORU ):
+        if self._service_type == HC.CLIENT_API_SERVICE:
             
             self._panels.append( EditServiceClientServerSubPanel( self, self._service_type, self._dictionary ) )
             
@@ -1105,12 +1105,7 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         
         self._client_server_options_panel = ClientGUICommon.StaticBox( self, 'options' )
         
-        if service_type == HC.LOCAL_BOORU:
-            
-            name = 'local booru'
-            default_port = 45868
-            
-        elif service_type == HC.CLIENT_API_SERVICE:
+        if service_type == HC.CLIENT_API_SERVICE:
             
             name = 'client api'
             default_port = 45869
@@ -1182,7 +1177,7 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         rows.append( ( 'normie-friendly welcome page', self._use_normie_eris ) )
         rows.append( ( 'upnp port', self._upnp ) )
         
-        if service_type == HC.LOCAL_BOORU:
+        if False: # some old local booru gubbins--maybe delete?
             
             rows.append( ( 'scheme (http/https) override when copying external links', self._external_scheme_override ) )
             rows.append( ( 'host override when copying external links', self._external_host_override ) )
@@ -4046,7 +4041,6 @@ class ReviewServicesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             elif service_type == HC.LOCAL_RATING_LIKE: service_type_name = 'like/dislike ratings'
             elif service_type == HC.LOCAL_RATING_NUMERICAL: service_type_name = 'numerical ratings'
             elif service_type == HC.LOCAL_RATING_INCDEC: service_type_name = 'inc/dec ratings'
-            elif service_type == HC.LOCAL_BOORU: service_type_name = 'booru'
             elif service_type == HC.CLIENT_API_SERVICE: service_type_name = 'client api'
             elif service_type == HC.IPFS: service_type_name = 'ipfs'
             else: continue

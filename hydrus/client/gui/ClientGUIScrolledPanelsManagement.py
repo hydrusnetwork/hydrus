@@ -2429,6 +2429,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._load_images_with_pil = QW.QCheckBox( system_panel )
             self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are expecting to drop CV and move to PIL exclusively. This used to be a test option but is now default true and may soon be retired.' ) )
             
+            self._do_icc_profile_normalisation = QW.QCheckBox( system_panel )
+            self._do_icc_profile_normalisation.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should PIL attempt to load ICC Profiles and normalise the colours of an image? This is usually fine, but when it janks out due to an additional OS/GPU ICC Profile, we can turn it off here.' ) )
+            
             self._enable_truncated_images_pil = QW.QCheckBox( system_panel )
             self._enable_truncated_images_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should PIL be allowed to load broken images that are missing some data? This is usually fine, but some years ago we had stability problems when this was mixed with OpenCV. Now it is default on, but if you need to, you can disable it here.' ) )
             
@@ -2516,6 +2519,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
             self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
             self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
+            self._do_icc_profile_normalisation.setChecked( self._new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
             self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
             self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
             self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
@@ -2617,6 +2621,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows.append( ( 'Set a new mpv.conf on dialog ok?:', self._mpv_conf_path ) )
             rows.append( ( 'Prefer system FFMPEG:', self._use_system_ffmpeg ) )
+            rows.append( ( 'Apply image ICC Profile colour adjustments:', self._do_icc_profile_normalisation ) )
             rows.append( ( 'Allow loading of truncated images:', self._enable_truncated_images_pil ) )
             rows.append( ( 'Load images with PIL:', self._load_images_with_pil ) )
             
@@ -2858,6 +2863,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'enable_truncated_images_pil', self._enable_truncated_images_pil.isChecked() )
+            self._new_options.SetBoolean( 'do_icc_profile_normalisation', self._do_icc_profile_normalisation.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
             self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
             self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
@@ -5137,6 +5143,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             CG.client_controller.WriteSynchronous( 'serialisable', self._new_options )
             
+            # TODO: move all this, including 'original options' gubbins, to the manageoptions call. this dialog shouldn't care about these signals
             # we do this to convert tuples to lists and so on
             test_new_options = self._new_options.Duplicate()
             
@@ -5151,7 +5158,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             if res_changed or type_changed or dpr_changed:
                 
-                CG.client_controller.pub( 'reset_thumbnail_cache' )
+                CG.client_controller.pub( 'clear_thumbnail_cache' )
                 
             
         except Exception as e:

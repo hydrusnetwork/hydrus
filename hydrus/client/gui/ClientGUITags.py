@@ -2592,7 +2592,9 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
-            self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'tags', self._tag_presentation_location, show_siblings_sort = True )
+            tags_panel = QW.QWidget( self )
+            
+            self._tags_box_sorter = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( tags_panel, 'tags', self._tag_presentation_location, show_siblings_sort = True )
             
             self._tags_box = ClientGUIListBoxes.ListBoxTagsMediaTagsDialog( self._tags_box_sorter, self._tag_presentation_location, self.EnterTags, self.RemoveTags )
             
@@ -2661,7 +2663,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             #
             
-            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.AddTags, self._location_context, self._tag_service_key )
+            self._add_tag_box = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( tags_panel, self.AddTags, self._location_context, self._tag_service_key )
             
             self._add_tag_box.movePageLeft.connect( self.movePageLeft )
             self._add_tag_box.movePageRight.connect( self.movePageRight )
@@ -2691,14 +2693,16 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._tags_box_sorter, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, self._add_tag_box )
+            QP.AddToLayout( vbox, self._add_tag_box, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            tags_panel.setLayout( vbox )
             
             #
             
             hbox = QP.HBoxLayout()
             
-            QP.AddToLayout( hbox, self._suggested_tags, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE )
-            QP.AddToLayout( hbox, vbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( hbox, self._suggested_tags, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( hbox, tags_panel, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
             #
             
@@ -4746,8 +4750,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             input_box = QP.HBoxLayout()
             
-            QP.AddToLayout( input_box, self._old_input )
-            QP.AddToLayout( input_box, self._new_input )
+            QP.AddToLayout( input_box, self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( input_box, self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = QP.VBoxLayout()
             

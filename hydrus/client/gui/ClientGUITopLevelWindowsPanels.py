@@ -82,7 +82,7 @@ class DialogNullipotent( DialogThatTakesScrollablePanel ):
         
         buttonbox = QP.HBoxLayout()
         
-        QP.AddToLayout( buttonbox, self._close )
+        QP.AddToLayout( buttonbox, self._close, CC.FLAGS_CENTER_PERPENDICULAR )
         
         return buttonbox
         
@@ -105,8 +105,8 @@ class DialogApplyCancel( DialogThatTakesScrollablePanel ):
         
         buttonbox = QP.HBoxLayout()
         
-        QP.AddToLayout( buttonbox, self._apply )
-        QP.AddToLayout( buttonbox, self._cancel )
+        QP.AddToLayout( buttonbox, self._apply, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( buttonbox, self._cancel, CC.FLAGS_CENTER_PERPENDICULAR )
         
         return buttonbox
         

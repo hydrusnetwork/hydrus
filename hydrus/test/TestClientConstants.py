@@ -29,14 +29,9 @@ class TestManagers( unittest.TestCase ):
         
         repo = ClientServices.GenerateService( repo_key, repo_type, repo_name )
         
-        other_key = HydrusData.GenerateKey()
-        
-        other = ClientServices.GenerateService( other_key, HC.LOCAL_BOORU, 'booru' )
-        
         services = []
         
         services.append( repo )
-        services.append( other )
         
         HG.test_controller.SetRead( 'services', services )
         
@@ -47,8 +42,6 @@ class TestManagers( unittest.TestCase ):
         service = services_manager.GetService( repo_key )
         
         test_service( service, repo_key, repo_type, repo_name )
-        
-        service = services_manager.GetService( other_key )
         
         #
         
@@ -62,13 +55,11 @@ class TestManagers( unittest.TestCase ):
         
         services = []
         
-        services.append( repo )
-        
         HG.test_controller.SetRead( 'services', services )
         
         services_manager.RefreshServices()
         
-        self.assertRaises( Exception, services_manager.GetService, other_key )
+        self.assertRaises( Exception, services_manager.GetService, repo_key )
         
     
     def test_undo( self ):
