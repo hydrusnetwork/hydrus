@@ -12,14 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageMetadata
 
-try:
-    
-    PIL_SRGB_PROFILE = PILImageCms.get_display_profile()
-    
-except:
-    
-    PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
-    
+PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
 
 def NormaliseNumPyImageToUInt8( numpy_image: numpy.array ):
     
