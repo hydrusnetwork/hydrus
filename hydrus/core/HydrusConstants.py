@@ -744,6 +744,10 @@ APPLICATION_RTF = 75
 APPLICATION_DOCX = 76
 APPLICATION_XLSX = 77
 APPLICATION_PPTX = 78
+UNDETERMINED_OLE = 79
+APPLICATION_DOC = 80
+APPLICATION_XLS = 81
+APPLICATION_PPT = 82
 APPLICATION_OCTET_STREAM = 100
 APPLICATION_UNKNOWN = 101
 
@@ -797,6 +801,9 @@ SEARCHABLE_MIMES = {
     APPLICATION_DOCX,
     APPLICATION_XLSX,
     APPLICATION_PPTX,
+    APPLICATION_DOC,
+    APPLICATION_XLS,
+    APPLICATION_PPT,
     APPLICATION_EPUB,
     APPLICATION_DJVU,
     APPLICATION_RTF,
@@ -898,6 +905,9 @@ APPLICATIONS = [
     APPLICATION_DOCX,
     APPLICATION_XLSX,
     APPLICATION_PPTX,
+    APPLICATION_DOC,
+    APPLICATION_XLS,
+    APPLICATION_PPT,
     APPLICATION_RTF
 ]
 
@@ -1044,6 +1054,13 @@ mime_enum_lookup = {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document' : APPLICATION_DOCX,
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : APPLICATION_XLSX,
     'application/vnd.openxmlformats-officedocument.presentationml.presentation' : APPLICATION_PPTX,
+    'application/msword' : APPLICATION_DOC,
+    'application/vnd.ms-word' : APPLICATION_DOC,
+    'application/vnd.ms-excel' : APPLICATION_XLS,
+    'application/msexcel' : APPLICATION_XLS,
+    'application/vnd.ms-powerpoint' : APPLICATION_PPT,
+    'application/powerpoint' : APPLICATION_PPT,
+    'application/mspowerpoint' : APPLICATION_PPT,
     'application/epub+zip' : APPLICATION_EPUB,
     'image/vnd.djvu' : APPLICATION_DJVU,
     'image/vnd.djvu+multipage' : APPLICATION_DJVU,
@@ -1086,6 +1103,7 @@ mime_enum_lookup = {
     'application/vnd.rn-realmedia' : VIDEO_REALMEDIA,
     'video/webm' : VIDEO_WEBM,
     'video' : VIDEO,
+    'application/x-ole-storage' : UNDETERMINED_OLE,
     'unknown filetype' : APPLICATION_UNKNOWN
 }
 
@@ -1119,6 +1137,9 @@ mime_string_lookup = {
     APPLICATION_DOCX : 'docx',
     APPLICATION_XLSX : 'xlsx',
     APPLICATION_PPTX : 'pptx',
+    APPLICATION_DOC : 'doc',
+    APPLICATION_XLS : 'xls',
+    APPLICATION_PPT : 'ppt',
     APPLICATION_EPUB : 'epub',
     APPLICATION_DJVU : 'djvu',
     APPLICATION_RTF : 'rtf',
@@ -1162,6 +1183,7 @@ mime_string_lookup = {
     UNDETERMINED_WM : 'wma or wmv',
     UNDETERMINED_MP4 : 'mp4 with or without audio',
     UNDETERMINED_PNG : 'png or apng',
+    UNDETERMINED_OLE : 'ole file',
     APPLICATION_UNKNOWN : 'unknown filetype',
     GENERAL_APPLICATION : 'application',
     GENERAL_APPLICATION_ARCHIVE : 'archive',
@@ -1204,6 +1226,9 @@ mime_mimetype_string_lookup = {
     APPLICATION_DOCX : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     APPLICATION_XLSX : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     APPLICATION_PPTX : 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    APPLICATION_DOC : 'application/msword',
+    APPLICATION_XLS : 'application/vnd.ms-excel',
+    APPLICATION_PPT : 'application/vnd.ms-powerpoint',
     APPLICATION_EPUB : 'application/epub+zip',
     APPLICATION_DJVU : 'image/vnd.djvu',
     APPLICATION_RTF: 'application/rtf',
@@ -1244,6 +1269,7 @@ mime_mimetype_string_lookup = {
     VIDEO_OGV : 'video/ogg',
     VIDEO_REALMEDIA : 'video/vnd.rn-realvideo',
     VIDEO_WEBM : 'video/webm',
+    UNDETERMINED_OLE : 'application/x-ole-storage',
     APPLICATION_UNKNOWN : 'unknown filetype',
     GENERAL_APPLICATION : 'application',
     GENERAL_APPLICATION_ARCHIVE : 'archive',
@@ -1287,6 +1313,9 @@ mime_ext_lookup = {
     APPLICATION_DOCX : '.docx',
     APPLICATION_XLSX : '.xlsx',
     APPLICATION_PPTX : '.pptx',
+    APPLICATION_DOC : '.doc',
+    APPLICATION_XLS : '.xls',
+    APPLICATION_PPT : '.ppt',
     APPLICATION_EPUB : '.epub',
     APPLICATION_DJVU : '.djvu',
     APPLICATION_RTF : '.rtf',
