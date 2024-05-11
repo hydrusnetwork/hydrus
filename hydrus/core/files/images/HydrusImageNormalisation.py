@@ -13,14 +13,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files.images import HydrusImageColours
 from hydrus.core.files.images import HydrusImageMetadata
 
-try:
-    
-    PIL_SRGB_PROFILE = PILImageCms.get_display_profile()
-    
-except:
-    
-    PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
-    
+PIL_SRGB_PROFILE = PILImageCms.createProfile( 'sRGB' )
 
 DO_ICC_PROFILE_NORMALISATION = True
 
