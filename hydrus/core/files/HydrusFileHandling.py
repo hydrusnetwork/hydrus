@@ -566,6 +566,15 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             
             pass
             
+    elif mime in HC.POTENTIAL_OFFICE_OLE_MIMES:
+        
+        try:
+        
+            num_words = HydrusOLEHandling.OfficeOLEDocumentWordCount( path )
+            
+        except HydrusExceptions.LimitedSupportFileException:
+            
+            pass
         
     elif mime == HC.APPLICATION_FLASH:
         
