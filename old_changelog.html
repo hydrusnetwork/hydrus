@@ -35,6 +35,36 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_575"><a href="#version_575">version 575</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>the new 'children' tab now sorts its results by count, and it only shows the top n (default 40) results. you can edit the n under _options-&gt;tags_. let me know how this works IRL, as this new count-sorting needs a bit of extra CPU</li>
+                        <li>when you ask subscriptions to 'check now', either in the 'edit subscription' or 'edit subscriptions' dialogs, if there is a mix of DEAD and ALIVE subs, it now pops up a quick question dialog asking whether you want to check now for all/alive/dead</li>
+                        <li>fixed the (do not) 'alphabetise GET query parameters' URL Class checkbox, which I broke in v569. sorry for the trouble--the new URL encoding handling was accidentally alphabetising all URLs on ingestion. a new unit test will catch this in future, so it shouldn't happen again (issue #1551)</li>
+                        <li>thanks to a user, I think we have fixed ICC profile processing when your system ICC Profile is non-sRGB</li>
+                        <li>fixed a logical test that was disallowing thumbnail regen on files with no resolution (certain svg, for instance). all un-resolutioned files will now (re)render a thumb to the max bounding thumbnail resolution setting. fingers crossed we'll be able to figure out a ratio solution in future</li>
+                        <li>added a _debug-&gt;help-&gt;gui actions-&gt;reload current stylesheet_ menu action. it unloads and reloads the current QSS</li>
+                        <li>added a _debug-&gt;help-&gt;gui actions-&gt;reload current gui session_ menu action. it saves the current session and reloads it</li>
+                        <li>fixed the rendering of some 16-bit pngs that seem to be getting a slightly different image mode on the new version of PIL</li>
+                        <li>the debug 'gui report mode' now reports extensive info about virtual taglist heights. if I have been working with you on taglists, mostly on the manage tags dialog, that spawn without a scrollbar even though they should, please run this mode and then try to capture the error. hit me up and we'll see if the numbers explain what's going on. I may have also simply fixed the bug</li>
+                        <li>I think I sped up adding tags to a local tag service that has a lot of siblings/parents</li>
+                        <li>updated the default danbooru parsers to get the original and/or translated artist notes. I don't know if a user did this or I did, but my dev machine somehow already had the tech while the defaults did not--if you did this, thinks!</li>
+                        <li>added more tweet URL Classes for the default downloader. you should now be able to drag and drop a vxtwitter or fxtwitter URL on the client and it'll work</li>
+                        <li><h3>auto-duplicate resolution</h3></li>
+                        <li>I have nothing real to show today, but I have a skeleton of code and a good plan on how to get the client resolving easy duplicate pairs by itself. so far, it looks easier than I feared, but, as always, there will be a lot to do. I will keep chipping away at this and will release features in tentative waves for advanced users to play with</li>
+                        <li>with this system, I will be launching the very first version of the 'Metadata Conditional' object I have been talking about for a few years. fingers crossed, we'll be able to spam it to all sorts of other places to do 'if the file has x property, then do y' in a standardised way</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>refactored the new tag children autocomplete tab to its own class so it can handle its new predicate gubbins and sorted/culled search separately. it is also now aware of the current file location context to give file-domain-sensitive suggestions (falling back to 'all known files' for fast search if things are complicated)</li>
+                        <li>fixed a layout issue on file import options panel when a sister page caused it to be taller than it wanted; the help button ended up being the expanding widget jej</li>
+                        <li>non-menubar menus and submenus across the program now remove a hanging final separator item, making the logic of forming menu groups a little easier in future</li>
+                        <li>the core 'Load image in PIL' method has some better error reporting, and many calls now explicitly tell it a human-readable source description so we can avoid repeats of `DamagedOrUnusualFileException: Could not load the image at "&lt;_io.BytesIO object at 0x000001F60CE45620&gt;"--it was likely malformed!`</li>
+                        <li>cleaned up some dict instantiations in `ClientOptions`</li>
+                        <li>moved `ClientDuplicates` up to a new `duplicates` module and migrated some duplicate enums over to it from `ClientConstants`</li>
+                        <li>removed an old method-wrapper hack that applied the 'load images with PIL' option. I just moved to a global that I set on init and update on options change</li>
+                        <li>cleaned some duplicate checking code</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_574"><a href="#version_574">version 574</a></h2>
                     <ul>
                         <li><h3>local hashes cache</h3></li>
@@ -53,7 +83,7 @@
                         <li>when setting up an import folder, the dialog will now refuse to OK if you set a path that is 1) above the install dir or db dir or 2) above or below any of your file storage locations. shouldn't be possible to set up an import from your own file storage folder by accident any more</li>
                         <li>added a new 'apply image ICC Profile colour adjustments' checkbox to _options-&gt;media_. this simply turns off ICC profile loading and application, for debug purposes</li>
                         <li><h3>boring cleanup</h3></li>
-                        <li>the default SQLite page size is now 4096 bytes on Linux, the SQLite default. it was 1024 previously, but SQLite now recommend 4096 for all platforms. the next time Linux users vacuum any of their databases, they will get fixed. I do not think this is a big deal, so don't rush to force this</li>
+                        <li>the default SQLite page size is now 4096 bytes on Linux and macOS, the SQLite default. it was 1024 previously, but SQLite now recommend 4096 for all platforms. the next time Linux users vacuum any of their databases, they will get fixed. I do not think this is a big deal, so don't rush to force this</li>
                         <li>fixed the last couple dozen missing layout flags across the program, which were ancient artifacts from the wx-&gt;Qt conversion</li>
                         <li>fixed the WTFPL licence to be my copyright, lol</li>
                         <li>deleted the local booru service management/UI code</li>
