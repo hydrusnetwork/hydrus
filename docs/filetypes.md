@@ -79,6 +79,9 @@ The filetype for a file can be overridden with `manage -> force filetype` in the
 | docx     | `.docx`   | `application/vnd.openxmlformats-officedocument.wordprocessingml.document`   |     ❌     |         ❌         |                                                                            |
 | xlsx     | `.xlsx`   | `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`         |     ❌     |         ❌         |                                                                            |
 | pptx     | `.pptx`   | `application/vnd.openxmlformats-officedocument.presentationml.presentation` |     ✅     |         ❌         | 300 DPI assumed for resolution. Thumbnail only if embedded in the document |
+| doc      | `.doc`    | `application/msword`                                                        |     ❌     |         ❌         |                                                                            |
+| xls      | `.xls`    | `application/vnd.ms-excel`                                                  |     ❌     |         ❌         |                                                                            |
+| ppt      | `.ppt`    | `application/vnd.ms-powerpoint`                                             |     ❌     |         ❌         |                                                                            |
 | rtf      | `.rtf`    | `application/rtf`                                                           |     ❌     |         ❌         |                                                                            |
 
 
