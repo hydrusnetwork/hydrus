@@ -1989,6 +1989,8 @@ class ListBox( QW.QScrollArea ):
     
     def _SetVirtualSize( self ):
         
+        # this triggers an update of the scrollbars, maybe important if this is the first time the thing is shown, let's see if it helps our missing scrollbar issue
+        # I think this is needed here for PySide2 and a/c dropdowns, help
         self.setWidgetResizable( True )
         
         my_size = self.widget().size()
@@ -1997,9 +1999,17 @@ class ListBox( QW.QScrollArea ):
         
         ideal_virtual_size = QC.QSize( my_size.width(), text_height * self._total_positional_rows )
         
+        if HG.gui_report_mode:
+            
+            HydrusData.ShowText( f'Setting a virtual size on {self}. Num terms: {len( self._ordered_terms)}, Text height: {text_height}, Total Positional Rows: {self._total_positional_rows}, My Height: {my_size.height()}, Ideal Height: {ideal_virtual_size.height()}' )
+            
+        
         if ideal_virtual_size != my_size:
             
             self.widget().setMinimumSize( ideal_virtual_size )
+            
+            # this triggers an update of the scrollbars, maybe important if this is the first time the thing is shown, let's see if it helps our missing scrollbar issue
+            self.setWidgetResizable( True )
             
         
     

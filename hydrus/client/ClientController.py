@@ -1023,6 +1023,8 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         HydrusImageHandling.SetEnableLoadTruncatedImages( self.new_options.GetBoolean( 'enable_truncated_images_pil' ) )
         HydrusImageNormalisation.SetDoICCProfileNormalisation( self.new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
         
+        HydrusImageHandling.FORCE_PIL_ALWAYS = self.new_options.GetBoolean( 'load_images_with_pil' )
+        
     
     def InitModel( self ):
         
@@ -1490,7 +1492,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             if work_done:
                 
-                from hydrus.client import ClientDuplicates
+                from hydrus.client.duplicates import ClientDuplicates
                 
                 ClientDuplicates.DuplicatesManager.instance().RefreshMaintenanceNumbers()
                 

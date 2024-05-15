@@ -53,6 +53,8 @@ class GUICore( QC.QObject ):
     
     def PopupMenu( self, widget: QW.QWidget, menu: QW.QMenu ):
         
+        ClientGUIMenus.RemoveFinalSeparator( menu )
+        
         if HC.PLATFORM_MACOS and widget.window().isModal():
             
             # Ok, seems like Big Sur can't do menus at the moment lmao. it shows the menu but the mouse can't interact with it

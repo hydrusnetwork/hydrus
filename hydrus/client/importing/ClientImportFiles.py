@@ -106,7 +106,7 @@ def CheckFileImportStatus( file_import_status: FileImportStatus ) -> FileImportS
     
 class FileImportJob( object ):
     
-    def __init__( self, temp_path: str, file_import_options: FileImportOptions.FileImportOptions ):
+    def __init__( self, temp_path: str, file_import_options: FileImportOptions.FileImportOptions, human_file_description = None ):
         
         if HG.file_import_report_mode:
             
@@ -120,6 +120,7 @@ class FileImportJob( object ):
         
         self._temp_path = temp_path
         self._file_import_options = file_import_options
+        self._human_file_description = human_file_description
         
         self._pre_import_file_status = FileImportStatus.STATICGetUnknownStatus()
         self._post_import_file_status = FileImportStatus.STATICGetUnknownStatus()
@@ -422,7 +423,7 @@ class FileImportJob( object ):
                 
                 if raw_pil_image is None:
                     
-                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path )
+                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path, human_file_description = self._human_file_description )
                     
                 
                 has_exif = HydrusImageMetadata.HasEXIF( raw_pil_image )
@@ -451,7 +452,7 @@ class FileImportJob( object ):
                     
                     if raw_pil_image is None:
                         
-                        raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path )
+                        raw_pil_image = HydrusImageOpening.RawOpenPILImage( self._temp_path, human_file_description = self._human_file_description )
                         
                     
                     has_icc_profile = HydrusImageMetadata.HasICCProfile( raw_pil_image )

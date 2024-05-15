@@ -45,6 +45,7 @@ from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client import ClientRendering
 from hydrus.client import ClientImageHandling
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
@@ -625,8 +626,8 @@ def ParseDuplicateSearch( request: HydrusServerRequest.HydrusRequest ):
     file_search_context_1 = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context_1, predicates = predicates_1 )
     file_search_context_2 = ClientSearch.FileSearchContext( location_context = location_context, tag_context = tag_context_2, predicates = predicates_2 )
     
-    dupe_search_type = request.parsed_request_args.GetValue( 'potentials_search_type', int, default_value = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
-    pixel_dupes_preference = request.parsed_request_args.GetValue( 'pixel_duplicates', int, default_value = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+    dupe_search_type = request.parsed_request_args.GetValue( 'potentials_search_type', int, default_value = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+    pixel_dupes_preference = request.parsed_request_args.GetValue( 'pixel_duplicates', int, default_value = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
     max_hamming_distance = request.parsed_request_args.GetValue( 'max_hamming_distance', int, default_value = 4 )
     
     return (
@@ -1434,7 +1435,7 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         
         file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
         
-        file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
+        file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = f'API POSTed File' )
         
         body_dict = {}
         

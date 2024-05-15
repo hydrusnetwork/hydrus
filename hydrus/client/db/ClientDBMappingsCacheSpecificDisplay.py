@@ -693,6 +693,9 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
     
     def RescindPendingMappings( self, file_service_id, tag_service_id, storage_tag_id, hash_ids ):
         
+        # other things imply this tag on display, so we need to check storage to see what else has it
+        statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNames( file_service_id, tag_service_id )
+        
         ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id )
         
         implies_tag_ids = self.modules_tag_display.GetImplies( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, storage_tag_id )
@@ -717,9 +720,6 @@ class ClientDBMappingsCacheSpecificDisplay( ClientDBModule.ClientDBModule ):
                 num_rescinded = self._GetRowCount()
                 
             else:
-                
-                # other things imply this tag on display, so we need to check storage to see what else has it
-                statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNames( file_service_id, tag_service_id )
                 
                 mappings_table_name = statuses_to_table_names[ HC.CONTENT_STATUS_PENDING ]
                 

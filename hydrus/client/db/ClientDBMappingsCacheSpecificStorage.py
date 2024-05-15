@@ -263,16 +263,25 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
     
     def AddMappings( self, tag_service_id, tag_id, hash_ids, filtered_hashes_generator: FilteredHashesGenerator ):
         
+        is_local = self.modules_services.GetServiceType( tag_service_id ) == HC.LOCAL_TAG
+        
         for ( file_service_id, filtered_hash_ids ) in filtered_hashes_generator.IterateHashes( hash_ids ):
             
             ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
             
-            # we have to interleave this into the iterator so that if two siblings with the same ideal are pend->currented at once, we remain logic consistent for soletag lookups!
-            self.modules_mappings_cache_specific_display.RescindPendingMappings( file_service_id, tag_service_id, tag_id, filtered_hash_ids )
-            
-            self._ExecuteMany( 'DELETE FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id = ? AND tag_id = ?;', ( ( hash_id, tag_id ) for hash_id in filtered_hash_ids ) )
-            
-            num_pending_rescinded = self._GetRowCount()
+            if is_local:
+                
+                num_pending_rescinded = 0
+                
+            else:
+                
+                # we have to interleave this into the iterator so that if two siblings with the same ideal are pend->currented at once, we remain logic consistent for soletag lookups!
+                self.modules_mappings_cache_specific_display.RescindPendingMappings( file_service_id, tag_service_id, tag_id, filtered_hash_ids )
+                
+                self._ExecuteMany( 'DELETE FROM ' + cache_pending_mappings_table_name + ' WHERE hash_id = ? AND tag_id = ?;', ( ( hash_id, tag_id ) for hash_id in filtered_hash_ids ) )
+                
+                num_pending_rescinded = self._GetRowCount()
+                
             
             #
             
@@ -594,8 +603,6 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         for ( file_service_id, filtered_hash_ids ) in filtered_hashes_generator.IterateHashes( hash_ids ):
             
             ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
-            
-            ac_counts = collections.Counter()
             
             self.modules_mappings_cache_specific_display.RescindPendingMappings( file_service_id, tag_service_id, tag_id, filtered_hash_ids )
             

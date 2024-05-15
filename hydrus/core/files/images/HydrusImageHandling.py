@@ -142,7 +142,11 @@ def ClipPILImage( pil_image: PILImage.Image, clip_rect ):
     return pil_image.crop( box = ( x, y, x + clip_width, y + clip_height ) )
     
 
-def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
+FORCE_PIL_ALWAYS = True
+
+def GenerateNumPyImage( path, mime, force_pil = False, human_file_description = None ) -> numpy.array:
+    
+    force_pil = force_pil or FORCE_PIL_ALWAYS
     
     if HG.media_load_report_mode:
         
@@ -180,7 +184,7 @@ def GenerateNumPyImage( path, mime, force_pil = False ) -> numpy.array:
     
     if not force_pil:
         
-        pil_image = HydrusImageOpening.RawOpenPILImage( path )
+        pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
         
         if pil_image.mode == 'LAB':
             
@@ -277,9 +281,9 @@ def GenerateNumPyImageFromPILImage( pil_image: PILImage.Image, strip_useless_alp
     return numpy_image
     
 
-def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = True ) -> PILImage.Image:
+def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = True, human_file_description = None ) -> PILImage.Image:
     
-    pil_image = HydrusImageOpening.RawOpenPILImage( path )
+    pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
     
     try:
         
@@ -287,7 +291,7 @@ def GeneratePILImage( path: typing.Union[ str, typing.BinaryIO ], dequantize = T
         
         if dequantize:
             
-            if pil_image.mode in ( 'I', 'F' ):
+            if pil_image.mode in ( 'I', 'I;16', 'I;16L', 'I;16B', 'I;16N', 'F' ):
                 
                 # 'I' = greyscale, uint16
                 # 'F' = float, np.float32
@@ -622,7 +626,7 @@ def GetThumbnailResolution( image_resolution: typing.Tuple[ int, int ], bounding
     return ( thumbnail_width, thumbnail_height )
     
 
-def IsDecompressionBomb( path ) -> bool:
+def IsDecompressionBomb( path, human_file_description = None ) -> bool:
     
     # there are two errors here, the 'Warning' and the 'Error', which atm is just a test vs a test x 2 for number of pixels
     # 256MB bmp by default, ( 1024 ** 3 ) // 4 // 3
@@ -634,7 +638,7 @@ def IsDecompressionBomb( path ) -> bool:
     
     try:
         
-        HydrusImageOpening.RawOpenPILImage( path )
+        HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
         
     except ( PILImage.DecompressionBombError ):
         

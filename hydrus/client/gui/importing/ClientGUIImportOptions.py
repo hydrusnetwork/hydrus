@@ -312,6 +312,8 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.AddToLayout( vbox, self._load_default_options, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._specific_options_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
+        vbox.addStretch( 1 )
+        
         self.widget().setLayout( vbox )
         
         self._destination_location_context.locationChanged.connect( self._UpdateLocationText )

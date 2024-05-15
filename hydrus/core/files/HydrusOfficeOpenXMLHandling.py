@@ -93,7 +93,7 @@ def PowerPointResolution( path: str ):
     file = GetZipAsPath( path, 'ppt/presentation.xml' ).open( 'rb' )
     
     root = ET.parse( file )
-        
+    
     sldSz = root.find('./p:sldSz', {'p': 'http://schemas.openxmlformats.org/presentationml/2006/main'})
     
     x_emu = int(sldSz.get('cx'))

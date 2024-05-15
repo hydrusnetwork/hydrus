@@ -3286,7 +3286,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
     
     def _UpdateScrollBars( self ):
-
+        
         # The following call is officially a no-op since this property is already true, but it also triggers an update
         # of the scroll area's scrollbars which we need.
         # We need this since we are intercepting & doing work in resize events which causes

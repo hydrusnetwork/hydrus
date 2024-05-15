@@ -1,4 +1,5 @@
 import collections
+import itertools
 import os
 import threading
 import time
@@ -38,6 +39,36 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportSubscriptions
 from hydrus.client.importing import ClientImportSubscriptionQuery
 from hydrus.client.importing import ClientImportSubscriptionLegacy # keep this here so the serialisable stuff is registered, it has to be imported somewhere
+
+def DoAliveOrDeadCheck( win: QW.QWidget, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
+    
+    do_alive = True
+    do_dead = True
+    
+    num_dead = sum( ( 1 for query_header in query_headers if query_header.IsDead() ) )
+    
+    if 0 < num_dead < len( query_headers ):
+        
+        message = f'Of the {HydrusData.ToHumanInt(len(query_headers))} selected queries, {HydrusData.ToHumanInt(num_dead)} are DEAD. Which queries do you want to check?'
+        
+        choice_tuples = [
+            ( f'all of them', ( True, True ), 'Resuscitate the DEAD queries and check everything.' ),
+            ( f'the {HydrusData.ToHumanInt(len(query_headers)-num_dead)} ALIVE', ( True, False ), 'Check the ALIVE queries.' ),
+            ( f'the {HydrusData.ToHumanInt(num_dead)} DEAD', ( False, True ), 'Resuscitate the DEAD queries and check them.' )
+        ]
+        
+        try:
+            
+            ( do_alive, do_dead ) = ClientGUIDialogsQuick.SelectFromListButtons( win, 'Check which?', choice_tuples, message = message )
+            
+        except HydrusExceptions.CancelledException:
+            
+            raise
+            
+        
+    
+    return ( do_alive, do_dead )
+    
 
 def GetQueryHeadersQualityInfo( query_headers: typing.Iterable[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ] ):
     
@@ -403,14 +434,38 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _CheckNow( self ):
         
-        selected_queries = self._query_headers.GetData( only_selected = True )
+        selected_query_headers = self._query_headers.GetData( only_selected = True )
         
-        for query_header in selected_queries:
+        try:
+            
+            ( do_alive, do_dead ) = DoAliveOrDeadCheck( self, selected_query_headers )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        for query_header in selected_query_headers:
+            
+            if query_header.IsDead():
+                
+                if not do_dead:
+                    
+                    continue
+                    
+                
+            else:
+                
+                if not do_alive:
+                    
+                    continue
+                    
+                
             
             query_header.CheckNow()
             
         
-        self._query_headers.UpdateDatas( selected_queries )
+        self._query_headers.UpdateDatas( selected_query_headers )
         
         self._query_headers.Sort()
         
@@ -2060,9 +2115,49 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
+        query_headers = HydrusData.MassExtend( ( subscription.GetQueryHeaders() for subscription in subscriptions ) )
+        
+        try:
+            
+            ( do_alive, do_dead ) = DoAliveOrDeadCheck( self, query_headers )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
         for subscription in subscriptions:
             
-            subscription.CheckNow()
+            we_did_some = False
+            
+            query_headers = subscription.GetQueryHeaders()
+            
+            for query_header in query_headers:
+                
+                if query_header.IsDead():
+                    
+                    if not do_dead:
+                        
+                        continue
+                        
+                    
+                else:
+                    
+                    if not do_alive:
+                        
+                        continue
+                        
+                    
+                
+                query_header.CheckNow()
+                
+                we_did_some = True
+                
+            
+            if we_did_some:
+                
+                subscription.ScrubDelay()
+                
             
         
         self._subscriptions.UpdateDatas( subscriptions )

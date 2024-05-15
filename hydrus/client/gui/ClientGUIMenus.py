@@ -17,6 +17,8 @@ from hydrus.client.gui import ClientGUIFunctions
 
 def AppendMenu( menu, submenu, label ):
     
+    RemoveFinalSeparator( submenu )
+    
     label = SanitiseLabel( label )
     
     submenu.setTitle( label )
@@ -233,6 +235,26 @@ def GetEventCallable( callable, *args, **kwargs ):
         
     
     return event_callable
+    
+    
+def RemoveFinalSeparator( menu: QW.QMenu ):
+    
+    num_items = len( menu.actions() )
+    
+    if num_items > 0:
+        
+        last_item = menu.actions()[-1]
+        
+        # got this once, who knows what happened, so we test for QAction now
+        # 'PySide2.QtGui.QStandardItem' object has no attribute 'isSeparator'
+        if isinstance( last_item, QW.QAction ):
+            
+            if last_item.isSeparator():
+                
+                menu.removeAction( last_item )
+                
+            
+        
     
 def SanitiseLabel( label: str ) -> str:
     

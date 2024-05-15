@@ -1973,9 +1973,13 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                 ClientGUIMenus.AppendMenuItem( menu, 'send pages to the right to a new page of pages', 'Make a new page of pages and put all the pages to the right into it.', self._SendRightPagesToNewNotebook, tab_index )
                 
             
-            if click_over_page_of_pages and page.count() > 0:
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            if not click_over_page_of_pages:
                 
-                ClientGUIMenus.AppendSeparator( menu )
+                ClientGUIMenus.AppendMenuItem( menu, 'refresh this page', 'Command this page to refresh.', page.RefreshQuery )
+                
+            elif click_over_page_of_pages and page.count() > 0:
                 
                 ClientGUIMenus.AppendMenuItem( menu, 'refresh all this page\'s pages', 'Command every page below this one to refresh.', page.RefreshAllPages )
                 

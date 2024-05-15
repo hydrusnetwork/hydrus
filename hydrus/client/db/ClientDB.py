@@ -69,6 +69,7 @@ from hydrus.client.db import ClientDBTagSearch
 from hydrus.client.db import ClientDBTagSiblings
 from hydrus.client.db import ClientDBTagSuggestions
 from hydrus.client.db import ClientDBURLMap
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.interfaces import ClientControllerInterface
 from hydrus.client.media import ClientMediaManagers
@@ -1829,7 +1830,7 @@ class DB( HydrusDB.HydrusDB ):
             
             with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                 
-                if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
                     query_hash_ids_1 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
                     query_hash_ids_2 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 ) )
@@ -1850,7 +1851,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         query_hash_ids = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
                         
-                        if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+                        if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                             
                             chosen_allowed_hash_ids = query_hash_ids
                             comparison_allowed_hash_ids = query_hash_ids
@@ -1967,7 +1968,7 @@ class DB( HydrusDB.HydrusDB ):
             
             with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                 
-                if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
                     query_hash_ids_1 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
                     query_hash_ids_2 = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 ) )
@@ -1988,7 +1989,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         query_hash_ids = set( self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 ) )
                         
-                        if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+                        if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                             
                             # both chosen and comparison must be in the search, no king selection nonsense allowed
                             chosen_allowed_hash_ids = query_hash_ids
@@ -2155,7 +2156,7 @@ class DB( HydrusDB.HydrusDB ):
             
             with self._MakeTemporaryIntegerTable( [], 'hash_id' ) as temp_table_name_2:
                 
-                if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+                if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                     
                     self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
                     self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_2, temp_table_name_2 )
@@ -2172,7 +2173,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self.modules_files_query.PopulateSearchIntoTempTable( file_search_context_1, temp_table_name_1 )
                         
-                        if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
+                        if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH:
                             
                             table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResultsBothFiles( temp_table_name_1, pixel_dupes_preference, max_hamming_distance )
                             
@@ -2791,7 +2792,7 @@ class DB( HydrusDB.HydrusDB ):
         return boned_stats
         
         # TODO: fix this, it takes ages sometimes IRL
-        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, current_files_table_name, CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
+        table_join = self.modules_files_duplicates.GetPotentialDuplicatePairsTableJoinOnSearchResults( db_location_context, current_files_table_name, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, max_hamming_distance = 8 )
         
         ( total_potential_pairs, ) = self._Execute( f'SELECT COUNT( * ) FROM ( SELECT DISTINCT smaller_media_id, larger_media_id FROM {table_join} );' ).fetchone()
         
@@ -6807,6 +6808,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'tag_display_application': result = self.modules_tag_display.GetApplication( *args, **kwargs )
         elif action == 'tag_display_maintenance_status': result = self._CacheTagDisplayGetApplicationStatusNumbers( *args, **kwargs )
         elif action == 'tag_parents': result = self.modules_tag_parents.GetTagParents( *args, **kwargs )
+        elif action == 'tag_predicates': result = self.modules_tag_search.GetTagPredicates( *args, **kwargs )
         elif action == 'tag_siblings': result = self.modules_tag_siblings.GetTagSiblings( *args, **kwargs )
         elif action == 'tag_siblings_all_ideals': result = self.modules_tag_siblings.GetTagSiblingsIdeals( *args, **kwargs )
         elif action == 'tag_display_decorators': result = self.modules_tag_display.GetUIDecorators( *args, **kwargs )
@@ -10316,6 +10318,55 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to delete the local booru stub failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 574:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'danbooru file page parser - get webm ugoira',
+                    'danbooru file page parser'
+                ] )
+                
+                parsers = domain_manager.GetParsers()
+                
+                parser_names = { parser.GetName() for parser in parsers }
+                
+                # checking for floog's downloader
+                if 'fxtwitter api status parser' not in parser_names and 'vxtwitter api status parser' not in parser_names:
+                    
+                    domain_manager.OverwriteDefaultURLClasses( [
+                        'vxtwitter tweet',
+                        'vxtwitter api status',
+                        'vxtwitter api status (with username)',
+                        'fixvx tweet',
+                        'fixupx tweet',
+                        'fxtwitter tweet',
+                        'x post'
+                    ] )
+                    
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

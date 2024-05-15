@@ -845,10 +845,16 @@ def LastShutdownWasBad( db_path, instance ):
         return False
         
 
+def MassExtend( iterables ):
+    
+    return [ item for item in itertools.chain.from_iterable( iterables ) ]
+    
+
 def MassUnion( iterables ):
     
     return { item for item in itertools.chain.from_iterable( iterables ) }
     
+
 def MedianPop( population ):
     
     # assume it has at least one and comes sorted

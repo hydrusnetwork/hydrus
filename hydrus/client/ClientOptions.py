@@ -11,8 +11,8 @@ from hydrus.core import HydrusTags
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientDuplicates
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing.options import FileImportOptions
 
 class ClientOptions( HydrusSerialisable.SerialisableBase ):
@@ -122,206 +122,134 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def _InitialiseDefaults( self ):
         
-        self._dictionary[ 'booleans' ] = {}
-        
-        self._dictionary[ 'booleans' ][ 'advanced_mode' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'remove_filtered_files_even_when_skipped' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'filter_inbox_and_archive_predicates' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'discord_dnd_fix' ] = False
-        self._dictionary[ 'booleans' ][ 'secret_discord_dnd_fix' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'show_unmatched_urls_in_media_viewer' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'set_search_focus_on_page_change' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'allow_remove_on_manage_tags_input' ] = True
-        self._dictionary[ 'booleans' ][ 'yes_no_on_remove_on_manage_tags' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'activate_window_on_tag_search_page_activation' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'show_related_tags' ] = True
-        self._dictionary[ 'booleans' ][ 'show_file_lookup_script_tags' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'use_native_menubar' ] = HC.PLATFORM_MACOS
-        
-        self._dictionary[ 'booleans' ][ 'shortcuts_merge_non_number_numpad' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'disable_get_safe_position_test' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'freeze_message_manager_when_mouse_on_other_monitor' ] = False
-        self._dictionary[ 'booleans' ][ 'freeze_message_manager_when_main_gui_minimised' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'load_images_with_pil' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'only_show_delete_from_all_local_domains_when_filtering' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'use_system_ffmpeg' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'elide_page_tab_names' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'maintain_similar_files_duplicate_pairs_during_idle' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'show_namespaces' ] = True
-        self._dictionary[ 'booleans' ][ 'show_number_namespaces' ] = True
-        self._dictionary[ 'booleans' ][ 'show_subtag_number_namespaces' ] = True
-        self._dictionary[ 'booleans' ][ 'replace_tag_underscores_with_spaces' ] = False
-        self._dictionary[ 'booleans' ][ 'replace_tag_emojis_with_boxes' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'verify_regular_https' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'page_drop_chase_normally' ] = True
-        self._dictionary[ 'booleans' ][ 'page_drop_chase_with_shift' ] = False
-        self._dictionary[ 'booleans' ][ 'page_drag_change_tab_normally' ] = True
-        self._dictionary[ 'booleans' ][ 'page_drag_change_tab_with_shift' ] = True
-        self._dictionary[ 'booleans' ][ 'wheel_scrolls_tab_bar' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'remove_local_domain_moved_files' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'anchor_and_hide_canvas_drags' ] = HC.PLATFORM_WINDOWS
-        self._dictionary[ 'booleans' ][ 'touchscreen_canvas_drags_unanchor' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'import_page_progress_display' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'process_subs_in_random_order' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'ac_select_first_with_count' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'saving_sash_positions_on_exit' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'database_deferred_delete_maintenance_during_idle' ] = True
-        self._dictionary[ 'booleans' ][ 'database_deferred_delete_maintenance_during_active' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'file_maintenance_during_idle' ] = True
-        self._dictionary[ 'booleans' ][ 'file_maintenance_during_active' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'tag_display_maintenance_during_idle' ] = True
-        self._dictionary[ 'booleans' ][ 'tag_display_maintenance_during_active' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'save_page_sort_on_change' ] = False
-        self._dictionary[ 'booleans' ][ 'disable_page_tab_dnd' ] = False
-        self._dictionary[ 'booleans' ][ 'force_hide_page_signal_on_new_page' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'pause_export_folders_sync' ] = False
-        self._dictionary[ 'booleans' ][ 'pause_import_folders_sync' ] = False
-        self._dictionary[ 'booleans' ][ 'pause_repo_sync' ] = False
-        self._dictionary[ 'booleans' ][ 'pause_subs_sync' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'pause_all_new_network_traffic' ] = False
-        self._dictionary[ 'booleans' ][ 'boot_with_network_traffic_paused' ] = False
-        self._dictionary[ 'booleans' ][ 'pause_all_file_queues' ] = False
-        self._dictionary[ 'booleans' ][ 'pause_all_watcher_checkers' ] = False
-        self._dictionary[ 'booleans' ][ 'pause_all_gallery_searches' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'popup_message_force_min_width' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'always_show_iso_time' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'confirm_multiple_local_file_services_move' ] = True
-        self._dictionary[ 'booleans' ][ 'confirm_multiple_local_file_services_copy' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'use_advanced_file_deletion_dialog' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'show_new_on_file_seed_short_summary' ] = False
-        self._dictionary[ 'booleans' ][ 'show_deleted_on_file_seed_short_summary' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'only_save_last_session_during_idle' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'do_human_sort_on_hdd_file_import_paths' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'highlight_new_watcher' ] = True
-        self._dictionary[ 'booleans' ][ 'highlight_new_query' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'delete_files_after_export' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active' ] = True
-        self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active_on_archive_delete_filter' ] = True
-        self._dictionary[ 'booleans' ][ 'file_viewing_statistics_active_on_dupe_filter' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'prefix_hash_when_copying' ] = False
-        self._dictionary[ 'booleans' ][ 'file_system_waits_on_wakeup' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'always_show_system_everything' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'watch_clipboard_for_watcher_urls' ] = False
-        self._dictionary[ 'booleans' ][ 'watch_clipboard_for_other_recognised_urls' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'default_search_synchronised' ] = True
-        self._dictionary[ 'booleans' ][ 'autocomplete_float_main_gui' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'global_audio_mute' ] = False
-        self._dictionary[ 'booleans' ][ 'media_viewer_audio_mute' ] = False
-        self._dictionary[ 'booleans' ][ 'media_viewer_uses_its_own_audio_volume' ] = False
-        self._dictionary[ 'booleans' ][ 'preview_audio_mute' ] = False
-        self._dictionary[ 'booleans' ][ 'preview_uses_its_own_audio_volume' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'always_loop_gifs' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'always_show_system_tray_icon' ] = False
-        self._dictionary[ 'booleans' ][ 'minimise_client_to_system_tray' ] = False
-        self._dictionary[ 'booleans' ][ 'close_client_to_system_tray' ] = False
-        self._dictionary[ 'booleans' ][ 'start_client_in_system_tray' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'use_qt_file_dialogs' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'notify_client_api_cookies' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_taglists' ] = True
-        self._dictionary[ 'booleans' ][ 'expand_parents_on_storage_autocomplete_taglists' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'show_parent_decorators_on_storage_taglists' ] = True
-        self._dictionary[ 'booleans' ][ 'show_parent_decorators_on_storage_autocomplete_taglists' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'show_sibling_decorators_on_storage_taglists' ] = True
-        self._dictionary[ 'booleans' ][ 'show_sibling_decorators_on_storage_autocomplete_taglists' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'show_session_size_warnings' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'delete_lock_for_archived_files' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_reason' ] = True
-        self._dictionary[ 'booleans' ][ 'remember_last_advanced_file_deletion_special_action' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'do_macos_debug_dialog_menus' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'save_default_tag_service_tab_on_change' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'force_animation_scanbar_show' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'call_mouse_buttons_primary_secondary' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'start_note_editing_at_end' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'draw_transparency_checkerboard_media_canvas' ] = False
-        self._dictionary[ 'booleans' ][ 'draw_transparency_checkerboard_media_canvas_duplicates' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'menu_choice_buttons_can_mouse_scroll' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'focus_preview_on_ctrl_click' ] = False
-        self._dictionary[ 'booleans' ][ 'focus_preview_on_ctrl_click_only_static' ] = False
-        self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click' ] = False
-        self._dictionary[ 'booleans' ][ 'focus_preview_on_shift_click_only_static' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'fade_sibling_connector' ] = True
-        self._dictionary[ 'booleans' ][ 'use_custom_sibling_connector_colour' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'hide_uninteresting_local_import_time' ] = True
-        self._dictionary[ 'booleans' ][ 'hide_uninteresting_modified_time' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'allow_blurhash_fallback' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'fade_thumbnails' ] = True
-        
-        self._dictionary[ 'booleans' ][ 'slideshow_always_play_duration_media_once_through' ] = False
-        
-        self._dictionary[ 'booleans' ][ 'enable_truncated_images_pil' ] = True
-        self._dictionary[ 'booleans' ][ 'do_icc_profile_normalisation' ] = True
-        
         from hydrus.client.gui.canvas import ClientGUIMPV
         
-        self._dictionary[ 'booleans' ][ 'mpv_available_at_start' ] = ClientGUIMPV.MPV_IS_AVAILABLE
+        self._dictionary[ 'booleans' ] = {
+            'advanced_mode' : False,
+            'remove_filtered_files_even_when_skipped' : False,
+            'filter_inbox_and_archive_predicates' : False,
+            'discord_dnd_fix' : False,
+            'secret_discord_dnd_fix' : False,
+            'show_unmatched_urls_in_media_viewer' : False,
+            'set_search_focus_on_page_change' : False,
+            'allow_remove_on_manage_tags_input' : True,
+            'yes_no_on_remove_on_manage_tags' : True,
+            'activate_window_on_tag_search_page_activation' : False,
+            'show_related_tags' : True,
+            'show_file_lookup_script_tags' : False,
+            'use_native_menubar' : HC.PLATFORM_MACOS,
+            'shortcuts_merge_non_number_numpad' : True,
+            'disable_get_safe_position_test' : False,
+            'freeze_message_manager_when_mouse_on_other_monitor' : False,
+            'freeze_message_manager_when_main_gui_minimised' : False,
+            'load_images_with_pil' : True,
+            'only_show_delete_from_all_local_domains_when_filtering' : False,
+            'use_system_ffmpeg' : False,
+            'elide_page_tab_names' : True,
+            'maintain_similar_files_duplicate_pairs_during_idle' : False,
+            'show_namespaces' : True,
+            'show_number_namespaces' : True,
+            'show_subtag_number_namespaces' : True,
+            'replace_tag_underscores_with_spaces' : False,
+            'replace_tag_emojis_with_boxes' : False,
+            'verify_regular_https' : True,
+            'page_drop_chase_normally' : True,
+            'page_drop_chase_with_shift' : False,
+            'page_drag_change_tab_normally' : True,
+            'page_drag_change_tab_with_shift' : True,
+            'wheel_scrolls_tab_bar' : False,
+            'remove_local_domain_moved_files' : False,
+            'anchor_and_hide_canvas_drags' : HC.PLATFORM_WINDOWS,
+            'touchscreen_canvas_drags_unanchor' : False,
+            'import_page_progress_display' : True,
+            'process_subs_in_random_order' : True,
+            'ac_select_first_with_count' : False,
+            'saving_sash_positions_on_exit' : True,
+            'database_deferred_delete_maintenance_during_idle' : True,
+            'database_deferred_delete_maintenance_during_active' : True,
+            'file_maintenance_during_idle' : True,
+            'file_maintenance_during_active' : True,
+            'tag_display_maintenance_during_idle' : True,
+            'tag_display_maintenance_during_active' : True,
+            'save_page_sort_on_change' : False,
+            'disable_page_tab_dnd' : False,
+            'force_hide_page_signal_on_new_page' : False,
+            'pause_export_folders_sync' : False,
+            'pause_import_folders_sync' : False,
+            'pause_repo_sync' : False,
+            'pause_subs_sync' : False,
+            'pause_all_new_network_traffic' : False,
+            'boot_with_network_traffic_paused' : False,
+            'pause_all_file_queues' : False,
+            'pause_all_watcher_checkers' : False,
+            'pause_all_gallery_searches' : False,
+            'popup_message_force_min_width' : False,
+            'always_show_iso_time' : False,
+            'confirm_multiple_local_file_services_move' : True,
+            'confirm_multiple_local_file_services_copy' : True,
+            'use_advanced_file_deletion_dialog' : False,
+            'show_new_on_file_seed_short_summary' : False,
+            'show_deleted_on_file_seed_short_summary' : False,
+            'only_save_last_session_during_idle' : False,
+            'do_human_sort_on_hdd_file_import_paths' : True,
+            'highlight_new_watcher' : True,
+            'highlight_new_query' : True,
+            'delete_files_after_export' : False,
+            'file_viewing_statistics_active' : True,
+            'file_viewing_statistics_active_on_archive_delete_filter' : True,
+            'file_viewing_statistics_active_on_dupe_filter' : False,
+            'prefix_hash_when_copying' : False,
+            'file_system_waits_on_wakeup' : False,
+            'always_show_system_everything' : False,
+            'watch_clipboard_for_watcher_urls' : False,
+            'watch_clipboard_for_other_recognised_urls' : False,
+            'default_search_synchronised' : True,
+            'autocomplete_float_main_gui' : True,
+            'global_audio_mute' : False,
+            'media_viewer_audio_mute' : False,
+            'media_viewer_uses_its_own_audio_volume' : False,
+            'preview_audio_mute' : False,
+            'preview_uses_its_own_audio_volume' : True,
+            'always_loop_gifs' : True,
+            'always_show_system_tray_icon' : False,
+            'minimise_client_to_system_tray' : False,
+            'close_client_to_system_tray' : False,
+            'start_client_in_system_tray' : False,
+            'use_qt_file_dialogs' : False,
+            'notify_client_api_cookies' : False,
+            'expand_parents_on_storage_taglists' : True,
+            'expand_parents_on_storage_autocomplete_taglists' : True,
+            'show_parent_decorators_on_storage_taglists' : True,
+            'show_parent_decorators_on_storage_autocomplete_taglists' : True,
+            'show_sibling_decorators_on_storage_taglists' : True,
+            'show_sibling_decorators_on_storage_autocomplete_taglists' : True,
+            'show_session_size_warnings' : True,
+            'delete_lock_for_archived_files' : False,
+            'remember_last_advanced_file_deletion_reason' : True,
+            'remember_last_advanced_file_deletion_special_action' : False,
+            'do_macos_debug_dialog_menus' : False,
+            'save_default_tag_service_tab_on_change' : True,
+            'force_animation_scanbar_show' : False,
+            'call_mouse_buttons_primary_secondary' : False,
+            'start_note_editing_at_end' : True,
+            'draw_transparency_checkerboard_media_canvas' : False,
+            'draw_transparency_checkerboard_media_canvas_duplicates' : True,
+            'menu_choice_buttons_can_mouse_scroll' : True,
+            'focus_preview_on_ctrl_click' : False,
+            'focus_preview_on_ctrl_click_only_static' : False,
+            'focus_preview_on_shift_click' : False,
+            'focus_preview_on_shift_click_only_static' : False,
+            'fade_sibling_connector' : True,
+            'use_custom_sibling_connector_colour' : False,
+            'hide_uninteresting_local_import_time' : True,
+            'hide_uninteresting_modified_time' : True,
+            'allow_blurhash_fallback' : True,
+            'fade_thumbnails' : True,
+            'slideshow_always_play_duration_media_once_through' : False,
+            'enable_truncated_images_pil' : True,
+            'do_icc_profile_normalisation' : True,
+            'mpv_available_at_start' : ClientGUIMPV.MPV_IS_AVAILABLE
+        }
         
         #
         
@@ -415,207 +343,144 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        self._dictionary[ 'integers' ] = {}
-        
-        self._dictionary[ 'integers' ][ 'notebook_tab_alignment' ] = CC.DIRECTION_UP
-        
-        self._dictionary[ 'integers' ][ 'video_buffer_size' ] = 96 * 1024 * 1024
-        
-        self._dictionary[ 'integers' ][ 'related_tags_search_1_duration_ms' ] = 250
-        self._dictionary[ 'integers' ][ 'related_tags_search_2_duration_ms' ] = 2000
-        self._dictionary[ 'integers' ][ 'related_tags_search_3_duration_ms' ] = 6000
-        self._dictionary[ 'integers' ][ 'related_tags_concurrence_threshold_percent' ] = 6
-        
-        self._dictionary[ 'integers' ][ 'suggested_tags_width' ] = 300
-        
-        self._dictionary[ 'integers' ][ 'similar_files_duplicate_pairs_search_distance' ] = 0
-        
-        self._dictionary[ 'integers' ][ 'default_new_page_goes' ] = CC.NEW_PAGE_GOES_FAR_RIGHT
-        
-        self._dictionary[ 'integers' ][ 'num_recent_petition_reasons' ] = 5
-        
-        self._dictionary[ 'integers' ][ 'max_page_name_chars' ] = 20
-        self._dictionary[ 'integers' ][ 'page_file_count_display' ] = CC.PAGE_FILE_COUNT_DISPLAY_ALL
-        
-        self._dictionary[ 'integers' ][ 'network_timeout' ] = 10
-        self._dictionary[ 'integers' ][ 'connection_error_wait_time' ] = 15
-        self._dictionary[ 'integers' ][ 'serverside_bandwidth_wait_time' ] = 60
-        
-        self._dictionary[ 'integers' ][ 'thumbnail_visibility_scroll_percent' ] = 75
-        self._dictionary[ 'integers' ][ 'ideal_tile_dimension' ] = 768
-        
-        self._dictionary[ 'integers' ][ 'wake_delay_period' ] = 15
-        
         from hydrus.client.gui.canvas import ClientGUICanvasMedia
-        
-        self._dictionary[ 'integers' ][ 'media_viewer_zoom_center' ] = ClientGUICanvasMedia.ZOOM_CENTERPOINT_MOUSE
-        
-        self._dictionary[ 'integers' ][ 'last_session_save_period_minutes' ] = 5
-        
-        self._dictionary[ 'integers' ][ 'shutdown_work_period' ] = 86400
-        
-        self._dictionary[ 'integers' ][ 'max_network_jobs' ] = 15
-        self._dictionary[ 'integers' ][ 'max_network_jobs_per_domain' ] = 3
-        
-        self._dictionary[ 'integers' ][ 'max_connection_attempts_allowed' ] = 5
-        self._dictionary[ 'integers' ][ 'max_request_attempts_allowed_get' ] = 5
-        
         from hydrus.core.files.images import HydrusImageHandling
         
-        self._dictionary[ 'integers' ][ 'thumbnail_scale_type' ] = HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY
-        
-        self._dictionary[ 'integers' ][ 'max_simultaneous_subscriptions' ] = 1
-        
-        self._dictionary[ 'integers' ][ 'gallery_page_wait_period_pages' ] = 15
-        self._dictionary[ 'integers' ][ 'gallery_page_wait_period_subscriptions' ] = 5
-        self._dictionary[ 'integers' ][ 'watcher_page_wait_period' ] = 5
-        
-        self._dictionary[ 'integers' ][ 'popup_message_character_width' ] = 56
-        
-        self._dictionary[ 'integers' ][ 'duplicate_filter_max_batch_size' ] = 250
-        
-        self._dictionary[ 'integers' ][ 'video_thumbnail_percentage_in' ] = 35
-        
-        self._dictionary[ 'integers' ][ 'global_audio_volume' ] = 70
-        self._dictionary[ 'integers' ][ 'media_viewer_audio_volume' ] = 70
-        self._dictionary[ 'integers' ][ 'preview_audio_volume' ] = 70
-        
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_jpeg_quality' ] = 10
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_jpeg_quality' ] = 20
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_filesize' ] = 10
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_filesize' ] = 20
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_higher_resolution' ] = 20
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_much_higher_resolution' ] = 50
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_more_tags' ] = 8
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_older' ] = 4
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_nicer_ratio' ] = 10
-        self._dictionary[ 'integers' ][ 'duplicate_comparison_score_has_audio' ] = 20
-        
-        self._dictionary[ 'integers' ][ 'thumbnail_cache_size' ] = 1024 * 1024 * 32
-        self._dictionary[ 'integers' ][ 'image_cache_size' ] = 1024 * 1024 * 384
-        self._dictionary[ 'integers' ][ 'image_tile_cache_size' ] = 1024 * 1024 * 256
-        
-        self._dictionary[ 'integers' ][ 'thumbnail_cache_timeout' ] = 86400
-        self._dictionary[ 'integers' ][ 'image_cache_timeout' ] = 600
-        self._dictionary[ 'integers' ][ 'image_tile_cache_timeout' ] = 300
-        
-        self._dictionary[ 'integers' ][ 'image_cache_storage_limit_percentage' ] = 25
-        self._dictionary[ 'integers' ][ 'image_cache_prefetch_limit_percentage' ] = 10
-        
-        self._dictionary[ 'integers' ][ 'media_viewer_prefetch_delay_base_ms' ] = 100
-        self._dictionary[ 'integers' ][ 'media_viewer_prefetch_num_previous' ] = 2
-        self._dictionary[ 'integers' ][ 'media_viewer_prefetch_num_next' ] = 3
-        
-        self._dictionary[ 'integers' ][ 'thumbnail_border' ] = 1
-        self._dictionary[ 'integers' ][ 'thumbnail_margin' ] = 2
-        
-        self._dictionary[ 'integers' ][ 'thumbnail_dpr_percent' ] = 100
-        
-        self._dictionary[ 'integers' ][ 'file_maintenance_idle_throttle_files' ] = 1
-        self._dictionary[ 'integers' ][ 'file_maintenance_idle_throttle_time_delta' ] = 2
-        
-        self._dictionary[ 'integers' ][ 'file_maintenance_active_throttle_files' ] = 1
-        self._dictionary[ 'integers' ][ 'file_maintenance_active_throttle_time_delta' ] = 20
-        
-        self._dictionary[ 'integers' ][ 'subscription_network_error_delay' ] = 12 * 3600
-        self._dictionary[ 'integers' ][ 'subscription_other_error_delay' ] = 36 * 3600
-        self._dictionary[ 'integers' ][ 'downloader_network_error_delay' ] = 90 * 60
-        
-        self._dictionary[ 'integers' ][ 'file_viewing_stats_menu_display' ] = CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU
-        
-        self._dictionary[ 'integers' ][ 'number_of_gui_session_backups' ] = 10
-        
-        self._dictionary[ 'integers' ][ 'animated_scanbar_height' ] = 20
-        self._dictionary[ 'integers' ][ 'animated_scanbar_nub_width' ] = 10
-        
-        self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_number' ] = 3
-        self._dictionary[ 'integers' ][ 'domain_network_infrastructure_error_time_delta' ] = 600
-        
-        self._dictionary[ 'integers' ][ 'ac_read_list_height_num_chars' ] = 21
-        self._dictionary[ 'integers' ][ 'ac_write_list_height_num_chars' ] = 11
-        
-        self._dictionary[ 'integers' ][ 'system_busy_cpu_percent' ] = 50
-        
-        self._dictionary[ 'integers' ][ 'human_bytes_sig_figs' ] = 3
-        
-        self._dictionary[ 'integers' ][ 'ms_to_wait_between_physical_file_deletes' ] = 250
-        
-        self._dictionary[ 'integers' ][ 'potential_duplicates_search_work_time_ms' ] = 500
-        self._dictionary[ 'integers' ][ 'potential_duplicates_search_rest_percentage' ] = 100
-        
-        self._dictionary[ 'integers' ][ 'repository_processing_work_time_ms_very_idle' ] = 30000
-        self._dictionary[ 'integers' ][ 'repository_processing_rest_percentage_very_idle' ] = 3
-        
-        self._dictionary[ 'integers' ][ 'repository_processing_work_time_ms_idle' ] = 10000
-        self._dictionary[ 'integers' ][ 'repository_processing_rest_percentage_idle' ] = 5
-        
-        self._dictionary[ 'integers' ][ 'repository_processing_work_time_ms_normal' ] = 500
-        self._dictionary[ 'integers' ][ 'repository_processing_rest_percentage_normal' ] = 10
-        
-        self._dictionary[ 'integers' ][ 'tag_display_processing_work_time_ms_idle' ] = 15000
-        self._dictionary[ 'integers' ][ 'tag_display_processing_rest_percentage_idle' ] = 3
-        
-        self._dictionary[ 'integers' ][ 'tag_display_processing_work_time_ms_normal' ] = 100
-        self._dictionary[ 'integers' ][ 'tag_display_processing_rest_percentage_normal' ] = 9900
-        
-        self._dictionary[ 'integers' ][ 'tag_display_processing_work_time_ms_work_hard' ] = 5000
-        self._dictionary[ 'integers' ][ 'tag_display_processing_rest_percentage_work_hard' ] = 5
-        
-        self._dictionary[ 'integers' ][ 'deferred_table_delete_work_time_ms_idle' ] = 20000
-        self._dictionary[ 'integers' ][ 'deferred_table_delete_rest_percentage_idle' ] = 10
-        
-        self._dictionary[ 'integers' ][ 'deferred_table_delete_work_time_ms_normal' ] = 250
-        self._dictionary[ 'integers' ][ 'deferred_table_delete_rest_percentage_normal' ] = 1000
-        
-        self._dictionary[ 'integers' ][ 'deferred_table_delete_work_time_ms_work_hard' ] = 5000
-        self._dictionary[ 'integers' ][ 'deferred_table_delete_rest_percentage_work_hard' ] = 10
+        self._dictionary[ 'integers' ] = {
+            'notebook_tab_alignment' : CC.DIRECTION_UP,
+            'video_buffer_size' : 96 * 1024 * 1024,
+            'related_tags_search_1_duration_ms' : 250,
+            'related_tags_search_2_duration_ms' : 2000,
+            'related_tags_search_3_duration_ms' : 6000,
+            'related_tags_concurrence_threshold_percent' : 6,
+            'suggested_tags_width' : 300,
+            'similar_files_duplicate_pairs_search_distance' : 0,
+            'default_new_page_goes' : CC.NEW_PAGE_GOES_FAR_RIGHT,
+            'num_recent_petition_reasons' : 5,
+            'max_page_name_chars' : 20,
+            'page_file_count_display' : CC.PAGE_FILE_COUNT_DISPLAY_ALL,
+            'network_timeout' : 10,
+            'connection_error_wait_time' : 15,
+            'serverside_bandwidth_wait_time' : 60,
+            'thumbnail_visibility_scroll_percent' : 75,
+            'ideal_tile_dimension' : 768,
+            'wake_delay_period' : 15,
+            'media_viewer_zoom_center' : ClientGUICanvasMedia.ZOOM_CENTERPOINT_MOUSE,
+            'last_session_save_period_minutes' : 5,
+            'shutdown_work_period' : 86400,
+            'max_network_jobs' : 15,
+            'max_network_jobs_per_domain' : 3,
+            'max_connection_attempts_allowed' : 5,
+            'max_request_attempts_allowed_get' : 5,
+            'thumbnail_scale_type' : HydrusImageHandling.THUMBNAIL_SCALE_DOWN_ONLY,
+            'max_simultaneous_subscriptions' : 1,
+            'gallery_page_wait_period_pages' : 15,
+            'gallery_page_wait_period_subscriptions' : 5,
+            'watcher_page_wait_period' : 5,
+            'popup_message_character_width' : 56,
+            'duplicate_filter_max_batch_size' : 250,
+            'video_thumbnail_percentage_in' : 35,
+            'global_audio_volume' : 70,
+            'media_viewer_audio_volume' : 70,
+            'preview_audio_volume' : 70,
+            'duplicate_comparison_score_higher_jpeg_quality' : 10,
+            'duplicate_comparison_score_much_higher_jpeg_quality' : 20,
+            'duplicate_comparison_score_higher_filesize' : 10,
+            'duplicate_comparison_score_much_higher_filesize' : 20,
+            'duplicate_comparison_score_higher_resolution' : 20,
+            'duplicate_comparison_score_much_higher_resolution' : 50,
+            'duplicate_comparison_score_more_tags' : 8,
+            'duplicate_comparison_score_older' : 4,
+            'duplicate_comparison_score_nicer_ratio' : 10,
+            'duplicate_comparison_score_has_audio' : 20,
+            'thumbnail_cache_size' : 1024 * 1024 * 32,
+            'image_cache_size' : 1024 * 1024 * 384,
+            'image_tile_cache_size' : 1024 * 1024 * 256,
+            'thumbnail_cache_timeout' : 86400,
+            'image_cache_timeout' : 600,
+            'image_tile_cache_timeout' : 300,
+            'image_cache_storage_limit_percentage' : 25,
+            'image_cache_prefetch_limit_percentage' : 10,
+            'media_viewer_prefetch_delay_base_ms' : 100,
+            'media_viewer_prefetch_num_previous' : 2,
+            'media_viewer_prefetch_num_next' : 3,
+            'thumbnail_border' : 1,
+            'thumbnail_margin' : 2,
+            'thumbnail_dpr_percent' : 100,
+            'file_maintenance_idle_throttle_files' : 1,
+            'file_maintenance_idle_throttle_time_delta' : 2,
+            'file_maintenance_active_throttle_files' : 1,
+            'file_maintenance_active_throttle_time_delta' : 20,
+            'subscription_network_error_delay' : 12 * 3600,
+            'subscription_other_error_delay' : 36 * 3600,
+            'downloader_network_error_delay' : 90 * 60,
+            'file_viewing_stats_menu_display' : CC.FILE_VIEWING_STATS_MENU_DISPLAY_MEDIA_AND_PREVIEW_IN_SUBMENU,
+            'number_of_gui_session_backups' : 10,
+            'animated_scanbar_height' : 20,
+            'animated_scanbar_nub_width' : 10,
+            'domain_network_infrastructure_error_number' : 3,
+            'domain_network_infrastructure_error_time_delta' : 600,
+            'ac_read_list_height_num_chars' : 21,
+            'ac_write_list_height_num_chars' : 11,
+            'system_busy_cpu_percent' : 50,
+            'human_bytes_sig_figs' : 3,
+            'ms_to_wait_between_physical_file_deletes' : 250,
+            'potential_duplicates_search_work_time_ms' : 500,
+            'potential_duplicates_search_rest_percentage' : 100,
+            'repository_processing_work_time_ms_very_idle' : 30000,
+            'repository_processing_rest_percentage_very_idle' : 3,
+            'repository_processing_work_time_ms_idle' : 10000,
+            'repository_processing_rest_percentage_idle' : 5,
+            'repository_processing_work_time_ms_normal' : 500,
+            'repository_processing_rest_percentage_normal' : 10,
+            'tag_display_processing_work_time_ms_idle' : 15000,
+            'tag_display_processing_rest_percentage_idle' : 3,
+            'tag_display_processing_work_time_ms_normal' : 100,
+            'tag_display_processing_rest_percentage_normal' : 9900,
+            'tag_display_processing_work_time_ms_work_hard' : 5000,
+            'tag_display_processing_rest_percentage_work_hard' : 5,
+            'deferred_table_delete_work_time_ms_idle' : 20000,
+            'deferred_table_delete_rest_percentage_idle' : 10,
+            'deferred_table_delete_work_time_ms_normal' : 250,
+            'deferred_table_delete_rest_percentage_normal' : 1000,
+            'deferred_table_delete_work_time_ms_work_hard' : 5000,
+            'deferred_table_delete_rest_percentage_work_hard' : 10
+        }
         
         #
         
-        self._dictionary[ 'keys' ] = {}
-        
-        self._dictionary[ 'keys' ][ 'default_tag_service_tab' ] = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex()
-        self._dictionary[ 'keys' ][ 'default_tag_service_search_page' ] = CC.COMBINED_TAG_SERVICE_KEY.hex()
-        self._dictionary[ 'keys' ][ 'default_gug_key' ] = HydrusData.GenerateKey().hex()
+        self._dictionary[ 'keys' ] = {
+            'default_tag_service_tab' : CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex(),
+            'default_tag_service_search_page' : CC.COMBINED_TAG_SERVICE_KEY.hex(),
+            'default_gug_key' : HydrusData.GenerateKey().hex()
+        }
         
         self._dictionary[ 'key_list' ] = {}
         
         #
         
-        self._dictionary[ 'noneable_integers' ] = {}
-        
-        self._dictionary[ 'noneable_integers' ][ 'forced_search_limit' ] = None
-        
-        self._dictionary[ 'noneable_integers' ][ 'num_recent_tags' ] = 20
-        
-        self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity_a' ] = 0
-        self._dictionary[ 'noneable_integers' ][ 'duplicate_background_switch_intensity_b' ] = 3
-        
-        self._dictionary[ 'noneable_integers' ][ 'last_review_bandwidth_search_distance' ] = 7 * 86400
-        
-        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_media_min_time' ] = 2
-        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_media_max_time' ] = 600
-        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_preview_min_time' ] = 5
-        self._dictionary[ 'noneable_integers' ][ 'file_viewing_statistics_preview_max_time' ] = 60
-        
-        self._dictionary[ 'noneable_integers' ][ 'subscription_file_error_cancel_threshold' ] = 5
-        
-        self._dictionary[ 'noneable_integers' ][ 'media_viewer_cursor_autohide_time_ms' ] = 700
-        
-        self._dictionary[ 'noneable_integers' ][ 'idle_mode_client_api_timeout' ] = None
-        
-        self._dictionary[ 'noneable_integers' ][ 'system_busy_cpu_count' ] = 1
-        
-        self._dictionary[ 'noneable_integers' ][ 'animated_scanbar_hide_height' ] = 5
-        
-        self._dictionary[ 'noneable_integers' ][ 'last_backup_time' ] = None
-        
-        self._dictionary[ 'noneable_integers' ][ 'slideshow_short_duration_loop_percentage' ] = 20
-        self._dictionary[ 'noneable_integers' ][ 'slideshow_short_duration_loop_seconds' ] = 10
-        
-        self._dictionary[ 'noneable_integers' ][ 'slideshow_short_duration_cutoff_percentage' ] = 75
-        
-        self._dictionary[ 'noneable_integers' ][ 'slideshow_long_duration_overspill_percentage' ] = 50
+        self._dictionary[ 'noneable_integers' ] = {
+            'forced_search_limit' : None,
+            'num_recent_tags' : 20,
+            'duplicate_background_switch_intensity_a' : 0,
+            'duplicate_background_switch_intensity_b' : 3,
+            'last_review_bandwidth_search_distance' : 7 * 86400,
+            'file_viewing_statistics_media_min_time' : 2,
+            'file_viewing_statistics_media_max_time' : 600,
+            'file_viewing_statistics_preview_min_time' : 5,
+            'file_viewing_statistics_preview_max_time' : 60,
+            'subscription_file_error_cancel_threshold' : 5,
+            'media_viewer_cursor_autohide_time_ms' : 700,
+            'idle_mode_client_api_timeout' : None,
+            'system_busy_cpu_count' : 1,
+            'animated_scanbar_hide_height' : 5,
+            'last_backup_time' : None,
+            'slideshow_short_duration_loop_percentage' : 20,
+            'slideshow_short_duration_loop_seconds' : 10,
+            'slideshow_short_duration_cutoff_percentage' : 75,
+            'slideshow_long_duration_overspill_percentage' : 50,
+            'num_to_show_in_ac_dropdown_children_tab' : 40
+        }
         
         #
         
@@ -623,50 +488,50 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         
         #
         
-        self._dictionary[ 'noneable_strings' ] = {}
+        self._dictionary[ 'noneable_strings' ] = {
+            'favourite_file_lookup_script' : 'gelbooru md5',
+            'suggested_tags_layout' : 'notebook',
+            'backup_path' : None,
+            'web_browser_path' : None,
+            'last_png_export_dir' : None,
+            'media_background_bmp_path' : None,
+            'http_proxy' : None,
+            'https_proxy' : None,
+            'no_proxy' : '127.0.0.1',
+            'qt_style_name' : None,
+            'qt_stylesheet_name' : None,
+            'last_advanced_file_deletion_reason' : None,
+            'last_advanced_file_deletion_special_action' : None,
+            'sibling_connector_custom_namespace_colour' : 'system',
+            'or_connector_custom_namespace_colour' : 'system'
+        }
         
-        self._dictionary[ 'noneable_strings' ][ 'favourite_file_lookup_script' ] = 'gelbooru md5'
-        self._dictionary[ 'noneable_strings' ][ 'suggested_tags_layout' ] = 'notebook'
-        self._dictionary[ 'noneable_strings' ][ 'backup_path' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'web_browser_path' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'last_png_export_dir' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'media_background_bmp_path' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'http_proxy' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'https_proxy' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'no_proxy' ] = '127.0.0.1'
-        self._dictionary[ 'noneable_strings' ][ 'qt_style_name' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'qt_stylesheet_name' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'last_advanced_file_deletion_reason' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'last_advanced_file_deletion_special_action' ] = None
-        self._dictionary[ 'noneable_strings' ][ 'sibling_connector_custom_namespace_colour' ] = 'system'
-        self._dictionary[ 'noneable_strings' ][ 'or_connector_custom_namespace_colour' ] = 'system'
+        self._dictionary[ 'strings' ] = {
+            'app_display_name' : 'hydrus client',
+            'namespace_connector' : ':',
+            'sibling_connector' : ' \u2192 ',
+            'or_connector' : ' OR ',
+            'export_phrase' : '{hash}',
+            'current_colourset' : 'default',
+            'favourite_simple_downloader_formula' : 'all files linked by images in page',
+            'thumbnail_scroll_rate' : '1.0',
+            'pause_character' : '\u23F8',
+            'stop_character' : '\u23F9',
+            'default_gug_name' : 'safebooru tag search',
+            'has_audio_label' : '\U0001F50A',
+            'has_duration_label' : ' \u23F5 ',
+            'discord_dnd_filename_pattern' : '{hash}',
+            'default_suggested_tags_notebook_page' : 'related',
+            'last_incremental_tagging_namespace' : 'page',
+            'last_incremental_tagging_prefix' : '',
+            'last_incremental_tagging_suffix' : ''
+        }
         
-        self._dictionary[ 'strings' ] = {}
-        
-        self._dictionary[ 'strings' ][ 'app_display_name' ] = 'hydrus client'
-        self._dictionary[ 'strings' ][ 'namespace_connector' ] = ':'
-        self._dictionary[ 'strings' ][ 'sibling_connector' ] = ' \u2192 '
-        self._dictionary[ 'strings' ][ 'or_connector' ] = ' OR '
-        self._dictionary[ 'strings' ][ 'export_phrase' ] = '{hash}'
-        self._dictionary[ 'strings' ][ 'current_colourset' ] = 'default'
-        self._dictionary[ 'strings' ][ 'favourite_simple_downloader_formula' ] = 'all files linked by images in page'
-        self._dictionary[ 'strings' ][ 'thumbnail_scroll_rate' ] = '1.0'
-        self._dictionary[ 'strings' ][ 'pause_character' ] = '\u23F8'
-        self._dictionary[ 'strings' ][ 'stop_character' ] = '\u23F9'
-        self._dictionary[ 'strings' ][ 'default_gug_name' ] = 'safebooru tag search'
-        self._dictionary[ 'strings' ][ 'has_audio_label' ] = '\U0001F50A'
-        self._dictionary[ 'strings' ][ 'has_duration_label' ] = ' \u23F5 '
-        self._dictionary[ 'strings' ][ 'discord_dnd_filename_pattern' ] = '{hash}'
-        self._dictionary[ 'strings' ][ 'default_suggested_tags_notebook_page' ] = 'related'
-        self._dictionary[ 'strings' ][ 'last_incremental_tagging_namespace' ] = 'page'
-        self._dictionary[ 'strings' ][ 'last_incremental_tagging_prefix' ] = ''
-        self._dictionary[ 'strings' ][ 'last_incremental_tagging_suffix' ] = ''
-        
-        self._dictionary[ 'string_list' ] = {}
-        
-        self._dictionary[ 'string_list' ][ 'default_media_viewer_custom_shortcuts' ] = []
-        self._dictionary[ 'string_list' ][ 'favourite_tags' ] = []
-        self._dictionary[ 'string_list' ][ 'advanced_file_deletion_reasons' ] = [ 'I do not like it.', 'It is bad quality.', 'It is not appropriate for this client.', 'Temporary delete--I want to bring it back later.' ]
+        self._dictionary[ 'string_list' ] = {
+            'default_media_viewer_custom_shortcuts' : [],
+            'favourite_tags' : [],
+            'advanced_file_deletion_reasons' : [ 'I do not like it.', 'It is bad quality.', 'It is not appropriate for this client.', 'Temporary delete--I want to bring it back later.' ]
+        }
         
         #
         

@@ -1295,6 +1295,84 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return final_result_tag_ids
         
     
+    def GetTagIdPredicates(
+        self,
+        tag_display_type: int,
+        file_search_context: ClientSearch.FileSearchContext,
+        tag_ids: typing.Collection[ int ],
+        inclusive = True,
+        zero_count_ok = False,
+        job_status = None
+    ):
+        
+        all_predicates = []
+        
+        tag_context = file_search_context.GetTagContext()
+        
+        display_tag_service_id = self.modules_services.GetServiceId( tag_context.display_service_key )
+        
+        include_current = tag_context.include_current_tags
+        include_pending = tag_context.include_pending_tags
+        
+        file_search_context_branch = self.modules_services.GetFileSearchContextBranch( file_search_context )
+        
+        for leaf in file_search_context_branch.IterateLeaves():
+            
+            domain_is_cross_referenced = leaf.file_service_id != self.modules_services.combined_deleted_file_service_id
+            
+            for group_of_tag_ids in HydrusData.SplitIteratorIntoChunks( tag_ids, 1000 ):
+                
+                if job_status is not None and job_status.IsCancelled():
+                    
+                    return []
+                    
+                
+                ids_to_count = self.modules_mappings_counts.GetCounts( tag_display_type, leaf.tag_service_id, leaf.file_service_id, group_of_tag_ids, include_current, include_pending, domain_is_cross_referenced = domain_is_cross_referenced, zero_count_ok = zero_count_ok, job_status = job_status )
+                
+                if len( ids_to_count ) == 0:
+                    
+                    continue
+                    
+                
+                #
+                
+                predicates = self.modules_tag_display.GeneratePredicatesFromTagIdsAndCounts( tag_display_type, display_tag_service_id, ids_to_count, inclusive, job_status = job_status )
+                
+                all_predicates.extend( predicates )
+                
+            
+            if job_status is not None and job_status.IsCancelled():
+                
+                return []
+                
+            
+        
+        predicates = ClientSearch.MergePredicates( all_predicates )
+        
+        return predicates
+        
+    
+    def GetTagPredicates(
+        self,
+        tag_display_type: int,
+        file_search_context: ClientSearch.FileSearchContext,
+        tags: typing.Collection[ str ],
+        inclusive = True,
+        zero_count_ok = False,
+        job_status = None
+    ):
+        
+        tag_ids = set( self.modules_tags.GetTagIdsToTags( tags = tags ).keys() )
+        
+        return self.GetTagIdPredicates(
+            tag_display_type,
+            file_search_context,
+            tag_ids,
+            inclusive = inclusive,
+            zero_count_ok = zero_count_ok,
+            job_status = job_status )
+        
+    
     def GetTagsTableName( self, file_service_id, tag_service_id ):
         
         if file_service_id == self.modules_services.combined_file_service_id:

@@ -17,7 +17,6 @@ from hydrus.core.networking import HydrusNetwork
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
-from hydrus.client import ClientDuplicates
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientParsing
@@ -25,6 +24,7 @@ from hydrus.client import ClientPaths
 from hydrus.client import ClientServices
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
@@ -549,15 +549,15 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._dupe_search_type = ClientGUICommon.BetterChoice( self._filtering_panel )
         
-        self._dupe_search_type.addItem( 'at least one file matches the search', CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
-        self._dupe_search_type.addItem( 'both files match the search', CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH )
-        self._dupe_search_type.addItem( 'both files match different searches', CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
+        self._dupe_search_type.addItem( 'at least one file matches the search', ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+        self._dupe_search_type.addItem( 'both files match the search', ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH )
+        self._dupe_search_type.addItem( 'both files match different searches', ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
         
         self._pixel_dupes_preference = ClientGUICommon.BetterChoice( self._filtering_panel )
         
-        for p in ( CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
+        for p in ( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
             
-            self._pixel_dupes_preference.addItem( CC.similar_files_pixel_dupes_string_lookup[ p ], p )
+            self._pixel_dupes_preference.addItem( ClientDuplicates.similar_files_pixel_dupes_string_lookup[ p ], p )
             
         
         self._max_hamming_distance_for_filter = ClientGUICommon.BetterSpinBox( self._filtering_panel, min = 0, max = 64 )
@@ -592,7 +592,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         if not management_controller.HasVariable( 'pixel_dupes_preference' ):
             
-            management_controller.SetVariable( 'pixel_dupes_preference', CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+            management_controller.SetVariable( 'pixel_dupes_preference', ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
             
         
         self._pixel_dupes_preference.SetValue( management_controller.GetVariable( 'pixel_dupes_preference' ) )
@@ -759,11 +759,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         if optimise_for_search:
             
-            if dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH and ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ):
+            if dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH and ( file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates() ):
                 
-                dupe_search_type = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
+                dupe_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
                 
-            elif dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
+            elif dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES:
                 
                 if file_search_context_1.IsJustSystemEverything() or file_search_context_1.HasNoPredicates():
                     
@@ -771,11 +771,11 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                     file_search_context_1 = file_search_context_2
                     file_search_context_2 = f
                     
-                    dupe_search_type = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
+                    dupe_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
                     
                 elif file_search_context_2.IsJustSystemEverything() or file_search_context_2.HasNoPredicates():
                     
-                    dupe_search_type = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
+                    dupe_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
                     
                 
             
@@ -1027,9 +1027,9 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         ( file_search_context_1, file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance ) = self._GetDuplicateFileSearchData( optimise_for_search = False )
         
-        self._tag_autocomplete_2.setVisible( dupe_search_type == CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
+        self._tag_autocomplete_2.setVisible( dupe_search_type == ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES )
         
-        self._max_hamming_distance_for_filter.setEnabled( self._pixel_dupes_preference.GetValue() != CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
+        self._max_hamming_distance_for_filter.setEnabled( self._pixel_dupes_preference.GetValue() != ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED )
         
     
     def FilterDupeSearchTypeChanged( self ):

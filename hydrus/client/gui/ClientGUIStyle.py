@@ -15,6 +15,7 @@ ORIGINAL_STYLE_NAME = None
 CURRENT_STYLE_NAME = None
 ORIGINAL_STYLESHEET = None
 CURRENT_STYLESHEET = None
+CURRENT_STYLESHEET_FILENAME = None
 
 def ClearStylesheet():
     
@@ -88,6 +89,18 @@ def InitialiseDefaults():
     CURRENT_STYLESHEET = ORIGINAL_STYLESHEET
     
 
+def ReloadStyleSheet():
+    
+    ClearStylesheet()
+    
+    if CURRENT_STYLESHEET_FILENAME is not None:
+        
+        ClearStylesheet()
+        
+        SetStylesheetFromPath( CURRENT_STYLESHEET_FILENAME )
+        
+    
+
 def SetStyleFromName( name: str ):
     
     if QtInit.WE_ARE_QT5:
@@ -116,7 +129,6 @@ def SetStyleFromName( name: str ):
     except Exception as e:
         
         raise HydrusExceptions.DataMissing( 'Style "{}" could not be generated/applied. If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it. Extra error info: {}'.format( name, e ) )
-            
         
     
 
@@ -142,6 +154,10 @@ def SetStyleSheet( stylesheet, prepend_hydrus = True ):
     
 
 def SetStylesheetFromPath( filename ):
+    
+    global CURRENT_STYLESHEET_FILENAME
+    
+    CURRENT_STYLESHEET_FILENAME = filename
     
     path = os.path.join( STYLESHEET_DIR, filename )
     
