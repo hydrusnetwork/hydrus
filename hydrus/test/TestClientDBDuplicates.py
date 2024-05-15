@@ -10,6 +10,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
 from hydrus.client.db import ClientDB
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.metadata import ClientContentUpdates
@@ -122,9 +123,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
     
     def _test_initial_state( self ):
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -175,9 +176,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[2] )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -263,9 +264,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._king_hash )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -330,9 +331,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._our_main_dupe_group_hashes.add( self._dupe_hashes[5] )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -508,9 +509,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', [ row ] )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -592,9 +593,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -636,9 +637,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -656,9 +657,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', [ row ] )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -712,9 +713,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -732,9 +733,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', [ row ] )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -794,9 +795,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         
@@ -857,9 +858,9 @@ class TestClientDBDuplicates( unittest.TestCase ):
         
         self._write( 'duplicate_pair_status', rows )
         
-        pixel_dupes_preference = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        pixel_dupes_preference = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         max_hamming_distance = 4
-        dupe_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+        dupe_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
         
         num_potentials = self._read( 'potential_duplicates_count', self._file_search_context_1, self._file_search_context_2, dupe_search_type, pixel_dupes_preference, max_hamming_distance )
         

@@ -334,7 +334,7 @@ class QuickDownloadManager( object ):
                                     file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
                                     file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
                                     
-                                    file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
+                                    file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = f'Downloaded File - {hash.hex()}' )
                                     
                                     file_import_job.DoWork()
                                     

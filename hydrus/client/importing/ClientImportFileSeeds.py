@@ -1023,7 +1023,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             file_import_options = FileImportOptions.GetRealFileImportOptions( file_import_options, FileImportOptions.IMPORT_TYPE_LOUD )
             
         
-        file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options )
+        file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = self.file_seed_data )
         
         file_import_status = file_import_job.DoWork( status_hook = status_hook )
         

@@ -28,13 +28,6 @@ def DiscardBlankPerceptualHashes( perceptual_hashes ):
     return perceptual_hashes
     
 
-def GenerateNumPyImage( path, mime ):
-    
-    force_pil = CG.client_controller.new_options.GetBoolean( 'load_images_with_pil' )
-    
-    return HydrusImageHandling.GenerateNumPyImage( path, mime, force_pil = force_pil )
-    
-
 def GenerateShapePerceptualHashes( path, mime ):
     
     if HG.phash_generation_report_mode:
@@ -44,7 +37,7 @@ def GenerateShapePerceptualHashes( path, mime ):
     
     try:
         
-        numpy_image = GenerateNumPyImage( path, mime )
+        numpy_image = HydrusImageHandling.GenerateNumPyImage( path, mime )
         
         return GenerateShapePerceptualHashesNumPy( numpy_image )
         

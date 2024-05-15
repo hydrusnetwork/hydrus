@@ -1792,7 +1792,7 @@ class ClientFilesManager( object ):
             
             thumbnail_mime = HydrusFileHandling.GetThumbnailMime( path )
             
-            numpy_image = ClientImageHandling.GenerateNumPyImage( path, thumbnail_mime )
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( path, thumbnail_mime )
             
             ( current_width, current_height ) = HydrusImageHandling.GetResolutionNumPy( numpy_image )
             
@@ -1863,7 +1863,7 @@ class ClientFilesManager( object ):
         
     
 
-def HasHumanReadableEmbeddedMetadata( path, mime ):
+def HasHumanReadableEmbeddedMetadata( path, mime, human_file_description = None ):
     
     if mime not in HC.FILES_THAT_CAN_HAVE_HUMAN_READABLE_EMBEDDED_METADATA:
         
@@ -1878,7 +1878,7 @@ def HasHumanReadableEmbeddedMetadata( path, mime ):
         
         try:
             
-            pil_image = HydrusImageOpening.RawOpenPILImage( path )
+            pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
             
         except:
             
@@ -2051,7 +2051,7 @@ class FilesMaintenanceManager( object ):
         
         ( width, height ) = media_result.GetResolution()
         
-        if width is None or height is None:
+        if mime in HC.MIMES_THAT_ALWAYS_HAVE_GOOD_RESOLUTION and ( width is None or height is None )    :
             
             # this guy is probably pending a metadata regen but the user forced thumbnail regen now
             # we'll wait for metadata regen to notice the new dimensions and schedule this job again
@@ -2420,7 +2420,7 @@ class FilesMaintenanceManager( object ):
             path = self._controller.client_files_manager.GetFilePath( hash, mime )
             
             if mime == HC.APPLICATION_PSD:
-            
+                
                 try:
                     
                     has_icc_profile = HydrusPSDHandling.PSDHasICCProfile( path )
@@ -2672,7 +2672,7 @@ class FilesMaintenanceManager( object ):
             
             thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
             
-            numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
             
             return HydrusBlurhash.GetBlurhashFromNumPy( numpy_image )
             

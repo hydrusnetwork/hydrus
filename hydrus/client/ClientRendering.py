@@ -45,12 +45,14 @@ def FrameIndexOutOfRange( index, range_start, range_end ):
     
     return False
     
+
 def GenerateHydrusBitmap( path, mime, compressed = True ):
     
-    numpy_image = ClientImageHandling.GenerateNumPyImage( path, mime )
+    numpy_image = HydrusImageHandling.GenerateNumPyImage( path, mime )
     
     return GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = compressed )
     
+
 def GenerateHydrusBitmapFromNumPyImage( numpy_image, compressed = True ):
     
     ( y, x, depth ) = numpy_image.shape
@@ -247,7 +249,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         
         try:
             
-            self._numpy_image = ClientImageHandling.GenerateNumPyImage( self._path, self._mime )
+            self._numpy_image = HydrusImageHandling.GenerateNumPyImage( self._path, self._mime )
             
         except Exception as e:
             

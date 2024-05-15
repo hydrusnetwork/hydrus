@@ -519,7 +519,7 @@ def EnsureURLIsEncoded( url: str, keep_fragment = True ) -> str:
         single_value_parameters = [ ensure_param_component_is_encoded( single_value_parameter ) for single_value_parameter in single_value_parameters ]
         
         path = '/' + '/'.join( path_components )
-        query = ConvertQueryDictToText( query_dict, single_value_parameters )
+        query = ConvertQueryDictToText( query_dict, single_value_parameters, param_order = param_order )
         
         if not keep_fragment:
             

@@ -9,6 +9,7 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing import ClientImportGallery
 from hydrus.client.importing import ClientImportLocal
 from hydrus.client.importing import ClientImportSimpleURLs
@@ -74,8 +75,8 @@ def CreateManagementControllerDuplicateFilter(
     
     management_controller.SetVariable( 'file_search_context_1', file_search_context )
     management_controller.SetVariable( 'file_search_context_2', file_search_context.Duplicate() )
-    management_controller.SetVariable( 'dupe_search_type', CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
-    management_controller.SetVariable( 'pixel_dupes_preference', CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
+    management_controller.SetVariable( 'dupe_search_type', ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH )
+    management_controller.SetVariable( 'pixel_dupes_preference', ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED )
     management_controller.SetVariable( 'max_hamming_distance', 4 )
     
     return management_controller
@@ -506,13 +507,13 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
             
             if management_type == MANAGEMENT_TYPE_DUPLICATE_FILTER:
                 
-                value = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
+                value = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
                 
                 if 'both_files_match' in variables:
                     
                     if variables[ 'both_files_match' ]:
                         
-                        value = CC.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
+                        value = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH
                         
                     
                     del variables[ 'both_files_match' ]

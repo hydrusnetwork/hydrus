@@ -4119,6 +4119,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            children_panel = ClientGUICommon.StaticBox( self, 'children tags' )
+            
+            self._num_to_show_in_ac_dropdown_children_tab = ClientGUICommon.NoneableSpinCtrl( children_panel, none_phrase = 'show all', min = 1 )
+            tt = 'The "children" tab will show children of the current tag context (usually the list of tags above the autocomplete), ordered by file count. This can quickly get spammy, so I recommend you cull it to a reasonable size.'
+            self._num_to_show_in_ac_dropdown_children_tab.setToolTip( tt )
+            self._num_to_show_in_ac_dropdown_children_tab.SetValue( 20 ) # init default
+            
+            #
+            
             self._expand_parents_on_storage_taglists.setChecked( self._new_options.GetBoolean( 'expand_parents_on_storage_taglists' ) )
             self._expand_parents_on_storage_taglists.setToolTip( ClientGUIFunctions.WrapToolTip( 'This affects taglists in places like the manage tags dialog, where you edit tags as they actually are, and implied parents hang below tags.' ) )
             
@@ -4147,7 +4156,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            vbox = QP.VBoxLayout()
+            self._num_to_show_in_ac_dropdown_children_tab.SetValue( self._new_options.GetNoneableInteger( 'num_to_show_in_ac_dropdown_children_tab' ) )
+            
+            #
             
             rows = []
             
@@ -4164,17 +4175,29 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
-            QP.AddToLayout( vbox, general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
             #
             
             favourites_panel.Add( favourites_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             favourites_panel.Add( self._favourites, CC.FLAGS_EXPAND_BOTH_WAYS )
             favourites_panel.Add( self._favourites_input )
             
-            QP.AddToLayout( vbox, favourites_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            #
+            
+            rows = []
+            
+            rows.append( ( 'How many tags to show in the children tab: ', self._num_to_show_in_ac_dropdown_children_tab ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( children_panel, rows )
+            
+            children_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, general_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, favourites_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( vbox, children_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.setLayout( vbox )
             
@@ -4211,6 +4234,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             #
             
             self._new_options.SetStringList( 'favourite_tags', list( self._favourites.GetTags() ) )
+            
+            #
+            
+            self._new_options.SetNoneableInteger( 'num_to_show_in_ac_dropdown_children_tab', self._num_to_show_in_ac_dropdown_children_tab.GetValue() )
             
         
     

@@ -64,6 +64,10 @@ def GetMissingPrefixes( merge_target: str, prefixes: typing.Collection[ str ], m
     return missing_prefixes
     
 
+# TODO: A 'FilePath' or 'FileLocation' or similar that holds the path or IO stream, and/or temp_path to use for import calcs, and hash once known, and the human description like 'this came from blah URL'
+# then we spam that all over the import pipeline and when we need a nice error, we ask that guy to describe himself
+# search up 'human_file_description' to see what we'd be replacing
+
 class FilesStorageBaseLocation( object ):
     
     def __init__( self, path: str, ideal_weight: int, max_num_bytes = None ):

@@ -26,6 +26,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientServices
 from hydrus.client import ClientTime
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing import ClientImportFiles
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -4172,8 +4173,8 @@ class TestClientAPI( unittest.TestCase ):
         
         default_file_search_context = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = tag_context, predicates = predicates )
         
-        default_potentials_search_type = CC.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
-        default_pixel_duplicates = CC.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
+        default_potentials_search_type = ClientDuplicates.DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH
+        default_pixel_duplicates = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_ALLOWED
         default_max_hamming_distance = 4
         
         test_tag_service_key_1 = CC.DEFAULT_LOCAL_TAG_SERVICE_KEY
@@ -4192,8 +4193,8 @@ class TestClientAPI( unittest.TestCase ):
         
         test_file_search_context_2 = ClientSearch.FileSearchContext( location_context = default_location_context, tag_context = test_tag_context_2, predicates = test_predicates_2 )
         
-        test_potentials_search_type = CC.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES
-        test_pixel_duplicates = CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED
+        test_potentials_search_type = ClientDuplicates.DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES
+        test_pixel_duplicates = ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED
         test_max_hamming_distance = 8
         
         # get count

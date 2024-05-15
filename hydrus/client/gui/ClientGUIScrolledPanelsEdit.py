@@ -19,9 +19,9 @@ from hydrus.core import HydrusText
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientDuplicates
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientTime
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick

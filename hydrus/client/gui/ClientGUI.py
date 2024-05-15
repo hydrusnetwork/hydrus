@@ -3459,6 +3459,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: CG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current g ui session', 'Reload the current QSS stylesheet.', self._ReloadCurrentGUISession )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current stylesheet', 'Reload the current QSS stylesheet.', ClientGUIStyle.ReloadStyleSheet )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'reset multi-column list settings to default', 'Reset all multi-column list widths and other display settings to default.', self._DebugResetColumnListManager )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, CC.LAST_SESSION_SESSION_NAME )
         
@@ -5435,6 +5437,42 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             self._controller.Write( 'regenerate_tag_siblings_and_parents_cache' )
             
+        
+    
+    def _ReloadCurrentGUISession( self ):
+        
+        name = 'temp_session_slot_for_reload_if_you_see_this_you_can_delete_it'
+        only_changed_page_data = True
+        about_to_save = True
+        
+        session = self._notebook.GetCurrentGUISession( name, only_changed_page_data, about_to_save )
+        
+        self._FleshOutSessionWithCleanDataIfNeeded( self._notebook, name, session )
+        
+        def qt_load():
+            
+            while self._notebook.count() > 0:
+                
+                self._notebook.CloseCurrentPage( polite = False )
+                
+            
+            self._notebook.LoadGUISession( name )
+            
+            self._controller.Write( 'delete_serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_GUI_SESSION_CONTAINER, name )
+            
+            self._controller.pub( 'notify_new_sessions' )
+            
+            
+        
+        def do_save():
+            
+            CG.client_controller.SaveGUISession( session )
+            
+            CG.client_controller.CallBlockingToQt( self, qt_load )
+            
+        
+        self._controller.CallToThread( do_save )
+        
         
     
     def _RepairInvalidTags( self ):

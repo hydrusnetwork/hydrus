@@ -374,7 +374,7 @@ class ThumbnailCache( object ):
             
             thumbnail_mime = HydrusFileHandling.GetThumbnailMime( thumbnail_path )
             
-            numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
+            numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
             
         except Exception as e:
             
@@ -394,7 +394,7 @@ class ThumbnailCache( object ):
             
             try:
                 
-                numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
+                numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, thumbnail_mime )
                 
             except Exception as e:
                 
@@ -645,7 +645,7 @@ class ThumbnailCache( object ):
             
             for ( mime, thumbnail_path ) in HydrusFileHandling.mimes_to_default_thumbnail_paths.items():
                 
-                numpy_image = ClientImageHandling.GenerateNumPyImage( thumbnail_path, HC.IMAGE_PNG )
+                numpy_image = HydrusImageHandling.GenerateNumPyImage( thumbnail_path, HC.IMAGE_PNG )
                 
                 numpy_image_resolution = HydrusImageHandling.GetResolutionNumPy( numpy_image )
                 

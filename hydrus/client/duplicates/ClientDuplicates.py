@@ -23,6 +23,24 @@ from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
 
+DUPE_SEARCH_ONE_FILE_MATCHES_ONE_SEARCH = 0
+DUPE_SEARCH_BOTH_FILES_MATCH_ONE_SEARCH = 1
+DUPE_SEARCH_BOTH_FILES_MATCH_DIFFERENT_SEARCHES = 2
+
+SIMILAR_FILES_PIXEL_DUPES_REQUIRED = 0
+SIMILAR_FILES_PIXEL_DUPES_ALLOWED = 1
+SIMILAR_FILES_PIXEL_DUPES_EXCLUDED = 2
+
+similar_files_pixel_dupes_string_lookup = {
+    SIMILAR_FILES_PIXEL_DUPES_REQUIRED : 'must be pixel dupes',
+    SIMILAR_FILES_PIXEL_DUPES_ALLOWED : 'can be pixel dupes',
+    SIMILAR_FILES_PIXEL_DUPES_EXCLUDED : 'must not be pixel dupes'
+}
+
+SYNC_ARCHIVE_NONE = 0
+SYNC_ARCHIVE_IF_ONE_DO_BOTH = 1
+SYNC_ARCHIVE_DO_BOTH_REGARDLESS = 2
+
 hashes_to_jpeg_quality = {}
 
 def GetDuplicateComparisonScore( shown_media, comparison_media ):
@@ -423,40 +441,25 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
         
         global hashes_to_jpeg_quality
         
-        if s_hash not in hashes_to_jpeg_quality:
+        for jpeg_hash in ( s_hash, c_hash ): 
             
-            path = CG.client_controller.client_files_manager.GetFilePath( s_hash, s_mime )
-            
-            try:
+            if jpeg_hash not in hashes_to_jpeg_quality:
                 
-                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                path = CG.client_controller.client_files_manager.GetFilePath( jpeg_hash, HC.IMAGE_JPEG )
                 
-                result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
+                try:
+                    
+                    raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
+                    
+                    result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
+                    
+                except:
+                    
+                    result = ( 'unknown', None )
+                    
                 
-            except:
+                hashes_to_jpeg_quality[ jpeg_hash ] = result
                 
-                result = ( 'unknown', None )
-                
-            
-            hashes_to_jpeg_quality[ s_hash ] = result
-            
-        
-        if c_hash not in hashes_to_jpeg_quality:
-            
-            path = CG.client_controller.client_files_manager.GetFilePath( c_hash, c_mime )
-            
-            try:
-                
-                raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
-                
-                result = HydrusImageMetadata.GetJPEGQuantizationQualityEstimate( raw_pil_image )
-                
-            except:
-                
-                result = ( 'unknown', None )
-                
-            
-            hashes_to_jpeg_quality[ c_hash ] = result
             
         
         ( s_label, s_jpeg_quality ) = hashes_to_jpeg_quality[ s_hash ]
@@ -784,10 +787,6 @@ class DuplicatesManager( object ):
             
         
     
-
-SYNC_ARCHIVE_NONE = 0
-SYNC_ARCHIVE_IF_ONE_DO_BOTH = 1
-SYNC_ARCHIVE_DO_BOTH_REGARDLESS = 2
 
 def get_updated_domain_modified_timestamp_datas( destination_media: ClientMedia.MediaSingleton, source_media: ClientMedia.MediaSingleton, urls: typing.Collection[ str ] ):
     

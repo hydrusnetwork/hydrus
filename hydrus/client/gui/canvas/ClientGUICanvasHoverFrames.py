@@ -12,8 +12,8 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
-from hydrus.client import ClientDuplicates
 from hydrus.client import ClientGlobals as CG
+from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions

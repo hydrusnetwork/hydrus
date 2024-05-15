@@ -7,6 +7,39 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 575](https://github.com/hydrusnetwork/hydrus/releases/tag/v575)
+
+### misc
+
+* the new 'children' tab now sorts its results by count, and it only shows the top n (default 40) results. you can edit the n under _options-&gt;tags_. let me know how this works IRL, as this new count-sorting needs a bit of extra CPU
+* when you ask subscriptions to 'check now', either in the 'edit subscription' or 'edit subscriptions' dialogs, if there is a mix of DEAD and ALIVE subs, it now pops up a quick question dialog asking whether you want to check now for all/alive/dead
+* fixed the (do not) 'alphabetise GET query parameters' URL Class checkbox, which I broke in v569. sorry for the trouble--the new URL encoding handling was accidentally alphabetising all URLs on ingestion. a new unit test will catch this in future, so it shouldn't happen again (issue #1551)
+* thanks to a user, I think we have fixed ICC profile processing when your system ICC Profile is non-sRGB
+* fixed a logical test that was disallowing thumbnail regen on files with no resolution (certain svg, for instance). all un-resolutioned files will now (re)render a thumb to the max bounding thumbnail resolution setting. fingers crossed we'll be able to figure out a ratio solution in future
+* added a _debug-&gt;help-&gt;gui actions-&gt;reload current stylesheet_ menu action. it unloads and reloads the current QSS
+* added a _debug-&gt;help-&gt;gui actions-&gt;reload current gui session_ menu action. it saves the current session and reloads it
+* fixed the rendering of some 16-bit pngs that seem to be getting a slightly different image mode on the new version of PIL
+* the debug 'gui report mode' now reports extensive info about virtual taglist heights. if I have been working with you on taglists, mostly on the manage tags dialog, that spawn without a scrollbar even though they should, please run this mode and then try to capture the error. hit me up and we'll see if the numbers explain what's going on. I may have also simply fixed the bug
+* I think I sped up adding tags to a local tag service that has a lot of siblings/parents
+* updated the default danbooru parsers to get the original and/or translated artist notes. I don't know if a user did this or I did, but my dev machine somehow already had the tech while the defaults did not--if you did this, thinks!
+* added more tweet URL Classes for the default downloader. you should now be able to drag and drop a vxtwitter or fxtwitter URL on the client and it'll work
+
+### auto-duplicate resolution
+
+* I have nothing real to show today, but I have a skeleton of code and a good plan on how to get the client resolving easy duplicate pairs by itself. so far, it looks easier than I feared, but, as always, there will be a lot to do. I will keep chipping away at this and will release features in tentative waves for advanced users to play with
+* with this system, I will be launching the very first version of the 'Metadata Conditional' object I have been talking about for a few years. fingers crossed, we'll be able to spam it to all sorts of other places to do 'if the file has x property, then do y' in a standardised way
+
+### boring stuff
+
+* refactored the new tag children autocomplete tab to its own class so it can handle its new predicate gubbins and sorted/culled search separately. it is also now aware of the current file location context to give file-domain-sensitive suggestions (falling back to 'all known files' for fast search if things are complicated)
+* fixed a layout issue on file import options panel when a sister page caused it to be taller than it wanted; the help button ended up being the expanding widget jej
+* non-menubar menus and submenus across the program now remove a hanging final separator item, making the logic of forming menu groups a little easier in future
+* the core 'Load image in PIL' method has some better error reporting, and many calls now explicitly tell it a human-readable source description so we can avoid repeats of `DamagedOrUnusualFileException: Could not load the image at "&lt;_io.BytesIO object at 0x000001F60CE45620&gt;"--it was likely malformed!`
+* cleaned up some dict instantiations in `ClientOptions`
+* moved `ClientDuplicates` up to a new `duplicates` module and migrated some duplicate enums over to it from `ClientConstants`
+* removed an old method-wrapper hack that applied the 'load images with PIL' option. I just moved to a global that I set on init and update on options change
+* cleaned some duplicate checking code
+
 ## [Version 574](https://github.com/hydrusnetwork/hydrus/releases/tag/v574)
 
 ### local hashes cache
@@ -381,46 +414,3 @@ title: Changelog
 
 * just a small thing, but the under-documented `/manage_database/get_client_options` call now says the four types of default tag sort. I left the old key, `default_tag_sort`, in so as not to break stuff, but it is just a copy of the `search_page` variant in the new `default_tag_sort_xxx` foursome
 * client api version is now 62
-
-## [Version 564](https://github.com/hydrusnetwork/hydrus/releases/tag/v564)
-
-### more macOS work
-
-* thanks to a user, we have more macOS features:
-* macOS users get a new shortcut action, default Space, that uses Quick Look to preview a thumbnail like you can in Finder. **all existing users will get the new shortcut!**
-* the hydrus .app now has the version number in Get Info
-* **macOS users who run from source should rebuild their venvs this week!** if you don't, then trying this new Quick Look feature will just give you an error notification
-
-### new fuzzy operator math in system predicates
-
-* the system predicates for width, height, num_notes, num_words, num_urls, num_frames, duration, and framerate now support two different kinds of approximate equals, ≈: absolute (±x), and percentage (±x%). previously, the ≈ secretly just did ±15% in all cases (issue #1468)
-* all `system:framerate=x` searches are now converted to `±5%`, which is what they were behind the scenes. `!=` framerate stuff is no longer supported, so if you happened to use it, it is now converted to `<` just as a valid fallback
-* `system:duration` gets the same thing, `±5%`. it wasn't doing this behind the scenes before, but it should have been!
-* `system:duration` also now allows hours and minutes input, if you need longer!
-* for now, the parsing system is not updated to specify the % or absolute ± values. it will remain the same as the old system, with ±15% as the default for a `~=` input
-* there's still a little borked logic in these combined types. if you search `< 3 URLs`, that will return files with 0 URLs, and same for `num_notes`, but if you search `< 200px width` or any of the others I changed this week, that won't return a PDF that has no width (although it will return a damaged file that reports 0 width specifically). I am going to think about this, since there isn't an easy one-size-fits-all-solution to marry what is technically correct with what is actually convenient. I'll probably add a checkbox that says whether to include 'Null' values or not and default that True/False depending on the situation; let me know what you think!
-
-### misc
-
-* I have taken out Space as the default for archive/delete filter 'keep' and duplicate filter 'this is better, delete other'. Space is now exclusively, by default, media pause/play. **I am going to set this to existing users too, deleting/overwriting what Space does for you, if you are still set to the defaults**
-* integer percentages are now rendered without the trailing `.0`. `15%`, not `15.0%`
-* when you 'open externally', 'open in web browser', or 'open path' from a thumbnail, the preview viewer now pauses rather than clears completely
-* fixed the edit shortcut panel ALWAYS showing the new (home/end/left/right/to focus) dropdown for thumbnail dropdown, arrgh
-* I fixed a stupid typo that was breaking file repository file deletes
-* `help->about` now shows the Qt platformName
-* added a note about bad Wayland support to the Linux 'installing' help document
-* the guy who wrote the `Fixing_Hydrus_Random_Crashes_Under_Linux` document has updated it with new information, particularly related to running hydrus fast using virtual memory on small, underpowered computers
-
-### client api
-
-* thanks to a user, the undocumented API call that returns info on importer pages now includes the sha256 file hash in each import object Object
-* although it is a tiny change, let's nonetheless update the Client API version to 61
-
-### boring predicate overhaul work
-
-* updated the `NumberTest` object to hold specific percentage and absolute ± values
-* updated the `NumberTest` object to render itself to any number format, for instance pixels vs kilobytes vs a time delta
-* updated the `Predicate` object for system preds width, height, num_notes, num_words, num_urls, num_frames, duration, and framerate to store their operator and value as a `NumberTest`, and updated predicate string rendering, parsing, editing, database-level predicate handling
-* wrote new widgets to edit `NumberTest`s of various sorts and spammed them to these (operator, value) system predicate UI panels. we are finally clearing out some 8+-year-old jank here
-* rewrote the `num_notes` database search logic to use `NumberTest`s
-* the system preds for height, width, and framerate now say 'has x' and 'no x' when set to `>0` or `=0`, although what these really mean is not perfectly defined

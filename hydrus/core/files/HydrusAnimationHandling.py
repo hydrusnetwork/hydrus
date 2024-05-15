@@ -199,9 +199,9 @@ def GetAPNGDurationAndNumFrames( path ):
     return ( duration_in_ms, num_frames )
     
 
-def GetFrameDurationsPILAnimation( path ):
+def GetFrameDurationsPILAnimation( path, human_file_description = None ):
     
-    pil_image = HydrusImageOpening.RawOpenPILImage( path )
+    pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
     
     times_to_play = GetTimesToPlayPILAnimationFromPIL( pil_image )
     
@@ -301,11 +301,11 @@ def GetTimesToPlayAPNG( path: str ) -> int:
     return num_plays
     
 
-def GetTimesToPlayPILAnimation( path ) -> int:
+def GetTimesToPlayPILAnimation( path, human_file_description = None ) -> int:
     
     try:
         
-        pil_image = HydrusImageOpening.RawOpenPILImage( path )
+        pil_image = HydrusImageOpening.RawOpenPILImage( path, human_file_description = human_file_description )
         
     except HydrusExceptions.UnsupportedFileException:
         

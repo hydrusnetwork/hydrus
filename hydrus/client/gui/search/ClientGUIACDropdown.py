@@ -599,13 +599,13 @@ def WriteFetch(
 
 class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
     
-    def __init__( self, parent, callable, service_key, float_mode, **kwargs ):
+    def __init__( self, parent, callable, float_mode, service_key, **kwargs ):
         
         ClientGUIListBoxes.ListBoxTagsPredicates.__init__( self, parent, **kwargs )
         
         self._callable = callable
-        self._service_key = service_key
         self._float_mode = float_mode
+        self._service_key = service_key
         
         self._predicates = {}
         
@@ -676,7 +676,6 @@ class ListBoxTagsPredicatesAC( ClientGUIListBoxes.ListBoxTagsPredicates ):
         if not they_are_the_same:
             
             previously_selected_predicate = None
-            previously_selected_predicate_had_count = False
             
             if len( self._selected_terms ) == 1:
                 
@@ -1534,6 +1533,155 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._DropdownHideShow()
         
     
+
+class ChildrenTab( ListBoxTagsPredicatesAC ):
+    
+    def __init__( self, parent: QW.QWidget, broadcast_call, float_mode: bool, location_context: ClientLocation.LocationContext, tag_service_key: bytes, tag_display_type: int = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars: int = 4 ):
+        
+        self._location_context = location_context
+        self._tags_to_child_predicates_cache = dict()
+        self._children_need_updating = True
+        
+        ListBoxTagsPredicatesAC.__init__( self, parent, broadcast_call, float_mode, tag_service_key, tag_display_type = tag_display_type, height_num_chars = height_num_chars )
+        
+    
+    def NotifyNeedsUpdating( self ):
+        
+        self._children_need_updating = True
+        
+    
+    def SetLocationContext( self, location_context: ClientLocation.LocationContext ):
+        
+        self._location_context = location_context
+        
+    
+    def SetTagServiceKey( self, service_key: bytes ):
+        
+        ListBoxTagsPredicatesAC.SetTagServiceKey( self, service_key )
+        
+        self._tags_to_child_predicates_cache = dict()
+        
+    
+    def UpdateChildrenIfNeeded( self, context_tags: typing.Collection[ str ] ):
+        
+        if self._children_need_updating:
+            
+            context_tags = set( context_tags )
+            
+            tag_display_type = self._tag_display_type
+            location_context = self._location_context
+            tag_service_key = self._service_key
+            tags_to_child_predicates_cache = dict( self._tags_to_child_predicates_cache )
+            
+            if location_context.IsOneDomain():
+                
+                search_location_context = location_context
+                
+            else:
+                
+                # let's not blat the db on some crazy multi-domain just for this un-numbered list
+                search_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_TAG_SERVICE_KEY )
+                
+            
+            tag_context = ClientSearch.TagContext( service_key = tag_service_key )
+            
+            file_search_context = ClientSearch.FileSearchContext(
+                location_context = search_location_context,
+                tag_context = tag_context
+            )
+            
+            def work_callable():
+                
+                uncached_context_tags = { tag for tag in context_tags if tag not in tags_to_child_predicates_cache }
+                
+                if len( uncached_context_tags ) > 0:
+                    
+                    new_tags_to_child_tags = CG.client_controller.Read( 'tag_descendants_lookup', tag_service_key, uncached_context_tags )
+                    
+                    new_child_tags = HydrusData.MassUnion( new_tags_to_child_tags.values() )
+                    
+                    child_predicates = CG.client_controller.Read(
+                        'tag_predicates',
+                        tag_display_type,
+                        file_search_context,
+                        new_child_tags,
+                        zero_count_ok = True
+                    )
+                    
+                    child_tags_to_child_predicates = { predicate.GetValue() : predicate for predicate in child_predicates }
+                    
+                    new_tags_to_child_predicates = { tag : { child_tags_to_child_predicates[ child_tag ] for child_tag in child_tags if child_tag in child_tags_to_child_predicates } for ( tag, child_tags ) in new_tags_to_child_tags.items() }
+                    
+                else:
+                    
+                    new_tags_to_child_predicates = dict()
+                    
+                
+                child_predicates = set()
+                
+                for tag in context_tags:
+                    
+                    if tag in tags_to_child_predicates_cache:
+                        
+                        child_predicates.update( tags_to_child_predicates_cache[ tag ] )
+                        
+                    elif tag in new_tags_to_child_predicates:
+                        
+                        child_predicates.update( new_tags_to_child_predicates[ tag ] )
+                        
+                    
+                
+                child_predicates = [ predicate for predicate in child_predicates if predicate.GetValue() not in context_tags ]
+                
+                ClientSearch.SortPredicates( child_predicates )
+                
+                child_predicates = [ predicate.GetCountlessCopy() for predicate in child_predicates ]
+                
+                num_to_show_in_ac_dropdown_children_tab = CG.client_controller.new_options.GetNoneableInteger( 'num_to_show_in_ac_dropdown_children_tab' )
+                
+                if num_to_show_in_ac_dropdown_children_tab is not None:
+                    
+                    child_predicates = child_predicates[ : num_to_show_in_ac_dropdown_children_tab ]
+                    
+                
+                return ( location_context, tag_service_key, child_predicates, new_tags_to_child_predicates )
+                
+            
+            def publish_callable( result ):
+                
+                ( job_location_context, job_tag_service_key, child_predicates, new_tags_to_children ) = result
+                
+                if job_location_context != self._location_context or job_tag_service_key != self._service_key:
+                    
+                    self.SetPredicates( [] )
+                    
+                    return
+                    
+                
+                self._tags_to_child_predicates_cache.update( new_tags_to_children )
+                
+                self.SetPredicates( child_predicates, preserve_single_selection = True )
+                
+                self._children_need_updating = False
+                
+            
+            def errback_callable( etype, value, tb ):
+                
+                self.SetPredicates( [] )
+                
+                self._children_need_updating = False
+                
+                HydrusData.ShowText( 'Trying to load some child tags failed, please send this to hydev:' )
+                HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
+                
+            
+            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
+            
+            job.start()
+            
+        
+    
+
 class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     locationChanged = QC.Signal( ClientLocation.LocationContext )
@@ -1569,9 +1717,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         
         self._dropdown_notebook.addTab( self._favourites_list, 'favourites' )
         
-        self._children_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
-        self._tags_to_children_cache = dict()
-        self._children_list_needs_updating = True
+        self._children_list = ChildrenTab( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._location_context_button.GetValue(), self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
         
         self._dropdown_notebook.addTab( self._children_list, 'children' )
         
@@ -1628,6 +1774,10 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
             self._SetTagService( top_local_tag_service_key )
             
         
+        self._children_list.SetLocationContext( location_context )
+        
+        self._NotifyChildrenListNeedsUpdating()
+        
         self.locationChanged.emit( location_context )
         
         self._SetListDirty()
@@ -1635,7 +1785,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def _NotifyChildrenListNeedsUpdating( self ):
         
-        self._children_list_needs_updating = True
+        self._children_list.NotifyNeedsUpdating()
         
         self._UpdateChildrenListIfNeeded()
         
@@ -1737,7 +1887,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._favourites_list.SetTagServiceKey( self._tag_service_key )
         self._children_list.SetTagServiceKey( self._tag_service_key )
         
-        self._tags_to_children_cache = dict()
         self._NotifyChildrenListNeedsUpdating()
         
         self.tagServiceChanged.emit( self._tag_service_key )
@@ -1754,83 +1903,9 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
     
     def _UpdateChildrenListIfNeeded( self ):
         
-        if self._children_list_needs_updating and self._dropdown_notebook.currentWidget() == self._children_list:
+        if self._dropdown_notebook.currentWidget() == self._children_list:
             
-            tag_service_key = self._tag_service_key
-            context_tags = set( self._current_context_tags )
-            tags_to_children_cache = dict( self._tags_to_children_cache )
-            
-            def work_callable():
-                
-                uncached_context_tags = { tag for tag in context_tags if tag not in tags_to_children_cache }
-                
-                if len( uncached_context_tags ) > 0:
-                    
-                    new_tags_to_children = CG.client_controller.Read( 'tag_descendants_lookup', tag_service_key, uncached_context_tags )
-                    
-                else:
-                    
-                    new_tags_to_children = dict()
-                    
-                
-                child_tags = set()
-                
-                for tag in context_tags:
-                    
-                    if tag in tags_to_children_cache:
-                        
-                        child_tags.update( tags_to_children_cache[ tag ] )
-                        
-                    elif tag in new_tags_to_children:
-                        
-                        child_tags.update( new_tags_to_children[ tag ] )
-                        
-                    
-                
-                child_tags.difference_update( context_tags )
-                
-                return ( tag_service_key, child_tags, new_tags_to_children )
-                
-            
-            def publish_callable( result ):
-                
-                ( job_tag_service_key, child_tags, new_tags_to_children ) = result
-                
-                if job_tag_service_key != self._tag_service_key:
-                    
-                    self._children_list.SetPredicates( [] )
-                    
-                    return
-                    
-                
-                child_tags = list( child_tags )
-                
-                self._tags_to_children_cache.update( new_tags_to_children )
-                
-                tag_sort = ClientTagSorting.TagSort( sort_type = ClientTagSorting.SORT_BY_HUMAN_TAG, sort_order = CC.SORT_ASC )
-                
-                ClientTagSorting.SortTags( tag_sort, child_tags )
-                
-                predicates = [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, value = tag ) for tag in child_tags ]
-                
-                self._children_list.SetPredicates( predicates, preserve_single_selection = True )
-                
-                self._children_list_needs_updating = False
-                
-            
-            def errback_callable( etype, value, tb ):
-                
-                self._children_list.SetPredicates( [] )
-                
-                self._children_list_needs_updating = False
-                
-                HydrusData.ShowText( 'Trying to load some child tags failed, please send this to hydev:' )
-                HydrusData.ShowExceptionTuple( etype, value, tb, do_wait = False )
-                
-            
-            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_callable = errback_callable )
-            
-            job.start()
+            self._children_list.UpdateChildrenIfNeeded( set( self._current_context_tags ) )
             
         
     
@@ -2292,7 +2367,7 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             height_num_chars = self._fixed_results_list_height
             
         
-        return ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._tag_service_key, self._float_mode, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
+        return ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = height_num_chars )
         
     
     def _LocationContextJustChanged( self, location_context: ClientLocation.LocationContext ):
@@ -3061,7 +3136,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         
         height_num_chars = CG.client_controller.new_options.GetInteger( 'ac_write_list_height_num_chars' )
         
-        preds_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._display_tag_service_key, self._float_mode, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE, height_num_chars = height_num_chars )
+        preds_list = ListBoxTagsPredicatesAC( self._dropdown_notebook, self.BroadcastChoices, self._float_mode, self._display_tag_service_key, tag_display_type = ClientTags.TAG_DISPLAY_STORAGE, height_num_chars = height_num_chars )
         
         preds_list.SetExtraParentRowsAllowed( CG.client_controller.new_options.GetBoolean( 'expand_parents_on_storage_autocomplete_taglists' ) )
         preds_list.SetParentDecoratorsAllowed( CG.client_controller.new_options.GetBoolean( 'show_parent_decorators_on_storage_autocomplete_taglists' ) )

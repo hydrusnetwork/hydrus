@@ -12,6 +12,7 @@ from hydrus.client.db import ClientDBDefinitionsCache
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBSimilarFiles
+from hydrus.client.duplicates import ClientDuplicates
 
 class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
     
@@ -1013,16 +1014,16 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         
         join_predicates = [ 'smaller_media_id = duplicate_files_smaller.media_id AND larger_media_id = duplicate_files_larger.media_id' ]
         
-        if pixel_dupes_preference != CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
+        if pixel_dupes_preference != ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
             
             join_predicates.append( 'distance <= {}'.format( max_hamming_distance ) )
             
         
-        if pixel_dupes_preference in ( CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
+        if pixel_dupes_preference in ( ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED, ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED ):
             
             join_predicate_pixel_dupes = 'duplicate_files_smaller.king_hash_id = pixel_hash_map_smaller.hash_id AND duplicate_files_larger.king_hash_id = pixel_hash_map_larger.hash_id AND pixel_hash_map_smaller.pixel_hash_id = pixel_hash_map_larger.pixel_hash_id'
             
-            if pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
+            if pixel_dupes_preference == ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_REQUIRED:
                 
                 tables.extend( [
                     'pixel_hash_map AS pixel_hash_map_smaller',
@@ -1031,7 +1032,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
                 
                 join_predicates.append( join_predicate_pixel_dupes )
                 
-            elif pixel_dupes_preference == CC.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
+            elif pixel_dupes_preference == ClientDuplicates.SIMILAR_FILES_PIXEL_DUPES_EXCLUDED:
                 
                 # can't do "AND NOT {}", or the join will just give you the million rows where it isn't true. we want 'AND NEVER {}', and quick
                 

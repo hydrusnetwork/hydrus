@@ -357,6 +357,13 @@ class TestURLClasses( unittest.TestCase ):
         self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( human_url_with_mix ), encoded_url_with_mix )
         self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( encoded_url_with_mix ), encoded_url_with_mix )
         
+        # double-check we don't auto-alphabetise params in this early stage! we screwed this up before and broke that option
+        human_url_with_mix = 'https://grunky.site/post?b=5 5&a=1 1'
+        encoded_url_with_mix = 'https://grunky.site/post?b=5%205&a=1%201'
+        
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( human_url_with_mix ), encoded_url_with_mix )
+        self.assertEqual( ClientNetworkingFunctions.EnsureURLIsEncoded( encoded_url_with_mix ), encoded_url_with_mix )
+        
     
     def test_defaults( self ):
         
