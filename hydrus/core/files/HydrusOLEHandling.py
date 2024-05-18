@@ -4,7 +4,16 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core.files.images import HydrusImageHandling
 
-import olefile
+try:
+    
+    import olefile
+
+    OLEFILE_OK = True
+    
+except:
+    
+    OLEFILE_OK = False
+    
 
 #                       :::!~!!!!!:.
 #                   .xUHWH!! !!?M88WHX:.
@@ -29,6 +38,7 @@ import olefile
 
 # This is a classic example of a good time to just let some third party library do it for you.
 
+# Historical record of attempting to just search for signatures:
 
 # https://gitlab.freedesktop.org/xdg/shared-mime-info/-/blob/a342af1d8848a2916ced47c9775cab6ab48b1db2/data/freedesktop.org.xml.in#L897
 # they got the byte order wrong
@@ -47,16 +57,19 @@ import olefile
 #     b'\x06\x09\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46': HC.APPLICATION_DOC,
 #     b'\x10\x8d\x81\x64\x9b\x4f\xcf\x11\x86\xea\x00\xaa\x00\xb9\x29\xe8': HC.APPLICATION_PPT, # where is this from?
 #     b'\x70\xae\x7b\xea\x3b\xfb\xcd\x11\xa9\x03\x00\xaa\x00\x51\x0e\xa3': HC.APPLICATION_PPT,
-#     b'\x51\x48\x04\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46': HC.APPLICATION_PPT,
+#     b'\x51\x48\x04\ x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46': HC.APPLICATION_PPT,
 #     b'\x10\x08\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46': HC.APPLICATION_XLS,
 #     b'\x20\x08\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46': HC.APPLICATION_XLS
 # }
 
+# Now using the proper `olefile` library:
 
 # http://fileformats.archiveteam.org/wiki/Microsoft_Compound_File 
 # https://wikileaks.org/ciav7p1/cms/page_13762814.html
 # https://raw.githubusercontent.com/decalage2/oletools/master/oletools/common/clsid.py
 
+
+# These need to be uppercase
 GUID_MIMES = {
     '00020900-0000-0000-C000-000000000046': HC.APPLICATION_DOC, # Word 6.0-7.0 Document (Word.Document.6)
     '00020906-0000-0000-C000-000000000046': HC.APPLICATION_DOC, # Word 97-2003 Document (Word.Document.8)
@@ -64,62 +77,45 @@ GUID_MIMES = {
     'F4754C9B-64F5-4B40-8AF4-679732AC0607': HC.APPLICATION_DOC, # (Word.Document.12)
     '00044851-0000-0000-C000-000000000046': HC.APPLICATION_PPT, # PowerPoint 4.0 PPT
     '64818D10-4F9B-11CF-86EA-00AA00B929E8': HC.APPLICATION_PPT, # PPT (Microsoft Powerpoint.Show.8)
-    'EA7bAE70-FB3B-11CD-A903-00AA00510EA3': HC.APPLICATION_PPT, # PowerPoint 95 PPT
+    'EA7BAE70-FB3B-11CD-A903-00AA00510EA3': HC.APPLICATION_PPT, # PowerPoint 95 PPT
     'CF4F55F4-8F87-4D47-80BB-5808164BB3F8': HC.APPLICATION_PPT, # (Microsoft Powerpoint.Show.12)
     '00020810-0000-0000-C000-000000000046': HC.APPLICATION_XLS, # Excel 5-95 XLS (Microsoft Excel.Sheet.5)
     '00020820-0000-0000-C000-000000000046': HC.APPLICATION_XLS, # Excel 97-2003 Worksheet (Excel.Sheet.8)
     '00020830-0000-0000-C000-000000000046': HC.APPLICATION_XLS, # (Microsoft Excel.Sheet.12)
 }
 
-GUID_MIMES =  {k.upper(): v for k, v in GUID_MIMES.items()}
+# GUID_MIMES =  {k.upper(): v for k, v in GUID_MIMES.items()}
 
-# OLE_signatures_items = OLE_GUIDs.items()
 
-# OLE_HEADER = b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1'
-
-# def isOLEFile(path: str):
+OLE_HEADER = b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1'
     
-#     with open( path, 'rb' ) as f:
+def isOleFile(path: str):
+    
+    if OLEFILE_OK:
         
-#         file_bytes = f.read(8)
+        return olefile.isOleFile(path)
         
-#         return file_bytes[ :8 ] == OLE_HEADER
+    else:
         
-    
-def isOleFile(path: typing.Union[ typing.IO[bytes], bytes, str ]):
-    
-    return olefile.isOleFile(path)
-    
-
-# def MimeFromMicrosoftOLEFile(path: str):
-    
-#     if not isOLEFile(path):
-    
-#         return HC.APPLICATION_UNKNOWN
-    
-#     print('ole')
-    
-#     with open( path, 'rb' ) as f:
+        with open( path, 'rb' ) as f:
             
-#         file_bytes = f.read()
-        
-#         for signature, mime in OLE_signatures_items:
+            file_bytes = f.read(8)
             
-#             print('checking:')
-#             print(signature)
-            
-#             if signature in file_bytes[ 592 : 8192 + len( signature ) ]:
-                
-#                 print('match!')
-                
-#                 return mime
-                
+            return file_bytes[ :8 ] == OLE_HEADER
             
         
-#     return HC.UNDETERMINED_OLE
     
 
-def MimeFromMicrosoftOLEFile(path: typing.Union[ typing.IO[bytes], bytes, str ]):
+def MimeFromOLEFile(path: str):
+    
+    if not isOleFile( path ):
+        
+        return HC.APPLICATION_UNKNOWN
+        
+    
+    if not OLEFILE_OK:
+        
+        return HC.UNDETERMINED_OLE
     
     try:
         
@@ -153,28 +149,34 @@ def MimeFromMicrosoftOLEFile(path: typing.Union[ typing.IO[bytes], bytes, str ])
             
     except:
         
-        raise HydrusExceptions.DamagedOrUnusualFileException()
-
-
-# def oleTesting(ole: olefile.OleFileIO): 
-#     ole.get_metadata().dump()
+        return HC.UNDETERMINED_OLE
+        
     
 
 def OfficeOLEDocumentWordCount( path: str ):
     
+    # Not all legacy office files are OLE
     if not isOleFile( path ):
         
         raise HydrusExceptions.LimitedSupportFileException('File is not OLE!')
+        
+    
+    if not OLEFILE_OK:
+        
+        raise HydrusExceptions.NoThumbnailFileException('olefile is not available')
+        
     
     try:
         
-        with olefile.OleFileIO(path) as ole:
+        with olefile.OleFileIO( path ) as ole:
             
             num_words = ole.get_metadata().num_words
             
+    
     except:
         
         num_words = None
         
     
     return num_words
+    

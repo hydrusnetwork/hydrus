@@ -863,7 +863,7 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 
             if mime == HC.UNDETERMINED_OLE:
                 
-                return HydrusOLEHandling.MimeFromMicrosoftOLEFile( path )
+                return HydrusOLEHandling.MimeFromOLEFile( path )
                 
             else:
                 
