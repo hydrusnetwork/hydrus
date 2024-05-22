@@ -583,7 +583,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._InitialisePermittedActionChoices()
         
-        self._action_radio = ClientGUICommon.BetterRadioBox( self, choices = self._permitted_action_choices, vertical = True )
+        self._action_radio = ClientGUICommon.BetterRadioBox( self, self._permitted_action_choices, vertical = True )
         
         self._action_radio.Select( 0 )
         
@@ -673,7 +673,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             selection_index = len( permitted_reason_choices ) - 1
             
         
-        self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, choices = permitted_reason_choices, vertical = True )
+        self._reason_radio = ClientGUICommon.BetterRadioBox( self._reason_panel, permitted_reason_choices, vertical = True )
         
         self._custom_reason = QW.QLineEdit( self._reason_panel )
         
@@ -1188,7 +1188,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if reasons_ok and not user_selected_existing_or_make_no_change:
                 
-                if self._reason_radio.GetCurrentIndex() <= 0:
+                if reason == self._default_reason:
                     
                     last_advanced_file_deletion_reason = None
                     

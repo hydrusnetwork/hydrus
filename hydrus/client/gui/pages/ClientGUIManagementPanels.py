@@ -1303,10 +1303,6 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._gallery_importers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
         self._gallery_importers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
         
-        self._gallery_importers_listctrl_panel.NewButtonRow()
-        
-        self._gallery_importers_listctrl_panel.AddButton( 'set options to queries', self._SetOptionsToGalleryImports, enabled_only_on_selection = True )
-        
         self._gallery_importers_listctrl.Sort()
         
         #
@@ -1335,6 +1331,10 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._import_options_button.SetTagImportOptions( tag_import_options )
         self._import_options_button.SetNoteImportOptions( note_import_options )
         
+        self._set_options_to_queries_button = ClientGUICommon.BetterButton( self, 'update selected queries with current options', self._SetOptionsToGalleryImports )
+        self._set_options_to_queries_button.setToolTip( 'Each query has its own file limit and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some downloaders in your selection differ with what the page currently has. Clicking here will update the selected queries with whatever the page currently has.' )
+        self._set_options_to_queries_button.setVisible( False )
+        
         #
         
         input_hbox = QP.HBoxLayout()
@@ -1348,7 +1348,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._gallery_downloader_panel.Add( input_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._gug_key_and_name, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._gallery_downloader_panel.Add( self._file_limit, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._gallery_downloader_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        import_buttons_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( import_buttons_hbox, self._import_options_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( import_buttons_hbox, self._set_options_to_queries_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._gallery_downloader_panel.Add( import_buttons_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -1385,6 +1391,11 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._import_options_button.fileImportOptionsChanged.connect( self._multiple_gallery_import.SetFileImportOptions )
         self._import_options_button.noteImportOptionsChanged.connect( self._multiple_gallery_import.SetNoteImportOptions )
         self._import_options_button.tagImportOptionsChanged.connect( self._multiple_gallery_import.SetTagImportOptions )
+        
+        self._file_limit.valueChanged.connect( self._UpdateImportOptionsSetButton )
+        self._import_options_button.importOptionsChanged.connect( self._UpdateImportOptionsSetButton )
+        self._highlighted_gallery_import_panel.importOptionsChanged.connect( self._UpdateImportOptionsSetButton )
+        self._gallery_importers_listctrl.selectionModel().selectionChanged.connect( self._UpdateImportOptionsSetButton )
         
     
     def _CanClearHighlight( self ):
@@ -1929,7 +1940,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             return
             
         
-        message = 'Set the current file limit, file import, and tag import options to all the selected queries? (by default, these options are only applied to new queries)'
+        message = 'Set the page\'s current file limit and import options to all the selected queries?'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -1947,6 +1958,8 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 gallery_import.SetTagImportOptions( tag_import_options )
                 gallery_import.SetNoteImportOptions( note_import_options )
                 
+            
+            self._UpdateImportOptionsSetButton()
             
         
     
@@ -2079,6 +2092,108 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             return False
             
+        
+    
+    def _UpdateImportOptionsSetButton( self ):
+        
+        selected_gallery_imports = self._gallery_importers_listctrl.GetData( only_selected = True )
+        
+        show_it = False
+        
+        if len( selected_gallery_imports ) > 0:
+            
+            # ok the serialisable comparison sucks, but we can cut down the repeated work to just one per future run of this method by updating our children with exactly our object
+            
+            file_limit = self._file_limit.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
+            note_import_options = self._import_options_button.GetNoteImportOptions()
+            tag_import_options = self._import_options_button.GetTagImportOptions()
+            
+            file_import_options_string = None
+            note_import_options_string = None
+            tag_import_options_string = None
+            
+            for gallery_import in selected_gallery_imports:
+                
+                if gallery_import.GetFileLimit() != file_limit:
+                    
+                    show_it = True
+                    
+                    break
+                    
+                
+                gallery_import_file_import_options = gallery_import.GetFileImportOptions()
+                
+                if gallery_import_file_import_options != file_import_options:
+                    
+                    if file_import_options_string is None:
+                        
+                        file_import_options_string = file_import_options.DumpToString()
+                        
+                    
+                    # not the same object, let's see if they have the same value
+                    if gallery_import_file_import_options.DumpToString() == file_import_options_string:
+                        
+                        # we have the same value here, just not the same object. let's make the check faster next time
+                        gallery_import.SetFileImportOptions( file_import_options )
+                        
+                    else:
+                        
+                        show_it = True
+                        
+                        break
+                        
+                    
+                
+                gallery_import_note_import_options = gallery_import.GetNoteImportOptions()
+                
+                if gallery_import_note_import_options != note_import_options:
+                    
+                    if note_import_options_string is None:
+                        
+                        note_import_options_string = note_import_options.DumpToString()
+                        
+                    
+                    # not the same object, let's see if they have the same value
+                    if gallery_import_note_import_options.DumpToString() == note_import_options_string:
+                        
+                        # we have the same value here, just not the same object. let's make the check faster next time
+                        gallery_import.SetNoteImportOptions( note_import_options )
+                        
+                    else:
+                        
+                        show_it = True
+                        
+                        break
+                        
+                    
+                
+                gallery_import_tag_import_options = gallery_import.GetTagImportOptions()
+                
+                if gallery_import_tag_import_options != tag_import_options:
+                    
+                    if tag_import_options_string is None:
+                        
+                        tag_import_options_string = tag_import_options.DumpToString()
+                        
+                    
+                    # not the same object, let's see if they have the same value
+                    if gallery_import_tag_import_options.DumpToString() == tag_import_options_string:
+                        
+                        # we have the same value here, just not the same object. let's make the check faster next time
+                        gallery_import.SetTagImportOptions( tag_import_options )
+                        
+                    else:
+                        
+                        show_it = True
+                        
+                        break
+                        
+                    
+                
+            
+        
+        self._set_options_to_queries_button.setVisible( show_it )
         
     
     def _UpdateImportStatus( self ):
@@ -2244,10 +2359,6 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_listctrl_panel.AddButton( 'retry failed', self._RetryFailed, enabled_check_func = self._CanRetryFailed )
         self._watchers_listctrl_panel.AddButton( 'retry ignored', self._RetryIgnored, enabled_check_func = self._CanRetryIgnored )
         
-        self._watchers_listctrl_panel.NewButtonRow()
-        
-        self._watchers_listctrl_panel.AddButton( 'set options to watchers', self._SetOptionsToWatchers, enabled_only_on_selection = True )
-        
         self._watchers_listctrl.Sort()
         
         self._watcher_url_input = ClientGUITextInput.TextAndPasteCtrl( self._watchers_panel, self._AddURLs )
@@ -2265,6 +2376,10 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._import_options_button.SetTagImportOptions( tag_import_options )
         self._import_options_button.SetNoteImportOptions( note_import_options )
         
+        self._set_options_to_watchers_button = ClientGUICommon.BetterButton( self, 'update selected queries with current options', self._SetOptionsToWatchers )
+        self._set_options_to_watchers_button.setToolTip( 'Each watcher has its own checker and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some watchers in your selection differ with what the page currently has. Clicking here will update the selected watchers with whatever the page currently has.' )
+        self._set_options_to_watchers_button.setVisible( False )
+        
         # suck up watchers from elsewhere in the program (presents a checkboxlistdialog)
         
         #
@@ -2280,7 +2395,13 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_panel.Add( self._watchers_listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         self._watchers_panel.Add( self._watcher_url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
         self._watchers_panel.Add( self._checker_options, CC.FLAGS_EXPAND_PERPENDICULAR )
-        self._watchers_panel.Add( self._import_options_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        
+        import_buttons_hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( import_buttons_hbox, self._import_options_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( import_buttons_hbox, self._set_options_to_watchers_button, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self._watchers_panel.Add( import_buttons_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         #
         
@@ -2309,6 +2430,11 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._import_options_button.tagImportOptionsChanged.connect( self._OptionsUpdated )
         
         self._checker_options.valueChanged.connect( self._OptionsUpdated )
+        
+        self._import_options_button.importOptionsChanged.connect( self._UpdateImportOptionsSetButton )
+        self._checker_options.valueChanged.connect( self._UpdateImportOptionsSetButton )
+        self._highlighted_watcher_panel.importOptionsChanged.connect( self._UpdateImportOptionsSetButton )
+        self._watchers_listctrl.selectionModel().selectionChanged.connect( self._UpdateImportOptionsSetButton )
         
     
     def _AddURLs( self, urls, filterable_tags = None, additional_service_keys_to_tags = None ):
@@ -2939,7 +3065,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             return
             
         
-        message = 'Set the current checker, file import, and tag import options to all the selected watchers? (by default, these options are only applied to new watchers)'
+        message = 'Set the current checker and import options to all the selected watchers?'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -2947,14 +3073,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             checker_options = self._checker_options.GetValue()
             file_import_options = self._import_options_button.GetFileImportOptions()
+            note_import_options = self._import_options_button.GetNoteImportOptions()
             tag_import_options = self._import_options_button.GetTagImportOptions()
             
             for watcher in watchers:
                 
                 watcher.SetCheckerOptions( checker_options )
                 watcher.SetFileImportOptions( file_import_options )
+                watcher.SetNoteImportOptions( note_import_options )
                 watcher.SetTagImportOptions( tag_import_options )
                 
+            
+            self._UpdateImportOptionsSetButton()
             
         
     
@@ -3069,6 +3199,125 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             return False
             
+        
+    
+    def _UpdateImportOptionsSetButton( self ):
+        
+        selected_watchers = self._watchers_listctrl.GetData( only_selected = True )
+        
+        show_it = False
+        
+        if len( selected_watchers ) > 0:
+            
+            # ok the serialisable comparison sucks, but we can cut down the repeated work to just one per future run of this method by updating our children with exactly our object
+            
+            checker_options = self._checker_options.GetValue()
+            file_import_options = self._import_options_button.GetFileImportOptions()
+            note_import_options = self._import_options_button.GetNoteImportOptions()
+            tag_import_options = self._import_options_button.GetTagImportOptions()
+            
+            checker_options_string = None
+            file_import_options_string = None
+            note_import_options_string = None
+            tag_import_options_string = None
+            
+            for watcher in selected_watchers:
+                
+                watcher_checker_options = watcher.GetCheckerOptions()
+                
+                if watcher_checker_options != checker_options:
+                    
+                    if checker_options_string is None:
+                        
+                        checker_options_string = checker_options.DumpToString()
+                        
+                    
+                    # not the same object, let's see if they have the same value
+                    if watcher_checker_options.DumpToString() == checker_options_string:
+                        
+                        # we have the same value here, just not the same object. let's make the check faster next time
+                        watcher.SetCheckerOptions( checker_options )
+                        
+                    else:
+                        
+                        show_it = True
+                        
+                        break
+                        
+                    
+                
+                watcher_file_import_options = watcher.GetFileImportOptions()
+                
+                if watcher_file_import_options != file_import_options:
+                    
+                    if file_import_options_string is None:
+                        
+                        file_import_options_string = file_import_options.DumpToString()
+                        
+                    
+                    # not the same object, let's see if they have the same value
+                    if watcher_file_import_options.DumpToString() == file_import_options_string:
+                        
+                        # we have the same value here, just not the same object. let's make the check faster next time
+                        watcher.SetFileImportOptions( file_import_options )
+                        
+                    else:
+                        
+                        show_it = True
+                        
+                        break
+                        
+                    
+                
+                watcher_note_import_options = watcher.GetNoteImportOptions()
+                
+                if watcher_note_import_options != note_import_options:
+                    
+                    if note_import_options_string is None:
+                        
+                        note_import_options_string = note_import_options.DumpToString()
+                        
+                    
+                    # not the same object, let's see if they have the same value
+                    if watcher_note_import_options.DumpToString() == note_import_options_string:
+                        
+                        # we have the same value here, just not the same object. let's make the check faster next time
+                        watcher.SetNoteImportOptions( note_import_options )
+                        
+                    else:
+                        
+                        show_it = True
+                        
+                        break
+                        
+                    
+                
+                watcher_tag_import_options = watcher.GetTagImportOptions()
+                
+                if watcher_tag_import_options != tag_import_options:
+                    
+                    if tag_import_options_string is None:
+                        
+                        tag_import_options_string = tag_import_options.DumpToString()
+                        
+                    
+                    # not the same object, let's see if they have the same value
+                    if watcher_tag_import_options.DumpToString() == tag_import_options_string:
+                        
+                        # we have the same value here, just not the same object. let's make the check faster next time
+                        watcher.SetTagImportOptions( tag_import_options )
+                        
+                    else:
+                        
+                        show_it = True
+                        
+                        break
+                        
+                    
+                
+            
+        
+        self._set_options_to_watchers_button.setVisible( show_it )
         
     
     def _UpdateImportStatus( self ):

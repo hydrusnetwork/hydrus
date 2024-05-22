@@ -35,6 +35,40 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_576"><a href="#version_576">version 576</a></h2>
+                    <ul>
+                        <li><h3>file access latency</h3></li>
+                        <li>the mpv player no longer hangs the UI thread on file load if the file manager is busy. it now just shows a black square until things are freed up. sorry this took so long to fix!</li>
+                        <li>the client file storage system has a new two-layer locking mechanism that allows for massively more parallel access, even when files are importing. file imports should lag out file/thumbnail load significantly less</li>
+                        <li>the 'check for file orphans' maintenance job is now a significantly less-blocking process. it'll lock each of the 512 subfolders in turn, which will delay some file/thumb access, but it won't need an exclusive write lock on the whole client files manager for the entire job any more</li>
+                        <li>also, the 'check for file orphans' job now saves thumbnails, sticking them in a subdirectory of the export location you designate. some users wanted to try using saucenao-type services to try and recover when they had a thumb but no file, so let's see how this works out</li>
+                        <li><h3>import options in watchers and gallery downloaders</h3></li>
+                        <li>instead of the mysterious 'set options to queries' button, there is now a button beside the 'import options' one that is only visible when the current selection of downloaders has differing file limit or import options than the main page. although this is still a complicated idea, I hope this will make it a little more obvious what is going on</li>
+                        <li>I did the same deal for the watchers page, for checker options or the import options</li>
+                        <li>it may be that some import options appear to differ after a client restart despite having the same settings. if you get this, let me know the details and I'll fix it!</li>
+                        <li>the 'set options to watchers' command now updates note import options</li>
+                        <li>fixed gallery imports not always saving changes to their note/tag import options in the main gui session, particularly if they are paused and the client is closed soon after options change</li>
+                        <li>improved the import options button's handling of certain options objects when editing, I suspect this fixed some weird edge-case situations of 'I thought I did not set that there' kind of thing, particularly when doing multiple sets of editing to a page and then sub-queries within it</li>
+                        <li>the import options button also has a stricter 'set default' command, clearing out old data more thoroughly to help with inter-widget comparisons here</li>
+                        <li><h3>misc</h3></li>
+                        <li>thanks to a user, we now have support for legacy Microsoft Office documents (.doc, .ppt, .xls), and a framework for other OLE based documents in future</li>
+                        <li>this new feature requires the `olefile` library. this is optional, and everyone who runs the normal built release now gets it, but if you run from source you might like to re-run the `setup_venv` script this week so you get it</li>
+                        <li>thanks to a user, the danbooru parsers now grab a danbooru post time accurate and precise to the second (previously they were getting 24-hour resolution, I think UTC midnight)</li>
+                        <li>uploading large files to the file repository should now use significantly less memory and be far less error prone. due to an in-elegant network request, it was previously timing out the connection if files took too long to upload. the code now streams the upload more cleverly. thanks to the users who helped with this one</li>
+                        <li>(tl;dr: if you have a darkmode stylesheet, the colour picker dialog is now fast) it looks like Qt fixed the weird bug that meant certain stylesheets broke the colour picker, so my test that says 'if the user is on Qt 6 and they have a hover-includiig stylesheet, then force a fake stylesheet without that tech before they open the colour-picker dialog and then restore the old one after they close, adding multiple seconds of entry and exit lag to this dialog argh' now no longer applies if you are on Qt 6.6 or later, which is anyone on the built release. let me know if you still have any problems!</li>
+                        <li>URLs are now tested against URL Classes by descending order of domain length. this ensures that if you have a URL class for 'api.example.com' and another for 'example.com', and this latter one is set to also apply to subdomains, the specific 'api.example.com' URL Class will be tested first! this was frequently working as desired before, but only for accidental reasons; it is now explicit in all cases</li>
+                        <li><h3>boring stuff</h3></li>
+                        <li>cleaned up the the regex list in the filename tagging panel, which had some ancient bad code from the wx days that stored the data in the string labels</li>
+                        <li>similarly significantly dejanked the 'ListBook' widget used in the options dialog</li>
+                        <li>overhauled my four(!!) separate radiobox classes, merging the best of all into one unified class and getting rid of some similar ancient and horrible 'select by label' tech. about twenty or thirty radioboxes across the program, particularly the stuff you see in system predicate panels, now operate on slightly saner principles</li>
+                        <li>fixed up the 'default gui session' combobox in the options, which was also inexplicably using ancient tech</li>
+                        <li>updated some misc UI typos and unhelpful tooltips</li>
+                        <li>refactored some of the client files manager to work with a 'prefix chunk', which will represent an umbrella prefix in the future system that supports overlapping folders and folders with differing prefix lengths'</li>
+                        <li>deleted some old client files manager code</li>
+                        <li>thanks to a user, the macOS setup_venv is fixed to point at the correct Cocoa/Quartz requirements.txt file</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_575"><a href="#version_575">version 575</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>
@@ -48,7 +82,7 @@
                         <li>fixed the rendering of some 16-bit pngs that seem to be getting a slightly different image mode on the new version of PIL</li>
                         <li>the debug 'gui report mode' now reports extensive info about virtual taglist heights. if I have been working with you on taglists, mostly on the manage tags dialog, that spawn without a scrollbar even though they should, please run this mode and then try to capture the error. hit me up and we'll see if the numbers explain what's going on. I may have also simply fixed the bug</li>
                         <li>I think I sped up adding tags to a local tag service that has a lot of siblings/parents</li>
-                        <li>updated the default danbooru parsers to get the original and/or translated artist notes. I don't know if a user did this or I did, but my dev machine somehow already had the tech while the defaults did not--if you did this, thinks!</li>
+                        <li>updated the default danbooru parsers to get the original and/or translated artist notes. I don't know if a user did this or I did, but my dev machine somehow already had the tech while the defaults did not--if you did this, thanks!</li>
                         <li>added more tweet URL Classes for the default downloader. you should now be able to drag and drop a vxtwitter or fxtwitter URL on the client and it'll work</li>
                         <li><h3>auto-duplicate resolution</h3></li>
                         <li>I have nothing real to show today, but I have a skeleton of code and a good plan on how to get the client resolving easy duplicate pairs by itself. so far, it looks easier than I feared, but, as always, there will be a lot to do. I will keep chipping away at this and will release features in tentative waves for advanced users to play with</li>

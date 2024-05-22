@@ -1193,13 +1193,16 @@ class ServiceRestricted( ServiceRemote ):
             
         
     
-    def Request( self, method, command, request_args = None, request_headers = None, report_hooks = None, temp_path = None ):
+    def Request( self, method, command, request_args = None, request_headers = None, report_hooks = None, temp_path = None, file_body_path = None ):
         
         if request_args is None: request_args = {}
         if request_headers is None: request_headers = {}
         if report_hooks is None: report_hooks = []
         
         try:
+            
+            query = ''
+            body = ''
             
             if method == HC.GET:
                 
@@ -1216,10 +1219,6 @@ class ServiceRestricted( ServiceRemote ):
                 if command == 'file':
                     
                     content_type = HC.APPLICATION_OCTET_STREAM
-                    
-                    body = request_args[ 'file' ]
-                    
-                    del request_args[ 'file' ]
                     
                 else:
                     
@@ -1249,7 +1248,7 @@ class ServiceRestricted( ServiceRemote ):
                 method = 'POST'
                 
             
-            network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method, url, body = body, temp_path = temp_path )
+            network_job = ClientNetworkingJobs.NetworkJobHydrus( self._service_key, method, url, body = body, temp_path = temp_path, file_body_path = file_body_path )
             
             if command not in ( 'update', 'metadata', 'file', 'thumbnail' ):
                 

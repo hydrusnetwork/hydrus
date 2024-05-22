@@ -23,6 +23,7 @@ from hydrus.core.files import HydrusSVGHandling
 from hydrus.core.files import HydrusUgoiraHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files import HydrusOfficeOpenXMLHandling
+from hydrus.core.files import HydrusOLEHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.networking import HydrusNetwork
 
@@ -78,6 +79,9 @@ mimes_to_default_thumbnail_paths[ HC.APPLICATION_PDF ] = os.path.join( HC.STATIC
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOCX ] = os.path.join( HC.STATIC_DIR, 'docx.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLSX ] = os.path.join( HC.STATIC_DIR, 'xlsx.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPTX ] = os.path.join( HC.STATIC_DIR, 'pptx.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_DOC ] = os.path.join( HC.STATIC_DIR, 'doc.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_XLS ] = os.path.join( HC.STATIC_DIR, 'xls.png' )
+mimes_to_default_thumbnail_paths[ HC.APPLICATION_PPT ] = os.path.join( HC.STATIC_DIR, 'ppt.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_EPUB ] = os.path.join( HC.STATIC_DIR, 'epub.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_DJVU ] = os.path.join( HC.STATIC_DIR, 'djvu.png' )
 mimes_to_default_thumbnail_paths[ HC.APPLICATION_PSD ] = os.path.join( HC.STATIC_DIR, 'psd.png' )
@@ -562,6 +566,15 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
             
             pass
             
+    elif mime in HC.POTENTIAL_OFFICE_OLE_MIMES:
+        
+        try:
+        
+            num_words = HydrusOLEHandling.OfficeOLEDocumentWordCount( path )
+            
+        except HydrusExceptions.LimitedSupportFileException:
+            
+            pass
         
     elif mime == HC.APPLICATION_FLASH:
         
@@ -696,7 +709,10 @@ headers_and_mime = [
     ( ( ( [0], [b'wvpk'] ), ), HC.AUDIO_WAVPACK ),
     ( ( ( [8], [b'AVI '] ), ), HC.VIDEO_AVI ),
     ( ( ( [0], [b'\x30\x26\xB2\x75\x8E\x66\xCF\x11\xA6\xD9\x00\xAA\x00\x62\xCE\x6C'] ), ), HC.UNDETERMINED_WM ),
-    ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE )
+    ( ( ( [0], [b'\x4D\x5A\x90\x00\x03'], ), ), HC.APPLICATION_WINDOWS_EXE ),
+    ( ( ( [0], [b'\x31\xbe\x00\x00', b'PO^Q', b'\376\067\0\043', b'\333\245-\0\0\0', b'\xDB\xA5\x2D\x00'] ), ), HC.APPLICATION_DOC ),
+    ( ( ( [0], [b'\xED\xDE\xAD\x0B', b'\x0B\xAD\xDE\xAD'], ), ), HC.APPLICATION_PPT ), # https://preservation.tylerthorsted.com/tag/hexspeak/
+    ( ( ( [0], [b'\xD0\xCF\x11\xE0\xA1\xB1\x1A\xE1'] ), ), HC.UNDETERMINED_OLE )
 ]
 
 def passes_offsets_and_headers_pair( offsets, headers, first_bytes_of_file ) -> bool:
@@ -844,6 +860,10 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                     
                     return HC.IMAGE_GIF
                     
+                
+            if mime == HC.UNDETERMINED_OLE:
+                
+                return HydrusOLEHandling.MimeFromOLEFile( path )
                 
             else:
                 

@@ -621,37 +621,117 @@ class ButtonWithMenuArrow( QW.QToolButton ):
         return False
         
     
-class BetterRadioBox( QP.RadioBox ):
+class BetterRadioBox( QW.QFrame ):
     
-    def __init__( self, *args, **kwargs ):
+    radioBoxChanged = QC.Signal()
+    
+    def __init__( self, parent, choice_tuples, vertical = False ):
         
-        self._indices_to_data = { i : data for ( i, ( s, data ) ) in enumerate( kwargs[ 'choices' ] ) }
+        QW.QFrame.__init__( self, parent )
         
-        kwargs[ 'choices' ] = [ s for ( s, data ) in kwargs[ 'choices' ] ]
+        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
         
-        QP.RadioBox.__init__( self, *args, **kwargs )
+        if vertical:
+            
+            self.setLayout( QP.VBoxLayout() )
+            
+        else:
+            
+            self.setLayout( QP.HBoxLayout() )
+            
+        
+        self._radio_buttons = []
+        self._buttons_to_data = {}
+        
+        for ( text, data ) in choice_tuples:
+            
+            radiobutton = QW.QRadioButton( text, self )
+            
+            self._radio_buttons.append( radiobutton )
+            
+            self._buttons_to_data[ radiobutton ] = data
+            
+            radiobutton.clicked.connect( self.radioBoxChanged )
+            
+            self.layout().addWidget( radiobutton )
+            
+        
+        if vertical and len( self._radio_buttons ):
+            
+            self._radio_buttons[0].setChecked( True )
+            
+        elif len( self._radio_buttons ) > 0:
+            
+            self._radio_buttons[-1].setChecked( True )
+            
+        
+    
+    def _GetCurrentChoiceWidget( self ):
+        
+        for choice in self._radio_buttons:
+            
+            if choice.isChecked():
+                
+                return choice
+                
+            
+        
+        return None
         
     
     def GetValue( self ):
         
-        index = self.GetCurrentIndex()
+        for ( button, data ) in self._buttons_to_data.items():
+            
+            if button.isChecked():
+                
+                return data
+                
+            
         
-        return self._indices_to_data[ index ]
+        raise Exception( 'No button selected!' )
         
     
-    def SetValue( self, data ):
+    def setFocus( self, reason ):
         
-        for ( i, d ) in self._indices_to_data.items():
+        for button in self._radio_buttons:
             
-            if d == data:
+            if button.isChecked():
                 
-                self.Select( i )
+                button.setFocus( reason )
                 
                 return
                 
             
         
+        QW.QFrame.setFocus( self, reason )
+        
     
+    def Select( self, index ):
+        
+        try:
+            
+            radio_button = self._radio_buttons[ index ]
+            
+            data = self._buttons_to_data[ radio_button ]
+            
+            self.SetValue( data )
+            
+        except:
+            
+            pass
+            
+        
+    
+    def SetValue( self, select_data ):
+        
+        for ( button, data ) in self._buttons_to_data.items():
+            
+            button.setChecked( data == select_data )
+            
+        
+    
+
 class BetterStaticText( QP.EllipsizedLabel ):
     
     def __init__( self, parent, label = None, tooltip_label = False, **kwargs ):
@@ -1483,6 +1563,7 @@ class RegexButton( BetterButton ):
             
         
     
+
 class StaticBox( QW.QFrame ):
     
     def __init__( self, parent, title ):
@@ -1525,46 +1606,7 @@ class StaticBox( QW.QFrame ):
         self._title_st.setText( title )
         
     
-class RadioBox( StaticBox ):
-    
-    def __init__( self, parent, title, choice_pairs, initial_index = None ):
-        
-        StaticBox.__init__( self, parent, title )
-        
-        self._indices_to_radio_buttons = {}
-        self._radio_buttons_to_data = {}
-        
-        for ( index, ( text, data ) ) in enumerate( choice_pairs ):
-            
-            radio_button = QW.QRadioButton( text, self )
-            
-            self.Add( radio_button, CC.FLAGS_EXPAND_PERPENDICULAR )
-            
-            self._indices_to_radio_buttons[ index ] = radio_button
-            self._radio_buttons_to_data[ radio_button ] = data
-            
-        
-        if initial_index is not None and initial_index in self._indices_to_radio_buttons: self._indices_to_radio_buttons[ initial_index ].setChecked( True )
-        
-    
-    def GetSelectedClientData( self ):
-        
-        for radio_button in list(self._radio_buttons_to_data.keys()):
-            
-            if radio_button.isDown(): return self._radio_buttons_to_data[ radio_button]
-            
-        
-    
-    def SetSelection( self, index ):
-        
-        self._indices_to_radio_buttons[ index ].setChecked( True )
-        
-    
-    def SetString( self, index, text ):
-        
-        self._indices_to_radio_buttons[ index ].setText( text )
-        
-    
+
 class TextCatchEnterEventFilter( QC.QObject ):
     
     def __init__( self, parent, callable, *args, **kwargs ):

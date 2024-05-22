@@ -7,6 +7,45 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 576](https://github.com/hydrusnetwork/hydrus/releases/tag/v576)
+
+### file access latency
+
+* the mpv player no longer hangs the UI thread on file load if the file manager is busy. it now just shows a black square until things are freed up. sorry this took so long to fix!
+* the client file storage system has a new two-layer locking mechanism that allows for massively more parallel access, even when files are importing. file imports should lag out file/thumbnail load significantly less
+* the 'check for file orphans' maintenance job is now a significantly less-blocking process. it'll lock each of the 512 subfolders in turn, which will delay some file/thumb access, but it won't need an exclusive write lock on the whole client files manager for the entire job any more
+* also, the 'check for file orphans' job now saves thumbnails, sticking them in a subdirectory of the export location you designate. some users wanted to try using saucenao-type services to try and recover when they had a thumb but no file, so let's see how this works out
+
+### import options in watchers and gallery downloaders
+
+* instead of the mysterious 'set options to queries' button, there is now a button beside the 'import options' one that is only visible when the current selection of downloaders has differing file limit or import options than the main page. although this is still a complicated idea, I hope this will make it a little more obvious what is going on
+* I did the same deal for the watchers page, for checker options or the import options
+* it may be that some import options appear to differ after a client restart despite having the same settings. if you get this, let me know the details and I'll fix it!
+* the 'set options to watchers' command now updates note import options
+* fixed gallery imports not always saving changes to their note/tag import options in the main gui session, particularly if they are paused and the client is closed soon after options change
+* improved the import options button's handling of certain options objects when editing, I suspect this fixed some weird edge-case situations of 'I thought I did not set that there' kind of thing, particularly when doing multiple sets of editing to a page and then sub-queries within it
+* the import options button also has a stricter 'set default' command, clearing out old data more thoroughly to help with inter-widget comparisons here
+
+### misc
+
+* thanks to a user, we now have support for legacy Microsoft Office documents (.doc, .ppt, .xls), and a framework for other OLE based documents in future
+* this new feature requires the `olefile` library. this is optional, and everyone who runs the normal built release now gets it, but if you run from source you might like to re-run the `setup_venv` script this week so you get it
+* thanks to a user, the danbooru parsers now grab a danbooru post time accurate and precise to the second (previously they were getting 24-hour resolution, I think UTC midnight)
+* uploading large files to the file repository should now use significantly less memory and be far less error prone. due to an in-elegant network request, it was previously timing out the connection if files took too long to upload. the code now streams the upload more cleverly. thanks to the users who helped with this one
+* (tl;dr: if you have a darkmode stylesheet, the colour picker dialog is now fast) it looks like Qt fixed the weird bug that meant certain stylesheets broke the colour picker, so my test that says 'if the user is on Qt 6 and they have a hover-includiig stylesheet, then force a fake stylesheet without that tech before they open the colour-picker dialog and then restore the old one after they close, adding multiple seconds of entry and exit lag to this dialog argh' now no longer applies if you are on Qt 6.6 or later, which is anyone on the built release. let me know if you still have any problems!
+* URLs are now tested against URL Classes by descending order of domain length. this ensures that if you have a URL class for 'api.example.com' and another for 'example.com', and this latter one is set to also apply to subdomains, the specific 'api.example.com' URL Class will be tested first! this was frequently working as desired before, but only for accidental reasons; it is now explicit in all cases
+
+### boring stuff
+
+* cleaned up the the regex list in the filename tagging panel, which had some ancient bad code from the wx days that stored the data in the string labels
+* similarly significantly dejanked the 'ListBook' widget used in the options dialog
+* overhauled my four(!!) separate radiobox classes, merging the best of all into one unified class and getting rid of some similar ancient and horrible 'select by label' tech. about twenty or thirty radioboxes across the program, particularly the stuff you see in system predicate panels, now operate on slightly saner principles
+* fixed up the 'default gui session' combobox in the options, which was also inexplicably using ancient tech
+* updated some misc UI typos and unhelpful tooltips
+* refactored some of the client files manager to work with a 'prefix chunk', which will represent an umbrella prefix in the future system that supports overlapping folders and folders with differing prefix lengths'
+* deleted some old client files manager code
+* thanks to a user, the macOS setup_venv is fixed to point at the correct Cocoa/Quartz requirements.txt file
+
 ## [Version 575](https://github.com/hydrusnetwork/hydrus/releases/tag/v575)
 
 ### misc
@@ -372,45 +411,3 @@ title: Changelog
 * untangled some of the presentation import options. stuff like 'is new or in inbox' gets slightly better description labels and cleaner actual logic code
 * fixed some type issues, some typo'd pubsubs, and other misc linting
 * tried last week's aborted github build update again. the build is now Node 20 compatible
-
-## [Version 565](https://github.com/hydrusnetwork/hydrus/releases/tag/v565)
-
-### tag sorting bonanza
-
-* _options->sort/collect_ now offers four places to customise default tag sort. instead of having one default sort for everything, there's now sort for search pages, media viewers, and the manage tags dialogs launched off of them
-
-### tag filter
-
-* when you copy namespaces from the tag filter list, it now copies the actual underlying data text like `character:`, which you can paste in elsewhere, rather than the pretty `"character" tags` display text
-* brushed up some of the UI and help text on the tag filter UI
-* fixed a couple places where the tag copy menus were trying to let you copy an empty string, which ended up with `-invalid label-`
-* fixed some extremely janked-out logic in the tag filter that was sending `(un)namespaced tags` to the 'except for these' advanced whitelist in many cases. it was technically ok, but not ideal and overall inhuman
-
-### concatenated source urls
-
-* on rule34.xxx and probably some other places, when the file has multiple source urls, the gelbooru-style parsers were pulling the urls in the format [ A, B, C, 'A B C' ], adding this weird extra string concatenation that is obviously invalid. I fixed the parsers so it won't happen again
-* **on update, you are going to get a couple of yes/no dialogs asking if you want to scan for and delete existing instances of these URLs**. if you have a big client, it will take some time to do this scan. the yes/no dialogs will auto-yes after ten minutes, so if you are doing a headless update via docker or something, please be patient--it will go through
-
-### note sidecars
-
-* the note->media sidecar exporter module now has a 'forced name' input. if you want to parse a single note from a .txt or .json that doesn't have a name, you can now force it
-* the sidecard txt separator dropdown in the .txt importer module now has a 'four pipes (||||)' entry in the dropdown as a quick-select beside 'newline'. four pipes is a useful separator of multi-line notes content since it almost certainly won't come up in a normal note
-* some tooltips and stuff are updated around here to better explain what the hell is going on
-* added a unit test to test the forced name
-
-### misc
-
-* to help the recent shortcuts change that merged `numpad` variants of + and left arrow and so on into being seen as the `unmodified` variants, if you have a saved shortcut that _is_ still the `numpad` variant, it will now match the `unmodified` input when the merge mode is on. just means you don't have to remap everything with this mode on--everything merged matches everything
-* added 'copy file known urls' to the 'media' shortcut set
-* I forgot to mention last week that we figured out more native global menubar tech (where the top menubar of the program will embed into your OS's top system menubar) in last week's release, for non-macOS (some versions of Linux) users. the new checkbox is under _gui->Use Native MenuBar_. it defaults to on for macOS and off for everyone else, but feel free to try it. there was a related 'my menubar is now messed up, why?' bug that hit some people in v564 that is fixed today. sorry if you got boshed by this, since it was tricky to manually fix. in future, note you can hit ctrl+p in a default client to bring up the command palette, and then you can type 'options' and can open the options that way, if your menubar isn't working!
-* fixed the `ideal usage` calculation in _database->move media files_ when there are three or more competing storage locations with two or more having a max size that is exceeded by their weight, and one or more having a max size that is only exceeded by their weight a little bit. due to a mistake in how total remaining weight was calculated in the little behind the scenes elimination game here, a location in this situation was exceeding its max size amount by a multiple of `1/(1-total_normalised_weight_of_restricted_locations)`, typically +10-30%. thank you for the report here, it was interesting to figure out!
-* I removed a hack that made the repositories (like the PTR) work for users running super old versions of the client. the hack has now been in place for more than a year. if you run into repository syncing problems, please update to after v511!
-* fixed a dumb status line in the 'check for missing/invalid files' checker thah was double-counting bad files in the popup
-* fixed some media duration 'second' components being rendered with extraneous .0, like '30.0 seconds'
-* fixed a db routine that fetches a huge table in pieces to not repeat a few rows when the ids it is fetching are non-contiguous, and to report the correct quantity of work done as a result (it was saying like 17,563/17,562)
-* the new _help->about_ Qt platformName addition will now say if the actual platformName differs from the running platformName (e.g. if it was set otherwise with a Qt launch parameter)
-
-### client api
-
-* just a small thing, but the under-documented `/manage_database/get_client_options` call now says the four types of default tag sort. I left the old key, `default_tag_sort`, in so as not to break stuff, but it is just a copy of the `search_page` variant in the new `default_tag_sort_xxx` foursome
-* client api version is now 62

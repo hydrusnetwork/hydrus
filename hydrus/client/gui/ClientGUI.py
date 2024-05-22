@@ -31,6 +31,7 @@ from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files import HydrusPSDHandling
+from hydrus.core.files import HydrusOLEHandling
 from hydrus.core.files import HydrusVideoHandling
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files.images import HydrusImageNormalisation
@@ -305,12 +306,7 @@ def THREADUploadPending( service_key ):
                         
                         path = client_files_manager.GetFilePath( hash, mime )
                         
-                        with open( path, 'rb' ) as f:
-                            
-                            file_bytes = f.read()
-                            
-                        
-                        service.Request( HC.POST, 'file', { 'file' : file_bytes } )
+                        service.Request( HC.POST, 'file', file_body_path = path )
                         
                         file_info_manager = media_result.GetFileInfoManager()
                         
@@ -862,6 +858,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'html5lib present: {}'.format( ClientParsing.HTML5LIB_IS_OK ) )
         library_version_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
         library_version_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
+        library_version_lines.append( 'olefile present: {}'.format( HydrusOLEHandling.OLEFILE_OK ) )
         library_version_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         library_version_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
         library_version_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )
@@ -1196,11 +1193,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _ClearOrphanFiles( self ):
         
-        text = 'This job will iterate through every file in your database\'s file storage, extracting any it does not expect to be there. This is particularly useful for \'re-syncing\' your file storage to what it should be, and is particularly useful if you are marrying an older/newer database with a newer/older file storage.'
+        text = 'This job will iterate through every file in your database\'s file storage, extracting any it does not expect to be there. This is particularly useful for \'re-syncing\' your file storage to what it should be after, say, marrying an older/newer database with a newer/older file storage.'
         text += '\n' * 2
-        text += 'You can choose to move the orphans in your file directories somewhere or delete them. Orphans in your thumbnail directories will always be deleted.'
+        text += 'You can choose to move the orphans in your file directories somewhere or delete them. Orphan thumbnails will be put in a subdirectory, in case you wish to perform reverse lookups.'
         text += '\n' * 2
-        text += 'Files and thumbnails will be inaccessible while this runs, so it is best to leave the client alone until it is done. It may take some time.'
+        text += 'Access to files and thumbnails will be slightly limited while this runs, and it may take some time.'
         
         yes_tuples = []
         
@@ -3459,8 +3456,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: CG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
-        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current g ui session', 'Reload the current QSS stylesheet.', self._ReloadCurrentGUISession )
-        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current stylesheet', 'Reload the current QSS stylesheet.', ClientGUIStyle.ReloadStyleSheet )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current gui session', 'Save, clear, and then reload the current GUI Session. Might help with some forced style reloading.', self._ReloadCurrentGUISession )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current stylesheet', 'Reload the current QSS stylesheet. Helps if you just edited it on disk and do not want to restart.', ClientGUIStyle.ReloadStyleSheet )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'reset multi-column list settings to default', 'Reset all multi-column list widths and other display settings to default.', self._DebugResetColumnListManager )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, CC.LAST_SESSION_SESSION_NAME )
         
@@ -6262,7 +6259,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             CG.client_controller.CallLaterQtSafe( self, t, 'test job', uias.Char, ac_widget, QC.Qt.Key_Return )
             
-            for i in range( 16 ):
+            for i in range( 20 ):
                 
                 t += SYS_PRED_REFRESH
                 

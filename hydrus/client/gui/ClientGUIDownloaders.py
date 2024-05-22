@@ -1340,6 +1340,8 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         tt += 'For instance, if this url class has domain \'example.com\', should it match a url with \'boards.example.com\' or \'artistname.example.com\'?'
         tt += '\n' * 2
         tt += 'Any subdomain starting with \'www\' is automatically matched, so do not worry about having to account for that.'
+        tt += '\n' * 2
+        tt += 'Also, if you have \'example.com\' here, but another URL class exists for \'api.example.com\', if an URL comes in with a domain of \'api.example.com\', that more specific URL Class one will always be tested before this one.'
         
         self._match_subdomains.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         

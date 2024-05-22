@@ -16,6 +16,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
@@ -916,52 +917,77 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 
             else:
                 
-                self._have_shown_human_error_on_this_file = False
+                media = self._media
                 
-                hash = self._media.GetHash()
-                mime = self._media.GetMime()
-                
-                # some videos have an audio channel that is silent. hydrus thinks these dudes are 'no audio', but when we throw them at mpv, it may play audio for them
-                # would be fine, you think, except in one reported case this causes scratches and pops and hell whitenoise
-                # so let's see what happens here
-                mute_override = not self._media.HasAudio()
-                
-                client_files_manager = CG.client_controller.client_files_manager
-                
-                path = client_files_manager.GetFilePath( hash, mime )
-                
-                self._player.visibility = 'always'
-                
-                self._stop_for_slideshow = False
-                
-                self._player.pause = True
-                
-                if mime in HC.VIEWABLE_ANIMATIONS and not CG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                def work_callable():
                     
-                    if mime == HC.ANIMATION_GIF:
+                    hash = media.GetHash()
+                    mime = media.GetMime()
+                    
+                    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+                    
+                    return ( media, path )
+                    
+                
+                def publish_callable( media_and_path ):
+                    
+                    ( media, path ) = media_and_path
+                    
+                    if media != self._media:
                         
-                        self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayPILAnimation( path )
-                        
-                    elif mime == HC.ANIMATION_APNG:
-                        
-                        self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( path )
+                        return
                         
                     
+                    self._have_shown_human_error_on_this_file = False
+                    
+                    # some videos have an audio channel that is silent. hydrus thinks these dudes are 'no audio', but when we throw them at mpv, it may play audio for them
+                    # would be fine, you think, except in one reported case this causes scratches and pops and hell whitenoise
+                    # so let's see what happens here
+                    mute_override = not self._media.HasAudio()
+                    
+                    self._player.visibility = 'always'
+                    
+                    self._stop_for_slideshow = False
+                    
+                    self._player.pause = True
+                    
+                    mime = self._media.GetMime()
+                    
+                    if mime in HC.VIEWABLE_ANIMATIONS and not CG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
+                        
+                        if mime == HC.ANIMATION_GIF:
+                            
+                            self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayPILAnimation( path )
+                            
+                        elif mime == HC.ANIMATION_APNG:
+                            
+                            self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( path )
+                            
+                        
+                    
+                    try:
+                        
+                        self._player.loadfile( path )
+                        
+                    except Exception as e:
+                        
+                        HydrusData.ShowException( e )
+                        
+                    
+                    self._player.volume = ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type )
+                    self._player.mute = mute_override or ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
+                    self._player.pause = start_paused
+                    
                 
-                try:
+                def errback_ui_cleanup_callable():
                     
-                    self._player.loadfile( path )
-                    
-                except Exception as e:
-                    
-                    HydrusData.ShowException( e )
+                    self.SetMedia( None )
                     
                 
-                self._player.volume = ClientGUIMediaVolume.GetCorrectCurrentVolume( self._canvas_type )
-                self._player.mute = mute_override or ClientGUIMediaVolume.GetCorrectCurrentMute( self._canvas_type )
-                self._player.pause = start_paused
+                job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable, errback_ui_cleanup_callable = errback_ui_cleanup_callable )
                 
-            
+                job.start()
+                
             
         except mpv.ShutdownError:
             

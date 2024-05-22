@@ -816,9 +816,11 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if file_import_options.DumpToString() != self._file_import_options.DumpToString():
-                
-                self._file_import_options = file_import_options
+            change_made = file_import_options.DumpToString() != self._file_import_options.DumpToString()
+            
+            self._file_import_options = file_import_options
+            
+            if change_made:
                 
                 self._SerialisableChangeMade()
                 
@@ -849,9 +851,13 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if note_import_options.DumpToString() != self._note_import_options.DumpToString():
+            change_made = note_import_options.DumpToString() != self._note_import_options.DumpToString()
+            
+            self._note_import_options = note_import_options
+            
+            if change_made:
                 
-                self._note_import_options = note_import_options
+                self._SerialisableChangeMade()
                 
             
         
@@ -860,9 +866,13 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if tag_import_options.DumpToString() != self._tag_import_options.DumpToString():
+            change_made = tag_import_options.DumpToString() != self._tag_import_options.DumpToString()
+            
+            self._tag_import_options = tag_import_options
+            
+            if change_made:
                 
-                self._tag_import_options = tag_import_options
+                self._SerialisableChangeMade()
                 
             
         

@@ -247,7 +247,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             for regex in regexes:
                 
-                self._regexes.addItem( regex )
+                self._regexes.Append( regex, regex )
                 
             
             #
@@ -375,7 +375,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                     return
                     
                 
-                self._regexes.addItem( regex )
+                self._regexes.Append( regex, regex )
                 
                 self._regex_box.clear()
                 
@@ -385,16 +385,13 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def EventRemoveRegex( self, item ):
             
-            selection = QP.ListWidgetGetSelection( self._regexes ) 
-            
-            if selection != -1:
+            if self._regexes.GetNumSelected() > 0:
                 
-                if len( self._regex_box.text() ) == 0:
-                    
-                    self._regex_box.setText( self._regexes.item( selection ).text() )
-                    
+                selected = list( self._regexes.GetData( only_selected = True ) )
                 
-                QP.ListWidgetDelete( self._regexes, selection )
+                self._regex_box.setText( selected[0] )
+                
+                self._regexes.DeleteSelected()
                 
                 self.tagsChanged.emit()
                 
@@ -423,7 +420,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             quick_namespaces = self._quick_namespaces_list.GetData()
             
-            regexes = QP.ListWidgetGetStrings( self._regexes )
+            regexes = self._regexes.GetData()
             
             filename_tagging_options.AdvancedSetTuple( quick_namespaces, regexes )
             
@@ -1245,6 +1242,8 @@ class EditFilenameTaggingOptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
 class GalleryImportPanel( ClientGUICommon.StaticBox ):
     
+    importOptionsChanged = QC.Signal()
+    
     def __init__( self, parent, page_key, name = 'gallery query' ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, name )
@@ -1332,6 +1331,9 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         self._import_options_button.fileImportOptionsChanged.connect( self._SetFileImportOptions )
         self._import_options_button.noteImportOptionsChanged.connect( self._SetNoteImportOptions )
         self._import_options_button.tagImportOptionsChanged.connect( self._SetTagImportOptions )
+        
+        self._file_limit.valueChanged.connect( self.importOptionsChanged )
+        self._import_options_button.importOptionsChanged.connect( self.importOptionsChanged )
         
         self._UpdateControlsForNewGalleryImport()
         
@@ -1666,6 +1668,8 @@ class GUGKeyAndNameSelector( ClientGUICommon.BetterButton ):
     
 class WatcherReviewPanel( ClientGUICommon.StaticBox ):
     
+    importOptionsChanged = QC.Signal()
+    
     def __init__( self, parent, page_key, name = 'watcher' ):
         
         ClientGUICommon.StaticBox.__init__( self, parent, name )
@@ -1778,6 +1782,9 @@ class WatcherReviewPanel( ClientGUICommon.StaticBox ):
         self._import_options_button.tagImportOptionsChanged.connect( self._SetTagImportOptions )
         
         self._checker_options_button.valueChanged.connect( self._SetCheckerOptions )
+        
+        self._checker_options_button.valueChanged.connect( self.importOptionsChanged )
+        self._import_options_button.importOptionsChanged.connect( self.importOptionsChanged )
         
         self._UpdateControlsForNewWatcher()
         

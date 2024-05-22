@@ -1,5 +1,6 @@
 import re
 
+import qtpy
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
@@ -65,10 +66,23 @@ def EditColour( win: QW.QWidget, colour: QG.QColor ):
     
     old_stylesheet = ClientGUIStyle.CURRENT_STYLESHEET
     
-    # OK, this is a legit bug in Qt6. if QWidget::item:hover is set in the QSS, even as an empty block, the colour-picker gradient square thing will update on normal mouse moves, not just drags, lmao
+    try:
+        
+        qt_version_tuple = tuple( map( int, qtpy.QT_VERSION.split( '.' ) ) ) # 6.6.0 -> ( 6, 6, 0 )
+        
+        qt_version_is_dangerzone = qt_version_tuple[0] == 6 and qt_version_tuple[1] < 6
+        
+    except:
+        
+        qt_version_is_dangerzone = False # who knows what is going on, but let's not spam stylesheets on this crazy Qt!?
+        
+    
+    # OK, this is a legit bug in Qt6, all I know is <6.6.0 but it might have been fixed earlier
+    # I think it is this one https://bugreports.qt.io/browse/QTBUG-115516
+    # if QWidget::item:hover is set in the QSS, even as an empty block, the colour-picker gradient square thing will update on normal mouse moves, not just drags, lmao
     # so we do this laggy nonsense, but it fixes it
     
-    if QtInit.WE_ARE_QT6 and ( 'QWidget::item:hover' in ClientGUIStyle.CURRENT_STYLESHEET or 'QWidget:item:hover' in ClientGUIStyle.CURRENT_STYLESHEET ):
+    if qt_version_is_dangerzone and ( 'QWidget::item:hover' in ClientGUIStyle.CURRENT_STYLESHEET or 'QWidget:item:hover' in ClientGUIStyle.CURRENT_STYLESHEET ):
         
         new_stylesheet = old_stylesheet.replace( 'QWidget::item:hover', 'QWidget::fugg:fugg' ).replace( 'QWidget:item:hover', 'QWidget:fugg:fugg' )
         

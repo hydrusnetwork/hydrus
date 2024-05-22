@@ -1730,6 +1730,8 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def SetFileImportOptions( self, file_import_options: FileImportOptions.FileImportOptions ):
         
+        file_import_options = file_import_options.Duplicate()
+        
         if self._file_import_options_panel is not None:
             
             raise Exception( 'This Import Options Panel already has File Import Options set!' )
@@ -1746,6 +1748,8 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def SetNoteImportOptions( self, note_import_options: NoteImportOptions.NoteImportOptions ):
         
+        note_import_options = note_import_options.Duplicate()
+        
         if self._note_import_options_panel is not None:
             
             raise Exception( 'This Import Options Panel already has Note Import Options set!' )
@@ -1761,6 +1765,8 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
     
     def SetTagImportOptions( self, tag_import_options: TagImportOptions.TagImportOptions ):
+        
+        tag_import_options = tag_import_options.Duplicate()
         
         if self._tag_import_options_panel is not None:
             
@@ -1779,6 +1785,7 @@ class EditImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
 
 class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
     
+    importOptionsChanged = QC.Signal()
     fileImportOptionsChanged = QC.Signal( FileImportOptions.FileImportOptions )
     noteImportOptionsChanged = QC.Signal( NoteImportOptions.NoteImportOptions )
     tagImportOptionsChanged = QC.Signal( TagImportOptions.TagImportOptions )
@@ -1802,6 +1809,10 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
         self._tag_import_options = None
         
         self._SetLabelAndToolTip()
+        
+        self.fileImportOptionsChanged.connect( self.importOptionsChanged )
+        self.noteImportOptionsChanged.connect( self.importOptionsChanged )
+        self.tagImportOptionsChanged.connect( self.importOptionsChanged )
         
     
     def _CopyFileImportOptions( self ):
@@ -2113,8 +2124,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             return
             
         
-        file_import_options = self._file_import_options.Duplicate()
-        
+        file_import_options = FileImportOptions.FileImportOptions()
         file_import_options.SetIsDefault( True )
         
         self._SetFileImportOptions( file_import_options )
@@ -2127,8 +2137,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             return
             
         
-        note_import_options = self._note_import_options.Duplicate()
-        
+        note_import_options = NoteImportOptions.NoteImportOptions()
         note_import_options.SetIsDefault( True )
         
         self._SetNoteImportOptions( note_import_options )
@@ -2141,9 +2150,7 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             return
             
         
-        tag_import_options = self._tag_import_options.Duplicate()
-        
-        tag_import_options.SetIsDefault( True )
+        tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         
         self._SetTagImportOptions( tag_import_options )
         
