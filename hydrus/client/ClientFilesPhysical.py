@@ -5,6 +5,8 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusExceptions
 
+from hydrus.client import ClientThreading
+
 def CheckFullPrefixCoverage( merge_target, prefixes ):
     
     missing_prefixes = GetMissingPrefixes( merge_target, prefixes )
@@ -294,6 +296,7 @@ class FilesStorageSubfolder( object ):
         our_subfolders[0] = first_char + our_subfolders[0]
         
         self.path = os.path.join( self.base_location.path, *our_subfolders )
+        self.rwlock = ClientThreading.FileRWLock()
         
     
     def __repr__( self ):
@@ -329,6 +332,16 @@ class FilesStorageSubfolder( object ):
     def IsForFiles( self ):
         
         return self.prefix[0] == 'f'
+        
+    
+    def IterateAllFiles( self ):
+        
+        filenames = list( os.listdir( self.path ) )
+        
+        for filename in filenames:
+            
+            yield os.path.join( self.path, filename )
+            
         
     
     def MakeSureExists( self ):

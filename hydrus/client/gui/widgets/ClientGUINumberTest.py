@@ -39,7 +39,7 @@ class NumberTestWidget( QW.QWidget ):
                 
             
         
-        self._operator = QP.DataRadioBox( self, choice_tuples = choice_tuples )
+        self._operator = ClientGUICommon.BetterRadioBox( self, choice_tuples )
         
         self._value = self._GenerateValueWidget( max )
         

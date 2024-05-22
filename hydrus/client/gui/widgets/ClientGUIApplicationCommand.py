@@ -428,9 +428,9 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._duplicates_type_panel = QW.QWidget( self )
         
-        choices = [ ( HC.duplicate_type_string_lookup[ t ], t ) for t in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
+        choice_tuples = [ ( HC.duplicate_type_string_lookup[ t ], t ) for t in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
         
-        self._duplicate_type = ClientGUICommon.BetterRadioBox( self._duplicates_type_panel, choices = choices )
+        self._duplicate_type = ClientGUICommon.BetterRadioBox( self._duplicates_type_panel, choice_tuples )
         
         vbox = QP.VBoxLayout()
         
@@ -465,12 +465,12 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._seek_panel = QW.QWidget( self )
         
-        choices = [
+        choice_tuples = [
             ( 'back', -1 ),
             ( 'forwards', 1 )
         ]
         
-        self._seek_direction = ClientGUICommon.BetterRadioBox( self._seek_panel, choices = choices )
+        self._seek_direction = ClientGUICommon.BetterRadioBox( self._seek_panel, choice_tuples )
         
         self._seek_duration_s = ClientGUICommon.BetterSpinBox( self._seek_panel, max=3599, width = 60 )
         self._seek_duration_ms = ClientGUICommon.BetterSpinBox( self._seek_panel, max=999, width = 60 )
@@ -494,9 +494,9 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._thumbnail_move_panel = QW.QWidget( self )
         
-        choices = [ ( CAC.selection_status_enum_to_str_lookup[ s ], s ) for s in [ CAC.SELECTION_STATUS_NORMAL, CAC.SELECTION_STATUS_SHIFT ] ]
+        choice_tuples = [ ( CAC.selection_status_enum_to_str_lookup[ s ], s ) for s in [ CAC.SELECTION_STATUS_NORMAL, CAC.SELECTION_STATUS_SHIFT ] ]
         
-        self._selection_status = ClientGUICommon.BetterRadioBox( self._thumbnail_move_panel, choices = choices )
+        self._selection_status = ClientGUICommon.BetterRadioBox( self._thumbnail_move_panel, choice_tuples )
         
         self._selection_status.SetValue( CAC.SELECTION_STATUS_NORMAL )
         
@@ -556,9 +556,9 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._file_command_target_panel = QW.QWidget( self )
         
-        choices = [ ( CAC.file_command_target_enum_to_str_lookup[ file_command_target ], file_command_target ) for file_command_target in ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) ]
+        choice_tuples = [ ( CAC.file_command_target_enum_to_str_lookup[ file_command_target ], file_command_target ) for file_command_target in ( CAC.FILE_COMMAND_TARGET_SELECTED_FILES, CAC.FILE_COMMAND_TARGET_FOCUSED_FILE ) ]
         
-        self._file_command_target = ClientGUICommon.BetterRadioBox( self._file_command_target_panel, choices = choices )
+        self._file_command_target = ClientGUICommon.BetterRadioBox( self._file_command_target_panel, choice_tuples )
         
         self._file_command_target.SetValue( CAC.FILE_COMMAND_TARGET_SELECTED_FILES )
         

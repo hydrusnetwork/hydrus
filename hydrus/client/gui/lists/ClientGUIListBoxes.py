@@ -72,7 +72,7 @@ class BetterQListWidget( QW.QListWidget ):
         return indices
         
     
-    def _GetListWidgetItems( self, only_selected = False ):
+    def _GetListWidgetItems( self, only_selected = False ) -> typing.Collection[ QW.QListWidgetItem ]:
         
         # not sure if selectedItems is always sorted, so just do it manually
         
@@ -176,6 +176,16 @@ class BetterQListWidget( QW.QListWidget ):
         return len( indices )
         
     
+    def GetSelectedIndices( self ):
+        
+        return self._GetSelectedIndices()
+        
+    
+    def HasData( self, obj ):
+        
+        return obj in self.GetData()
+        
+    
     def keyPressEvent( self, event: QG.QKeyEvent ):
         
         if event.modifiers() & QC.Qt.ControlModifier and event.key() in ( QC.Qt.Key_C, QC.Qt.Key_Insert ):
@@ -259,6 +269,8 @@ class BetterQListWidget( QW.QListWidget ):
         
     
     def SelectData( self, datas: typing.Collection[ object ] ):
+        
+        datas = set( datas )
         
         list_widget_items = self._GetListWidgetItems()
         

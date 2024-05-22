@@ -554,9 +554,11 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if file_import_options.DumpToString() != self._file_import_options.DumpToString():
-                
-                self._file_import_options = file_import_options
+            changes_made = file_import_options.DumpToString() != self._file_import_options.DumpToString()
+            
+            self._file_import_options = file_import_options
+            
+            if changes_made:
                 
                 self._SerialisableChangeMade()
                 
@@ -582,9 +584,11 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if note_import_options.DumpToString() != self._note_import_options.DumpToString():
-                
-                self._note_import_options = note_import_options
+            changes_made = note_import_options.DumpToString() != self._note_import_options.DumpToString()
+            
+            self._note_import_options = note_import_options
+            
+            if changes_made:
                 
                 self._SerialisableChangeMade()
                 
@@ -595,9 +599,11 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if tag_import_options.DumpToString() != self._tag_import_options.DumpToString():
-                
-                self._tag_import_options = tag_import_options
+            changes_made = tag_import_options.DumpToString() != self._tag_import_options.DumpToString()
+            
+            self._tag_import_options = tag_import_options
+            
+            if changes_made:
                 
                 self._SerialisableChangeMade()
                 
@@ -1688,9 +1694,11 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
         
         with self._lock:
             
-            if checker_options.DumpToString() != self._checker_options.DumpToString():
-                
-                self._checker_options = checker_options
+            change_made = checker_options.DumpToString() != self._checker_options.DumpToString()
+            
+            self._checker_options = checker_options
+            
+            if change_made:
                 
                 self._UpdateNextCheckTime()
                 

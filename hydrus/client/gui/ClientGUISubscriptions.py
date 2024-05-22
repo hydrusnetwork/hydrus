@@ -233,7 +233,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._initial_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'The first sync will add no more than this many URLs.' ) )
         
         self._periodic_file_limit = ClientGUICommon.BetterSpinBox( self._file_limits_panel, min=1, max=limits_max )
-        self._periodic_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before.' ) )
+        self._periodic_file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'Normal syncs will add no more than this many URLs, stopping early if they find several URLs the query has seen before. Note that this generally means top-level posts. If those posts include multiple files, e.g. as on Pixiv, they will still only count for one URL at the stage when this is checked.' ) )
         
         self._this_is_a_random_sample_sub = QW.QCheckBox( self._file_limits_panel )
         self._this_is_a_random_sample_sub.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you check this, you will not get warnings if the normal file limit is hit. Useful if you have a randomly sorted gallery, or you just want a recurring small sample of files.' ) )
@@ -309,8 +309,8 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows = []
         
-        rows.append( ( 'on first check, get at most this many files: ', self._initial_file_limit ) )
-        rows.append( ( 'on normal checks, get at most this many newer files: ', self._periodic_file_limit ) )
+        rows.append( ( 'on first check, get at most this many urls/posts: ', self._initial_file_limit ) )
+        rows.append( ( 'on normal checks, get at most this many newer urls/posts: ', self._periodic_file_limit ) )
         rows.append( ( 'do not worry about subscription gaps: ', self._this_is_a_random_sample_sub ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self._file_limits_panel, rows )

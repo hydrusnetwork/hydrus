@@ -153,7 +153,7 @@ class NetworkJob( object ):
     IS_HYDRUS_SERVICE = False
     IS_IPFS_SERVICE = False
     
-    def __init__( self, method: str, url: str, body = None, referral_url = None, temp_path = None ):
+    def __init__( self, method: str, url: str, body = None, referral_url = None, temp_path = None, file_body_path = None ):
         
         if body is not None and isinstance( body, str ):
             
@@ -179,6 +179,7 @@ class NetworkJob( object ):
         self._referral_url = referral_url
         self._actual_fetched_url = self._url
         self._temp_path = temp_path
+        self._file_body_path = file_body_path
         
         self._response_server_header = None
         self._response_last_modified = None
@@ -798,11 +799,25 @@ class NetworkJob( object ):
         
         ( connect_timeout, read_timeout ) = self._GetTimeouts()
         
-        response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+        if self._file_body_path is not None:
+            
+            with open( self._file_body_path, 'rb' ) as f:
+                
+                response = session.request( method, url, data = f, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+                
+            
+        else:
+            
+            response = session.request( method, url, data = data, files = files, headers = headers, stream = True, timeout = ( connect_timeout, read_timeout ) )
+            
         
         with self._lock:
             
-            if self._body is not None:
+            if self._file_body_path is not None:
+                
+                self._ReportDataUsed( os.path.getsize( self._file_body_path ) )
+                
+            elif self._body is not None:
                 
                 self._ReportDataUsed( len( self._body ) )
                 
@@ -2098,11 +2113,11 @@ class NetworkJobHydrus( NetworkJob ):
     WILLING_TO_WAIT_ON_INVALID_LOGIN = False
     IS_HYDRUS_SERVICE = True
     
-    def __init__( self, service_key, method, url, body = None, referral_url = None, temp_path = None ):
+    def __init__( self, service_key, method, url, body = None, referral_url = None, temp_path = None, file_body_path = None ):
         
         self._service_key = service_key
         
-        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path )
+        NetworkJob.__init__( self, method, url, body = body, referral_url = referral_url, temp_path = temp_path, file_body_path = file_body_path )
         
     
     def _GenerateNetworkContexts( self ):

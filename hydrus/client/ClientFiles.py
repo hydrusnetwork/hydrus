@@ -356,11 +356,15 @@ class ClientFilesManager( object ):
         
         self._controller = controller
         
-        self._file_storage_rwlock = ClientThreading.FileRWLock()
+        # the lock for any file access and for altering the list of locations
+        self._master_locations_rwlock = ClientThreading.FileRWLock()
         
-        self._prefixes_to_client_files_subfolders = collections.defaultdict( list )
-        self._smallest_prefix = 2
-        self._largest_prefix = 2
+        # the locks for the sub-locations, broken into related umbrella groups
+        self._prefix_umbrellas_to_rwlocks = collections.defaultdict( ClientThreading.FileRWLock )
+        
+        self._prefix_umbrellas_to_client_files_subfolders = collections.defaultdict( list )
+        self._shortest_prefix = 2
+        self._longest_prefix = 2
         
         self._physical_file_delete_wait = threading.Event()
         
@@ -579,6 +583,8 @@ class ClientFilesManager( object ):
     
     def _GenerateExpectedFilePath( self, hash, mime ):
         
+        # TODO: this guy is presumably nuked or altered when we move to overlapping locations. there is no 'expected' to check, but there might be multiple, or a 'preferred' for imports
+        
         self._WaitOnWakeup()
         
         subfolder = self._GetSubfolderForFile( hash, 'f' )
@@ -627,13 +633,25 @@ class ClientFilesManager( object ):
         return thumbnail_bytes
         
     
+    def _GetAllSubfolders( self ) -> typing.List[ ClientFilesPhysical.FilesStorageSubfolder ]:
+        
+        result = []
+        
+        for ( prefix_umbrella, subfolders ) in self._prefix_umbrellas_to_client_files_subfolders.items():
+            
+            result.extend( subfolders )
+            
+        
+        return result
+        
+    
     def _GetCurrentSubfolderBaseLocations( self, only_files = False ):
         
         known_base_locations = set()
         
-        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
+        for ( prefix_umbrella, subfolders ) in self._prefix_umbrellas_to_client_files_subfolders.items():
             
-            if only_files and not prefix.startswith( 'f' ):
+            if only_files and not prefix_umbrella.startswith( 'f' ):
                 
                 continue
                 
@@ -689,33 +707,38 @@ class ClientFilesManager( object ):
     
     def _GetPossibleSubfoldersForFile( self, hash: bytes, prefix_type: str ) -> typing.List[ ClientFilesPhysical.FilesStorageSubfolder ]:
         
-        hash_encoded = hash.hex()
+        prefix_umbrella = self._GetPrefixUmbrella( hash, prefix_type )
         
-        result = []
-        
-        for i in range( self._smallest_prefix, self._largest_prefix + 1 ):
+        if prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders:
             
-            prefix = prefix_type + hash_encoded[ : i ]
-            
-            if prefix in self._prefixes_to_client_files_subfolders:
-                
-                result.extend( self._prefixes_to_client_files_subfolders[ prefix ] )
-                
+            return self._prefix_umbrellas_to_client_files_subfolders[ prefix_umbrella ]
             
         
-        return result
+        return []
         
     
-    def _GetAllSubfolders( self ) -> typing.List[ ClientFilesPhysical.FilesStorageSubfolder ]:
+    def _GetPrefixUmbrella( self, hash: bytes, prefix_type: str ) -> str:
         
-        result = []
+        # a prefix umbrella oversees potentially several overlapping prefixes of higher granularity
+        # 'f95' might oversee two instances of 'f95', and one or more 'f95x' subfolder
+        # we know a file fits into a particular umbrella even though we don't know which subfolder it fits into 
+        # this is so we can:
+            # A) search for a file in multiple subfolders
+            # B) add a file to one of multiple subfolders
+            # C) move files between these subfolders
+        # without having to worry about crazy locks
         
-        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
-            
-            result.extend( subfolders )
-            
+        return prefix_type + hash.hex()[ : self._shortest_prefix ]
         
-        return result
+    
+    def _GetPrefixUmbrellaRWLock( self, hash: bytes, prefix_type: str ) -> ClientThreading.FileRWLock:
+        """
+        You can only call this guy if you have the total lock already!
+        """
+        
+        prefix_umbrella = self._GetPrefixUmbrella( hash, prefix_type )
+        
+        return self._prefix_umbrellas_to_rwlocks[ prefix_umbrella ]
         
     
     def _GetRebalanceTuple( self ):
@@ -738,13 +761,13 @@ class ClientFilesManager( object ):
         current_base_locations_to_normalised_weights = collections.Counter()
         current_base_locations_to_size_estimate = collections.Counter()
         
-        file_prefixes = [ prefix for prefix in self._prefixes_to_client_files_subfolders.keys() if prefix.startswith( 'f' ) ]
+        file_prefix_umbrellas = [ prefix_umbrella for prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders.keys() if prefix_umbrella.startswith( 'f' ) ]
         
         all_media_base_locations = set( ideal_media_base_locations )
         
-        for file_prefix in file_prefixes:
+        for file_prefix_umbrella in file_prefix_umbrellas:
             
-            subfolders = self._prefixes_to_client_files_subfolders[ file_prefix ]
+            subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
             
             subfolder = subfolders[0]
             
@@ -867,11 +890,11 @@ class ClientFilesManager( object ):
             source_base_location = potential_sources.pop( 0 )
             destination_base_location = potential_destinations.pop( 0 )
             
-            random.shuffle( file_prefixes )
+            random.shuffle( file_prefix_umbrellas )
             
-            for file_prefix in file_prefixes:
+            for file_prefix_umbrella in file_prefix_umbrellas:
                 
-                subfolders = self._prefixes_to_client_files_subfolders[ file_prefix ]
+                subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
                 
                 subfolder = subfolders[0]
                 
@@ -879,8 +902,8 @@ class ClientFilesManager( object ):
                 
                 if base_location == source_base_location:
                     
-                    overweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( file_prefix, source_base_location )
-                    underweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( file_prefix, destination_base_location )
+                    overweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, source_base_location )
+                    underweight_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, destination_base_location )
                     
                     return ( overweight_subfolder, underweight_subfolder )
                     
@@ -888,28 +911,29 @@ class ClientFilesManager( object ):
             
         else:
             
-            thumbnail_prefixes = [ prefix for prefix in self._prefixes_to_client_files_subfolders.keys() if prefix.startswith( 't' ) ]
+            thumbnail_prefix_umbrellas = [ prefix_umbrella for prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders.keys() if prefix_umbrella.startswith( 't' ) ]
             
-            for thumbnail_prefix in thumbnail_prefixes:
+            for thumbnail_prefix_umbrella in thumbnail_prefix_umbrellas:
                 
                 if ideal_thumbnail_override_base_location is None:
                     
-                    file_prefix = 'f' + thumbnail_prefix[1:]
+                    file_prefix_umbrella = 'f' + thumbnail_prefix_umbrella[1:]
                     
                     subfolders = None
                     
-                    if file_prefix in self._prefixes_to_client_files_subfolders:
+                    if file_prefix_umbrella in self._prefix_umbrellas_to_client_files_subfolders:
                         
-                        subfolders = self._prefixes_to_client_files_subfolders[ file_prefix ]
+                        subfolders = self._prefix_umbrellas_to_client_files_subfolders[ file_prefix_umbrella ]
                         
                     else:
                         
                         # TODO: Consider better that thumbs might not be split but files would.
                         # We need to better deal with t43 trying to find its place in f431, and t431 to f43, which means triggering splits or whatever (when we get to that code)
+                        # Update: Yeah I've now moved to prefix_umbrellas, and this looks even crazier
                         
-                        for ( possible_file_prefix, possible_subfolders ) in self._prefixes_to_client_files_subfolders.items():
+                        for ( possible_file_prefix_umbrella, possible_subfolders ) in self._prefix_umbrellas_to_client_files_subfolders.items():
                             
-                            if possible_file_prefix.startswith( file_prefix ) or file_prefix.startswith( possible_file_prefix ):
+                            if possible_file_prefix_umbrella.startswith( file_prefix_umbrella ) or file_prefix_umbrella.startswith( possible_file_prefix_umbrella ):
                                 
                                 subfolders = possible_subfolders
                                 
@@ -934,7 +958,7 @@ class ClientFilesManager( object ):
                     correct_base_location = ideal_thumbnail_override_base_location
                     
                 
-                subfolders = self._prefixes_to_client_files_subfolders[ thumbnail_prefix ]
+                subfolders = self._prefix_umbrellas_to_client_files_subfolders[ thumbnail_prefix_umbrella ]
                 
                 subfolder = subfolders[0]
                 
@@ -942,8 +966,8 @@ class ClientFilesManager( object ):
                 
                 if current_thumbnails_base_location != correct_base_location:
                     
-                    current_subfolder = ClientFilesPhysical.FilesStorageSubfolder( thumbnail_prefix, current_thumbnails_base_location )
-                    correct_subfolder = ClientFilesPhysical.FilesStorageSubfolder( thumbnail_prefix, correct_base_location )
+                    current_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, current_thumbnails_base_location )
+                    correct_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, correct_base_location )
                     
                     return ( current_subfolder, correct_subfolder )
                     
@@ -977,48 +1001,6 @@ class ClientFilesManager( object ):
         HydrusData.ShowText( 'A critical drive error has occurred. All importers--subscriptions, import folders, and paged file import queues--have been paused. Once the issue is clear, restart the client and resume your imports after restart under the file and network menus!' )
         
         self._controller.pub( 'notify_refresh_network_menu' )
-        
-    
-    def _IterateAllFilePaths( self ):
-        
-        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
-            
-            if prefix.startswith( 'f' ):
-                
-                for subfolder in subfolders:
-                    
-                    files_dir = subfolder.path
-                    
-                    filenames = list( os.listdir( files_dir ) )
-                    
-                    for filename in filenames:
-                        
-                        yield os.path.join( files_dir, filename )
-                        
-                    
-                
-            
-        
-    
-    def _IterateAllThumbnailPaths( self ):
-        
-        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
-            
-            if prefix.startswith( 't' ):
-                
-                for subfolder in subfolders:
-                    
-                    files_dir = subfolder.path
-                    
-                    filenames = list( os.listdir( files_dir ) )
-                    
-                    for filename in filenames:
-                        
-                        yield os.path.join( files_dir, filename )
-                        
-                    
-                
-            
         
     
     def _LookForFilePath( self, hash ):
@@ -1155,22 +1137,34 @@ class ClientFilesManager( object ):
         
         subfolders = self._controller.Read( 'client_files_subfolders' )
         
-        self._prefixes_to_client_files_subfolders = collections.defaultdict( list )
+        self._prefix_umbrellas_to_client_files_subfolders = collections.defaultdict( list )
         
         for subfolder in subfolders:
             
-            self._prefixes_to_client_files_subfolders[ subfolder.prefix ].append( subfolder )
+            self._prefix_umbrellas_to_client_files_subfolders[ subfolder.prefix ].append( subfolder )
             
         
-        self._smallest_prefix = min( ( len( prefix ) for prefix in self._prefixes_to_client_files_subfolders.keys() ) ) - 1
-        self._largest_prefix = max( ( len( prefix ) for prefix in self._prefixes_to_client_files_subfolders.keys() ) ) - 1
+        all_subfolders = []
+        
+        for subfolders in self._prefix_umbrellas_to_client_files_subfolders.values():
+            
+            all_subfolders.extend( subfolders )
+            
+        
+        all_prefixes = { subfolder.prefix for subfolder in all_subfolders }
+        all_prefix_lengths = { len( prefix ) for prefix in all_prefixes }
+        
+        self._shortest_prefix = min( all_prefix_lengths ) - 1
+        self._longest_prefix = max( all_prefix_lengths ) - 1
+        
+        self._prefix_umbrellas_to_rwlocks.clear()
         
     
     def _ReinitMissingLocations( self ):
         
         self._missing_subfolders = set()
         
-        for ( prefix, subfolders ) in self._prefixes_to_client_files_subfolders.items():
+        for subfolders in self._prefix_umbrellas_to_client_files_subfolders.values():
             
             for subfolder in subfolders:
                 
@@ -1197,7 +1191,7 @@ class ClientFilesManager( object ):
     
     def AllLocationsAreDefault( self ):
         
-        with self._file_storage_rwlock.read:
+        with self._master_locations_rwlock.read:
             
             db_dir = self._controller.GetDBDir()
             
@@ -1228,22 +1222,31 @@ class ClientFilesManager( object ):
     
     def AddFile( self, hash, mime, source_path, thumbnail_bytes = None ):
         
-        with self._file_storage_rwlock.write:
+        with self._master_locations_rwlock.read:
             
-            self._AddFile( hash, mime, source_path )
+            with self._GetPrefixUmbrellaRWLock( hash, 'f' ).write:
+                
+                self._AddFile( hash, mime, source_path )
+                
             
             if thumbnail_bytes is not None:
                 
-                self._AddThumbnailFromBytes( hash, thumbnail_bytes )
+                with self._GetPrefixUmbrellaRWLock( hash, 't' ).write:
+                    
+                    self._AddThumbnailFromBytes( hash, thumbnail_bytes )
+                    
                 
             
         
     
     def AddThumbnailFromBytes( self, hash, thumbnail_bytes, silent = False ):
         
-        with self._file_storage_rwlock.write:
+        with self._master_locations_rwlock.read:
             
-            self._AddThumbnailFromBytes( hash, thumbnail_bytes, silent = silent )
+            with self._GetPrefixUmbrellaRWLock( hash, 't' ).write:
+                
+                self._AddThumbnailFromBytes( hash, thumbnail_bytes, silent = silent )
+                
             
         
     
@@ -1254,15 +1257,28 @@ class ClientFilesManager( object ):
             return False
             
         
-        with self._file_storage_rwlock.write:
+        with self._master_locations_rwlock.read:
             
-            return self._ChangeFileExt( hash, old_mime, mime )
+            with self._GetPrefixUmbrellaRWLock( hash, 'f' ).write:
+                
+                return self._ChangeFileExt( hash, old_mime, mime )
+                
             
         
     
     def ClearOrphans( self, move_location = None ):
         
-        with self._file_storage_rwlock.write:
+        files_move_location = move_location
+        thumbnails_move_location = None
+        
+        if move_location is not None:
+            
+            thumbnails_move_location = os.path.join( move_location, 'thumbnails' )
+            
+            HydrusPaths.MakeSureDirectoryExists( thumbnails_move_location )
+            
+        
+        with self._master_locations_rwlock.read:
             
             job_status = ClientThreading.JobStatus( cancellable = True )
             
@@ -1274,163 +1290,181 @@ class ClientFilesManager( object ):
             orphan_paths = []
             orphan_thumbnails = []
             
-            for ( i, path ) in enumerate( self._IterateAllFilePaths() ):
+            num_files_reviewed = 0
+            num_thumbnails_reviewed = 0
+            
+            all_subfolders_in_order = sorted( self._prefix_umbrellas_to_client_files_subfolders.items() )
+            
+            for ( prefix_umbrella, subfolders ) in all_subfolders_in_order:
                 
-                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
+                with self._prefix_umbrellas_to_rwlocks[ prefix_umbrella ].write:
+                    
+                    job_status.SetStatusText( f'checking {prefix_umbrella}' )
+                    
+                    for subfolder in subfolders:
+                        
+                        for path in subfolder.IterateAllFiles():
+                            
+                            ( i_paused, should_quit ) = job_status.WaitIfNeeded()
+                            
+                            if should_quit:
+                                
+                                return
+                                
+                            
+                            if subfolder.IsForFiles():
+                                
+                                if num_files_reviewed % 100 == 0:
+                                    
+                                    status = 'reviewed ' + HydrusData.ToHumanInt( num_files_reviewed ) + ' files, found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans'
+                                    
+                                    job_status.SetStatusText( status, level = 2 )
+                                    
+                                
+                            else:
+                                
+                                if num_thumbnails_reviewed % 100 == 0:
+                                    
+                                    status = 'reviewed ' + HydrusData.ToHumanInt( num_thumbnails_reviewed ) + ' thumbnails, found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphans'
+                                    
+                                    job_status.SetStatusText( status, level = 2 )
+                                    
+                                
+                            
+                            try:
+                                
+                                ( directory, filename ) = os.path.split( path )
+                                
+                                should_be_a_hex_hash = filename[:64]
+                                
+                                hash = bytes.fromhex( should_be_a_hex_hash )
+                                
+                                orphan_type = 'file' if subfolder.IsForFiles() else 'thumbnail'
+                                
+                                is_an_orphan = CG.client_controller.Read( 'is_an_orphan', orphan_type, hash )
+                                
+                            except:
+                                
+                                is_an_orphan = True
+                                
+                            
+                            if is_an_orphan:
+                                
+                                if move_location is not None:
+                                    
+                                    ( source_dir, filename ) = os.path.split( path )
+                                    
+                                    if subfolder.IsForFiles():
+                                        
+                                        dest = os.path.join( files_move_location, filename )
+                                        
+                                    else:
+                                        
+                                        dest = os.path.join( thumbnails_move_location, filename )
+                                        
+                                    
+                                    dest = HydrusPaths.AppendPathUntilNoConflicts( dest )
+                                    
+                                    HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
+                                    
+                                    try:
+                                        
+                                        HydrusPaths.MergeFile( path, dest )
+                                        
+                                    except Exception as e:
+                                        
+                                        HydrusData.ShowText( f'Had trouble moving orphan from {path} to {dest}! Abandoning job!' )
+                                        
+                                        HydrusData.ShowException( e, do_wait = False )
+                                        
+                                        job_status.Cancel()
+                                        
+                                        return
+                                        
+                                    
+                                
+                                if subfolder.IsForFiles():
+                                    
+                                    orphan_paths.append( path )
+                                    
+                                else:
+                                    
+                                    orphan_thumbnails.append( path )
+                                    
+                                
+                            
+                            if subfolder.IsForFiles():
+                                
+                                num_files_reviewed += 1
+                                
+                            else:
+                                
+                                num_thumbnails_reviewed += 1
+                                
+                            
+                        
+                    
                 
-                if should_quit:
-                    
-                    return
-                    
+            
+            job_status.SetStatusText( 'finished checking' )
+            job_status.DeleteStatusText( level = 2 )
+            
+            time.sleep( 2 )
+            
+            if move_location is None:
                 
-                if i % 100 == 0:
+                if len( orphan_paths ) > 0:
                     
-                    status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' files, found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans'
+                    status = 'found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphan files, now deleting'
                     
                     job_status.SetStatusText( status )
                     
-                
-                try:
+                    time.sleep( 5 )
                     
-                    ( directory, filename ) = os.path.split( path )
-                    
-                    should_be_a_hex_hash = filename[:64]
-                    
-                    hash = bytes.fromhex( should_be_a_hex_hash )
-                    
-                    is_an_orphan = CG.client_controller.Read( 'is_an_orphan', 'file', hash )
-                    
-                except:
-                    
-                    is_an_orphan = True
-                    
-                
-                if is_an_orphan:
-                    
-                    if move_location is not None:
+                    for ( i, path ) in enumerate( orphan_paths ):
                         
-                        ( source_dir, filename ) = os.path.split( path )
+                        ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                         
-                        dest = os.path.join( move_location, filename )
-                        
-                        dest = HydrusPaths.AppendPathUntilNoConflicts( dest )
-                        
-                        HydrusData.Print( 'Moving the orphan ' + path + ' to ' + dest )
-                        
-                        try:
-                            
-                            HydrusPaths.MergeFile( path, dest )
-                            
-                        except Exception as e:
-                            
-                            HydrusData.ShowText( f'Had trouble moving orphan from {path} to {dest}! Abandoning job!' )
-                            
-                            HydrusData.ShowException( e, do_wait = False )
-                            
-                            job_status.Cancel()
+                        if should_quit:
                             
                             return
                             
                         
-                    
-                    orphan_paths.append( path )
-                    
-                
-            
-            time.sleep( 2 )
-            
-            for ( i, path ) in enumerate( self._IterateAllThumbnailPaths() ):
-                
-                ( i_paused, should_quit ) = job_status.WaitIfNeeded()
-                
-                if should_quit:
-                    
-                    return
+                        HydrusData.Print( 'Deleting the orphan ' + path )
+                        
+                        status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
+                        
+                        job_status.SetStatusText( status )
+                        
+                        ClientPaths.DeletePath( path )
+                        
                     
                 
-                if i % 100 == 0:
+                if len( orphan_thumbnails ) > 0:
                     
-                    status = 'reviewed ' + HydrusData.ToHumanInt( i ) + ' thumbnails, found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphans'
+                    status = 'found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
                     
                     job_status.SetStatusText( status )
                     
-                
-                try:
+                    time.sleep( 5 )
                     
-                    is_an_orphan = False
-                    
-                    ( directory, filename ) = os.path.split( path )
-                    
-                    should_be_a_hex_hash = filename[:64]
-                    
-                    hash = bytes.fromhex( should_be_a_hex_hash )
-                    
-                    is_an_orphan = CG.client_controller.Read( 'is_an_orphan', 'thumbnail', hash )
-                    
-                except:
-                    
-                    is_an_orphan = True
-                    
-                
-                if is_an_orphan:
-                    
-                    orphan_thumbnails.append( path )
-                    
-                
-            
-            time.sleep( 2 )
-            
-            if move_location is None and len( orphan_paths ) > 0:
-                
-                status = 'found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans, now deleting'
-                
-                job_status.SetStatusText( status )
-                
-                time.sleep( 5 )
-                
-                for ( i, path ) in enumerate( orphan_paths ):
-                    
-                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
-                    
-                    if should_quit:
+                    for ( i, path ) in enumerate( orphan_thumbnails ):
                         
-                        return
+                        ( i_paused, should_quit ) = job_status.WaitIfNeeded()
                         
-                    
-                    HydrusData.Print( 'Deleting the orphan ' + path )
-                    
-                    status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
-                    
-                    job_status.SetStatusText( status )
-                    
-                    ClientPaths.DeletePath( path )
-                    
-                
-            
-            if len( orphan_thumbnails ) > 0:
-                
-                status = 'found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
-                
-                job_status.SetStatusText( status )
-                
-                time.sleep( 5 )
-                
-                for ( i, path ) in enumerate( orphan_thumbnails ):
-                    
-                    ( i_paused, should_quit ) = job_status.WaitIfNeeded()
-                    
-                    if should_quit:
+                        if should_quit:
+                            
+                            return
+                            
                         
-                        return
+                        HydrusData.Print( 'Deleting the orphan ' + path )
                         
-                    
-                    status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
-                    
-                    job_status.SetStatusText( status )
-                    
-                    HydrusData.Print( 'Deleting the orphan ' + path )
-                    
-                    ClientPaths.DeletePath( path, always_delete_fully = True )
+                        status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
+                        
+                        job_status.SetStatusText( status )
+                        
+                        ClientPaths.DeletePath( path, always_delete_fully = True )
+                        
                     
                 
             
@@ -1453,38 +1487,41 @@ class ClientFilesManager( object ):
     
     def DeleteNeighbourDupes( self, hash, true_mime ):
         
-        with self._file_storage_rwlock.write:
+        with self._master_locations_rwlock.read:
             
-            correct_path = self._GenerateExpectedFilePath( hash, true_mime )
-            
-            if not os.path.exists( correct_path ):
+            with self._GetPrefixUmbrellaRWLock( hash, 'f' ).write:
                 
-                return # misfire, let's not actually delete the right one
+                correct_path = self._GenerateExpectedFilePath( hash, true_mime )
                 
-            
-            for mime in HC.ALLOWED_MIMES:
-                
-                if mime == true_mime:
+                if not os.path.exists( correct_path ):
                     
-                    continue
+                    return # misfire, let's not actually delete the right one
                     
                 
-                incorrect_path = self._GenerateExpectedFilePath( hash, mime )
-                
-                if incorrect_path == correct_path:
+                for mime in HC.ALLOWED_MIMES:
                     
-                    # some diff mimes have the same ext
-                    
-                    continue
-                    
-                
-                if os.path.exists( incorrect_path ):
-                    
-                    delete_ok = HydrusPaths.DeletePath( incorrect_path )
-                    
-                    if not delete_ok and random.randint( 1, 52 ) != 52:
+                    if mime == true_mime:
                         
-                        self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + ( 7 * 86400 ) )
+                        continue
+                        
+                    
+                    incorrect_path = self._GenerateExpectedFilePath( hash, mime )
+                    
+                    if incorrect_path == correct_path:
+                        
+                        # some diff mimes have the same ext
+                        
+                        continue
+                        
+                    
+                    if os.path.exists( incorrect_path ):
+                        
+                        delete_ok = HydrusPaths.DeletePath( incorrect_path )
+                        
+                        if not delete_ok and random.randint( 1, 52 ) != 52:
+                            
+                            self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_DELETE_NEIGHBOUR_DUPES, HydrusTime.GetNow() + ( 7 * 86400 ) )
+                            
                         
                     
                 
@@ -1500,7 +1537,7 @@ class ClientFilesManager( object ):
         
         while not HG.started_shutdown:
             
-            with self._file_storage_rwlock.write:
+            with self._master_locations_rwlock.read:
                 
                 ( file_hash, thumbnail_hash ) = self._controller.Read( 'deferred_physical_delete' )
                 
@@ -1511,38 +1548,44 @@ class ClientFilesManager( object ):
                 
                 if file_hash is not None:
                     
-                    media_result = self._controller.Read( 'media_result', file_hash )
-                    
-                    expected_mime = media_result.GetMime()
-                    
-                    try:
+                    with self._GetPrefixUmbrellaRWLock( file_hash, 'f' ).write:
                         
-                        path = self._GenerateExpectedFilePath( file_hash, expected_mime )
+                        media_result = self._controller.Read( 'media_result', file_hash )
                         
-                        if not os.path.exists( path ):
+                        expected_mime = media_result.GetMime()
+                        
+                        try:
                             
-                            ( path, actual_mime ) = self._LookForFilePath( file_hash )
+                            path = self._GenerateExpectedFilePath( file_hash, expected_mime )
                             
-                        
-                        ClientPaths.DeletePath( path )
-                        
-                        num_files_deleted += 1
-                        
-                    except HydrusExceptions.FileMissingException:
-                        
-                        HydrusData.Print( 'Wanted to physically delete the "{}" file, with expected mime "{}", but it was not found!'.format( file_hash.hex(), HC.mime_string_lookup[ expected_mime ] ) )
+                            if not os.path.exists( path ):
+                                
+                                ( path, actual_mime ) = self._LookForFilePath( file_hash )
+                                
+                            
+                            ClientPaths.DeletePath( path )
+                            
+                            num_files_deleted += 1
+                            
+                        except HydrusExceptions.FileMissingException:
+                            
+                            HydrusData.Print( 'Wanted to physically delete the "{}" file, with expected mime "{}", but it was not found!'.format( file_hash.hex(), HC.mime_string_lookup[ expected_mime ] ) )
+                            
                         
                     
                 
                 if thumbnail_hash is not None:
                     
-                    path = self._GenerateExpectedThumbnailPath( thumbnail_hash )
-                    
-                    if os.path.exists( path ):
+                    with self._GetPrefixUmbrellaRWLock( thumbnail_hash, 't' ).write:
                         
-                        ClientPaths.DeletePath( path, always_delete_fully = True )
+                        path = self._GenerateExpectedThumbnailPath( thumbnail_hash )
                         
-                        num_thumbnails_deleted += 1
+                        if os.path.exists( path ):
+                            
+                            ClientPaths.DeletePath( path, always_delete_fully = True )
+                            
+                            num_thumbnails_deleted += 1
+                            
                         
                     
                 
@@ -1569,7 +1612,7 @@ class ClientFilesManager( object ):
     
     def GetAllDirectoriesInUse( self ):
         
-        with self._file_storage_rwlock.read:
+        with self._master_locations_rwlock.read:
             
             subfolders = self._GetAllSubfolders()
             
@@ -1581,7 +1624,7 @@ class ClientFilesManager( object ):
     
     def GetCurrentFileBaseLocations( self ):
         
-        with self._file_storage_rwlock.read:
+        with self._master_locations_rwlock.read:
             
             return self._GetCurrentSubfolderBaseLocations( only_files = True )
             
@@ -1589,41 +1632,44 @@ class ClientFilesManager( object ):
     
     def GetFilePath( self, hash, mime = None, check_file_exists = True ):
         
-        with self._file_storage_rwlock.read:
+        with self._master_locations_rwlock.read:
             
             if HG.file_report_mode:
                 
                 HydrusData.ShowText( 'File path request: ' + str( ( hash, mime ) ) )
                 
             
-            if mime is None:
+            with self._GetPrefixUmbrellaRWLock( hash, 'f' ).read:
                 
-                ( path, mime ) = self._LookForFilePath( hash )
-                
-            else:
-                
-                path = self._GenerateExpectedFilePath( hash, mime )
-                
-                if check_file_exists and not os.path.exists( path ):
+                if mime is None:
                     
-                    try:
-                        
-                        # let's see if the file exists, but with the wrong ext!
-                        
-                        ( actual_path, old_mime ) = self._LookForFilePath( hash )
-                        
-                    except HydrusExceptions.FileMissingException:
-                        
-                        raise HydrusExceptions.FileMissingException( 'No file found at path {}!'.format( path ) )
-                        
+                    ( path, mime ) = self._LookForFilePath( hash )
                     
-                    self._ChangeFileExt( hash, old_mime, mime )
+                else:
                     
-                    # we have now fixed the path, it is good to return
+                    path = self._GenerateExpectedFilePath( hash, mime )
+                    
+                    if check_file_exists and not os.path.exists( path ):
+                        
+                        try:
+                            
+                            # let's see if the file exists, but with the wrong ext!
+                            
+                            ( actual_path, old_mime ) = self._LookForFilePath( hash )
+                            
+                        except HydrusExceptions.FileMissingException:
+                            
+                            raise HydrusExceptions.FileMissingException( 'No file found at path {}!'.format( path ) )
+                            
+                        
+                        self._ChangeFileExt( hash, old_mime, mime )
+                        
+                        # we have now fixed the path, it is good to return
+                        
                     
                 
-            
-            return path
+                return path
+                
             
         
     
@@ -1642,11 +1688,14 @@ class ClientFilesManager( object ):
             HydrusData.ShowText( 'Thumbnail path request: ' + str( ( hash, mime ) ) )
             
         
-        with self._file_storage_rwlock.read:
+        with self._master_locations_rwlock.read:
             
-            path = self._GenerateExpectedThumbnailPath( hash )
-            
-            thumb_missing = not os.path.exists( path )
+            with self._GetPrefixUmbrellaRWLock( hash, 't' ).read:
+                
+                path = self._GenerateExpectedThumbnailPath( hash )
+                
+                thumb_missing = not os.path.exists( path )
+                
             
         
         if thumb_missing:
@@ -1692,7 +1741,7 @@ class ClientFilesManager( object ):
                 return
                 
             
-            with self._file_storage_rwlock.write:
+            with self._master_locations_rwlock.write:
                 
                 rebalance_tuple = self._GetRebalanceTuple()
                 
@@ -1732,7 +1781,7 @@ class ClientFilesManager( object ):
     
     def RebalanceWorkToDo( self ):
         
-        with self._file_storage_rwlock.read:
+        with self._master_locations_rwlock.read:
             
             return self._GetRebalanceTuple() is not None
             
@@ -1748,24 +1797,29 @@ class ClientFilesManager( object ):
             return
             
         
-        with self._file_storage_rwlock.read:
+        with self._master_locations_rwlock.read:
             
-            file_path = self._GenerateExpectedFilePath( hash, mime )
-            
-            if not os.path.exists( file_path ):
+            with self._GetPrefixUmbrellaRWLock( hash, 'f' ).read:
                 
-                raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
+                file_path = self._GenerateExpectedFilePath( hash, mime )
+                
+                if not os.path.exists( file_path ):
+                    
+                    raise HydrusExceptions.FileMissingException( 'The thumbnail for file ' + hash.hex() + ' could not be regenerated from the original file because the original file is missing! This event could indicate hard drive corruption. Please check everything is ok.')
+                    
                 
             
+            # in another world I do this inside the file read lock, but screw it I'd rather have the time spent outside
             thumbnail_bytes = self._GenerateThumbnailBytes( file_path, media )
             
+            with self._GetPrefixUmbrellaRWLock( hash, 't' ).write:
+                
+                self._AddThumbnailFromBytes( hash, thumbnail_bytes )
+                
+            
         
-        with self._file_storage_rwlock.write:
-            
-            self._AddThumbnailFromBytes( hash, thumbnail_bytes )
-            
         return True
-    
+        
     
     def RegenerateThumbnailIfWrongSize( self, media ):
         
@@ -1831,27 +1885,30 @@ class ClientFilesManager( object ):
         hash = media.GetHash()
         mime = media.GetMime()
         
-        path = self._GenerateExpectedFilePath( hash, mime )
-        
-        with self._file_storage_rwlock.write:
+        with self._master_locations_rwlock.read:
             
-            if os.path.exists( path ):
+            with self._GetPrefixUmbrellaRWLock( hash, 'f' ).write:
                 
-                existing_access_time = os.path.getatime( path )
-                existing_modified_time = os.path.getmtime( path )
+                path = self._GenerateExpectedFilePath( hash, mime )
                 
-                # floats are ok here!
-                modified_timestamp = modified_timestamp_ms / 1000
-                
-                try:
+                if os.path.exists( path ):
                     
-                    os.utime( path, ( existing_access_time, modified_timestamp ) )
+                    existing_access_time = os.path.getatime( path )
+                    existing_modified_time = os.path.getmtime( path )
                     
-                    HydrusData.Print( 'Successfully changed modified time of "{}" from {} to {}.'.format( path, HydrusTime.TimestampToPrettyTime( int( existing_modified_time ) ), HydrusTime.TimestampToPrettyTime( int( modified_timestamp ) ) ))
+                    # floats are ok here!
+                    modified_timestamp = modified_timestamp_ms / 1000
                     
-                except PermissionError:
-                    
-                    HydrusData.Print( 'Tried to set modified time of {} to file "{}", but did not have permission!'.format( HydrusTime.TimestampToPrettyTime( int( modified_timestamp ) ), path ) )
+                    try:
+                        
+                        os.utime( path, ( existing_access_time, modified_timestamp ) )
+                        
+                        HydrusData.Print( 'Successfully changed modified time of "{}" from {} to {}.'.format( path, HydrusTime.TimestampToPrettyTime( int( existing_modified_time ) ), HydrusTime.TimestampToPrettyTime( int( modified_timestamp ) ) ))
+                        
+                    except PermissionError:
+                        
+                        HydrusData.Print( 'Tried to set modified time of {} to file "{}", but did not have permission!'.format( HydrusTime.TimestampToPrettyTime( int( modified_timestamp ) ), path ) )
+                        
                     
                 
             

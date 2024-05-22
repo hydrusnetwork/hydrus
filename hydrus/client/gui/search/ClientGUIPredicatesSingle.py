@@ -86,7 +86,7 @@ class StaticSystemPredicateButton( QW.QWidget ):
         
     
 
-class TimeDateOperator( QP.DataRadioBox ):
+class TimeDateOperator( ClientGUICommon.BetterRadioBox ):
     
     def __init__( self, parent ):
         
@@ -97,11 +97,11 @@ class TimeDateOperator( QP.DataRadioBox ):
             ( '+/- a month of', HC.UNICODE_APPROX_EQUAL )
         ]
         
-        QP.DataRadioBox.__init__( self, parent, choice_tuples, vertical = True )
+        ClientGUICommon.BetterRadioBox.__init__( self, parent, choice_tuples, vertical = True )
         
     
 
-class TimeDeltaOperator( QP.DataRadioBox ):
+class TimeDeltaOperator( ClientGUICommon.BetterRadioBox ):
     
     def __init__( self, parent ):
         
@@ -111,7 +111,7 @@ class TimeDeltaOperator( QP.DataRadioBox ):
             ( '+/- 15% of', HC.UNICODE_APPROX_EQUAL )
         ]
         
-        QP.DataRadioBox.__init__( self, parent, choice_tuples, vertical = True )
+        ClientGUICommon.BetterRadioBox.__init__( self, parent, choice_tuples, vertical = True )
         
     
 
@@ -760,13 +760,13 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
         
         choices = [ '<', HC.UNICODE_APPROX_EQUAL, '=', '>' ]
         
-        self._sign = QP.RadioBox( self, choices = choices )
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._num = ClientGUICommon.BetterSpinBox( self, min=0, max=65535 )
         
-        choices = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
+        choice_tuples = [ ( HC.duplicate_type_string_lookup[ status ], status ) for status in ( HC.DUPLICATE_MEMBER, HC.DUPLICATE_ALTERNATE, HC.DUPLICATE_FALSE_POSITIVE, HC.DUPLICATE_POTENTIAL ) ]
         
-        self._dupe_type = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
+        self._dupe_type = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
         
         #
         
@@ -774,7 +774,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
         
         ( sign, num, dupe_type ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         self._num.setValue( num )
         self._dupe_type.SetValue( dupe_type )
         
@@ -803,7 +803,7 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( self._sign.GetStringSelection(), self._num.value(), self._dupe_type.GetValue() ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FILE_RELATIONSHIPS_COUNT, ( self._sign.GetValue(), self._num.value(), self._dupe_type.GetValue() ) ), )
         
         return predicates
         
@@ -866,22 +866,22 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
-        choices = [
+        choice_tuples = [
             ( 'currently in', HC.CONTENT_STATUS_CURRENT ),
             ( 'deleted from', HC.CONTENT_STATUS_DELETED ),
             ( 'pending to', HC.CONTENT_STATUS_PENDING ),
             ( 'petitioned from', HC.CONTENT_STATUS_PETITIONED )
         ]
         
-        self._status = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
+        self._status = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
         
         services = CG.client_controller.services_manager.GetServices( HC.REAL_FILE_SERVICES )
         
-        choices = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
+        choice_tuples = [ ( service.GetName(), service.GetServiceKey() ) for service in services ]
         
-        self._file_service_key = ClientGUICommon.BetterRadioBox( self, choices = choices, vertical = True )
+        self._file_service_key = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
         
         #
         
@@ -934,7 +934,9 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         self._viewing_locations.Append( 'media views', 'media' )
         self._viewing_locations.Append( 'preview views', 'preview' )
         
-        self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=','>'] )
+        choices = ['<',HC.UNICODE_APPROX_EQUAL,'=','>']
+        
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._num = ClientGUICommon.BetterSpinBox( self, min=0, max=1000000 )
         
@@ -950,7 +952,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         
         self._viewing_locations.setMaximumHeight( height )
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._num.setValue( num )
         
@@ -986,7 +988,7 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
             viewing_locations = [ 'media' ]
             
         
-        sign = self._sign.GetStringSelection()
+        sign = self._sign.GetValue()
         
         num = self._num.value()
         
@@ -1006,7 +1008,9 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         self._viewing_locations.Append( 'media viewtime', 'media' )
         self._viewing_locations.Append( 'preview viewtime', 'preview' )
         
-        self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=','>'] )
+        choices = ['<',HC.UNICODE_APPROX_EQUAL,'=','>']
+        
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._time_delta = ClientGUITime.TimeDeltaCtrl( self, min = 0, days = True, hours = True, minutes = True, seconds = True )
         
@@ -1022,7 +1026,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         self._viewing_locations.setMaximumHeight( height )
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._time_delta.SetValue( time_delta )
         
@@ -1058,7 +1062,7 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
             viewing_locations = [ 'media' ]
             
         
-        sign = self._sign.GetStringSelection()
+        sign = self._sign.GetValue()
         
         time_delta = self._time_delta.GetValue()
         
@@ -1124,11 +1128,11 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = ClientGUICommon.BetterRadioBox( self, choices = [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( 'is', True ), ( 'is not', False ) ], vertical = True )
         
         choices = [ 'sha256', 'md5', 'sha1', 'sha512' ]
         
-        self._hash_type = QP.RadioBox( self, choices = choices, vertical = True )
+        self._hash_type = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ], vertical = True )
         
         self._hashes = QW.QPlainTextEdit( self )
         
@@ -1150,7 +1154,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         self._hashes.setPlainText( hashes_text )
         
-        self._hash_type.SetStringSelection( hash_type )
+        self._hash_type.SetValue( hash_type )
         
         #
         
@@ -1178,7 +1182,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         inclusive = self._sign.GetValue()
         
-        hash_type = self._hash_type.GetStringSelection()
+        hash_type = self._hash_type.GetValue()
         
         hex_hashes_raw = self._hashes.toPlainText()
         
@@ -1697,11 +1701,15 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=[ '<', HC.UNICODE_APPROX_EQUAL, '=', HC.UNICODE_NOT_EQUAL, '>' ] )
+        choices = [ '<', HC.UNICODE_APPROX_EQUAL, '=', HC.UNICODE_NOT_EQUAL, '>' ]
+        
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._num_pixels = ClientGUICommon.BetterSpinBox( self, max=1048576, width = 60 )
         
-        self._unit = QP.RadioBox( self, choices=['pixels','kilopixels','megapixels'] )
+        choice_tuples = [ ( 'pixels', 1 ), ( 'kilopixels', 1000 ), ( 'megapixels', 1000000 ) ]
+        
+        self._unit = ClientGUICommon.BetterRadioBox( self, choice_tuples )
         
         #
         
@@ -1709,11 +1717,11 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         
         ( sign, num_pixels, unit ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._num_pixels.setValue( num_pixels )
         
-        self._unit.SetStringSelection( HydrusData.ConvertIntToPixels( unit ) )
+        self._unit.SetValue( unit )
         
         #
         
@@ -1740,7 +1748,7 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( self._sign.GetStringSelection(), self._num_pixels.value(), HydrusData.ConvertPixelsToInt( self._unit.GetStringSelection() ) ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( self._sign.GetValue(), self._num_pixels.value(), self._unit.GetValue() ) ), )
         
         return predicates
         
@@ -1808,7 +1816,9 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         self._namespace.setPlaceholderText( 'Leave empty for unnamespaced, \'*\' for all namespaces' )
         self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' ) )
         
-        self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=','>'] )
+        choices = ['<',HC.UNICODE_APPROX_EQUAL,'=','>']
+        
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._num_tags = ClientGUICommon.BetterSpinBox( self, max=2000, width = 60 )
         
@@ -1825,7 +1835,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         
         self._namespace.setText( namespace )
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._num_tags.setValue( num_tags )
         
@@ -1854,7 +1864,7 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        ( namespace, operator, value ) = ( self._namespace.text(), self._sign.GetStringSelection(), self._num_tags.value() )
+        ( namespace, operator, value ) = ( self._namespace.text(), self._sign.GetValue(), self._num_tags.value() )
         
         predicate = None
         
@@ -2047,7 +2057,9 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['=','wider than','taller than',HC.UNICODE_APPROX_EQUAL,HC.UNICODE_NOT_EQUAL] )
+        choices = ['=','wider than','taller than',HC.UNICODE_APPROX_EQUAL,HC.UNICODE_NOT_EQUAL]
+        
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._width = ClientGUICommon.BetterSpinBox( self, max=50000, width = 60 )
         
@@ -2059,7 +2071,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         
         ( sign, width, height ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._width.setValue( width )
         
@@ -2091,7 +2103,7 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( self._sign.GetStringSelection(), self._width.value(), self._height.value() ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( self._sign.GetValue(), self._width.value(), self._height.value() ) ), )
         
         return predicates
         
@@ -2382,7 +2394,9 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         
         PanelPredicateSystemSingle.__init__( self, parent )
         
-        self._sign = QP.RadioBox( self, choices=['<',HC.UNICODE_APPROX_EQUAL,'=',HC.UNICODE_NOT_EQUAL,'>'] )
+        choices = ['<',HC.UNICODE_APPROX_EQUAL,'=',HC.UNICODE_NOT_EQUAL,'>']
+        
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._bytes = ClientGUIBytes.BytesControl( self )
         
@@ -2392,7 +2406,7 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         
         ( sign, size, unit ) = predicate.GetValue()
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         
         self._bytes.SetSeparatedValue( size, unit )
         
@@ -2422,7 +2436,7 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         
         ( size, unit ) = self._bytes.GetSeparatedValue()
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( self._sign.GetStringSelection(), size, unit ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( self._sign.GetValue(), size, unit ) ), )
         
         return predicates
         
@@ -2437,7 +2451,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         choices = [ '<', HC.UNICODE_APPROX_EQUAL, '>' ]
         
-        self._sign = QP.RadioBox( self, choices = choices )
+        self._sign = ClientGUICommon.BetterRadioBox( self, [ ( c, c ) for c in choices ] )
         
         self._num = ClientGUICommon.BetterSpinBox( self, min=-(2 ** 31), max= (2 ** 31) - 1 )
         
@@ -2451,7 +2465,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         self._namespace.setPlaceholderText( 'Leave empty for unnamespaced, \'*\' for all namespaces' )
         self._namespace.setToolTip( ClientGUIFunctions.WrapToolTip( 'Leave empty for unnamespaced, \'*\' for all namespaces. Other wildcards also supported.' ) )
         
-        self._sign.SetStringSelection( sign )
+        self._sign.SetValue( sign )
         self._num.setValue( num )
         
         #
@@ -2477,7 +2491,7 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
     
     def GetPredicates( self ):
         
-        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( self._namespace.text(), self._sign.GetStringSelection(), self._num.value() ) ), )
+        predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( self._namespace.text(), self._sign.GetValue(), self._num.value() ) ), )
         
         return predicates
         

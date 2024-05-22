@@ -1584,7 +1584,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._sessions_panel = ClientGUICommon.StaticBox( self, 'sessions' )
             
-            self._default_gui_session = QW.QComboBox( self._sessions_panel )
+            self._default_gui_session = ClientGUICommon.BetterChoice( self._sessions_panel )
             
             self._last_session_save_period_minutes = ClientGUICommon.BetterSpinBox( self._sessions_panel, min = 1, max = 1440 )
             
@@ -1679,14 +1679,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 self._default_gui_session.addItem( name, name )
                 
             
-            try:
-                
-                QP.SetStringSelection( self._default_gui_session, HC.options['default_gui_session'] )
-                
-            except:
-                
-                self._default_gui_session.setCurrentIndex( 0 )
-                
+            self._default_gui_session.SetValue( HC.options['default_gui_session'] )
             
             self._last_session_save_period_minutes.setValue( self._new_options.GetInteger( 'last_session_save_period_minutes' ) )
             
@@ -1801,7 +1794,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
-            HC.options[ 'default_gui_session' ] = self._default_gui_session.currentText()
+            HC.options[ 'default_gui_session' ] = self._default_gui_session.GetValue()
             
             self._new_options.SetInteger( 'notebook_tab_alignment', self._notebook_tab_alignment.GetValue() )
             

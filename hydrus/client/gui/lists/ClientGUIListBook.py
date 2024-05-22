@@ -1,27 +1,11 @@
-import collections.abc
-import os
-import re
-import typing
-
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
-from qtpy import QtGui as QG
 
-from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 
-from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
-from hydrus.client import ClientGlobals as CG
-from hydrus.client import ClientPaths
-from hydrus.client.gui import ClientGUICore as CGC
-from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
-from hydrus.client.networking import ClientNetworkingFunctions
 
 class ListBook( QW.QWidget ):
     
@@ -30,7 +14,6 @@ class ListBook( QW.QWidget ):
         QW.QWidget.__init__( self, *args, **kwargs )
         
         self._keys_to_active_pages = {}
-        self._keys_to_proto_pages = {}
         
         self._list_box = ClientGUIListBoxes.BetterQListWidget( self )
         self._list_box.setSelectionMode( QW.QListWidget.SingleSelection )
@@ -50,24 +33,9 @@ class ListBook( QW.QWidget ):
         QP.AddToLayout( hbox, self._list_box, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( hbox, self._panel_sizer, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
-        self._list_box.itemSelectionChanged.connect( self.EventSelection )
+        self._list_box.itemSelectionChanged.connect( self._ListBoxSelected )
         
         self.setLayout( hbox )
-        
-    
-    def _ActivatePage( self, key ):
-
-        ( classname, args, kwargs ) = self._keys_to_proto_pages[ key ]
-        
-        page = classname( *args, **kwargs )
-        
-        page.setVisible( False )
-        
-        QP.AddToLayout( self._panel_sizer, page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self._keys_to_active_pages[ key ] = page
-        
-        del self._keys_to_proto_pages[ key ]
         
     
     def _GetIndex( self, key ):
@@ -85,35 +53,29 @@ class ListBook( QW.QWidget ):
         return -1
         
     
-    def _Select( self, selection ):
+    def _ListBoxSelected( self ):
         
-        if selection == -1:
+        selected_datas = list( self._list_box.GetData( only_selected = True ) )
+        
+        if len( selected_datas ) > 0:
             
-            self._current_key = None
+            key = selected_datas[0]
             
-        else:
+            self._ShowPage( key )
             
-            self._current_key = self._list_box.item( selection ).data( QC.Qt.UserRole )
-            
+        
+    
+    def _ShowPage( self, key ):
+        
+        self._current_key = key
         
         self._current_panel.setVisible( False )
         
-        self._list_box.blockSignals( True )
-        
-        QP.ListWidgetSetSelection( self._list_box, selection )
-        
-        self._list_box.blockSignals( False )
-        
-        if selection == -1:
+        if self._current_key is None:
             
             self._current_panel = self._empty_panel
             
         else:
-            
-            if self._current_key in self._keys_to_proto_pages:
-                
-                self._ActivatePage( self._current_key )
-                
             
             self._current_panel = self._keys_to_active_pages[ self._current_key ]
             
@@ -125,7 +87,7 @@ class ListBook( QW.QWidget ):
     
     def AddPage( self, display_name, key, page, select = False ):
         
-        if self._GetIndex( key ) != -1:
+        if self.HasKey( key ):
             
             raise HydrusExceptions.NameException( 'That entry already exists!' )
             
@@ -137,72 +99,20 @@ class ListBook( QW.QWidget ):
             QP.AddToLayout( self._panel_sizer, page, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             
         
-        # Could call QListWidget.sortItems() here instead of doing it manually
-        
-        current_display_names = QP.ListWidgetGetStrings( self._list_box )
-        
-        insertion_index = len( current_display_names )
-        
-        for ( i, current_display_name ) in enumerate( current_display_names ):
+        if self._list_box.count() == 0:
             
-            if current_display_name > display_name:
-                
-                insertion_index = i
-                
-                break
-                
+            select = True
             
-        item = QW.QListWidgetItem()
-        item.setText( display_name )
-        item.setData( QC.Qt.UserRole, key )
-        self._list_box.insertItem( insertion_index, item )
         
         self._keys_to_active_pages[ key ] = page
         
-        if self._list_box.count() == 1:
-            
-            self._Select( 0 )
-            
-        elif select:
-            
-            index = self._GetIndex( key )
-            
-            self._Select( index )
-            
+        self._list_box.Append( display_name, key, select = select )
         
-    
-    def AddPageArgs( self, display_name, key, classname, args, kwargs ):
+        self._list_box.sortItems()
         
-        if self._GetIndex( key ) != -1:
+        if select:
             
-            raise HydrusExceptions.NameException( 'That entry already exists!' )
-            
-        
-        # Could call QListWidget.sortItems() here instead of doing it manually
-        
-        current_display_names = QP.ListWidgetGetStrings( self._list_box )
-        
-        insertion_index = len( current_display_names )
-        
-        for ( i, current_display_name ) in enumerate( current_display_names ):
-            
-            if current_display_name > display_name:
-                
-                insertion_index = i
-                
-                break
-                
-            
-        item = QW.QListWidgetItem()
-        item.setText( display_name )
-        item.setData( QC.Qt.UserRole, key )
-        self._list_box.insertItem( insertion_index, item )
-        
-        self._keys_to_proto_pages[ key ] = ( classname, args, kwargs )
-        
-        if self._list_box.count() == 1:
-            
-            self._Select( 0 )
+            self._list_box.SelectData( [ key ] )
             
         
     
@@ -219,35 +129,23 @@ class ListBook( QW.QWidget ):
         self._current_panel = self._empty_panel
         
         self._keys_to_active_pages = {}
-        self._keys_to_proto_pages = {}
         
         self._list_box.clear()
         
     
     def DeleteCurrentPage( self ):
         
-        selection = QP.ListWidgetGetSelection( self._list_box )
-        
-        if selection != -1:
+        if self._list_box.GetNumSelected() > 0:
             
             key_to_delete = self._current_key
             page_to_delete = self._current_panel
             
+            selected_indices = self._list_box.GetSelectedIndices()
+            
+            selection = selected_indices[0]
+            
             next_selection = selection + 1
             previous_selection = selection - 1
-            
-            if next_selection < self._list_box.count():
-                
-                self._Select( next_selection )
-                
-            elif previous_selection >= 0:
-                
-                self._Select( previous_selection )
-                
-            else:
-                
-                self._Select( -1 )
-                
             
             self._panel_sizer.removeWidget( page_to_delete )
             
@@ -255,17 +153,19 @@ class ListBook( QW.QWidget ):
             
             del self._keys_to_active_pages[ key_to_delete ]
             
-            QP.ListWidgetDelete( self._list_box, selection )
+            self._list_box.DeleteSelected()
             
-        
-    
-    def EventSelection( self ):
-        
-        selection = QP.ListWidgetGetSelection( self._list_box )
-        
-        if selection != self._GetIndex( self._current_key ):
-            
-            self._Select( selection )
+            if next_selection < self._list_box.count():
+                
+                self._list_box.SelectData( [ self._list_box.item( next_selection ).data( QC.Qt.UserRole ) ] )
+                
+            elif previous_selection >= 0:
+                
+                self._list_box.SelectData( [ self._list_box.item( previous_selection ).data( QC.Qt.UserRole ) ] )
+                
+            else:
+                
+                self._ShowPage( None )
                 
             
         
@@ -294,11 +194,6 @@ class ListBook( QW.QWidget ):
     
     def GetPage( self, key ):
         
-        if key in self._keys_to_proto_pages:
-            
-            self._ActivatePage( key )
-            
-        
         if key in self._keys_to_active_pages:
             
             return self._keys_to_active_pages[ key ]
@@ -309,69 +204,31 @@ class ListBook( QW.QWidget ):
     
     def GetPageCount( self ):
         
-        return len( self._keys_to_active_pages ) + len( self._keys_to_proto_pages )
+        return len( self._keys_to_active_pages )
         
     
-    def KeyExists( self, key ):
+    def HasKey( self, key ):
         
-        return key in self._keys_to_active_pages or key in self._keys_to_proto_pages
+        return key in self._keys_to_active_pages
         
     
     def Select( self, key ):
         
-        index = self._GetIndex( key )
-        
-        if index != -1 and index != QP.ListWidgetGetSelection( self._list_box ) :
+        if self.HasKey( key ):
             
-            self._Select( index )
-            
-        
-    
-    def SelectDown( self ):
-        
-        current_selection = QP.ListWidgetGetSelection( self._list_box )
-        
-        if current_selection != -1:
-            
-            num_entries = self._list_box.count()
-            
-            if current_selection == num_entries - 1: selection = 0
-            else: selection = current_selection + 1
-            
-            if selection != current_selection:
-                
-                self._Select( selection )
-                
+            self._list_box.SelectData( [ key ] )
             
         
     
     def SelectPage( self, page_to_select ):
         
-        for ( key, page ) in list(self._keys_to_active_pages.items()):
+        for ( key, page ) in self._keys_to_active_pages.items():
             
             if page == page_to_select:
                 
-                self._Select( self._GetIndex( key ) )
+                self._list_box.SelectData( [ key ] )
                 
                 return
-                
-            
-        
-    
-    def SelectUp( self ):
-        
-        current_selection = QP.ListWidgetGetSelection( self._list_box )
-        
-        if current_selection != -1:
-            
-            num_entries = self._list_box.count()
-            
-            if current_selection == 0: selection = num_entries - 1
-            else: selection = current_selection - 1
-            
-            if selection != current_selection:
-                
-                self._Select( selection )
                 
             
         

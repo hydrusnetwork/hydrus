@@ -1253,6 +1253,10 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
         # I used to do gallery first, then post, then file, but it ultimately was unhelpful in some situations and better handled by strict component/parameter matching
         
+        # note, we have added a bunch of extra params and stuff here, and here's another one, 2024-05:
+            # adding domain length so that api.vxtwitter.com will match before vxtwitter.com. subdomains before domains!
+        
+        len_domain = len( self._netloc )
         num_required_path_components = len( [ 1 for ( string_match, default ) in self._path_components if default is None ] )
         num_total_path_components = len( self._path_components )
         num_required_parameters = len( [ 1 for parameter in self._parameters if not parameter.HasDefaultValue() ] )
@@ -1267,7 +1271,7 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
             len_example_url = len( self._example_url )
             
         
-        return ( num_required_path_components, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
+        return ( len_domain, num_required_path_components, num_total_path_components, num_required_parameters, num_total_parameters, len_example_url )
         
     
     def GetURLBooleans( self ):

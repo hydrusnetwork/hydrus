@@ -138,7 +138,7 @@ class PairSelectorAndComparator( HydrusSerialisable.SerialisableBase ):
 
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_AUTO_DUPLICATES_PAIR_SELECTOR_AND_COMPARATOR ] = PairSelectorAndComparator
 
-class AutoDuplicatesRule( HydrusSerialisable.SerialisableBaseNamed ):
+class DuplicatesAutoResolutionRule( HydrusSerialisable.SerialisableBaseNamed ):
     
     SERIALISABLE_TYPE = HydrusSerialisable.SERIALISABLE_AUTO_DUPLICATES_RULE
     SERIALISABLE_NAME = 'Auto-Duplicates Rule'
@@ -171,15 +171,15 @@ class AutoDuplicatesRule( HydrusSerialisable.SerialisableBaseNamed ):
     # 'here's a pair of media results, pass/fail?'
     
 
-HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_AUTO_DUPLICATES_RULE ] = AutoDuplicatesRule
+HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_AUTO_DUPLICATES_RULE ] = DuplicatesAutoResolutionRule
 
-class AutoDuplicatesManager( object ):
+class DuplicatesAutoResolutionManager( object ):
     
     my_instance = None
     
     def __init__( self ):
         
-        AutoDuplicatesManager.my_instance = self
+        DuplicatesAutoResolutionManager.my_instance = self
         
         # my rules, start with empty and then load from db or whatever on controller init
         
@@ -187,13 +187,13 @@ class AutoDuplicatesManager( object ):
         
     
     @staticmethod
-    def instance() -> 'AutoDuplicatesManager':
+    def instance() -> 'DuplicatesAutoResolutionManager':
         
-        if AutoDuplicatesManager.my_instance is None:
+        if DuplicatesAutoResolutionManager.my_instance is None:
             
-            AutoDuplicatesManager()
+            DuplicatesAutoResolutionManager()
             
         
-        return AutoDuplicatesManager.my_instance
+        return DuplicatesAutoResolutionManager.my_instance
         
     

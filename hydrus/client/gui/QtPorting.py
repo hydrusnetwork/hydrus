@@ -1424,17 +1424,6 @@ def ListWidgetGetSelection( widget ):
     return -1
 
 
-def ListWidgetGetStrings( widget ):
-    
-    strings = []
-    
-    for i in range( widget.count() ):
-        
-        strings.append( widget.item( i ).text() )
-        
-    return strings
-
-
 def ListWidgetSetSelection( widget, idxs ):
     
     widget.clearSelection()
@@ -1497,14 +1486,6 @@ def SetBackgroundColour( widget, colour ):
         widget.setStyleSheet( '#{} {{ background-color: {} }}'.format( object_name, QG.QColor( colour ).name() ) )
         
     
-def SetStringSelection( combobox, string ):
-    
-    index = combobox.findText( string )
-    
-    if index != -1:
-        
-        combobox.setCurrentIndex( index )
-
 
 def SetMinClientSize( widget, size ):
     
@@ -1563,6 +1544,7 @@ class StatusBar( QW.QStatusBar ):
             
         
     
+
 class UIActionSimulator:
     
     def __init__( self ):
@@ -1582,210 +1564,6 @@ class UIActionSimulator:
         
         QW.QApplication.instance().postEvent( widget, ev1 )
         QW.QApplication.instance().postEvent( widget, ev2 )
-        
-
-class RadioBox( QW.QFrame ):
-    
-    radioBoxChanged = QC.Signal()
-    
-    def __init__( self, parent, choices, vertical = False ):
-        
-        QW.QFrame.__init__( self, parent )
-        
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
-        
-        if vertical:
-            
-            self.setLayout( VBoxLayout() )
-            
-        else:
-            
-            self.setLayout( HBoxLayout() )
-            
-        
-        self._choices = []
-        
-        for choice in choices:
-            
-            radiobutton = QW.QRadioButton( choice, self )
-            
-            self._choices.append( radiobutton )
-            
-            radiobutton.clicked.connect( self.radioBoxChanged )
-            
-            self.layout().addWidget( radiobutton )
-            
-        
-        if vertical and len( self._choices ):
-            
-            self._choices[0].setChecked( True )
-            
-        elif len( self._choices ):
-            
-            self._choices[-1].setChecked( True )
-            
-        
-    
-    def _GetCurrentChoiceWidget( self ):
-        
-        for choice in self._choices:
-            
-            if choice.isChecked():
-                
-                return choice
-                
-            
-        
-        return None
-        
-    
-    def GetCurrentIndex( self ):
-        
-        for i in range( len( self._choices ) ):
-            
-            if self._choices[ i ].isChecked(): return i
-            
-        
-        return -1
-        
-    
-    def SetStringSelection( self, str ):
-
-        for i in range( len( self._choices ) ):
-
-            if self._choices[ i ].text() == str:
-                
-                self._choices[ i ].setChecked( True )
-                
-                return
-                
-            
-        
-    
-    def GetStringSelection( self ):
-
-        for i in range( len( self._choices ) ):
-
-            if self._choices[ i ].isChecked(): return self._choices[ i ].text()
-
-        return None
-    
-    def setFocus( self, reason ):
-        
-        item = self._GetCurrentChoiceWidget()
-        
-        if item is not None:
-            
-            item.setFocus( reason )
-            
-        else:
-            
-            QW.QFrame.setFocus( self, reason )
-            
-        
-    
-    def SetValue( self, data ):
-        
-        pass
-        
-    
-    def Select( self, idx ):
-    
-        self._choices[ idx ].setChecked( True )
-
-
-class DataRadioBox( QW.QFrame ):
-    
-    radioBoxChanged = QC.Signal()
-    
-    def __init__( self, parent, choice_tuples, vertical = False ):
-        
-        QW.QFrame.__init__( self, parent )
-        
-        self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Raised )
-        
-        if vertical:
-            
-            self.setLayout( VBoxLayout() )
-            
-        else:
-            
-            self.setLayout( HBoxLayout() )
-            
-        
-        self._choices = []
-        self._buttons_to_data = {}
-        
-        for ( text, data ) in choice_tuples:
-            
-            radiobutton = QW.QRadioButton( text, self )
-            
-            self._choices.append( radiobutton )
-            
-            self._buttons_to_data[ radiobutton ] = data
-            
-            radiobutton.clicked.connect( self.radioBoxChanged )
-            
-            self.layout().addWidget( radiobutton )
-            
-        
-        if vertical and len( self._choices ):
-            
-            self._choices[0].setChecked( True )
-            
-        elif len( self._choices ) > 0:
-            
-            self._choices[-1].setChecked( True )
-            
-        
-    
-    def _GetCurrentChoiceWidget( self ):
-        
-        for choice in self._choices:
-            
-            if choice.isChecked():
-                
-                return choice
-                
-            
-        
-        return None
-        
-    
-    def GetValue( self ):
-        
-        for ( button, data ) in self._buttons_to_data.items():
-            
-            if button.isChecked():
-                
-                return data
-                
-            
-        
-        raise Exception( 'No button selected!' )
-        
-    
-    def setFocus( self, reason ):
-        
-        for button in self._choices:
-            
-            if button.isChecked():
-                
-                button.setFocus( reason )
-                
-                return
-                
-            
-        
-        QW.QFrame.setFocus( self, reason )
-        
-    
-    def SetValue( self, select_data ):
-        
-        for ( button, data ) in self._buttons_to_data.items():
-            
-            button.setChecked( data == select_data )
-            
         
     
 

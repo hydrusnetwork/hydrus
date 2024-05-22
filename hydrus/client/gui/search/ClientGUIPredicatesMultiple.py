@@ -32,7 +32,7 @@ class PredicateSystemRatingIncDecControl( QW.QWidget ):
         
         name_st.setAlignment( QC.Qt.AlignLeft | QC.Qt.AlignVCenter )
         
-        choices = [
+        choice_tuples = [
             ( 'more than', '>' ),
             ( 'less than', '<' ),
             ( 'is', '=' ),
@@ -40,7 +40,7 @@ class PredicateSystemRatingIncDecControl( QW.QWidget ):
             ( 'do not search', '' )
         ]
         
-        self._choice = QP.DataRadioBox( self, choices, vertical = True )
+        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
         
         self._rating_value = ClientGUICommon.BetterSpinBox( self, initial = 0, min = 0, max = 1000000 )
         
@@ -122,13 +122,13 @@ class PredicateSystemRatingLikeControl( QW.QWidget ):
         
         name_st.setAlignment( QC.Qt.AlignLeft | QC.Qt.AlignVCenter )
         
-        choices = [
+        choice_tuples = [
             ( 'has rating', 'rated' ),
             ( 'is', '=' ),
             ( 'do not search', '' )
         ]
         
-        self._choice = QP.DataRadioBox( self, choices, vertical = True )
+        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
         
         self._rating_control = ClientGUIRatings.RatingLikeDialog( self, service_key )
         
@@ -258,7 +258,7 @@ class PredicateSystemRatingNumericalControl( QW.QWidget ):
         
         name_st.setAlignment( QC.Qt.AlignLeft | QC.Qt.AlignVCenter )
         
-        choices = [
+        choice_tuples = [
             ( 'has rating', 'rated' ),
             ( 'more than', '>' ),
             ( 'less than', '<' ),
@@ -267,7 +267,7 @@ class PredicateSystemRatingNumericalControl( QW.QWidget ):
             ( 'do not search', '' )
         ]
         
-        self._choice = QP.DataRadioBox( self, choices, vertical = True )
+        self._choice = ClientGUICommon.BetterRadioBox( self, choice_tuples, vertical = True )
         
         self._rating_control = ClientGUIRatings.RatingNumericalDialog( self, service_key )
         

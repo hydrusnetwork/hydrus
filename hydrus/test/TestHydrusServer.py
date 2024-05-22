@@ -168,21 +168,16 @@ class TestServer( unittest.TestCase ):
         
         self.assertEqual( response, EXAMPLE_FILE )
         
-        #
-        
         try: os.remove( path )
         except: pass
         
-        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
+        #
         
-        with open( path, 'rb' ) as f:
-            
-            file_bytes = f.read()
-            
+        path = os.path.join( HC.STATIC_DIR, 'hydrus.png' )
         
         HG.test_controller.ClearWrites( 'file' )
         
-        service.Request( HC.POST, 'file', { 'file' : file_bytes } )
+        service.Request( HC.POST, 'file', file_body_path = path )
         
         written = HG.test_controller.GetWrite( 'file' )
         
