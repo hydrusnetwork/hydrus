@@ -285,7 +285,7 @@ def OpenFileLocation( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> 
     
     path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
     
-    HydrusPaths.OpenFileLocation( path )
+    ClientPaths.OpenFileLocation( path )
     
     return True
     

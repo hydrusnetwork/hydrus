@@ -685,7 +685,7 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
         
         if focused_media.GetLocationsManager().IsLocal():
             
-            show_open_in_explorer = CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) and ( HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS )
+            show_open_in_explorer = CG.client_controller.new_options.GetBoolean( 'advanced_mode' ) and ClientPaths.CAN_OPEN_FILE_LOCATION
             
             if show_open_in_explorer:
                 
