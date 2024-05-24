@@ -17,6 +17,11 @@ except:
     SHOW_IN_FILE_MANAGER_OK = False
     
 
+if HC.PLATFORM_WINDOWS:
+    
+    from win32com.shell import shell, shellcon
+    
+
 CAN_OPEN_FILE_LOCATION = HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS or ( HC.PLATFORM_LINUX and SHOW_IN_FILE_MANAGER_OK )
 
 def DeletePath( path, always_delete_fully = False ):
@@ -76,3 +81,26 @@ def OpenFileLocations( paths: typing.Sequence[str] ):
             HydrusPaths.OpenFileLocation( path )
             
     
+def OpenFilePropertiesWindows( path: str ):
+    
+    shell.ShellExecuteEx( fMask = shellcon.SEE_MASK_INVOKEIDLIST, lpFile = path, lpVerb = 'properties' )
+    
+
+def OpenNativeFileProperties( path: str ):
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        OpenFilePropertiesWindows( path )
+    
+
+def OpenFileWithWindows( path: str ):
+    
+    shell.ShellExecuteEx( fMask = shellcon.SEE_MASK_INVOKEIDLIST, lpFile = path, lpVerb = 'openas' )
+    
+    
+def OpenFileWithDialog( path: str ):
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        OpenFileWithWindows( path )
+        

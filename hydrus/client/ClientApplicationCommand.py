@@ -169,6 +169,8 @@ SIMPLE_COPY_FILE_HASHES = 156
 SIMPLE_COPY_FILE_BITMAP = 157
 SIMPLE_COPY_FILE_ID = 158
 SIMPLE_COPY_FILE_SERVICE_FILENAMES = 159
+SIMPLE_NATIVE_OPEN_FILE_PROPERTIES = 160
+SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG = 161
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -383,8 +385,10 @@ simple_enum_to_str_lookup = {
     SIMPLE_SELECT_FILES : 'select files',
     SIMPLE_REARRANGE_THUMBNAILS : 'move thumbnails',
     SIMPLE_MAC_QUICKLOOK : 'open quick look for selected file (macOS only)',
-    SIMPLE_COPY_URLS : 'copy file known urls'
-    }
+    SIMPLE_COPY_URLS : 'copy file known urls',
+    SIMPLE_NATIVE_OPEN_FILE_PROPERTIES: 'open file properties',
+    SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG: 'open with'
+}
 
 legacy_simple_str_to_enum_lookup = {
     'archive_delete_filter_back' : SIMPLE_ARCHIVE_DELETE_FILTER_BACK,
@@ -491,7 +495,7 @@ legacy_simple_str_to_enum_lookup = {
     'view_previous' : SIMPLE_VIEW_PREVIOUS,
     'zoom_in' : SIMPLE_ZOOM_IN,
     'zoom_out' : SIMPLE_ZOOM_OUT
-    }
+}
 
 APPLICATION_COMMAND_TYPE_SIMPLE = 0
 APPLICATION_COMMAND_TYPE_CONTENT = 1

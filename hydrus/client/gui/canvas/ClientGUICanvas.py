@@ -887,6 +887,21 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     self._MediaFocusWentToExternalProgram()
                     
+            elif action == CAC.SIMPLE_NATIVE_OPEN_FILE_PROPERTIES:
+                
+                it_worked = ClientGUIMediaSimpleActions.OpenNativeFileProperties( self._current_media )
+                
+                if it_worked:
+                    
+                    self._MediaFocusWentToExternalProgram()
+                    
+            elif action == CAC.SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG:
+                
+                it_worked = ClientGUIMediaSimpleActions.OpenFileWithDialog( self._current_media )
+                
+                if it_worked:
+                    
+                    self._MediaFocusWentToExternalProgram()
                 
             elif action == CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE:
                 
