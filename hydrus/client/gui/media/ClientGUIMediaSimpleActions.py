@@ -285,7 +285,7 @@ def OpenFileLocation( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> 
     
     path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
     
-    HydrusPaths.OpenFileLocation( path )
+    ClientPaths.OpenFileLocation( path )
     
     return True
     
@@ -311,6 +311,50 @@ def OpenInWebBrowser( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> 
     
     return True
     
+def OpenNativeFileProperties( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
+    
+    if media is None:
+        
+        return False
+        
+    
+    if not media.GetLocationsManager().IsLocal():
+        
+        return False
+        
+    
+    hash = media.GetHash()
+    mime = media.GetMime()
+    
+    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+    
+    ClientPaths.OpenNativeFileProperties( path )
+    
+    return True
+
+
+def OpenFileWithDialog( media: typing.Optional[ ClientMedia.MediaSingleton ] ) -> bool:
+    
+    if media is None:
+        
+        return False
+        
+    
+    if not media.GetLocationsManager().IsLocal():
+        
+        return False
+        
+    
+    hash = media.GetHash()
+    mime = media.GetMime()
+    
+    path = CG.client_controller.client_files_manager.GetFilePath( hash, mime )
+    
+    ClientPaths.OpenFileWithDialog( path )
+    
+    return True
+
+
 
 def ShowDuplicatesInNewPage( location_context: ClientLocation.LocationContext, hash, duplicate_type ):
     

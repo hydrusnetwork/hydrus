@@ -2335,6 +2335,34 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
                         
                     
                 
+            elif action == CAC.SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG:
+                
+                if self._HasFocusSingleton():
+                    
+                    focused_singleton = self._GetFocusSingleton()
+                    
+                    it_worked = ClientGUIMediaSimpleActions.OpenFileWithDialog( focused_singleton )
+                    
+                    if it_worked:
+                        
+                        self.focusMediaPaused.emit()
+                        
+                    
+                
+            elif action == CAC.SIMPLE_NATIVE_OPEN_FILE_PROPERTIES:
+                
+                if self._HasFocusSingleton():
+                    
+                    focused_singleton = self._GetFocusSingleton()
+                    
+                    it_worked = ClientGUIMediaSimpleActions.OpenNativeFileProperties( focused_singleton )
+                    
+                    if it_worked:
+                        
+                        self.focusMediaPaused.emit()
+                        
+                    
+                
             elif action == CAC.SIMPLE_OPEN_FILE_IN_WEB_BROWSER:
                 
                 if self._HasFocusSingleton():

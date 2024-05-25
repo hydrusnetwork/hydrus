@@ -688,10 +688,8 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 try:
                     
-                    for file_seed in file_seeds:
-                        
-                        HydrusPaths.OpenFileLocation( file_seed.file_seed_data )
-                        
+                    ClientPaths.OpenFileLocations( [ file_seed.file_seed_data for file_seed in file_seeds ] )
+                    
                     
                 except Exception as e:
                     

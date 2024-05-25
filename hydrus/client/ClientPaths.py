@@ -1,9 +1,28 @@
+import typing
 import webbrowser
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientGlobals as CG
+
+try:
+    
+    from showinfm import show_in_file_manager
+    
+    SHOW_IN_FILE_MANAGER_OK = True
+    
+except:
+    
+    SHOW_IN_FILE_MANAGER_OK = False
+    
+
+if HC.PLATFORM_WINDOWS:
+    
+    from hydrus.client import ClientWindowsIntegration
+    
+
+CAN_OPEN_FILE_LOCATION = HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS or ( HC.PLATFORM_LINUX and SHOW_IN_FILE_MANAGER_OK )
 
 def DeletePath( path, always_delete_fully = False ):
     
@@ -35,5 +54,47 @@ def LaunchURLInWebBrowser( url ):
     else:
         
         HydrusPaths.LaunchFile( url, launch_path = web_browser_path )
+        
+    
+
+def OpenFileLocation( path: str ):
+    
+    if SHOW_IN_FILE_MANAGER_OK:
+        
+        show_in_file_manager( path )
+                
+    else:
+        
+        HydrusPaths.OpenFileLocation( path )
+        
+    
+
+def OpenFileLocations( paths: typing.Sequence[str] ):
+    
+    if SHOW_IN_FILE_MANAGER_OK:
+        
+        show_in_file_manager( paths )
+        
+    else:
+        
+        for path in paths:
+        
+            HydrusPaths.OpenFileLocation( path )
+            
+    
+
+def OpenNativeFileProperties( path: str ):
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        ClientWindowsIntegration.OpenFileProperties( path )
+        
+    
+
+def OpenFileWithDialog( path: str ):
+    
+    if HC.PLATFORM_WINDOWS:
+        
+        ClientWindowsIntegration.OpenFileWith( path )
         
     
