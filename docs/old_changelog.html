@@ -35,6 +35,37 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_577"><a href="#version_577">version 577</a></h2>
+                    <ul>
+                        <li><h3>explorer integration</h3></li>
+                        <li>thanks to a user, we have some new OS-file-explorer integration</li>
+                        <li>two additional options are added to the "open" menu for Windows users, "in another program" opens the Windows dialog to select which program to use and "properties" opens the Windows file properties dialog for the file</li>
+                        <li>the 'media' shortcut set gets the new 'open file properties' and 'open with...' commands to plug into these new features</li>
+                        <li>the "open in file browser" media menu command now more reliably selects the file in Windows and is now available for most Linux file managers--full list [here](https://github.com/damonlynch/showinfilemanager#supported-file-managers).</li>
+                        <li>the "open files' locations" file import log menu command is similarly more reliable, and can sometimes select multiple files when launched on a selection</li>
+                        <li>this requires a new external library, so users who run from source will want to rebuild their venvs this week to get this functionality</li>
+                        <li><h3>misc</h3></li>
+                        <li>the manage times single-time edit dialog's paste button can now eat any datstring you can think of. try pasting 'yesterday 3am' into it, it'll work!</li>
+                        <li>split the increasingly cluttered 'media' options panel into 'media playback' (options governing how media is rendered) and 'media viewer' (options governing the viewer itself like drags and slideshows)</li>
+                        <li>added to the new 'media viewer' panel are five checkboxes to turn off the background text in the full media viewer--for the taglist, the top hover, the top-right hover, the notes hover, and the bottom-right index string. if you want, you can have a completely blank background now</li>
+                        <li>gave the _help-&gt;about_ window a pass. I broke the cluttered first tab into two, and the layout all over is a bit clearer</li>
+                        <li>the _help-&gt;advanced mode_ option is now available under a new _options-&gt;advanced_ tab. this thing covers several dozen things across the program, all insufficiently documented, so the plan is to blow it out into all its granular constituent components on this page!</li>
+                        <li>fixed it so an invalid `ApplicationCommand` will still render a string. if you got some jank `ToString()` errors in a shortcuts dialog recently, please try again and let me know what you get. you'll probably want to go into the actual shortcut with the error string and try and see if you can fix what it has set--again, let me know the details please!</li>
+                        <li>updated the 'installing and updating' help page to talk clearly about the different versions that have special update instructions, and generally gave the language a pass</li>
+                        <li><h3>some url encoding</h3></li>
+                        <li>fixed an issue in url encoding-normalisation where urls were not retaining their parameters if their names had certain decoded characters (particularly, this was stuff like the decoded square brackets in `fields[post]=123`). a new unit test will catch this in future</li>
+                        <li>url classes and parsers are now careful to encode their example urls any time they are asked for (outside of their respective edit dialogs' "example url(s)" fields, so if you want to work with a human-looking URL in UI, that's fine). this ensures the automatic url-parser linking system works if the parser and url classes have a mish-mash of encoded and non-encoded example URLs. it also fixes some stuff like the multi-column list in the manage url classes dialog when the url class has a decoded example url. this was basically just an ingestion point that I missed in the previous work</li>
+                        <li>the edit parser dialog makes sure to properly encode the URL when you do a test pull</li>
+                        <li><h3>orphan table tech</h3></li>
+                        <li>the _database-&gt;db maintenance-&gt;clear orphan tables_ command, which could previously only clear out the repository update/processing-tracking tables, can now nuke: the core file list tables in client.db; the core mappings tables in client.mappings.db; the display and storage mappings caches in client.caches.db; the display and storage autocomplete count caches; the ideal and actual tag parent lookup tables in client.caches.db; the ideal and actual tag sibling lookup tables in client.caches.db; and the various tag search tables (except the fts4 stuff) in client.caches.db</li>
+                        <li>when this job fires, it now sends orphan tables to the deferred delete system (previously it dropped them immediately, which for a big mappings table is a no-go)</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>cleaned a bunch of db table code for the new orphan table stuff</li>
+                        <li>deleted the old 'yaml_dumps' table and all associated methods, which are all now unused</li>
+                        <li>added a couple help labels to the "colours" and "style" pages to better explain what is actually going on here</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_576"><a href="#version_576">version 576</a></h2>
                     <ul>
                         <li><h3>file access latency</h3></li>

@@ -702,7 +702,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _AboutWindow( self ):
         
         name = 'hydrus client'
-        version = '{}, using network version {}'.format( HC.SOFTWARE_VERSION, HC.NETWORK_VERSION )
+        version = 'v{}, using network version {}'.format( HC.SOFTWARE_VERSION, HC.NETWORK_VERSION )
         
         library_version_lines = []
         
@@ -742,7 +742,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         library_version_lines.append( 'OpenCV: {}'.format( cv2.__version__ ) )
         library_version_lines.append( 'openssl: {}'.format( ssl.OPENSSL_VERSION ) )
         library_version_lines.append( 'Pillow: {}'.format( PIL.__version__ ) )
-        library_version_lines.append( 'Pillow-HEIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
         
         qt_string = 'Qt: Unknown'
         
@@ -798,15 +797,44 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         library_version_lines.append( qt_string )
         
-        library_version_lines.append( 'QtCharts ok: {}'.format( ClientGUICharts.QT_CHARTS_OK ) )
+        library_version_lines.append( 'sqlite: {}'.format( sqlite3.sqlite_version ) )
+        
+        library_version_lines.append( '' )
+        
+        library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
+        library_version_lines.append( 'db dir: {}'.format( CG.client_controller.db_dir ) )
+        library_version_lines.append( 'temp dir: {}'.format( HydrusTemp.GetCurrentTempDir() ) )
+        
+        import locale
+        
+        l_string = locale.getlocale()[0]
+        qtl_string = QC.QLocale().name()
+        
+        library_version_lines.append( 'locale: {}/{}'.format( l_string, qtl_string ) )
+        
+        library_version_lines.append( '' )
+        
+        library_version_lines.append( 'db cache size per file: {}MB'.format( HG.db_cache_size ) )
+        library_version_lines.append( 'db journal mode: {}'.format( HG.db_journal_mode ) )
+        library_version_lines.append( 'db synchronous mode: {}'.format( HG.db_synchronous ) )
+        library_version_lines.append( 'db transaction commit period: {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) )
+        library_version_lines.append( 'db using memory for temp?: {}'.format( HG.no_db_temp_files ) )
+        
+        description_versions = 'This is the media management application of the hydrus software suite.' + '\n' * 2 + '\n'.join( library_version_lines )
+        
+        #
+        
+        availability_lines = []
+        
+        availability_lines.append( 'QtCharts: {}'.format( ClientGUICharts.QT_CHARTS_OK ) )
         
         if QtInit.WE_ARE_QT5:
             
-            library_version_lines.append( 'QtPdf not available on Qt5' )
+            availability_lines.append( 'QtPdf not available on Qt5' )
             
         else:
             
-            library_version_lines.append( 'QtPdf ok: {}'.format( ClientPDFHandling.PDF_OK ) )
+            availability_lines.append( 'QtPdf: {}'.format( ClientPDFHandling.PDF_OK ) )
             
             if not ClientPDFHandling.PDF_OK:
                 
@@ -816,7 +844,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
             
         
-        library_version_lines.append( 'sqlite: {}'.format( sqlite3.sqlite_version ) )
+        availability_lines.append( 'Pillow-HEIF: {}'.format( HydrusImageHandling.HEIF_OK ) )
         
         CBOR_AVAILABLE = False
         
@@ -830,9 +858,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             pass
             
         
-        library_version_lines.append( 'cbor2 present: {}'.format( str( CBOR_AVAILABLE ) ) )
+        availability_lines.append( 'cbor2 present: {}'.format( str( CBOR_AVAILABLE ) ) )
         
-        library_version_lines.append( 'chardet present: {}'.format( str( HydrusText.CHARDET_OK ) ) )
+        availability_lines.append( 'chardet present: {}'.format( str( HydrusText.CHARDET_OK ) ) )
         
         from hydrus.client.networking import ClientNetworkingJobs
         
@@ -840,48 +868,32 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             try:
                 
-                library_version_lines.append( 'cloudscraper present: {}'.format( ClientNetworkingJobs.cloudscraper.__version__ ) )
+                availability_lines.append( 'cloudscraper present: {}'.format( ClientNetworkingJobs.cloudscraper.__version__ ) )
                 
             except:
                 
-                library_version_lines.append( 'cloudscraper present: unknown version' )
+                availability_lines.append( 'cloudscraper present: unknown version' )
                 
             
         else:
             
-            library_version_lines.append( 'cloudscraper present: {}'.format( 'False' ) )
+            availability_lines.append( 'cloudscraper present: {}'.format( 'False' ) )
             
         
-        library_version_lines.append( 'cryptography present: {}'.format( HydrusEncryption.CRYPTO_OK ) )
-        library_version_lines.append( 'dateparser present: {}'.format( ClientTime.DATEPARSER_OK ) )
-        library_version_lines.append( 'dateutil present: {}'.format( ClientTime.DATEUTIL_OK ) )
-        library_version_lines.append( 'html5lib present: {}'.format( ClientParsing.HTML5LIB_IS_OK ) )
-        library_version_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
-        library_version_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
-        library_version_lines.append( 'olefile present: {}'.format( HydrusOLEHandling.OLEFILE_OK ) )
-        library_version_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
-        library_version_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
-        library_version_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )
-        library_version_lines.append( 'speedcopy (experimental test) present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
-        library_version_lines.append( 'install dir: {}'.format( HC.BASE_DIR ) )
-        library_version_lines.append( 'db dir: {}'.format( CG.client_controller.db_dir ) )
-        library_version_lines.append( 'temp dir: {}'.format( HydrusTemp.GetCurrentTempDir() ) )
-        library_version_lines.append( 'db cache size per file: {}MB'.format( HG.db_cache_size ) )
-        library_version_lines.append( 'db journal mode: {}'.format( HG.db_journal_mode ) )
-        library_version_lines.append( 'db synchronous mode: {}'.format( HG.db_synchronous ) )
-        library_version_lines.append( 'db transaction commit period: {}'.format( HydrusTime.TimeDeltaToPrettyTimeDelta( HG.db_cache_size ) ) )
-        library_version_lines.append( 'db using memory for temp?: {}'.format( HG.no_db_temp_files ) )
+        availability_lines.append( 'cryptography present: {}'.format( HydrusEncryption.CRYPTO_OK ) )
+        availability_lines.append( 'dateparser present: {}'.format( ClientTime.DATEPARSER_OK ) )
+        availability_lines.append( 'dateutil present: {}'.format( ClientTime.DATEUTIL_OK ) )
+        availability_lines.append( 'html5lib present: {}'.format( ClientParsing.HTML5LIB_IS_OK ) )
+        availability_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
+        availability_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
+        availability_lines.append( 'olefile present: {}'.format( HydrusOLEHandling.OLEFILE_OK ) )
+        availability_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
+        availability_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
+        availability_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )
+        availability_lines.append( 'show-in-file-manager present: {}'.format( ClientPaths.SHOW_IN_FILE_MANAGER_OK ) )
+        availability_lines.append( 'speedcopy (experimental test) present: {}'.format( HydrusFileHandling.SPEEDCOPY_OK ) )
         
-        import locale
-        
-        l_string = locale.getlocale()[0]
-        qtl_string = QC.QLocale().name()
-        
-        library_version_lines.append( 'locale: {}/{}'.format( l_string, qtl_string ) )
-        
-        description = 'This is the media management application of the hydrus software suite.'
-        
-        description += '\n' * 2 + '\n'.join( library_version_lines )
+        description_availability = '\n'.join( availability_lines )
         
         #
         
@@ -903,7 +915,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'about hydrus' )
         
-        panel = ClientGUIScrolledPanelsReview.AboutPanel( frame, name, version, description, license, developers, site )
+        panel = ClientGUIScrolledPanelsReview.AboutPanel( frame, name, version, description_versions, description_availability, license, developers, site )
         
         frame.SetPanel( panel )
         
@@ -1253,7 +1265,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _ClearOrphanHashedSerialisables( self ):
         
-        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
+        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO. MAKE A BACKUP BEFORE YOU RUN IT'
         text += '\n' * 2
         text += 'This force-runs a routine that regularly removes some spare data from the database. You most likely do not need to run it.'
         
@@ -1285,7 +1297,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _ClearOrphanTables( self ):
         
-        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO'
+        text = 'DO NOT RUN THIS UNLESS YOU KNOW YOU NEED TO. MAKE A BACKUP BEFORE YOU RUN IT'
         text += '\n' * 2
         text += 'This will instruct the database to review its service tables and delete any orphans. This will typically do nothing, but hydrus dev may tell you to run this, just to check. Be sure you have a recent backup before you run this--if it deletes something important by accident, you will want to roll back!'
         text += '\n' * 2
@@ -3371,7 +3383,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         current_value = check_manager.GetCurrentValue()
         func = check_manager.Invert
         
-        ClientGUIMenus.AppendMenuCheckItem( menu, 'advanced mode', 'Turn on advanced menu options and buttons.', current_value, func )
+        self._menu_item_help_advanced_mode = ClientGUIMenus.AppendMenuCheckItem( menu, 'advanced mode', 'Turn on advanced menu options and buttons.', current_value, func )
         
         ClientGUIMenus.AppendSeparator( menu )
         
@@ -4421,6 +4433,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         CG.client_controller.ReinitGlobalSettings()
         
         self._menu_item_help_darkmode.setChecked( CG.client_controller.new_options.GetString( 'current_colourset' ) == 'darkmode' )
+        self._menu_item_help_advanced_mode.setChecked( self._new_options.GetBoolean( 'advanced_mode' ) )
         
         self._UpdateSystemTrayIcon()
         

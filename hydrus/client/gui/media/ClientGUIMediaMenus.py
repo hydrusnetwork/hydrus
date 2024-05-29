@@ -687,11 +687,12 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
         
         if focused_media.GetLocationsManager().IsLocal():
             
-            show_windows_native_options = advanced_mode and HC.PLATFORM_WINDOWS
+            show_windows_native_options = HC.PLATFORM_WINDOWS
             
             if show_windows_native_options:
                 
                 ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in another program', 'Choose which program to open this file with.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG ) )
+                
             
             show_open_in_explorer = advanced_mode and ClientPaths.CAN_OPEN_FILE_LOCATION
             
@@ -699,10 +700,11 @@ def AddOpenMenu( win: QW.QWidget, menu: QW.QMenu, focused_media: typing.Optional
                 
                 ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}in file browser', 'Show this file in your OS\'s file browser.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_OPEN_FILE_IN_FILE_EXPLORER ) )
                 
+            
             if show_windows_native_options:
                 
-                
                 ClientGUIMenus.AppendMenuItem( open_menu, f'{prefix}properties', 'Open your OS\'s properties window for this file.', win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_NATIVE_OPEN_FILE_PROPERTIES ) )
+                
             
         
     

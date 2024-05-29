@@ -231,7 +231,7 @@ class Service( object ):
         CG.client_controller.pub( 'service_updated', self )
         
     
-    def CheckFunctional( self ) -> bool:
+    def CheckFunctional( self ):
         
         with self._lock:
             

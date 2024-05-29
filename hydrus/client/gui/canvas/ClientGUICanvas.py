@@ -902,6 +902,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                 if it_worked:
                     
                     self._MediaFocusWentToExternalProgram()
+                    
                 
             elif action == CAC.SIMPLE_OPEN_SELECTION_IN_NEW_PAGE:
                 
@@ -1593,15 +1594,37 @@ class CanvasWithDetails( Canvas ):
             
         else:
             
-            self._DrawTags( painter )
+            new_options = CG.client_controller.new_options
             
-            self._DrawTopMiddle( painter )
+            if new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ):
+                
+                self._DrawTags( painter )
+                
             
-            current_y = self._DrawTopRight( painter )
+            if new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ):
+                
+                self._DrawTopMiddle( painter )
+                
             
-            self._DrawNotes( painter, current_y )
+            if new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ):
+                
+                current_y = self._DrawTopRight( painter )
+                
+            else:
+                
+                # ah this is actually wrong, bleargh
+                current_y = 0
+                
             
-            self._DrawIndexAndZoom( painter )
+            if new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ):
+                
+                self._DrawNotes( painter, current_y )
+                
+            
+            if new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ):
+                
+                self._DrawIndexAndZoom( painter )
+                
             
         
     

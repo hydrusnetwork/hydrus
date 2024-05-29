@@ -984,11 +984,11 @@ class StringSlicer( StringProcessingStep ):
             
             result = 'selecting everything'
             
-        elif self._index_end is None:
+        elif self._index_start is not None and self._index_end is None:
             
             result = 'selecting the {} string and onwards'.format( HydrusData.ConvertIndexToPrettyOrdinalString( self._index_start ) )
             
-        elif self._index_start is None:
+        elif self._index_start is None and self._index_end is not None:
             
             result = 'selecting up to and including the {} string'.format( HydrusData.ConvertIndexToPrettyOrdinalString( self._index_end - 1 ) )
             

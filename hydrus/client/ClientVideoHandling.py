@@ -116,7 +116,9 @@ class GIFRenderer( object ):
     
     def _RenderCurrentFrameAndResizeIt( self ) -> numpy.array:
         
-        if self._cannot_seek_to_or_beyond_this_index is not None and self._current_render_index >= self._cannot_seek_to_or_beyond_this_index:
+        we_are_in_the_dangerzone = self._cannot_seek_to_or_beyond_this_index is not None and self._current_render_index >= self._cannot_seek_to_or_beyond_this_index
+        
+        if we_are_in_the_dangerzone:
             
             numpy_image = self._GetRecoveryFrame()
             

@@ -122,7 +122,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         return table_generation_dict
         
     
-    def _GetServiceTablePrefixes( self ) -> typing.Collection:
+    def _GetServiceTablePrefixes( self ) -> typing.Collection[ str ]:
         
         return set()
         
@@ -186,7 +186,7 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
         return list( table_generation_dict.keys() )
         
     
-    def GetSurplusServiceTableNames( self, all_table_names ) -> set:
+    def GetSurplusServiceTableNames( self, all_table_names ) -> typing.Set[ str ]:
         
         prefixes = self._GetServiceTablePrefixes()
         
@@ -195,9 +195,16 @@ class HydrusDBModule( HydrusDBBase.DBBase ):
             return set()
             
         
-        all_service_table_names = { table_name for table_name in all_table_names if True in ( table_name.startswith( prefix ) or '.{}'.format( prefix ) in table_name for prefix in prefixes ) }
+        # careful about the flattening here. after adding more tables here, I ran into issues with db tables either being main.current_files_x or just current_files_x and got (dangerous!!) false positives on the test
+        # so, to failsafe, let's merge everything down to just the table name, no db schema, and then we'll catch all possible collisions no matter what the calls are actually giving us here
+        
+        all_service_table_names = { name if '.' not in name else name.split( '.', 1 )[1] for name in all_table_names }
+        
+        all_service_table_names = { table_name for table_name in all_service_table_names if True in ( table_name.startswith( prefix ) for prefix in prefixes ) }
         
         good_service_table_names = self.GetExpectedServiceTableNames()
+        
+        good_service_table_names = { name if '.' not in name else name.split( '.', 1 )[1] for name in good_service_table_names }
         
         surplus_table_names = all_service_table_names.difference( good_service_table_names )
         

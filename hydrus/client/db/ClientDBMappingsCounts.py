@@ -11,40 +11,47 @@ from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 from hydrus.client.metadata import ClientTags
 
+FILES_COMBINED_AC_CACHE_PREFIX = 'combined_files_ac_cache_'
+FILES_COMBINED_DISPLAY_AC_CACHE_PREFIX = 'combined_files_display_ac_cache_'
+FILES_SPECIFIC_AC_CACHE_PREFIX = 'specific_ac_cache_'
+FILES_SPECIFIC_DISPLAY_AC_CACHE_PREFIX = 'specific_display_ac_cache_'
+
 def GenerateCombinedFilesMappingsCountsCacheTableName( tag_display_type, tag_service_id ):
     
     if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
         
-        name = 'combined_files_ac_cache'
+        prefix = FILES_COMBINED_AC_CACHE_PREFIX
         
     elif tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
         
-        name = 'combined_files_display_ac_cache'
+        prefix = FILES_COMBINED_DISPLAY_AC_CACHE_PREFIX
         
     
     suffix = str( tag_service_id )
     
-    combined_counts_cache_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    combined_counts_cache_table_name = f'external_caches.{prefix}{suffix}'
     
     return combined_counts_cache_table_name
     
+
 def GenerateSpecificCountsCacheTableName( tag_display_type, file_service_id, tag_service_id ):
     
     if tag_display_type == ClientTags.TAG_DISPLAY_STORAGE:
         
-        name = 'specific_ac_cache'
+        prefix = FILES_SPECIFIC_AC_CACHE_PREFIX
         
     elif tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL:
         
-        name = 'specific_display_ac_cache'
+        prefix = FILES_SPECIFIC_DISPLAY_AC_CACHE_PREFIX
         
     
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    specific_counts_cache_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    specific_counts_cache_table_name = f'external_caches.{prefix}{suffix}'
     
     return specific_counts_cache_table_name
     
+
 class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
@@ -94,6 +101,16 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
             
         
         return table_dict
+        
+    
+    def _GetServiceTablePrefixes( self ):
+        
+        return {
+            FILES_COMBINED_AC_CACHE_PREFIX,
+            FILES_COMBINED_DISPLAY_AC_CACHE_PREFIX,
+            FILES_SPECIFIC_AC_CACHE_PREFIX,
+            FILES_SPECIFIC_DISPLAY_AC_CACHE_PREFIX
+        }
         
     
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):

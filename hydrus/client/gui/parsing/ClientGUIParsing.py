@@ -1281,7 +1281,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( sub_page_parsers, content_parsers ) = parser.GetContentParsers()
         
-        example_urls = parser.GetExampleURLs()
+        example_urls = parser.GetExampleURLs( encoded = False )
         
         if len( example_urls ) > 0:
             
@@ -1576,7 +1576,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             QP.CallAfter( qt_tidy_up, example_data, example_bytes, error )
             
         
-        url = self._test_url.text()
+        url = ClientNetworkingFunctions.EnsureURLIsEncoded( self._test_url.text() )
         referral_url = self._test_referral_url.text()
         
         if referral_url == '':

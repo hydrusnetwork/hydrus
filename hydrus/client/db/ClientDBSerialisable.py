@@ -161,8 +161,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         
         return {
             'main.json_dict',
-            'main.json_dumps',
-            'main.yaml_dumps'
+            'main.json_dumps'
         }
         
     
@@ -172,8 +171,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
             'main.json_dict' : ( 'CREATE TABLE IF NOT EXISTS {} ( name TEXT PRIMARY KEY, dump BLOB_BYTES );', 400 ),
             'main.json_dumps' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER PRIMARY KEY, version INTEGER, dump BLOB_BYTES );', 400 ),
             'main.json_dumps_named' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER, dump_name TEXT, version INTEGER, timestamp_ms INTEGER, dump BLOB_BYTES, PRIMARY KEY ( dump_type, dump_name, timestamp_ms ) );', 400 ),
-            'main.json_dumps_hashed' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );', 442 ),
-            'main.yaml_dumps' : ( 'CREATE TABLE IF NOT EXISTS {} ( dump_type INTEGER, dump_name TEXT, dump TEXT_YAML, PRIMARY KEY ( dump_type, dump_name ) );', 400 )
+            'main.json_dumps_hashed' : ( 'CREATE TABLE IF NOT EXISTS {} ( hash BLOB_BYTES PRIMARY KEY, dump_type INTEGER, version INTEGER, dump BLOB_BYTES );', 442 )
         }
         
     
@@ -195,18 +193,6 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
         else:
             
             self._Execute( 'DELETE FROM json_dumps_named WHERE dump_type = ? AND dump_name = ? AND timestamp_ms = ?;', ( dump_type, dump_name, timestamp_ms ) )
-            
-        
-    
-    def DeleteYAMLDump( self, dump_type, dump_name = None ):
-        
-        if dump_name is None:
-            
-            self._Execute( 'DELETE FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) )
-            
-        else:
-            
-            self._Execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
             
         
     
@@ -493,51 +479,6 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
         return []
-        
-    
-    def GetYAMLDump( self, dump_type, dump_name = None ):
-        
-        if dump_name is None:
-            
-            result = { dump_name : data for ( dump_name, data ) in self._Execute( 'SELECT dump_name, dump FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) }
-            
-            if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
-                
-                result = { bytes.fromhex( dump_name ) : data for ( dump_name, data ) in list(result.items()) }
-                
-            
-        else:
-            
-            if dump_type == YAML_DUMP_ID_LOCAL_BOORU: dump_name = dump_name.hex()
-            
-            result = self._Execute( 'SELECT dump FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) ).fetchone()
-            
-            if result is None:
-                
-                if result is None:
-                    
-                    raise HydrusExceptions.DataMissing( dump_name + ' was not found!' )
-                    
-                
-            else:
-                
-                ( result, ) = result
-                
-            
-        
-        return result
-        
-    
-    def GetYAMLDumpNames( self, dump_type ):
-        
-        names = [ name for ( name, ) in self._Execute( 'SELECT dump_name FROM yaml_dumps WHERE dump_type = ?;', ( dump_type, ) ) ]
-        
-        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
-            
-            names = [ bytes.fromhex( name ) for name in names ]
-            
-        
-        return names
         
     
     def HaveHashedJSONDump( self, hash ):
@@ -897,27 +838,6 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
                 
                 raise
                 
-            
-        
-    
-    def SetYAMLDump( self, dump_type, dump_name, data ):
-        
-        if dump_type == YAML_DUMP_ID_LOCAL_BOORU:
-            
-            dump_name = dump_name.hex()
-            
-        
-        self._Execute( 'DELETE FROM yaml_dumps WHERE dump_type = ? AND dump_name = ?;', ( dump_type, dump_name ) )
-        
-        try:
-            
-            self._Execute( 'INSERT INTO yaml_dumps ( dump_type, dump_name, dump ) VALUES ( ?, ?, ? );', ( dump_type, dump_name, data ) )
-            
-        except:
-            
-            HydrusData.Print( ( dump_type, dump_name, data ) )
-            
-            raise
             
         
     

@@ -66,7 +66,7 @@ from hydrus.client.search import ClientSearch
 
 class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, name, version, description, license_text, developers, site ):
+    def __init__( self, parent, name, version, description_versions, description_availability, license_text, developers, site ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
@@ -80,14 +80,21 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         version_label = ClientGUICommon.BetterStaticText( self, version )
         
+        url_label = ClientGUICommon.BetterHyperLink( self, site, site )
+        
         tabwidget = QW.QTabWidget( self )
         
-        desc_panel = QW.QWidget( self )
+        #
         
-        desc_label = ClientGUICommon.BetterStaticText( self, description )
+        desc_label = ClientGUICommon.BetterStaticText( self, description_versions )
         desc_label.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
         
-        url_label = ClientGUICommon.BetterHyperLink( self, site, site )
+        #
+        
+        availability_label = ClientGUICommon.BetterStaticText( self, description_availability )
+        availability_label.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
+        
+        #
         
         credits = QW.QTextEdit( self )
         credits.setPlainText( 'Created by ' + ', '.join( developers ) )
@@ -98,23 +105,22 @@ class AboutPanel( ClientGUIScrolledPanels.ReviewPanel ):
         license_textedit.setPlainText( license_text )
         license_textedit.setReadOnly( True )
         
-        tabwidget.addTab( desc_panel, 'Description' )
+        text_width = ClientGUIFunctions.ConvertTextToPixelWidth( license_textedit, 64 )
+        
+        license_textedit.setFixedWidth( text_width )
+        
+        tabwidget.addTab( desc_label, 'Description' )
+        tabwidget.addTab( availability_label, 'Optional Libraries' )
         tabwidget.addTab( credits, 'Credits' )
         tabwidget.addTab( license_textedit, 'License' )
         tabwidget.setCurrentIndex( 0 )
-        
-        desc_layout = QP.VBoxLayout()
-        
-        QP.AddToLayout( desc_layout, desc_label, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( desc_layout, url_label, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        desc_panel.setLayout( desc_layout )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, icon_label, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( vbox, name_label, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( vbox, version_label, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( vbox, url_label, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( vbox, tabwidget, CC.FLAGS_CENTER_PERPENDICULAR )
         
         self.widget().setLayout( vbox )

@@ -387,7 +387,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_MAC_QUICKLOOK : 'open quick look for selected file (macOS only)',
     SIMPLE_COPY_URLS : 'copy file known urls',
     SIMPLE_NATIVE_OPEN_FILE_PROPERTIES: 'open file properties',
-    SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG: 'open with'
+    SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG: 'open with' + HC.UNICODE_ELLIPSIS
 }
 
 legacy_simple_str_to_enum_lookup = {
@@ -905,195 +905,202 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
     
     def ToString( self ):
         
-        if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
+        try:
             
-            action = self.GetSimpleAction()
-            
-            s = simple_enum_to_str_lookup[ action ]
-            
-            if action == SIMPLE_SHOW_DUPLICATES:
+            if self._command_type == APPLICATION_COMMAND_TYPE_SIMPLE:
                 
-                duplicate_type = self.GetSimpleData()
+                action = self.GetSimpleAction()
                 
-                s = f'{s} {HC.duplicate_type_string_lookup[ duplicate_type ]}'
+                s = simple_enum_to_str_lookup[ action ]
                 
-            elif action == SIMPLE_MEDIA_SEEK_DELTA:
-                
-                ( direction, ms ) = self.GetSimpleData()
-                
-                direction_s = 'back' if direction == -1 else 'forwards'
-                
-                ms_s = HydrusTime.TimeDeltaToPrettyTimeDelta( ms / 1000 )
-                
-                s = f'{s} ({direction_s} {ms_s})'
-                
-            elif action == SIMPLE_OPEN_SIMILAR_LOOKING_FILES:
-                
-                hamming_distance = self.GetSimpleData()
-                
-                if hamming_distance in CC.hamming_string_lookup:
+                if action == SIMPLE_SHOW_DUPLICATES:
                     
-                    s = f'{s} ({hamming_distance} - {CC.hamming_string_lookup[ hamming_distance ]})'
+                    duplicate_type = self.GetSimpleData()
+                    
+                    s = f'{s} {HC.duplicate_type_string_lookup[ duplicate_type ]}'
+                    
+                elif action == SIMPLE_MEDIA_SEEK_DELTA:
+                    
+                    ( direction, ms ) = self.GetSimpleData()
+                    
+                    direction_s = 'back' if direction == -1 else 'forwards'
+                    
+                    ms_s = HydrusTime.TimeDeltaToPrettyTimeDelta( ms / 1000 )
+                    
+                    s = f'{s} ({direction_s} {ms_s})'
+                    
+                elif action == SIMPLE_OPEN_SIMILAR_LOOKING_FILES:
+                    
+                    hamming_distance = self.GetSimpleData()
+                    
+                    if hamming_distance in CC.hamming_string_lookup:
+                        
+                        s = f'{s} ({hamming_distance} - {CC.hamming_string_lookup[ hamming_distance ]})'
+                        
+                    else:
+                        
+                        s = f'{s} ({hamming_distance})'
+                        
+                    
+                elif action == SIMPLE_COPY_FILE_HASHES:
+                    
+                    ( file_command_target, hash_type ) = self.GetSimpleData()
+                    
+                    s = f'{s} ({hash_type}, {file_command_target_enum_to_str_lookup[ file_command_target ]})'
+                    
+                elif action == SIMPLE_COPY_FILE_BITMAP:
+                    
+                    bitmap_type = self.GetSimpleData()
+                    
+                    s = f'{s} ({bitmap_type_enum_to_str_lookup[ bitmap_type ]})'
+                    
+                elif action in ( SIMPLE_COPY_FILES, SIMPLE_COPY_FILE_PATHS, SIMPLE_COPY_FILE_ID ):
+                    
+                    file_command_target = self.GetSimpleData()
+                    
+                    s = f'{s} ({file_command_target_enum_to_str_lookup[ file_command_target ]})'
+                    
+                elif action == SIMPLE_COPY_FILE_SERVICE_FILENAMES:
+                    
+                    hacky_ipfs_dict = self.GetSimpleData()
+                    
+                    try:
+                        
+                        file_command_target_string = file_command_target_enum_to_str_lookup[ hacky_ipfs_dict[ 'file_command_target' ] ]
+                        
+                    except:
+                        
+                        file_command_target_string = 'unknown'
+                        
+                    
+                    try:
+                        
+                        ipfs_service_key = hacky_ipfs_dict[ 'ipfs_service_key' ]
+                        
+                        name = CG.client_controller.services_manager.GetName( ipfs_service_key )
+                        
+                    except:
+                        
+                        name = 'unknown service'
+                        
+                    
+                    s = f'{s} ({name}, {file_command_target_string})'
+                    
+                elif action == SIMPLE_MOVE_THUMBNAIL_FOCUS:
+                    
+                    ( move_direction, selection_status ) = self.GetSimpleData()
+                    
+                    s = f'{s} ({selection_status_enum_to_str_lookup[selection_status]} {move_enum_to_str_lookup[move_direction]})'
+                    
+                elif action == SIMPLE_SELECT_FILES:
+                    
+                    file_filter = self.GetSimpleData()
+                    
+                    s = f'{s} ({file_filter.ToString()})'
+                    
+                elif action == SIMPLE_REARRANGE_THUMBNAILS:
+                    
+                    ( rearrange_type, rearrange_data ) = self.GetSimpleData()
+                    
+                    if rearrange_type == REARRANGE_THUMBNAILS_TYPE_COMMAND:
+                        
+                        s = f'{s} ({move_enum_to_str_lookup[ rearrange_data ]})'
+                        
+                    elif rearrange_type == REARRANGE_THUMBNAILS_TYPE_FIXED:
+                        
+                        s = f'{s} (to index {HydrusData.ToHumanInt(rearrange_data)})'
+                        
+                    
+                
+                return s
+                
+            elif self._command_type == APPLICATION_COMMAND_TYPE_CONTENT:
+                
+                ( service_key, content_type, action, value ) = self._data
+                
+                components = []
+                
+                components.append( HC.content_update_string_lookup[ action ] )
+                components.append( HC.content_type_string_lookup[ content_type ] )
+                
+                value_string = ''
+                
+                if content_type == HC.CONTENT_TYPE_RATINGS:
+                    
+                    if action in ( HC.CONTENT_UPDATE_SET, HC.CONTENT_UPDATE_FLIP ):
+                        
+                        value_string = 'uncertain rating, "{}"'.format( value )
+                        
+                        if CG.client_controller is not None and CG.client_controller.IsBooted():
+                            
+                            try:
+                                
+                                service = CG.client_controller.services_manager.GetService( service_key )
+                                
+                                value_string = service.ConvertNoneableRatingToString( value )
+                                
+                            except HydrusExceptions.DataMissing:
+                                
+                                pass
+                                
+                            
+                        
+                    else:
+                        
+                        value_string = '' # only 1 up/down allowed atm
+                        
+                    
+                elif content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None:
+                    
+                    try:
+                        
+                        from_name = CG.client_controller.services_manager.GetName( value )
+                        
+                        value_string = '(from {})'.format( from_name )
+                        
+                    except:
+                        
+                        value_string = ''
+                        
+                    
+                elif value is not None:
+                    
+                    value_string = '"{}"'.format( value )
+                    
+                
+                if len( value_string ) > 0:
+                    
+                    components.append( value_string )
+                    
+                
+                if content_type == HC.CONTENT_TYPE_FILES:
+                    
+                    components.append( 'to' )
                     
                 else:
                     
-                    s = f'{s} ({hamming_distance})'
+                    components.append( 'for' )
                     
                 
-            elif action == SIMPLE_COPY_FILE_HASHES:
+                services_manager = CG.client_controller.services_manager
                 
-                ( file_command_target, hash_type ) = self.GetSimpleData()
-                
-                s = f'{s} ({hash_type}, {file_command_target_enum_to_str_lookup[ file_command_target ]})'
-                
-            elif action == SIMPLE_COPY_FILE_BITMAP:
-                
-                bitmap_type = self.GetSimpleData()
-                
-                s = f'{s} ({bitmap_type_enum_to_str_lookup[ bitmap_type ]})'
-                
-            elif action in ( SIMPLE_COPY_FILES, SIMPLE_COPY_FILE_PATHS, SIMPLE_COPY_FILE_ID ):
-                
-                file_command_target = self.GetSimpleData()
-                
-                s = f'{s} ({file_command_target_enum_to_str_lookup[ file_command_target ]})'
-                
-            elif action == SIMPLE_COPY_FILE_SERVICE_FILENAMES:
-                
-                hacky_ipfs_dict = self.GetSimpleData()
-                
-                try:
+                if services_manager.ServiceExists( service_key ):
                     
-                    file_command_target_string = file_command_target_enum_to_str_lookup[ hacky_ipfs_dict[ 'file_command_target' ] ]
+                    service = services_manager.GetService( service_key )
                     
-                except:
-                    
-                    file_command_target_string = 'unknown'
-                    
-                
-                try:
-                    
-                    ipfs_service_key = hacky_ipfs_dict[ 'ipfs_service_key' ]
-                    
-                    name = CG.client_controller.services_manager.GetName( ipfs_service_key )
-                    
-                except:
-                    
-                    name = 'unknown service'
-                    
-                
-                s = f'{s} ({name}, {file_command_target_string})'
-                
-            elif action == SIMPLE_MOVE_THUMBNAIL_FOCUS:
-                
-                ( move_direction, selection_status ) = self.GetSimpleData()
-                
-                s = f'{s} ({selection_status_enum_to_str_lookup[selection_status]} {move_enum_to_str_lookup[move_direction]})'
-                
-            elif action == SIMPLE_SELECT_FILES:
-                
-                file_filter = self.GetSimpleData()
-                
-                s = f'{s} ({file_filter.ToString()})'
-                
-            elif action == SIMPLE_REARRANGE_THUMBNAILS:
-                
-                ( rearrange_type, rearrange_data ) = self.GetSimpleData()
-                
-                if rearrange_type == REARRANGE_THUMBNAILS_TYPE_COMMAND:
-                    
-                    s = f'{s} ({move_enum_to_str_lookup[ rearrange_data ]})'
-                    
-                elif rearrange_type == REARRANGE_THUMBNAILS_TYPE_FIXED:
-                    
-                    s = f'{s} (to index {HydrusData.ToHumanInt(rearrange_data)})'
-                    
-                
-            
-            return s
-            
-        elif self._command_type == APPLICATION_COMMAND_TYPE_CONTENT:
-            
-            ( service_key, content_type, action, value ) = self._data
-            
-            components = []
-            
-            components.append( HC.content_update_string_lookup[ action ] )
-            components.append( HC.content_type_string_lookup[ content_type ] )
-            
-            value_string = ''
-            
-            if content_type == HC.CONTENT_TYPE_RATINGS:
-                
-                if action in ( HC.CONTENT_UPDATE_SET, HC.CONTENT_UPDATE_FLIP ):
-                    
-                    value_string = 'uncertain rating, "{}"'.format( value )
-                    
-                    if CG.client_controller is not None and CG.client_controller.IsBooted():
-                        
-                        try:
-                            
-                            service = CG.client_controller.services_manager.GetService( service_key )
-                            
-                            value_string = service.ConvertNoneableRatingToString( value )
-                            
-                        except HydrusExceptions.DataMissing:
-                            
-                            pass
-                            
-                        
+                    components.append( service.GetName() )
                     
                 else:
                     
-                    value_string = '' # only 1 up/down allowed atm
+                    components.append( 'unknown service!' )
                     
                 
-            elif content_type == HC.CONTENT_TYPE_FILES and action == HC.CONTENT_UPDATE_MOVE and value is not None:
-                
-                try:
-                    
-                    from_name = CG.client_controller.services_manager.GetName( value )
-                    
-                    value_string = '(from {})'.format( from_name )
-                    
-                except:
-                    
-                    value_string = ''
-                    
-                
-            elif value is not None:
-                
-                value_string = '"{}"'.format( value )
+                return ' '.join( components )
                 
             
-            if len( value_string ) > 0:
-                
-                components.append( value_string )
-                
+        except:
             
-            if content_type == HC.CONTENT_TYPE_FILES:
-                
-                components.append( 'to' )
-                
-            else:
-                
-                components.append( 'for' )
-                
-            
-            services_manager = CG.client_controller.services_manager
-            
-            if services_manager.ServiceExists( service_key ):
-                
-                service = services_manager.GetService( service_key )
-                
-                components.append( service.GetName() )
-                
-            else:
-                
-                components.append( 'unknown service!' )
-                
-            
-            return ' '.join( components )
+            return 'Unknown Application Command: ' + repr( ( self._command_type, self._data ) )
             
         
     

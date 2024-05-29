@@ -28,13 +28,20 @@ def GenerateTagParentsLookupCacheTableName( display_type: int, service_id: int )
         return cache_actual_tag_parents_lookup_table_name
         
     
+
+TAG_PARENTS_IDEAL_PREFIX = 'ideal_tag_parents_lookup_cache_'
+TAG_PARENTS_ACTUAL_PREFIX = 'actual_tag_parents_lookup_cache_'
+
 def GenerateTagParentsLookupCacheTableNames( service_id ):
     
-    cache_ideal_tag_parents_lookup_table_name = 'external_caches.ideal_tag_parents_lookup_cache_{}'.format( service_id )
-    cache_actual_tag_parents_lookup_table_name = 'external_caches.actual_tag_parents_lookup_cache_{}'.format( service_id )
+    suffix = service_id
+    
+    cache_ideal_tag_parents_lookup_table_name = f'external_caches.{TAG_PARENTS_IDEAL_PREFIX}{suffix}'
+    cache_actual_tag_parents_lookup_table_name = f'external_caches.{TAG_PARENTS_ACTUAL_PREFIX}{suffix}'
     
     return ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name )
     
+
 class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
@@ -109,6 +116,14 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         return {
             cache_actual_tag_parents_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );', 414 ),
             cache_ideal_tag_parents_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );', 414 )
+        }
+        
+    
+    def _GetServiceTablePrefixes( self ):
+        
+        return {
+            TAG_PARENTS_IDEAL_PREFIX,
+            TAG_PARENTS_ACTUAL_PREFIX
         }
         
     

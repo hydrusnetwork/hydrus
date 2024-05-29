@@ -2599,9 +2599,16 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         return self._example_parsing_context
         
     
-    def GetExampleURLs( self ):
+    def GetExampleURLs( self, encoded = True ):
         
-        return self._example_urls
+        if encoded:
+            
+            return [ ClientNetworkingFunctions.EnsureURLIsEncoded( url ) for url in self._example_urls ]
+            
+        else:
+            
+            return list( self._example_urls )
+            
         
     
     def GetNamespaces( self ):

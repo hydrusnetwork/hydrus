@@ -25,41 +25,53 @@ def DoingAFileJoinTagSearchIsFaster( estimated_file_row_count, estimated_tag_row
     return estimated_file_row_count * ( file_lookup_speed_ratio + temp_table_overhead ) < estimated_tag_row_count
     
 
+MAPPINGS_CURRENT_PREFIX = 'current_mappings_'
+MAPPINGS_DELETED_PREFIX = 'deleted_mappings_'
+MAPPINGS_PENDING_PREFIX = 'pending_mappings_'
+MAPPINGS_PETITIONED_PREFIX = 'petitioned_mappings_'
+
 def GenerateMappingsTableNames( service_id: int ) -> typing.Tuple[ str, str, str, str ]:
     
     suffix = str( service_id )
     
-    current_mappings_table_name = 'external_mappings.current_mappings_{}'.format( suffix )
+    current_mappings_table_name = f'external_mappings.{MAPPINGS_CURRENT_PREFIX}{suffix}'
     
-    deleted_mappings_table_name = 'external_mappings.deleted_mappings_{}'.format( suffix )
+    deleted_mappings_table_name = f'external_mappings.{MAPPINGS_DELETED_PREFIX}{suffix}'
     
-    pending_mappings_table_name = 'external_mappings.pending_mappings_{}'.format( suffix )
+    pending_mappings_table_name = f'external_mappings.{MAPPINGS_PENDING_PREFIX}{suffix}'
     
-    petitioned_mappings_table_name = 'external_mappings.petitioned_mappings_{}'.format( suffix )
+    petitioned_mappings_table_name = f'external_mappings.{MAPPINGS_PETITIONED_PREFIX}{suffix}'
     
     return ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name )
     
+
+SPECIFIC_DISPLAY_MAPPINGS_CURRENT_PREFIX = 'specific_display_current_mappings_cache_'
+SPECIFIC_DISPLAY_MAPPINGS_PENDING_PREFIX = 'specific_display_pending_mappings_cache_'
 
 def GenerateSpecificDisplayMappingsCacheTableNames( file_service_id, tag_service_id ):
     
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    cache_display_current_mappings_table_name = 'external_caches.specific_display_current_mappings_cache_{}'.format( suffix )
+    cache_display_current_mappings_table_name = f'external_caches.{SPECIFIC_DISPLAY_MAPPINGS_CURRENT_PREFIX}{suffix}'
     
-    cache_display_pending_mappings_table_name = 'external_caches.specific_display_pending_mappings_cache_{}'.format( suffix )
+    cache_display_pending_mappings_table_name = f'external_caches.{SPECIFIC_DISPLAY_MAPPINGS_PENDING_PREFIX}{suffix}'
     
     return ( cache_display_current_mappings_table_name, cache_display_pending_mappings_table_name )
     
+
+SPECIFIC_MAPPINGS_CURRENT_PREFIX = 'specific_current_mappings_cache_'
+SPECIFIC_MAPPINGS_DELETED_PREFIX = 'specific_deleted_mappings_cache_'
+SPECIFIC_MAPPINGS_PENDING_PREFIX = 'specific_pending_mappings_cache_'
 
 def GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id ):
     
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    cache_current_mappings_table_name = 'external_caches.specific_current_mappings_cache_{}'.format( suffix )
+    cache_current_mappings_table_name = f'external_caches.{SPECIFIC_MAPPINGS_CURRENT_PREFIX}{suffix}'
     
-    cache_deleted_mappings_table_name = 'external_caches.specific_deleted_mappings_cache_{}'.format( suffix )
+    cache_deleted_mappings_table_name = f'external_caches.{SPECIFIC_MAPPINGS_DELETED_PREFIX}{suffix}'
     
-    cache_pending_mappings_table_name = 'external_caches.specific_pending_mappings_cache_{}'.format( suffix )
+    cache_pending_mappings_table_name = f'external_caches.{SPECIFIC_MAPPINGS_PENDING_PREFIX}{suffix}'
     
     return ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name )
     
@@ -114,6 +126,16 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
         return self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+        
+    
+    def _GetServiceTablePrefixes( self ):
+        
+        return {
+            MAPPINGS_CURRENT_PREFIX,
+            MAPPINGS_DELETED_PREFIX,
+            MAPPINGS_PENDING_PREFIX,
+            MAPPINGS_PETITIONED_PREFIX
+        }
         
     
     def ClearMappingsTables( self, service_id: int ):

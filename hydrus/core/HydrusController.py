@@ -129,7 +129,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
             
         
     
-    def _GetPubsubValidCallable( self ) -> bool:
+    def _GetPubsubValidCallable( self ):
         
         return lambda o: True
         

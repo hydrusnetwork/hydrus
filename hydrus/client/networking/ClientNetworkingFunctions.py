@@ -514,6 +514,8 @@ def EnsureURLIsEncoded( url: str, keep_fragment = True ) -> str:
         path_components = ConvertPathTextToList( p.path )
         ( query_dict, single_value_parameters, param_order ) = ConvertQueryTextToDict( p.query )
         
+        param_order = [ ensure_param_component_is_encoded( param ) if param is not None else None for param in param_order ]
+        
         path_components = [ ensure_path_component_is_encoded( path_component ) for path_component in path_components ]
         query_dict = { ensure_param_component_is_encoded( name ) : ensure_param_component_is_encoded( value ) for ( name, value ) in query_dict.items() }
         single_value_parameters = [ ensure_param_component_is_encoded( single_value_parameter ) for single_value_parameter in single_value_parameters ]

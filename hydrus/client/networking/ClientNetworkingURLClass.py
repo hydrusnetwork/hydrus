@@ -1068,9 +1068,16 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         return self._netloc
         
     
-    def GetExampleURL( self ):
+    def GetExampleURL( self, encoded = True ):
         
-        return self._example_url
+        if encoded:
+            
+            return ClientNetworkingFunctions.EnsureURLIsEncoded( self._example_url )
+            
+        else:
+            
+            return self._example_url
+            
         
     
     def GetGalleryIndexValues( self ):
@@ -1440,6 +1447,8 @@ class URLClass( HydrusSerialisable.SerialisableBaseNamed ):
         
     
     def Test( self, url ):
+        
+        url = ClientNetworkingFunctions.EnsureURLIsEncoded( url )
         
         p = ClientNetworkingFunctions.ParseURL( url )
         

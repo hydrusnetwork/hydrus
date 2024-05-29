@@ -10403,6 +10403,25 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 575:
+            
+            try:
+                
+                if self._TableExists( 'yaml_dumps' ):
+                    
+                    self._Execute( 'DROP TABLE yaml_dumps;' )
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to delete an old table failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

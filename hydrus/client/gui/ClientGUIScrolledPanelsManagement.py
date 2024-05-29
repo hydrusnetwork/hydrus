@@ -74,7 +74,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'file viewing statistics', 'file viewing statistics', self._FileViewingStatisticsPanel( self._listbook ) )
         self._listbook.AddPage( 'speed and memory', 'speed and memory', self._SpeedAndMemoryPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'maintenance and processing', 'maintenance and processing', self._MaintenanceAndProcessingPanel( self._listbook ) )
-        self._listbook.AddPage( 'media', 'media', self._MediaPanel( self._listbook ) )
+        self._listbook.AddPage( 'media viewer', 'media viewer', self._MediaViewerPanel( self._listbook ) )
+        self._listbook.AddPage( 'media playback', 'media playback', self._MediaPlaybackPanel( self._listbook ) )
         self._listbook.AddPage( 'audio', 'audio', self._AudioPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'system tray', 'system tray', self._SystemTrayPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'search', 'search', self._SearchPanel( self._listbook, self._new_options ) )
@@ -92,6 +93,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         self._listbook.AddPage( 'thumbnails', 'thumbnails', self._ThumbnailsPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'system', 'system', self._SystemPanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'notes', 'notes', self._NotesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( '𝖆𝖉𝖛𝖆𝖓𝖈𝖊𝖉', 'advanced', self._AdvancedPanel( self._listbook, self._new_options ), do_sort = False )
         
         #
         
@@ -100,6 +102,40 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         QP.AddToLayout( vbox, self._listbook, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
+        
+    
+    class _AdvancedPanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._new_options = new_options
+            
+            # https://github.com/hydrusnetwork/hydrus/issues/1558
+            
+            self._advanced_mode = QW.QCheckBox( self )
+            self._advanced_mode.setToolTip( ClientGUIFunctions.WrapToolTip( 'This controls a variety of different features across the program, too many to list neatly. The plan is to blow this single option out into many granular options on this pgae.' ) )
+            
+            self._advanced_mode.setChecked( self._new_options.GetBoolean( 'advanced_mode' ) )
+            
+            vbox = QP.VBoxLayout()
+            
+            rows = []
+            
+            rows.append( ( 'Advanced mode: ', self._advanced_mode ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            
+            self.setLayout( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'advanced_mode', self._advanced_mode.isChecked() )
+            
         
     
     class _AudioPanel( QW.QWidget ):
@@ -163,6 +199,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QW.QWidget.__init__( self, parent )
             
             self._new_options = CG.client_controller.new_options
+            
+            help_text = 'Hey, this page is pretty old. We want to eventually move its capabilities to the more flexible "style" page, but for now, several custom widgets have hardcoded colours set here.'
+            help_text += '\n' * 2
+            help_text += 'In a similar way, the "darkmode" here only changes these colours, it does not change the stylesheet. Please bear with the awkwardness of these two systems, we do plan to improve them, thank you!'
+            
+            self._help_label = ClientGUICommon.BetterStaticText( self, label = help_text )
+            
+            self._help_label.setObjectName( 'HydrusWarning' )
             
             coloursets_panel = ClientGUICommon.StaticBox( self, 'coloursets' )
             
@@ -255,6 +299,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             vbox = QP.VBoxLayout()
             
+            QP.AddToLayout( vbox, self._help_label, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, coloursets_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             vbox.addStretch( 1 )
             
@@ -711,7 +756,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._duplicate_background_switch_intensity_b.setToolTip( ClientGUIFunctions.WrapToolTip( 'This changes the background colour when you are looking at B. Making it different to the A value helps to highlight switches between the two.' ) )
             
             self._draw_transparency_checkerboard_media_canvas_duplicates = QW.QCheckBox( colours_panel )
-            self._draw_transparency_checkerboard_media_canvas_duplicates.setToolTip( ClientGUIFunctions.WrapToolTip( 'Same as the setting in _media_, but only for the duplicate filter. Only applies if that _media_ setting is unchecked.' ) )
+            self._draw_transparency_checkerboard_media_canvas_duplicates.setToolTip( ClientGUIFunctions.WrapToolTip( 'Same as the setting in _media playback_, but only for the duplicate filter. Only applies if that _media_ setting is unchecked.' ) )
             
             #
             
@@ -2389,7 +2434,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
-    class _MediaPanel( QW.QWidget ):
+    class _MediaViewerPanel( QW.QWidget ):
         
         def __init__( self, parent ):
             
@@ -2399,73 +2444,41 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            animations_panel = ClientGUICommon.StaticBox( self, 'animations' )
+            media_viewer_panel = ClientGUICommon.StaticBox( self, 'mouse and animations' )
             
-            self._animated_scanbar_height = ClientGUICommon.BetterSpinBox( animations_panel, min=1, max=255 )
-            self._animated_scanbar_hide_height = ClientGUICommon.NoneableSpinCtrl( animations_panel, none_phrase = 'no, hide it', min = 1, max = 255, unit = 'px' )
-            self._animated_scanbar_nub_width = ClientGUICommon.BetterSpinBox( animations_panel, min=1, max=63 )
-            
-            self._animation_start_position = ClientGUICommon.BetterSpinBox( animations_panel, min=0, max=100 )
-            
-            self._always_loop_animations = QW.QCheckBox( animations_panel )
-            self._always_loop_animations.setToolTip( ClientGUIFunctions.WrapToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' ) )
-            
-            #
-            
-            system_panel = ClientGUICommon.StaticBox( self, 'system' )
-            
-            self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
-            
-            self._use_system_ffmpeg = QW.QCheckBox( system_panel )
-            self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
-            
-            self._load_images_with_pil = QW.QCheckBox( system_panel )
-            self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are expecting to drop CV and move to PIL exclusively. This used to be a test option but is now default true and may soon be retired.' ) )
-            
-            self._do_icc_profile_normalisation = QW.QCheckBox( system_panel )
-            self._do_icc_profile_normalisation.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should PIL attempt to load ICC Profiles and normalise the colours of an image? This is usually fine, but when it janks out due to an additional OS/GPU ICC Profile, we can turn it off here.' ) )
-            
-            self._enable_truncated_images_pil = QW.QCheckBox( system_panel )
-            self._enable_truncated_images_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should PIL be allowed to load broken images that are missing some data? This is usually fine, but some years ago we had stability problems when this was mixed with OpenCV. Now it is default on, but if you need to, you can disable it here.' ) )
-            
-            #
-            
-            media_viewer_panel = ClientGUICommon.StaticBox( self, 'media viewer' )
+            self._animated_scanbar_height = ClientGUICommon.BetterSpinBox( media_viewer_panel, min=1, max=255 )
+            self._animated_scanbar_hide_height = ClientGUICommon.NoneableSpinCtrl( media_viewer_panel, none_phrase = 'no, hide it', min = 1, max = 255, unit = 'px' )
+            self._animated_scanbar_nub_width = ClientGUICommon.BetterSpinBox( media_viewer_panel, min=1, max=63 )
             
             self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( media_viewer_panel, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
-            
-            self._media_zooms = QW.QLineEdit( media_viewer_panel )
-            self._media_zooms.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' ) )
-            self._media_zooms.textChanged.connect( self.EventZoomsChanged )
-            
-            from hydrus.client.gui.canvas import ClientGUICanvasMedia
-            
-            self._media_viewer_zoom_center = ClientGUICommon.BetterChoice( media_viewer_panel )
-            
-            for zoom_centerpoint_type in ClientGUICanvasMedia.ZOOM_CENTERPOINT_TYPES:
-                
-                self._media_viewer_zoom_center.addItem( ClientGUICanvasMedia.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
-                
-            
-            tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit before zooming.'
-            
-            self._media_viewer_zoom_center.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
-            
-            self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_viewer_panel )
-            self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
-            
-            self._hide_uninteresting_local_import_time = QW.QCheckBox( media_viewer_panel )
-            self._hide_uninteresting_local_import_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file was imported at a similar time to when it was added to its current services (i.e. the number of seconds since both events differs by less than 10%), hide the import time in the top of the media viewer.' ) )
-            
-            self._hide_uninteresting_modified_time = QW.QCheckBox( media_viewer_panel )
-            self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (i.e. the number of seconds since both events differs by less than 10%), hide the modified time in the top of the media viewer.' ) )
             
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( media_viewer_panel )
             self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( media_viewer_panel )
             
             #
             
-            slideshow_panel = ClientGUICommon.StaticBox( media_viewer_panel, 'slideshows' )
+            media_canvas_panel = ClientGUICommon.StaticBox( self, 'hover windows and background' )
+            
+            self._draw_tags_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+            self._draw_tags_hover_in_media_viewer_background.setToolTip( 'Draw the left list of tags in the background of the media viewer.' )
+            self._draw_top_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+            self._draw_top_hover_in_media_viewer_background.setToolTip( 'Draw the center-top file metadata in the background of the media viewer.' )
+            self._draw_top_right_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+            self._draw_top_right_hover_in_media_viewer_background.setToolTip( 'Draw the top-right ratings, inbox and URL information in the background of the media viewer.' )
+            self._draw_notes_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+            self._draw_notes_hover_in_media_viewer_background.setToolTip( 'Draw the right list of notes in the background of the media viewer.' )
+            self._draw_bottom_right_index_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
+            self._draw_bottom_right_index_in_media_viewer_background.setToolTip( 'Draw the bottom-right index string in the background of the media viewer.' )
+            
+            self._hide_uninteresting_local_import_time = QW.QCheckBox( media_canvas_panel )
+            self._hide_uninteresting_local_import_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file was imported at a similar time to when it was added to its current services (i.e. the number of seconds since both events differs by less than 10%), hide the import time in the top of the media viewer.' ) )
+            
+            self._hide_uninteresting_modified_time = QW.QCheckBox( media_canvas_panel )
+            self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (i.e. the number of seconds since both events differs by less than 10%), hide the modified time in the top of the media viewer.' ) )
+            
+            #
+            
+            slideshow_panel = ClientGUICommon.StaticBox( self, 'slideshows' )
             
             self._slideshow_durations = QW.QLineEdit( slideshow_panel )
             self._slideshow_durations.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will end up in the slideshow menu in the media viewer.' ) )
@@ -2493,39 +2506,23 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            filetype_handling_panel = ClientGUICommon.StaticBox( media_viewer_panel, 'media viewer filetype handling' )
-            
-            media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( filetype_handling_panel )
-            
-            self._media_viewer_options = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, 20, data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
-            
-            media_viewer_list_panel.SetListCtrl( self._media_viewer_options )
-            
-            media_viewer_list_panel.AddButton( 'add', self.AddMediaViewerOptions, enabled_check_func = self._CanAddMediaViewOption )
-            media_viewer_list_panel.AddButton( 'edit', self.EditMediaViewerOptions, enabled_only_on_selection = True )
-            media_viewer_list_panel.AddDeleteButton( enabled_check_func = self._CanDeleteMediaViewOptions )
-            
-            #
-            
-            self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
-            self._hide_uninteresting_local_import_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_local_import_time' ) )
-            self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
-            self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
-            self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
-            self._do_icc_profile_normalisation.setChecked( self._new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
-            self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
-            self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
-            self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
-            self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
-            self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
-            self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
             self._animated_scanbar_height.setValue( self._new_options.GetInteger( 'animated_scanbar_height' ) )
             self._animated_scanbar_nub_width.setValue( self._new_options.GetInteger( 'animated_scanbar_nub_width' ) )
             
             self._animated_scanbar_hide_height.SetValue( 5 )
             self._animated_scanbar_hide_height.SetValue( self._new_options.GetNoneableInteger( 'animated_scanbar_hide_height' ) )
             
-            self._media_viewer_zoom_center.SetValue( self._new_options.GetInteger( 'media_viewer_zoom_center' ) )
+            self._draw_tags_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ) )
+            self._draw_top_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ) )
+            self._draw_top_right_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ) )
+            self._draw_notes_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ) )
+            self._draw_bottom_right_index_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ) )
+            self._hide_uninteresting_local_import_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_local_import_time' ) )
+            self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
+            
+            self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
+            self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
+            self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
             
             slideshow_durations = self._new_options.GetSlideshowDurations()
             
@@ -2537,39 +2534,34 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._slideshow_short_duration_cutoff_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_short_duration_cutoff_percentage' ) )
             self._slideshow_long_duration_overspill_percentage.SetValue( self._new_options.GetNoneableInteger( 'slideshow_long_duration_overspill_percentage' ) )
             
-            media_zooms = self._new_options.GetMediaZooms()
-            
-            self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
-            
-            all_media_view_options = self._new_options.GetMediaViewOptions()
-            
-            for ( mime, view_options ) in all_media_view_options.items():
-                
-                data = QP.ListsToTuples( [ mime ] + list( view_options ) )
-                
-                self._media_viewer_options.AddDatas( ( data, ) )
-                
-            
-            self._media_viewer_options.Sort()
-            
-            #
-            
-            vbox = QP.VBoxLayout()
-            
             #
             
             rows = []
             
             rows.append( ( 'Time until mouse cursor autohides on media viewer:', self._media_viewer_cursor_autohide_time_ms ) )
-            rows.append( ( 'Media zooms:', self._media_zooms ) )
-            rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
-            rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
-            rows.append( ( 'Hide uninteresting import times:', self._hide_uninteresting_local_import_time ) )
-            rows.append( ( 'Hide uninteresting modified times:', self._hide_uninteresting_modified_time ) )
+            rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
+            rows.append( ( 'Animation scanbar height when mouse away:', self._animated_scanbar_hide_height ) )
+            rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
             
             media_viewer_gridbox = ClientGUICommon.WrapInGrid( media_viewer_panel, rows )
+            
+            media_viewer_panel.Add( media_viewer_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            rows = []
+            
+            rows.append( ( 'Duplicate tags hover-window information in the background of the viewer:', self._draw_tags_hover_in_media_viewer_background ) )
+            rows.append( ( 'Duplicate top hover-window information in the background of the viewer:', self._draw_top_hover_in_media_viewer_background ) )
+            rows.append( ( 'Duplicate top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
+            rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
+            rows.append( ( 'Draw bottom-right index string in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
+            rows.append( ( 'Hide uninteresting import times:', self._hide_uninteresting_local_import_time ) )
+            rows.append( ( 'Hide uninteresting modified times:', self._hide_uninteresting_modified_time ) )
+            
+            media_canvas_gridbox = ClientGUICommon.WrapInGrid( media_canvas_panel, rows )
+            
+            media_canvas_panel.Add( media_canvas_gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             rows = []
             
@@ -2584,29 +2576,204 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             slideshow_panel.Add( slideshow_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, media_viewer_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, media_canvas_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, slideshow_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+        
+        def EventSlideshowChanged( self, text ):
+            
+            try:
+                
+                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
+                
+                self._slideshow_durations.setObjectName( '' )
+                
+            except ValueError:
+                
+                self._slideshow_durations.setObjectName( 'HydrusInvalid' )
+                
+            
+            self._slideshow_durations.style().polish( self._slideshow_durations )
+            
+            self._slideshow_durations.update()
+            
+            always_once_through = self._slideshow_always_play_duration_media_once_through.isChecked()
+            
+            self._slideshow_long_duration_overspill_percentage.setEnabled( not always_once_through )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'draw_tags_hover_in_media_viewer_background', self._draw_tags_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'draw_top_hover_in_media_viewer_background', self._draw_top_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'draw_top_right_hover_in_media_viewer_background', self._draw_top_right_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'draw_notes_hover_in_media_viewer_background', self._draw_notes_hover_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'draw_bottom_right_index_in_media_viewer_background', self._draw_bottom_right_index_in_media_viewer_background.isChecked() )
+            self._new_options.SetBoolean( 'hide_uninteresting_local_import_time', self._hide_uninteresting_local_import_time.isChecked() )
+            self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
+            
+            self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
+            self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
+            
+            self._new_options.SetNoneableInteger( 'media_viewer_cursor_autohide_time_ms', self._media_viewer_cursor_autohide_time_ms.GetValue() )
+            
+            self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
+            self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )
+            
+            self._new_options.SetNoneableInteger( 'animated_scanbar_hide_height', self._animated_scanbar_hide_height.GetValue() )
+            
+            try:
+                
+                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
+                
+                slideshow_durations = [ slideshow_duration for slideshow_duration in slideshow_durations if slideshow_duration > 0.0 ]
+                
+                if len( slideshow_durations ) > 0:
+                    
+                    self._new_options.SetSlideshowDurations( slideshow_durations )
+                    
+                
+            except ValueError:
+                
+                HydrusData.ShowText( 'Could not parse those slideshow durations, so they were not saved!' )
+                
+            
+            self._new_options.SetBoolean( 'slideshow_always_play_duration_media_once_through', self._slideshow_always_play_duration_media_once_through.isChecked() )
+            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_percentage', self._slideshow_short_duration_loop_percentage.GetValue() )
+            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_seconds', self._slideshow_short_duration_loop_seconds.GetValue() )
+            self._new_options.SetNoneableInteger( 'slideshow_short_duration_cutoff_percentage', self._slideshow_short_duration_cutoff_percentage.GetValue() )
+            self._new_options.SetNoneableInteger( 'slideshow_long_duration_overspill_percentage', self._slideshow_long_duration_overspill_percentage.GetValue() )
+            
+        
+    
+    class _MediaPlaybackPanel( QW.QWidget ):
+        
+        def __init__( self, parent ):
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._new_options = CG.client_controller.new_options
+            
+            #
+            
+            media_panel = ClientGUICommon.StaticBox( self, 'media' )
+            
+            self._animation_start_position = ClientGUICommon.BetterSpinBox( media_panel, min=0, max=100 )
+            
+            self._always_loop_animations = QW.QCheckBox( media_panel )
+            self._always_loop_animations.setToolTip( ClientGUIFunctions.WrapToolTip( 'Some GIFS and APNGs have metadata specifying how many times they should be played, usually 1. Uncheck this to obey that number.' ) )
+            
+            self._draw_transparency_checkerboard_media_canvas = QW.QCheckBox( media_panel )
+            self._draw_transparency_checkerboard_media_canvas.setToolTip( ClientGUIFunctions.WrapToolTip( 'If unchecked, will fill in with the normal background colour. Does not apply to MPV.' ) )
+            
+            self._media_zooms = QW.QLineEdit( media_panel )
+            self._media_zooms.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is a bit hacky, but whatever you have here, in comma-separated floats, will be what the program steps through as you zoom a media up and down.' ) )
+            self._media_zooms.textChanged.connect( self.EventZoomsChanged )
+            
+            from hydrus.client.gui.canvas import ClientGUICanvasMedia
+            
+            self._media_viewer_zoom_center = ClientGUICommon.BetterChoice( media_panel )
+            
+            for zoom_centerpoint_type in ClientGUICanvasMedia.ZOOM_CENTERPOINT_TYPES:
+                
+                self._media_viewer_zoom_center.addItem( ClientGUICanvasMedia.zoom_centerpoints_str_lookup[ zoom_centerpoint_type ], zoom_centerpoint_type )
+                
+            
+            tt = 'When you zoom in or out, there is a centerpoint about which the image zooms. This point \'stays still\' while the image expands or shrinks around it. Different centerpoints give different feels, especially if you drag images around a bit before zooming.'
+            
+            self._media_viewer_zoom_center.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+            
+            #
+            
+            system_panel = ClientGUICommon.StaticBox( self, 'system' )
+            
+            self._mpv_conf_path = QP.FilePickerCtrl( system_panel, starting_directory = os.path.join( HC.STATIC_DIR, 'mpv-conf' ) )
+            
+            self._use_system_ffmpeg = QW.QCheckBox( system_panel )
+            self._use_system_ffmpeg.setToolTip( ClientGUIFunctions.WrapToolTip( 'FFMPEG is used for file import metadata parsing and the native animation viewer. Check this to always default to the system ffmpeg in your path, rather than using the static ffmpeg in hydrus\'s bin directory. (requires restart)' ) )
+            
+            self._load_images_with_pil = QW.QCheckBox( system_panel )
+            self._load_images_with_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'We are expecting to drop CV and move to PIL exclusively. This used to be a test option but is now default true and may soon be retired.' ) )
+            
+            self._do_icc_profile_normalisation = QW.QCheckBox( system_panel )
+            self._do_icc_profile_normalisation.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should PIL attempt to load ICC Profiles and normalise the colours of an image? This is usually fine, but when it janks out due to an additional OS/GPU ICC Profile, we can turn it off here.' ) )
+            
+            self._enable_truncated_images_pil = QW.QCheckBox( system_panel )
+            self._enable_truncated_images_pil.setToolTip( ClientGUIFunctions.WrapToolTip( 'Should PIL be allowed to load broken images that are missing some data? This is usually fine, but some years ago we had stability problems when this was mixed with OpenCV. Now it is default on, but if you need to, you can disable it here.' ) )
+            
+            #
+            
+            filetype_handling_panel = ClientGUICommon.StaticBox( media_panel, 'per-filetype handling' )
+            
+            media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( filetype_handling_panel )
+            
+            self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, 20, data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
+            
+            media_viewer_list_panel.SetListCtrl( self._filetype_handling_listctrl )
+            
+            media_viewer_list_panel.AddButton( 'add', self.AddMediaViewerOptions, enabled_check_func = self._CanAddMediaViewOption )
+            media_viewer_list_panel.AddButton( 'edit', self.EditMediaViewerOptions, enabled_only_on_selection = True )
+            media_viewer_list_panel.AddDeleteButton( enabled_check_func = self._CanDeleteMediaViewOptions )
+            
+            #
+            
+            self._animation_start_position.setValue( int( HC.options['animation_start_position'] * 100.0 ) )
+            self._always_loop_animations.setChecked( self._new_options.GetBoolean( 'always_loop_gifs' ) )
+            self._draw_transparency_checkerboard_media_canvas.setChecked( self._new_options.GetBoolean( 'draw_transparency_checkerboard_media_canvas' ) )
+            
+            media_zooms = self._new_options.GetMediaZooms()
+            
+            self._media_zooms.setText( ','.join( ( str( media_zoom ) for media_zoom in media_zooms ) ) )
+            
+            self._media_viewer_zoom_center.SetValue( self._new_options.GetInteger( 'media_viewer_zoom_center' ) )
+            
+            self._load_images_with_pil.setChecked( self._new_options.GetBoolean( 'load_images_with_pil' ) )
+            self._enable_truncated_images_pil.setChecked( self._new_options.GetBoolean( 'enable_truncated_images_pil' ) )
+            self._do_icc_profile_normalisation.setChecked( self._new_options.GetBoolean( 'do_icc_profile_normalisation' ) )
+            self._use_system_ffmpeg.setChecked( self._new_options.GetBoolean( 'use_system_ffmpeg' ) )
+            
+            all_media_view_options = self._new_options.GetMediaViewOptions()
+            
+            for ( mime, view_options ) in all_media_view_options.items():
+                
+                data = QP.ListsToTuples( [ mime ] + list( view_options ) )
+                
+                self._filetype_handling_listctrl.AddDatas( ( data, ) )
+                
+            
+            self._filetype_handling_listctrl.Sort()
+            
+            #
+            
+            vbox = QP.VBoxLayout()
+            
+            #
+            
             filetype_handling_panel.Add( media_viewer_list_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            media_viewer_panel.Add( media_viewer_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            media_viewer_panel.Add( slideshow_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            media_viewer_panel.Add( filetype_handling_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            QP.AddToLayout( vbox, media_viewer_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
             
             rows = []
             
-            rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
-            rows.append( ( 'Animation scanbar height when mouse away:', self._animated_scanbar_hide_height ) )
-            rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
+            rows.append( ( 'Centerpoint for media zooming:', self._media_viewer_zoom_center ) )
+            rows.append( ( 'Media zooms:', self._media_zooms ) )
             rows.append( ( 'Start animations this % in:', self._animation_start_position ) )
             rows.append( ( 'Always Loop GIFs/APNGs:', self._always_loop_animations ) )
+            rows.append( ( 'Draw image transparency as checkerboard:', self._draw_transparency_checkerboard_media_canvas ) )
             
-            gridbox = ClientGUICommon.WrapInGrid( animations_panel, rows )
+            gridbox = ClientGUICommon.WrapInGrid( media_panel, rows )
             
-            animations_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            QP.AddToLayout( vbox, animations_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            media_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            media_panel.Add( filetype_handling_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             #
             
@@ -2622,6 +2789,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             system_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
+            QP.AddToLayout( vbox, media_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( vbox, system_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
@@ -2640,7 +2808,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             selected_mimes = set()
             
-            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._media_viewer_options.GetData( only_selected = True ):
+            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._filetype_handling_listctrl.GetData( only_selected = True ):
                 
                 selected_mimes.add( mime )
                 
@@ -2659,7 +2827,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             general_mime_type = HC.mimes_to_general_mimetypes[ desired_mime ]
             
-            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._media_viewer_options.GetData():
+            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._filetype_handling_listctrl.GetData():
                 
                 if mime == general_mime_type:
                     
@@ -2676,7 +2844,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             set_mimes = set()
             
-            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._media_viewer_options.GetData():
+            for ( mime, media_show_action, media_start_paused, media_start_with_embed, preview_show_action, preview_start_paused, preview_start_with_embed, zoom_info ) in self._filetype_handling_listctrl.GetData():
                 
                 set_mimes.add( mime )
                 
@@ -2781,14 +2949,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     new_data = panel.GetValue()
                     
-                    self._media_viewer_options.AddDatas( ( new_data, ) )
+                    self._filetype_handling_listctrl.AddDatas( ( new_data, ) )
                     
                 
             
         
         def EditMediaViewerOptions( self ):
             
-            for data in self._media_viewer_options.GetData( only_selected = True ):
+            for data in self._filetype_handling_listctrl.GetData( only_selected = True ):
                 
                 title = 'edit media view options information'
                 
@@ -2802,32 +2970,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         new_data = panel.GetValue()
                         
-                        self._media_viewer_options.ReplaceData( data, new_data )
+                        self._filetype_handling_listctrl.ReplaceData( data, new_data )
                         
                     
                 
-            
-        
-        def EventSlideshowChanged( self, text ):
-            
-            try:
-                
-                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
-                
-                self._slideshow_durations.setObjectName( '' )
-                
-            except ValueError:
-                
-                self._slideshow_durations.setObjectName( 'HydrusInvalid' )
-                
-            
-            self._slideshow_durations.style().polish( self._slideshow_durations )
-            
-            self._slideshow_durations.update()
-            
-            always_once_through = self._slideshow_always_play_duration_media_once_through.isChecked()
-            
-            self._slideshow_long_duration_overspill_percentage.setEnabled( not always_once_through )
             
         
         def EventZoomsChanged( self, text ):
@@ -2851,19 +2997,31 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         def UpdateOptions( self ):
             
             HC.options[ 'animation_start_position' ] = self._animation_start_position.value() / 100.0
+            self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
+            self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
             
-            self._new_options.SetBoolean( 'hide_uninteresting_local_import_time', self._hide_uninteresting_local_import_time.isChecked() )
-            self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
+            try:
+                
+                media_zooms = [ float( media_zoom ) for media_zoom in self._media_zooms.text().split( ',' ) ]
+                
+                media_zooms = [ media_zoom for media_zoom in media_zooms if media_zoom > 0.0 ]
+                
+                if len( media_zooms ) > 0:
+                    
+                    self._new_options.SetMediaZooms( media_zooms )
+                    
+                
+            except ValueError:
+                
+                HydrusData.ShowText( 'Could not parse those zooms, so they were not saved!' )
+                
+            
+            self._new_options.SetInteger( 'media_viewer_zoom_center', self._media_viewer_zoom_center.GetValue() )
+            
             self._new_options.SetBoolean( 'load_images_with_pil', self._load_images_with_pil.isChecked() )
             self._new_options.SetBoolean( 'enable_truncated_images_pil', self._enable_truncated_images_pil.isChecked() )
             self._new_options.SetBoolean( 'do_icc_profile_normalisation', self._do_icc_profile_normalisation.isChecked() )
             self._new_options.SetBoolean( 'use_system_ffmpeg', self._use_system_ffmpeg.isChecked() )
-            self._new_options.SetBoolean( 'always_loop_gifs', self._always_loop_animations.isChecked() )
-            self._new_options.SetBoolean( 'draw_transparency_checkerboard_media_canvas', self._draw_transparency_checkerboard_media_canvas.isChecked() )
-            self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
-            self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
-            
-            self._new_options.SetNoneableInteger( 'media_viewer_cursor_autohide_time_ms', self._media_viewer_cursor_autohide_time_ms.GetValue() )
             
             mpv_conf_path = self._mpv_conf_path.GetPath()
             
@@ -2882,54 +3040,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            self._new_options.SetInteger( 'animated_scanbar_height', self._animated_scanbar_height.value() )
-            self._new_options.SetInteger( 'animated_scanbar_nub_width', self._animated_scanbar_nub_width.value() )
-            
-            self._new_options.SetNoneableInteger( 'animated_scanbar_hide_height', self._animated_scanbar_hide_height.GetValue() )
-            
-            self._new_options.SetInteger( 'media_viewer_zoom_center', self._media_viewer_zoom_center.GetValue() )
-            
-            try:
-                
-                slideshow_durations = [ float( slideshow_duration ) for slideshow_duration in self._slideshow_durations.text().split( ',' ) ]
-                
-                slideshow_durations = [ slideshow_duration for slideshow_duration in slideshow_durations if slideshow_duration > 0.0 ]
-                
-                if len( slideshow_durations ) > 0:
-                    
-                    self._new_options.SetSlideshowDurations( slideshow_durations )
-                    
-                
-            except ValueError:
-                
-                HydrusData.ShowText( 'Could not parse those slideshow durations, so they were not saved!' )
-                
-            
-            self._new_options.SetBoolean( 'slideshow_always_play_duration_media_once_through', self._slideshow_always_play_duration_media_once_through.isChecked() )
-            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_percentage', self._slideshow_short_duration_loop_percentage.GetValue() )
-            self._new_options.SetNoneableInteger( 'slideshow_short_duration_loop_seconds', self._slideshow_short_duration_loop_seconds.GetValue() )
-            self._new_options.SetNoneableInteger( 'slideshow_short_duration_cutoff_percentage', self._slideshow_short_duration_cutoff_percentage.GetValue() )
-            self._new_options.SetNoneableInteger( 'slideshow_long_duration_overspill_percentage', self._slideshow_long_duration_overspill_percentage.GetValue() )
-            
-            try:
-                
-                media_zooms = [ float( media_zoom ) for media_zoom in self._media_zooms.text().split( ',' ) ]
-                
-                media_zooms = [ media_zoom for media_zoom in media_zooms if media_zoom > 0.0 ]
-                
-                if len( media_zooms ) > 0:
-                    
-                    self._new_options.SetMediaZooms( media_zooms )
-                    
-                
-            except ValueError:
-                
-                HydrusData.ShowText( 'Could not parse those zooms, so they were not saved!' )
-                
-            
             mimes_to_media_view_options = {}
             
-            for data in self._media_viewer_options.GetData():
+            for data in self._filetype_handling_listctrl.GetData():
                 
                 data = list( data )
                 
@@ -3819,6 +3932,12 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            help_text = 'Hey, there are several colours, mostly for custom widgets, not set here. Check the "colours" page out!'
+            
+            self._help_label = ClientGUICommon.BetterStaticText( self, label = help_text )
+            
+            self._help_label.setObjectName( 'HydrusWarning' )
+            
             self._qt_style_name = ClientGUICommon.BetterChoice( self )
             self._qt_stylesheet_name = ClientGUICommon.BetterChoice( self )
             
@@ -3860,6 +3979,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             vbox = QP.VBoxLayout()
             
             #
+            
+            QP.AddToLayout( vbox, self._help_label, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             text = 'The current styles are what your Qt has available, the stylesheets are what .css and .qss files are currently in install_dir/static/qss.'
             text += '\n' * 2
@@ -4117,7 +4238,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._num_to_show_in_ac_dropdown_children_tab = ClientGUICommon.NoneableSpinCtrl( children_panel, none_phrase = 'show all', min = 1 )
             tt = 'The "children" tab will show children of the current tag context (usually the list of tags above the autocomplete), ordered by file count. This can quickly get spammy, so I recommend you cull it to a reasonable size.'
             self._num_to_show_in_ac_dropdown_children_tab.setToolTip( tt )
-            self._num_to_show_in_ac_dropdown_children_tab.SetValue( 20 ) # init default
+            self._num_to_show_in_ac_dropdown_children_tab.SetValue( 40 ) # init default
             
             #
             

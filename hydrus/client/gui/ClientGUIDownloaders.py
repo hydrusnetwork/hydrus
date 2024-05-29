@@ -1316,7 +1316,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         parameters = url_class.GetParameters()
         api_lookup_converter = url_class.GetAPILookupConverter()
         ( send_referral_url, referral_url_converter ) = url_class.GetReferralURLInfo()
-        example_url = url_class.GetExampleURL()
+        example_url = url_class.GetExampleURL( encoded = False )
         
         self._notebook = ClientGUICommon.BetterNotebook( self )
         

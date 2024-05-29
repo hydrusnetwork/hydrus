@@ -171,6 +171,15 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         return table_dict
         
     
+    def _GetServiceTablePrefixes( self ):
+        
+        return {
+            ClientDBMappingsStorage.SPECIFIC_MAPPINGS_CURRENT_PREFIX,
+            ClientDBMappingsStorage.SPECIFIC_MAPPINGS_DELETED_PREFIX,
+            ClientDBMappingsStorage.SPECIFIC_MAPPINGS_PENDING_PREFIX
+        }
+        
+    
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
         return self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )

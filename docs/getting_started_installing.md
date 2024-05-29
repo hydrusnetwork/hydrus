@@ -133,30 +133,25 @@ To run the client:
 
 Although I put out a new version every week, you can update far less often if you prefer. The client keeps to itself, so if it does exactly what you want and a new version does nothing you care about, you can just leave it. Other users enjoy updating every week, simply because it makes for a nice schedule. Others like to stay a week or two behind what is current, just in case I mess up and cause a temporary bug in something they like.
 
-A user has written a longer and more formal guide to updating, and information on the 334->335 step (python2 to python3) [here](update_guide.rtf).
-
-??? note "The 526->527 step was also important."
-    527 changed the program executable name from 'client' to 'hydrus_client'. There was also a library update that caused a dll conflict with previous installs.
-    
-    If you need to update from 526 or before, then:
-    
-    * If you use the Windows installer, install as normal. Your start menu 'hydrus client' shortcut should be overwritten with one to the new executable, but if you use a custom shortcut, you will need to update that too.
-    * If you use one of the normal extract builds, you will have to do a 'clean install', as below. You also need to update your program shortcuts.
-    * If you use the macOS app, there are no special instructions. Update as normal.
-    * If you run from source, `git pull` as normal. If you haven't already, feel free to run setup_venv again to get the new OpenCV. Update your launch scripts to point at the new `hydrus_client.py` boot scripts.
-
 The update process:
 
-*   If the client is running, close it!
-*   If you maintain a backup, run it now!
-*   If you use the installer, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.
-*   If you extract, then just extract the new version right on top of your current install and overwrite manually. *It is wise to extract it straight from the archive to your install folder.*
-*   Start your client or server. It may take a few minutes to update its database. I will say in the release post if it is likely to take longer.
+* If the client is running, close it!
+* If you maintain a backup, run it now!
+* Update your install:
+    1. **If you use the installer**, just download the new installer and run it. It should detect where the last install was and overwrite everything automatically.
+    2. **If you use the extract**, then just extract the new version right on top of your current install and overwrite manually. *It is wise to extract it straight from the archive to your install folder.*
+    3. **If you use the macOS App**, just drag and drop from the dmg to your Applications as normal.
+    4. **If you run from source**, then run `git pull` as normal.
+* Start your client or server. It may take a few minutes to update its database. I will say in the release post if it is likely to take longer.
+
+A user has written a longer and more formal guide to updating [here](update_guide.rtf).
 
 ??? warning "Be extremely careful making test runs of the Extract release"
     **Do not test-run the extract before copying it over your install!** Running the program anywhere will create database files in the /db/ dir, and if you then copy that once-run folder on top of your real install, you will overwrite your real database! <span class="spoiler">Of course it doesn't really matter, because you made a full backup before you started, right? :^)</span>
     
     If you need to perform tests of an update, make sure you have a good backup before you start and then remember to delete any functional test extracts before extracting from the original archive once more for the actual 'install'.
+
+**Several older versions, like 334, 526, and 570 have [special update instructions](#big_updates).**
 
 Unless the update specifically disables or reconfigures something, all your files and tags and settings will be remembered after the update.
 
@@ -166,7 +161,7 @@ Clients and servers of different versions can usually connect to one another, bu
 
 ## Clean installs
 
-**This is usually only relevant if you know you have a dll conflict or otherwise update and cannot boot at all. It usually only applies to Windows or Linux users who manually update using the 'Extract' releases.**
+**This is usually only relevant if you use the extract release and have a dll conflict or otherwise update and cannot boot at all. A handful of hydrus updates through its history have needed this.**
 
 Very rarely, hydrus needs a clean install. This can be due to a special update like when we moved from 32-bit to 64-bit or needing to otherwise 'reset' a custom install situation. The problem is usually that a library file has been renamed in a new version and hydrus has trouble figuring out whether to use the older one (from a previous version) or the newer.
 
@@ -181,17 +176,58 @@ However, you need to be careful not to delete your database! It sounds silly, bu
 
 After that, you'll have a 'clean' version of hydrus that only has the latest version's dlls. If hydrus still will not boot, I recommend you roll back to your last working backup and let me, hydrus dev, know what your error is.
 
-*Note that macOS App users will not ever have to do a clean install because every App is self-contained and non-merging with previous Apps. Source users similarly do not have to worry about this issue, although if they update their system python, they'll want to recreate their venv. Windows Installer users basically get a clean install every time, so they don't have to worry about this.*
+*Note that macOS App users will not ever have to do a clean install because every App is self-contained and non-merging with previous Apps. Source users similarly do not have to worry about this issue, although if they update their system python, they'll want to recreate their venv. Windows Installer users basically get a clean install every time, so they shouldn't have to worry about this.*
 
-## Big updates
+## Big updates { id="big_updates" }
 
-If you have not updated in some time--say twenty versions or more--doing it all in one jump, like v250->v290, is likely not going to work. I am doing a lot of unusual stuff with hydrus, change my code at a fast pace, and do not have a ton of testing in place. Hydrus update code often falls to [bitrot](https://en.wikipedia.org/wiki/Software_rot), and so some underlying truth I assumed for the v255->v256 code may not still apply six months later. If you try to update more than 50 versions at once (i.e. trying to perform more than a year of updates in one go), the client will give you a polite error rather than even try.
+If you have not updated in some time--say twenty versions or more--doing it all in one jump, like v290->v330, may not work. I am doing a lot of unusual stuff with hydrus, change my code at a fast pace, and do not have a ton of testing in place. Hydrus update code often falls to [bitrot](https://en.wikipedia.org/wiki/Software_rot), and so some underlying truth I assumed for the v299->v300 code may not still apply six months later. If you try to update more than 50 versions at once (i.e. trying to perform more than a year of updates in one go), the client will give you a polite error rather than even try.
 
-As a result, if you get a failure on trying to do a big update, try cutting the distance in half--try v270 first, and then if that works, try v270->v290. If it doesn't, try v260, and so on.
+As a result, if you get a failure on trying to do a big update, try cutting the distance in half--try v290->v310 first, and boot it. If the database updates correctly and the program boots, then shut down and move on to v310->v330. If the update does not work, cut down the gap and try v290->v300, and so on. **Again, it is very important you make a backup before starting a process like this so you can roll back and try a different version if things go wrong.**
 
-If you narrow the gap down to just one version and still get an error, please let me know. I am very interested in these sorts of problems and will be happy to help figure out a fix with you (and everyone else who might be affected).
+If you narrow the gap down to just one version and still get an error, please let me know. If the problem is ever quick to appear and ugly/serious-looking, and perhaps talking about a "bootloader" or "dll" issue, then try doing a clean install as above. I am very interested in these sorts of problems and will be happy to help figure out a fix with you (and everyone else who might be affected).
 
-_All that said, and while updating is complex and every client is different, various user reports over the years suggest this route works and is efficient: 204 > 238 > 246 > 291 > 328 > 335 > 376 > 421 > 466 > 474 > 480 > 521 > 527 (clean install) > 535 > 558 > 571 (clean install)_ 
+_All that said, and while updating is complex and every client is different, various user reports over the years suggest this route works and is efficient: 204 > 238 > 246 > 291 > 328 > 335 (clean install) > 376 > 421 > 466 (clean install) > 474 > 480 > 521 (maybe clean install) > 527 (special clean install) > 535 > 558 > 571 (clean install)_ 
+
+??? note "334->335"
+    We moved from python 2 to python 3.
+        
+    If you need to update from 334 or before to 335 or later, then:
+    
+    * If you use the Windows installer, install as normal.
+    * If you use one of the normal extract builds, you will have to do a 'clean install', as above.
+    * If you use the macOS app, there are no special instructions. Update as normal.
+    * If you run from source, there are no special instructions. Update as normal.
+    
+
+??? note "427->428"
+    Some new dlls cause a potential conflict.
+    
+    If you need to update from 427 or before to 428 or later, then:
+    
+    * If you use the Windows installer, install as normal.
+    * If you use one of the normal extract builds, you will have to do a 'clean install', as above.
+    * If you use the macOS app, there are no special instructions. Update as normal.
+    * If you run from source, there are no special instructions. Update as normal.
+
+??? note "526->527"
+    527 changed the program executable name from 'client' to 'hydrus_client'. There was also a library update that caused a dll conflict with previous installs.
+    
+    If you need to update from 526 or before to 527 or later, then:
+    
+    * If you use the Windows installer, install as normal. Your start menu 'hydrus client' shortcut should be overwritten with one to the new executable, but if you use a custom shortcut, you will need to update that too.
+    * If you use one of the normal extract builds, you will have to do a 'clean install', as above.
+    * If you use the macOS app, there are no special instructions. Update as normal.
+    * If you run from source, `git pull` as normal. If you haven't already, feel free to run setup_venv again to get the new OpenCV. Update your launch scripts to point at the new `hydrus_client.py` boot scripts.
+
+??? note "570->571"
+    571 updated the python version, which caused a dll conflict with previous installs.
+    
+    If you need to update from 570 or before to 571 or later, then:
+    
+    * If you use the Windows installer, install as normal.
+    * If you use one of the normal extract builds, you will have to do a 'clean install', as above.
+    * If you use the macOS app, there are no special instructions. Update as normal.
+    * If you run from source, there are no special instructions. Update as normal.
 
 ## Backing up
 

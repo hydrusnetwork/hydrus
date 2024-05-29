@@ -1,3 +1,4 @@
+# noinspection PyUnresolvedReferences
 from win32com.shell import shell, shellcon
 
 def OpenFileProperties( path: str ):

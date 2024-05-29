@@ -406,10 +406,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             
             table_names = self._STS( self._Execute( 'SELECT name FROM {}.sqlite_master WHERE type = ?;'.format( db_name ), ( 'table', ) ) )
             
-            if db_name != 'main':
-                
-                table_names = { f'{db_name}.{table_name}' for table_name in table_names }
-                
+            table_names = { f'{db_name}.{table_name}' for table_name in table_names }
             
             all_table_names.update( table_names )
             
@@ -430,9 +427,9 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
         
         for table_name in all_surplus_table_names:
             
-            HydrusData.ShowText( f'Dropping {table_name}' )
+            HydrusData.ShowText( f'Cleared orphan table "{table_name}"' )
             
-            self._Execute( f'DROP table {table_name};' )
+            self.DeferredDropTable( table_name )
             
         
     

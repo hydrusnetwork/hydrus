@@ -1647,7 +1647,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             self._currently_testing = False
             
         
-        def do_it( login_script, domain, credentials, network_job_presentation_context_factory ):
+        def do_it( login_script: ClientNetworkingLogin.LoginScriptDomain, domain, credentials, network_job_presentation_context_factory ):
             
             login_result = 'login did not finish'
             

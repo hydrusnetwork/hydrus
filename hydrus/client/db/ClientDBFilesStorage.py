@@ -17,17 +17,22 @@ from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBModule
 from hydrus.client.db import ClientDBServices
 
+FILES_CURRENT_PREFIX = 'current_files_'
+FILES_DELETED_PREFIX = 'deleted_files_'
+FILES_PENDING_PREFIX = 'pending_files_'
+FILES_PETITIONED_PREFIX = 'petitioned_files_'
+
 def GenerateFilesTableNames( service_id: int ) -> typing.Tuple[ str, str, str, str ]:
     
     suffix = str( service_id )
     
-    current_files_table_name = 'main.current_files_{}'.format( suffix )
+    current_files_table_name = f'main.{FILES_CURRENT_PREFIX}{suffix}'
     
-    deleted_files_table_name = 'main.deleted_files_{}'.format( suffix )
+    deleted_files_table_name = f'main.{FILES_DELETED_PREFIX}{suffix}'
     
-    pending_files_table_name = 'main.pending_files_{}'.format( suffix )
+    pending_files_table_name = f'main.{FILES_PENDING_PREFIX}{suffix}'
     
-    petitioned_files_table_name = 'main.petitioned_files_{}'.format( suffix )
+    petitioned_files_table_name = f'main.{FILES_PETITIONED_PREFIX}{suffix}'
     
     return ( current_files_table_name, deleted_files_table_name, pending_files_table_name, petitioned_files_table_name )
     
@@ -296,6 +301,16 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):
         
         return self.modules_services.GetServiceIds( HC.REAL_FILE_SERVICES )
+        
+    
+    def _GetServiceTablePrefixes( self ):
+        
+        return {
+            FILES_CURRENT_PREFIX,
+            FILES_DELETED_PREFIX,
+            FILES_PENDING_PREFIX,
+            FILES_PETITIONED_PREFIX
+        }
         
     
     def _GetTimestampMS( self, service_id: int, timestamp_type: int, hash_id: int ) -> typing.Optional[ int ]:

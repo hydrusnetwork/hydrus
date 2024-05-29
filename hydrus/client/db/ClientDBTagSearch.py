@@ -41,91 +41,84 @@ def ConvertWildcardToSQLiteLikeParameter( wildcard ):
     return like_param
     
 
+COMBINED_INTEGER_SUBTAGS_PREFIX = 'combined_files_integer_subtags_cache_'
+COMBINED_SUBTAGS_FTS4_PREFIX = 'combined_files_subtags_fts4_cache_'
+COMBINED_SUBTAGS_SEARCHABLE_MAP_PREFIX = 'combined_files_subtags_searchable_map_cache_'
+COMBINED_TAGS_PREFIX = 'combined_files_tags_cache_'
+
+SPECIFIC_INTEGER_SUBTAGS_PREFIX = 'specific_integer_subtags_cache_'
+SPECIFIC_SUBTAGS_FTS4_PREFIX = 'specific_subtags_fts4_cache_'
+SPECIFIC_SUBTAGS_SEARCHABLE_MAP_PREFIX = 'specific_subtags_searchable_map_cache_'
+SPECIFIC_TAGS_PREFIX = 'specific_tags_cache_'
+
 def GenerateCombinedFilesIntegerSubtagsTableName( tag_service_id ):
     
-    name = 'combined_files_integer_subtags_cache'
+    suffix = tag_service_id
     
-    integer_subtags_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
+    integer_subtags_table_name = f'external_caches.{COMBINED_INTEGER_SUBTAGS_PREFIX}{suffix}'
     
     return integer_subtags_table_name
     
 
 def GenerateCombinedFilesSubtagsFTS4TableName( tag_service_id ):
     
-    name = 'combined_files_subtags_fts4_cache'
+    suffix = tag_service_id
     
-    subtags_fts4_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
+    subtags_fts4_table_name = f'external_caches.{COMBINED_SUBTAGS_FTS4_PREFIX}{suffix}'
     
     return subtags_fts4_table_name
     
 
 def GenerateCombinedFilesSubtagsSearchableMapTableName( tag_service_id ):
     
-    name = 'combined_files_subtags_searchable_map_cache'
+    suffix = tag_service_id
     
-    subtags_searchable_map_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
+    subtags_searchable_map_table_name = f'external_caches.{COMBINED_SUBTAGS_SEARCHABLE_MAP_PREFIX}{suffix}'
     
     return subtags_searchable_map_table_name
     
 
 def GenerateCombinedFilesTagsTableName( tag_service_id ):
     
-    name = 'combined_files_tags_cache'
+    suffix = tag_service_id
     
-    tags_table_name = 'external_caches.{}_{}'.format( name, tag_service_id )
-    
-    return tags_table_name
-    
-
-def GenerateCombinedTagsTagsTableName( file_service_id ):
-    
-    name = 'combined_tags_tags_cache'
-    
-    tags_table_name = 'external_caches.{}_{}'.format( name, file_service_id )
+    tags_table_name = f'external_caches.{COMBINED_TAGS_PREFIX}{suffix}'
     
     return tags_table_name
     
 
 def GenerateSpecificIntegerSubtagsTableName( file_service_id, tag_service_id ):
     
-    name = 'specific_integer_subtags_cache'
-    
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    integer_subtags_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    integer_subtags_table_name = f'external_caches.{SPECIFIC_INTEGER_SUBTAGS_PREFIX}{suffix}'
     
     return integer_subtags_table_name
     
 
 def GenerateSpecificSubtagsFTS4TableName( file_service_id, tag_service_id ):
     
-    name = 'specific_subtags_fts4_cache'
-    
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    subtags_fts4_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    subtags_fts4_table_name = f'external_caches.{SPECIFIC_SUBTAGS_FTS4_PREFIX}{suffix}'
     
     return subtags_fts4_table_name
     
 
 def GenerateSpecificSubtagsSearchableMapTableName( file_service_id, tag_service_id ):
     
-    name = 'specific_subtags_searchable_map_cache'
-    
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    subtags_searchable_map_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    subtags_searchable_map_table_name = f'external_caches.{SPECIFIC_SUBTAGS_SEARCHABLE_MAP_PREFIX}{suffix}'
     
     return subtags_searchable_map_table_name
     
 
 def GenerateSpecificTagsTableName( file_service_id, tag_service_id ):
     
-    name = 'specific_tags_cache'
-    
     suffix = '{}_{}'.format( file_service_id, tag_service_id )
     
-    tags_table_name = 'external_caches.{}_{}'.format( name, suffix )
+    tags_table_name = f'external_caches.{SPECIFIC_TAGS_PREFIX}{suffix}'
     
     return tags_table_name
     
@@ -246,6 +239,19 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
             
         
         return table_dict
+        
+    
+    def _GetServiceTablePrefixes( self ):
+        
+        # do not add the fts4 guys to this, since that already uses a bunch of different suffixes for its own virtual sub-tables and it all gets wrapped up false-positive in our tests!
+        return {
+            COMBINED_TAGS_PREFIX,
+            COMBINED_SUBTAGS_SEARCHABLE_MAP_PREFIX,
+            COMBINED_INTEGER_SUBTAGS_PREFIX,
+            SPECIFIC_TAGS_PREFIX,
+            SPECIFIC_SUBTAGS_SEARCHABLE_MAP_PREFIX,
+            SPECIFIC_INTEGER_SUBTAGS_PREFIX
+        }
         
     
     def _GetServiceIdsWeGenerateDynamicTablesFor( self ):

@@ -31,10 +31,15 @@ def GenerateTagSiblingsLookupCacheTableName( display_type: int, service_id: int 
         
     
 
+TAG_SIBLINGS_IDEAL_PREFIX = 'ideal_tag_siblings_lookup_cache_'
+TAG_SIBLINGS_ACTUAL_PREFIX = 'actual_tag_siblings_lookup_cache_'
+
 def GenerateTagSiblingsLookupCacheTableNames( service_id ):
     
-    cache_ideal_tag_siblings_lookup_table_name = 'external_caches.ideal_tag_siblings_lookup_cache_{}'.format( service_id )
-    cache_actual_tag_siblings_lookup_table_name = 'external_caches.actual_tag_siblings_lookup_cache_{}'.format( service_id )
+    suffix = service_id
+    
+    cache_ideal_tag_siblings_lookup_table_name = f'external_caches.{TAG_SIBLINGS_IDEAL_PREFIX}{suffix}'
+    cache_actual_tag_siblings_lookup_table_name = f'external_caches.{TAG_SIBLINGS_ACTUAL_PREFIX}{suffix}'
     
     return ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name )
     
@@ -125,6 +130,14 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return {
             cache_actual_tag_siblings_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );', 414 ),
             cache_ideal_tag_siblings_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );', 414 )
+        }
+        
+    
+    def _GetServiceTablePrefixes( self ):
+        
+        return {
+            TAG_SIBLINGS_IDEAL_PREFIX,
+            TAG_SIBLINGS_ACTUAL_PREFIX
         }
         
     

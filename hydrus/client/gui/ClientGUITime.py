@@ -707,7 +707,7 @@ class DateTimesCtrl( QW.QWidget ):
         self._copy_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Copy timestamp to the clipboard.' ) )
         
         self._paste_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().paste, self._Paste )
-        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste timestamp from another datetime widget.' ) )
+        self._paste_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Paste a timestamp. Needs to be a simple string but can handle pretty much anything.' ) )
         
         #
         
@@ -828,21 +828,57 @@ class DateTimesCtrl( QW.QWidget ):
             return
             
         
+        timestamp = None
+        timestamp_set = False
+        
+        if not timestamp_set:
+            
+            try:
+                
+                timestamp = json.loads( raw_text )
+                
+                timestamp_set = True
+                
+                if isinstance( timestamp, str ):
+                    
+                    try:
+                        
+                        timestamp = float( timestamp )
+                        
+                    except ValueError:
+                        
+                        raise Exception( 'Does not look like a number!' )
+                        
+                    
+                
+            except:
+                
+                pass
+                
+            
+        
+        if not timestamp_set:
+            
+            try:
+                
+                timestamp = ClientTime.ParseDate( raw_text )
+                
+                timestamp_set = True
+                
+            except:
+                
+                pass
+                
+            
+        
+        if not timestamp_set:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, f'Sorry, I did not understand that! I am looking for a simple timestamp integer or parseable datestring, but I got:\n\n{raw_text}' )
+            
+            return
+            
+        
         try:
-            
-            timestamp = json.loads( raw_text )
-            
-            if isinstance( timestamp, str ):
-                
-                try:
-                    
-                    timestamp = float( timestamp )
-                    
-                except ValueError:
-                    
-                    raise Exception( 'Does not look like a number!' )
-                    
-                
             
             looks_good = timestamp is None or isinstance( timestamp, ( int, float ) )
             
@@ -866,7 +902,7 @@ class DateTimesCtrl( QW.QWidget ):
             
         except Exception as e:
             
-            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'A simple integer timestamp', e )
+            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'A parseable timestamp string', e )
             
             return
             

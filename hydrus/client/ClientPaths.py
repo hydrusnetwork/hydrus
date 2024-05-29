@@ -2,6 +2,7 @@ import typing
 import webbrowser
 
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
 from hydrus.core import HydrusPaths
 
 from hydrus.client import ClientGlobals as CG
@@ -19,7 +20,15 @@ except:
 
 if HC.PLATFORM_WINDOWS:
     
-    from hydrus.client import ClientWindowsIntegration
+    try:
+        
+        from hydrus.client import ClientWindowsIntegration
+        
+    except Exception as e:
+        
+        HydrusData.Print( 'Could not import ClientWindowsIntegration--maybe you need PyWin32 in your venv?' )
+        HydrusData.PrintException( e, do_wait = False )
+        
     
 
 CAN_OPEN_FILE_LOCATION = HC.PLATFORM_WINDOWS or HC.PLATFORM_MACOS or ( HC.PLATFORM_LINUX and SHOW_IN_FILE_MANAGER_OK )

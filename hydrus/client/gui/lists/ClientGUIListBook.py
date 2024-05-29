@@ -85,7 +85,7 @@ class ListBook( QW.QWidget ):
         self.update()
         
     
-    def AddPage( self, display_name, key, page, select = False ):
+    def AddPage( self, display_name, key, page, select = False, do_sort = True ):
         
         if self.HasKey( key ):
             
@@ -108,7 +108,10 @@ class ListBook( QW.QWidget ):
         
         self._list_box.Append( display_name, key, select = select )
         
-        self._list_box.sortItems()
+        if do_sort:
+            
+            self._list_box.sortItems()
+            
         
         if select:
             
