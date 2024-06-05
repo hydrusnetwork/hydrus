@@ -35,6 +35,30 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_578"><a href="#version_578">version 578</a></h2>
+                    <ul>
+                        <li><h3>animated webp</h3></li>
+                        <li>we now have animated webp support! despite many libraries having trouble with this, it turns out that modern PIL can decode and render them. I have figured out a solution using my old native gif renderer, so webps will now play in the program</li>
+                        <li>I'm going the same route as gifs and (a)pngs--the program now tracks 'webp' vs 'animated webp' as different filetypes. all your image webps will be queued for a scan on update, and any with animation will become the new type, with num frames and duration, and will be fully viewable in the media viewer</li>
+                        <li>I don't know when PIL added this tech, so if you are a source user and haven't rebuilt your venv in a while, this is probably a good time!</li>
+                        <li><h3>misc</h3></li>
+                        <li>the five new 'draw hover-window text in the background of media viewer' options are now copied to the media viewer itself, under a new 'eye' icon menu button. I'll be hanging more stuff off here, like 'always on top' in future!</li>
+                        <li>the 'known urls' media submenu is now just 'urls', and it now has A) the 'manage' command, moved from the manage menu and B) 'open in a new page' for the focused file's specific URLs or 'any of them' (i.e. it opens a new search page with 'system:known url=blah', so if you need to find which files share a URL, it is now just one click</li>
+                        <li>fixed the gelbooru 0.2.5 post parser's fetching of multiple source urls. it was not splitting them correctly due to a (recent?) change on gelbooru's end and adding unhelpful `https://gelbooru.com/%7C` gumpf as an additional source url</li>
+                        <li>added a 'network report mode (silent)' to the `help-&gt;debug` menu, which does everything the network report mode does but with silent logging rather than a million popups. should help with longer-term debugging</li>
+                        <li>fixed an issue with fetching gif variable framerate timings in the native renderer</li>
+                        <li>added variable framerate tech to the native renderer for all animation types PIL can figure out except apng (previously it could only do it for gif)</li>
+                        <li>tightened up some of the file metadata checks. apng is now scanned for exif data, the HEIF types are now scanned for transparency. these jobs are also queued up on update</li>
+                        <li>the media viewer's top hover's center buttons (usually inbox/delete stuff) are finally centered correctly, aligned with the text below. apologies for the delay; it took several years of under-waterfall mediation to gather enough chi, but I finally have a beginner's understanding of `QSizePolicy.Expanding`</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>fixed some more long tooltips to wrap into nice newlines</li>
+                        <li>converted the 'manage urls' dialog to the decoupled 'edit' paradigm</li>
+                        <li>refactored most of the 'scrolling panel' code to a new `gui.panels` module</li>
+                        <li>broke up some of the bloated scrolling panel code into smaller files, moved Migrate Tags and Edit Timestamps to new files in `gui.metadata`, and replaced/deleted some old code</li>
+                        <li>refactored `ClientGUITime` to `gui.metadata`, `ClientGUILogin` to `gui.networking`</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_577"><a href="#version_577">version 577</a></h2>
                     <ul>
                         <li><h3>explorer integration</h3></li>
