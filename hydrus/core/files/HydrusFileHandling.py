@@ -299,9 +299,7 @@ def GenerateThumbnailNumPy( path, target_resolution, mime, duration, num_frames,
             HydrusTemp.CleanUpTempPath( os_file_handle, temp_path )
             
         
-    elif mime in HC.IMAGES:
-        
-        # TODO: it would be nice to have gif and apng generating their thumb x frames in, like with videos. maybe we should add animation thumb fetcher to hydrusanimationhandling
+    elif mime in HC.IMAGES or mime == HC.ANIMATION_WEBP:
         
         try:
             
@@ -674,7 +672,7 @@ headers_and_mime = [
     ( ( ( [0], [b'\xff\xd8'] ), ), HC.IMAGE_JPEG ),
     ( ( ( [0], [b'\x89PNG'] ), ), HC.UNDETERMINED_PNG ),
     ( ( ( [0], [b'GIF87a', b'GIF89a'] ), ), HC.UNDETERMINED_GIF ),
-    ( ( ( [8], [b'WEBP'] ), ), HC.IMAGE_WEBP ),
+    ( ( ( [8], [b'WEBP'] ), ), HC.UNDETERMINED_WEBP ),
     ( ( ( [0], [b'II*\x00', b'MM\x00*'] ), ), HC.IMAGE_TIFF ),
     ( ( ( [0], [b'BM'] ), ), HC.IMAGE_BMP ),
     ( ( ( [0], [b'\x00\x00\x01\x00', b'\x00\x00\x02\x00'] ), ), HC.IMAGE_ICON ),
@@ -859,6 +857,17 @@ def GetMime( path, ok_to_look_for_hydrus_updates = False ):
                 else:
                     
                     return HC.IMAGE_GIF
+                    
+                
+            elif mime == HC.UNDETERMINED_WEBP:
+                
+                if HydrusAnimationHandling.PILAnimationHasDuration( path ):
+                    
+                    return HC.ANIMATION_WEBP
+                    
+                else:
+                    
+                    return HC.IMAGE_WEBP
                     
                 
             if mime == HC.UNDETERMINED_OLE:

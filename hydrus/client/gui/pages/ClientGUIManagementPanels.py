@@ -32,10 +32,8 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIGallerySeedLog
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
@@ -50,6 +48,8 @@ from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.gui.pages import ClientGUIResults
 from hydrus.client.gui.pages import ClientGUIResultsSortCollect
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.parsing import ClientGUIParsingFormulae
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -1332,7 +1332,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._import_options_button.SetNoteImportOptions( note_import_options )
         
         self._set_options_to_queries_button = ClientGUICommon.BetterButton( self, 'update selected queries with current options', self._SetOptionsToGalleryImports )
-        self._set_options_to_queries_button.setToolTip( 'Each query has its own file limit and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some downloaders in your selection differ with what the page currently has. Clicking here will update the selected queries with whatever the page currently has.' )
+        self._set_options_to_queries_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Each query has its own file limit and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some downloaders in your selection differ with what the page currently has. Clicking here will update the selected queries with whatever the page currently has.' ) )
         self._set_options_to_queries_button.setVisible( False )
         
         #
@@ -2377,7 +2377,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._import_options_button.SetNoteImportOptions( note_import_options )
         
         self._set_options_to_watchers_button = ClientGUICommon.BetterButton( self, 'update selected queries with current options', self._SetOptionsToWatchers )
-        self._set_options_to_watchers_button.setToolTip( 'Each watcher has its own checker and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some watchers in your selection differ with what the page currently has. Clicking here will update the selected watchers with whatever the page currently has.' )
+        self._set_options_to_watchers_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Each watcher has its own checker and import options (you can review them in the highlight panel below). These are not updated if the main page\'s options are updated. It seems some watchers in your selection differ with what the page currently has. Clicking here will update the selected watchers with whatever the page currently has.' ) )
         self._set_options_to_watchers_button.setVisible( False )
         
         # suck up watchers from elsewhere in the program (presents a checkboxlistdialog)

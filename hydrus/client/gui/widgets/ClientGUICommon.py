@@ -1544,7 +1544,7 @@ class RegexButton( BetterButton ):
         regex_favourites = HC.options[ 'regex_favourites' ]
         
         from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-        from hydrus.client.gui import ClientGUIScrolledPanelsEdit
+        from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'manage regex favourites' ) as dlg:
             

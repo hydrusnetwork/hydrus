@@ -13,13 +13,13 @@ from hydrus.client import ClientStrings
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIStringControls
-from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.metadata import ClientGUIMetadataMigrationCommon
+from hydrus.client.gui.metadata import ClientGUITime
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.parsing import ClientGUIParsingFormulae
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton

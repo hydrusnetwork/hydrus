@@ -672,7 +672,7 @@ class RasterContainerVideo( RasterContainer ):
         
         if self._media.GetMime() == HC.ANIMATION_GIF:
             
-            if index in self._durations:
+            if 0 <= index <= len( self._durations ) - 1:
                 
                 return self._durations[ index ]
                 
@@ -891,19 +891,30 @@ class RasterContainerVideo( RasterContainer ):
         
         time.sleep( 0.00001 )
         
-        # OK so just a note, you can switch GIF to the FFMPEG renderer these days and it works fine mate, transparency included
-        if self._media.GetMime() == HC.ANIMATION_GIF:
+        if self._media.GetMime() == HC.ANIMATION_APNG:
             
-            ( self._durations, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsPILAnimation( self._path )
-            
-            self._renderer = ClientVideoHandling.GIFRenderer( self._path, num_frames_in_video, self._target_resolution )
+            self._durations = [] # we only support constant framerate for apng, I think the spec support variable though if PIL ever supports that
+            self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
             
         else:
             
-            if self._media.GetMime() == HC.ANIMATION_APNG:
+            try:
                 
-                self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( self._path )
+                ( self._durations, self._times_to_play_animation ) = HydrusAnimationHandling.GetFrameDurationsPILAnimation( self._path )
                 
+            except:
+                
+                self._durations = []
+                self._times_to_play_animation = 0
+                
+            
+        
+        # OK so just a note, you can switch GIF to the FFMPEG renderer these days and it works fine mate, transparency included
+        if self._media.GetMime() in ( HC.ANIMATION_GIF, HC.ANIMATION_WEBP ):
+            
+            self._renderer = ClientVideoHandling.AnimationRendererPIL( self._path, num_frames_in_video, self._target_resolution )
+            
+        else:
             
             self._renderer = HydrusVideoHandling.VideoRendererFFMPEG( self._path, mime, duration, num_frames_in_video, self._target_resolution )
             

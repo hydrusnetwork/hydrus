@@ -8,12 +8,12 @@ from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
 from hydrus.client import ClientConstants as CC
-from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUITime
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUIBytes
 from hydrus.client.gui.widgets import ClientGUICommon
 

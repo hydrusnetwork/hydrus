@@ -32,13 +32,20 @@ def CatchExceptionClient( etype, value, tb ):
         
         all_lines = pretty_value.splitlines()
         
-        first_line = all_lines[0]
-        
-        if len( all_lines ) > 1:
+        if len( all_lines ) > 0:
             
-            the_rest = all_lines[1:]
+            first_line = all_lines[0]
             
-            trace = trace + '\n' + '\n'.join( the_rest )
+            if len( all_lines ) > 1:
+                
+                the_rest = all_lines[1:]
+                
+                trace = trace + '\n' + '\n'.join( the_rest )
+                
+            
+        else:
+            
+            first_line = 'textless exception!'
             
         
         job_status = ClientThreading.JobStatus()

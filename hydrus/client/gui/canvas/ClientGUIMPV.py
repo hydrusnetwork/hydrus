@@ -955,13 +955,13 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
                     
                     if mime in HC.VIEWABLE_ANIMATIONS and not CG.client_controller.new_options.GetBoolean( 'always_loop_gifs' ):
                         
-                        if mime == HC.ANIMATION_GIF:
-                            
-                            self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayPILAnimation( path )
-                            
-                        elif mime == HC.ANIMATION_APNG:
+                        if mime == HC.ANIMATION_APNG:
                             
                             self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayAPNG( path )
+                            
+                        else:
+                            
+                            self._times_to_play_animation = HydrusAnimationHandling.GetTimesToPlayPILAnimation( path )
                             
                         
                     

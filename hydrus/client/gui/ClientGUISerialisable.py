@@ -9,8 +9,8 @@ from hydrus.core import HydrusSerialisable
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientSerialisable
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 
 class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):

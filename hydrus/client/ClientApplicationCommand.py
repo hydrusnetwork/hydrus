@@ -387,7 +387,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_MAC_QUICKLOOK : 'open quick look for selected file (macOS only)',
     SIMPLE_COPY_URLS : 'copy file known urls',
     SIMPLE_NATIVE_OPEN_FILE_PROPERTIES: 'open file properties',
-    SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG: 'open with' + HC.UNICODE_ELLIPSIS
+    SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG: 'open in another program'
 }
 
 legacy_simple_str_to_enum_lookup = {

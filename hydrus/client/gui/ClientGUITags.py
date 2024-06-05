@@ -32,8 +32,6 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITagSuggestions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -41,7 +39,10 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUIMigrateTags
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -3132,7 +3133,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                 
                 frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'migrate tags' )
                 
-                panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._tag_service_key, hashes )
+                panel = ClientGUIMigrateTags.MigrateTagsPanel( frame, self._tag_service_key, hashes )
                 
                 frame.SetPanel( panel )
                 

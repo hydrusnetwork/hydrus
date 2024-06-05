@@ -58,13 +58,8 @@ from hydrus.client.gui import ClientGUIDownloaders
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUIFrames
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUILogin
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIPopupMessages
-from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui import ClientGUIScrolledPanelsManagement
-from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUISplash
@@ -72,7 +67,6 @@ from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUISystemTray
 from hydrus.client.gui import ClientGUITags
-from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QLocator
@@ -83,11 +77,18 @@ from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.importing import ClientGUIImportFolders
 from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.metadata import ClientGUIMigrateTags
+from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
+from hydrus.client.gui.networking import ClientGUILogin
 from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.parsing import ClientGUIParsing
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.services import ClientGUIClientsideServices
@@ -3428,6 +3429,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'media load report mode', 'Have the client report media load information, where supported.', HG.media_load_report_mode, self._SwitchBoolean, 'media_load_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'mpv report mode', 'Have the client report significant mpv debug information.', HG.mpv_report_mode, self._SwitchBoolean, 'mpv_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode', 'Have the network engine report new jobs.', HG.network_report_mode, self._SwitchBoolean, 'network_report_mode' )
+        ClientGUIMenus.AppendMenuCheckItem( report_modes, 'network report mode (silent)', 'Have the network engine report new jobs, do not make spammy popups.', HG.network_report_mode_silent, self._SwitchBoolean, 'network_report_mode_silent' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'pubsub report mode', 'Report info about every pubsub processed.', HG.pubsub_report_mode, self._SwitchBoolean, 'pubsub_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'similar files metadata generation report mode', 'Have the perceptual_hash generation routine report its progress.', HG.phash_generation_report_mode, self._SwitchBoolean, 'phash_generation_report_mode' )
         ClientGUIMenus.AppendMenuCheckItem( report_modes, 'shortcut report mode', 'Have the new shortcut system report what shortcuts it catches and whether it matches an action.', HG.shortcut_report_mode, self._SwitchBoolean, 'shortcut_report_mode' )
@@ -5045,7 +5047,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( self, 'migrate tags' )
         
-        panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, default_tag_service_key )
+        panel = ClientGUIMigrateTags.MigrateTagsPanel( frame, default_tag_service_key )
         
         frame.SetPanel( panel )
         
@@ -6787,6 +6789,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         elif name == 'network_report_mode':
             
             HG.network_report_mode = not HG.network_report_mode
+            HG.network_report_mode_silent = False
+            
+        elif name == 'network_report_mode_silent':
+            
+            HG.network_report_mode = not HG.network_report_mode
+            HG.network_report_mode_silent = True
             
         elif name == 'phash_generation_report_mode':
             

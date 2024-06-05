@@ -4,16 +4,16 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.media import ClientMediaFileFilter
@@ -562,7 +562,7 @@ class SimpleSubPanel( QW.QWidget ):
         
         self._file_command_target.SetValue( CAC.FILE_COMMAND_TARGET_SELECTED_FILES )
         
-        self._file_command_target.setToolTip( 'This is only important in the thumbnail view, where the "focused file" means the one currently in the preview view, usually the one you last clicked on. In the media viewer, actions are always applied to the current file.' )
+        self._file_command_target.setToolTip( ClientGUIFunctions.WrapToolTip( 'This is only important in the thumbnail view, where the "focused file" means the one currently in the preview view, usually the one you last clicked on. In the media viewer, actions are always applied to the current file.' ) )
         
         rows = []
         

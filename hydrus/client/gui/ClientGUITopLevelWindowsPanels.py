@@ -5,10 +5,10 @@ from hydrus.core import HydrusExceptions
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITopLevelWindows
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 
 class DialogThatTakesScrollablePanel( ClientGUITopLevelWindows.DialogThatResizes ):
     

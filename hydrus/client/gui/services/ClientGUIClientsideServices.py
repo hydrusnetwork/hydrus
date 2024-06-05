@@ -29,8 +29,6 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIPanels
-from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -38,6 +36,9 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
+from hydrus.client.gui.metadata import ClientGUIMigrateTags
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUIColourPicker
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -3788,7 +3789,7 @@ class ReviewServiceTagSubPanel( ClientGUICommon.StaticBox ):
         
         frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( tlw, 'migrate tags' )
         
-        panel = ClientGUIScrolledPanelsReview.MigrateTagsPanel( frame, self._service.GetServiceKey() )
+        panel = ClientGUIMigrateTags.MigrateTagsPanel( frame, self._service.GetServiceKey() )
         
         frame.SetPanel( panel )
         

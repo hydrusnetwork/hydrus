@@ -22,6 +22,7 @@ from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.search import ClientSearch
 
 def AddDuplicatesMenu( win: QW.QWidget, menu: QW.QMenu, location_context: ClientLocation.LocationContext, focus_singleton: ClientMedia.Media, num_selected: int, collections_selected: bool ):
     
@@ -349,7 +350,7 @@ def AddFileViewingStatsMenu( menu, medias: typing.Collection[ ClientMedia.Media 
         
     
 
-def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
+def AddKnownURLsViewCopyMenu( win, menu, focus_media, num_files_selected: int, selected_media = None ):
     
     # figure out which urls this focused file has
     
@@ -452,12 +453,28 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
         
     
-    if len( focus_labels_and_urls ) > 0 or len( selected_media_url_classes ) > 0 or multiple_or_unmatching_selection_url_classes:
+    urls_menu = ClientGUIMenus.GenerateMenu( menu )
+    
+    if num_files_selected > 1:
         
-        urls_menu = ClientGUIMenus.GenerateMenu( menu )
+        description = 'Edit which URLs these files have.'
+        
+    else:
+        
+        description = 'Edit which URLs this file has.'
+        
+    
+    ClientGUIMenus.AppendMenuItem( urls_menu, 'manage', description, win.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_MANAGE_FILE_URLS ) )
+    
+    if len( focus_labels_and_urls ) > 0 or len( selected_media_url_classes ) > 0 or multiple_or_unmatching_selection_url_classes:
         
         urls_visit_menu = ClientGUIMenus.GenerateMenu( urls_menu )
         urls_copy_menu = ClientGUIMenus.GenerateMenu( urls_menu )
+        
+        if len( focus_labels_and_urls ) > 0:
+            
+            urls_open_page_menu = ClientGUIMenus.GenerateMenu( urls_menu )
+            
         
         # copy each this file's urls (of a particular type)
         
@@ -469,6 +486,41 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             ClientGUIMenus.SpamItems( urls_visit_menu, [ ( label, description, HydrusData.Call( ClientPaths.LaunchURLInWebBrowser, url ) ) for ( label, url ) in focus_labels_and_urls ], MAX_TO_SHOW )
             ClientGUIMenus.SpamLabels( urls_copy_menu, focus_labels_and_urls, MAX_TO_SHOW )
+            
+            description = 'Open a new page with the files that have this url.'
+            
+            def call_generator( u ):
+                
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', u, f'has url {u}' ) ) ]
+                
+                page_name = 'url search'
+                activate_window = False
+                
+                c = HydrusData.Call( CG.client_controller.pub, 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+                
+                return c
+                
+            
+            ClientGUIMenus.SpamItems( urls_open_page_menu, [ ( f'files with {label}', description, call_generator( url ) ) for ( label, url ) in focus_labels_and_urls ], MAX_TO_SHOW )
+            
+            if len( focus_labels_and_urls ) > 1:
+                
+                ClientGUIMenus.AppendSeparator( urls_open_page_menu )
+                
+                location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+                
+                url_preds = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for ( label, url ) in focus_labels_and_urls ]
+                
+                predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
+                
+                page_name = 'url search'
+                activate_window = False
+                
+                c = HydrusData.Call( CG.client_controller.pub, 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+                
+                ClientGUIMenus.AppendMenuItem( urls_open_page_menu, 'files with any of the above', 'Open a new page with the files that share any of this file\'s urls.', c )
+                
             
         
         # copy this file's urls
@@ -486,13 +538,11 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             urls = [ url for ( label, url ) in focus_matched_labels_and_urls ]
             
-            label = 'open this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' recognised urls in your web browser'
+            label = 'this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' recognised urls'
             
             ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls )
             
             urls_string = '\n'.join( urls )
-            
-            label = 'copy this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' recognised urls to your clipboard'
             
             ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy these urls to your clipboard.', CG.client_controller.pub, 'clipboard', 'text', urls_string )
             
@@ -501,13 +551,11 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             urls = [ url for ( label, url ) in focus_labels_and_urls ]
             
-            label = 'open this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' urls in your web browser'
+            label = 'this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' urls'
             
             ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open these urls in your web browser.', ClientGUIMediaModalActions.OpenURLs, win, urls )
             
             urls_string = '\n'.join( urls )
-            
-            label = 'copy this file\'s ' + HydrusData.ToHumanInt( len( urls ) ) + ' urls to your clipboard'
             
             ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url to your clipboard.', CG.client_controller.pub, 'clipboard', 'text', urls_string )
             
@@ -530,11 +578,11 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
             
             for url_class in selected_media_url_classes:
                 
-                label = 'open files\' ' + url_class.GetName() + ' urls in your web browser'
+                label = 'these files\' ' + url_class.GetName() + ' urls'
                 
                 ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open this url class in your web browser for all files.', ClientGUIMediaModalActions.OpenMediaURLClassURLs, win, selected_media, url_class )
                 
-                label = 'copy files\' ' + url_class.GetName() + ' urls'
+                label = 'these files\' ' + url_class.GetName() + ' urls'
                 
                 ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy this url class for all files.', ClientGUIMediaSimpleActions.CopyMediaURLClassURLs, selected_media, url_class )
                 
@@ -544,22 +592,28 @@ def AddKnownURLsViewCopyMenu( win, menu, focus_media, selected_media = None ):
         
         if multiple_or_unmatching_selection_url_classes:
             
-            label = 'open all files\' urls'
+            label = 'all these files\' urls'
             
-            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open urls in your web browser for all files.', ClientGUIMediaModalActions.OpenMediaURLs, win, selected_media )
+            ClientGUIMenus.AppendMenuItem( urls_visit_menu, label, 'Open all files\' urls in your web browser.', ClientGUIMediaModalActions.OpenMediaURLs, win, selected_media )
             
-            label = 'copy all files\' urls'
+            label = 'all these files\' urls'
             
-            ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy urls for all files.', ClientGUIMediaSimpleActions.CopyMediaURLs, selected_media )
+            ClientGUIMenus.AppendMenuItem( urls_copy_menu, label, 'Copy all files\' urls.', ClientGUIMediaSimpleActions.CopyMediaURLs, selected_media )
             
         
         #
         
-        ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open' )
+        ClientGUIMenus.AppendMenu( urls_menu, urls_visit_menu, 'open in browser' )
+        
+        if len( focus_labels_and_urls ) > 0:
+            
+            ClientGUIMenus.AppendMenu( urls_menu, urls_open_page_menu, 'open in a new page' )
+            
+        
         ClientGUIMenus.AppendMenu( urls_menu, urls_copy_menu, 'copy' )
         
-        ClientGUIMenus.AppendMenu( menu, urls_menu, 'known urls' )
-        
+    
+    ClientGUIMenus.AppendMenu( menu, urls_menu, 'urls' )
     
 
 def AddLocalFilesMoveAddToMenu( win: QW.QWidget, menu: QW.QMenu, local_duplicable_to_file_service_keys: typing.Collection[ bytes ], local_moveable_from_and_to_file_service_keys: typing.Collection[ typing.Tuple[ bytes, bytes ] ], multiple_selected: bool, process_application_command_call ):

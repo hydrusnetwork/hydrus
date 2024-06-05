@@ -21,7 +21,6 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUISerialisable
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUIStringPanels
@@ -31,6 +30,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.parsing import ClientGUIParsingFormulae
 from hydrus.client.gui.parsing import ClientGUIParsingTest
 from hydrus.client.gui.widgets import ClientGUICommon

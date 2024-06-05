@@ -27,13 +27,9 @@ from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIScrolledPanels
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIStyle
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITagSorting
-from hydrus.client.gui import ClientGUITime
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.importing import ClientGUIImport
@@ -42,7 +38,10 @@ from hydrus.client.gui.lists import ClientGUIListBook
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
+from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.pages import ClientGUIResultsSortCollect
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUIColourPicker
@@ -1081,7 +1080,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._only_show_delete_from_all_local_domains_when_filtering.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._remove_filtered_files = QW.QCheckBox( self )
-            self._remove_filtered_files.setToolTip( 'This will remove all archived/deleted files from the source thumbnail page when you commit your archive/delete filter run.' )
+            self._remove_filtered_files.setToolTip( ClientGUIFunctions.WrapToolTip( 'This will remove all archived/deleted files from the source thumbnail page when you commit your archive/delete filter run.' ) )
             
             self._remove_filtered_files_even_when_skipped = QW.QCheckBox( self )
             self._remove_trashed_files = QW.QCheckBox( self )
@@ -2460,15 +2459,15 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             media_canvas_panel = ClientGUICommon.StaticBox( self, 'hover windows and background' )
             
             self._draw_tags_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
-            self._draw_tags_hover_in_media_viewer_background.setToolTip( 'Draw the left list of tags in the background of the media viewer.' )
+            self._draw_tags_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the left list of tags in the background of the media viewer.' ) )
             self._draw_top_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
-            self._draw_top_hover_in_media_viewer_background.setToolTip( 'Draw the center-top file metadata in the background of the media viewer.' )
+            self._draw_top_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the center-top file metadata in the background of the media viewer.' ) )
             self._draw_top_right_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
-            self._draw_top_right_hover_in_media_viewer_background.setToolTip( 'Draw the top-right ratings, inbox and URL information in the background of the media viewer.' )
+            self._draw_top_right_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the top-right ratings, inbox and URL information in the background of the media viewer.' ) )
             self._draw_notes_hover_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
-            self._draw_notes_hover_in_media_viewer_background.setToolTip( 'Draw the right list of notes in the background of the media viewer.' )
+            self._draw_notes_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the right list of notes in the background of the media viewer.' ) )
             self._draw_bottom_right_index_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
-            self._draw_bottom_right_index_in_media_viewer_background.setToolTip( 'Draw the bottom-right index string in the background of the media viewer.' )
+            self._draw_bottom_right_index_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the bottom-right index string in the background of the media viewer.' ) )
             
             self._hide_uninteresting_local_import_time = QW.QCheckBox( media_canvas_panel )
             self._hide_uninteresting_local_import_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file was imported at a similar time to when it was added to its current services (i.e. the number of seconds since both events differs by less than 10%), hide the import time in the top of the media viewer.' ) )
@@ -2555,7 +2554,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Duplicate top hover-window information in the background of the viewer:', self._draw_top_hover_in_media_viewer_background ) )
             rows.append( ( 'Duplicate top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
             rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
-            rows.append( ( 'Draw bottom-right index string in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
+            rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
             rows.append( ( 'Hide uninteresting import times:', self._hide_uninteresting_local_import_time ) )
             rows.append( ( 'Hide uninteresting modified times:', self._hide_uninteresting_modified_time ) )
             
@@ -4237,7 +4236,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._num_to_show_in_ac_dropdown_children_tab = ClientGUICommon.NoneableSpinCtrl( children_panel, none_phrase = 'show all', min = 1 )
             tt = 'The "children" tab will show children of the current tag context (usually the list of tags above the autocomplete), ordered by file count. This can quickly get spammy, so I recommend you cull it to a reasonable size.'
-            self._num_to_show_in_ac_dropdown_children_tab.setToolTip( tt )
+            self._num_to_show_in_ac_dropdown_children_tab.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             self._num_to_show_in_ac_dropdown_children_tab.SetValue( 40 ) # init default
             
             #
@@ -5308,371 +5307,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             ClientGUIDialogsMessage.ShowCritical( self, 'Problem saving options!', str( e ) )
             
-        
-    
-class ManageURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPanels.ManagePanel ):
-    
-    def __init__( self, parent, medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
-        
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
-        
-        self._current_media = [ m.Duplicate() for m in medias ]
-        
-        self._multiple_files_warning = ClientGUICommon.BetterStaticText( self, label = 'Warning: you are editing urls for multiple files!\nBe very careful about adding URLs here, as they will apply to everything.\nAdding the same URL to multiple files is only appropriate for gallery-type URLs!' )
-        self._multiple_files_warning.setObjectName( 'HydrusWarning' )
-        
-        if len( self._current_media ) == 1:
-            
-            self._multiple_files_warning.hide()
-            
-        
-        self._urls_listbox = ClientGUIListBoxes.BetterQListWidget( self )
-        self._urls_listbox.setSortingEnabled( True )
-        self._urls_listbox.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
-        self._urls_listbox.itemDoubleClicked.connect( self.EventListDoubleClick )
-        
-        self._listbox_event_filter = QP.WidgetEventFilter( self._urls_listbox )
-        self._listbox_event_filter.EVT_KEY_DOWN( self.EventListKeyDown )
-        
-        ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
-        
-        self._urls_listbox.setMinimumWidth( width )
-        self._urls_listbox.setMinimumHeight( height )
-        
-        self._url_input = QW.QLineEdit( self )
-        self._url_input.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._url_input, self.AddURL ) )
-        
-        self._copy_button = ClientGUICommon.BetterButton( self, 'copy all', self._Copy )
-        self._paste_button = ClientGUICommon.BetterButton( self, 'paste', self._Paste )
-        
-        self._urls_to_add = set()
-        self._urls_to_remove = set()
-        
-        #
-        
-        self._pending_content_updates = []
-        
-        self._current_urls_count = collections.Counter()
-        
-        self._UpdateList()
-        
-        #
-        
-        hbox = QP.HBoxLayout()
-        
-        QP.AddToLayout( hbox, self._copy_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( hbox, self._paste_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        vbox = QP.VBoxLayout()
-        
-        QP.AddToLayout( vbox, self._multiple_files_warning, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._urls_listbox, CC.FLAGS_EXPAND_BOTH_WAYS )
-        QP.AddToLayout( vbox, self._url_input, CC.FLAGS_EXPAND_PERPENDICULAR )
-        QP.AddToLayout( vbox, hbox, CC.FLAGS_ON_RIGHT )
-        
-        self.widget().setLayout( vbox )
-        
-        self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ 'global', 'media', 'main_gui' ] )
-        
-        ClientGUIFunctions.SetFocusLater( self._url_input )
-        
-    
-    def _Copy( self ):
-        
-        urls = sorted( self._current_urls_count.keys() )
-        
-        text = '\n'.join( urls )
-        
-        CG.client_controller.pub( 'clipboard', 'text', text )
-        
-    
-    def _EnterURLs( self, urls, only_add = False ):
-        
-        normalised_urls = []
-        weird_urls = []
-        
-        for url in urls:
-            
-            try:
-                
-                normalised_url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url, for_server = True )
-                
-                normalised_urls.append( normalised_url )
-                
-            except HydrusExceptions.URLClassException:
-                
-                weird_urls.append( url )
-                
-            
-        
-        if len( weird_urls ) > 0:
-            
-            message = 'The URLs:'
-            message += '\n' * 2
-            message += '\n'.join( weird_urls )
-            message += '\n' * 2
-            message += '--did not parse. Normally I would not recommend importing invalid URLs, but do you want to force it anyway?'
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result != QW.QDialog.Accepted:
-                
-                return False
-                
-            
-            normalised_urls.extend( weird_urls )
-            
-        
-        normalised_urls = HydrusData.DedupeList( normalised_urls )
-        
-        for normalised_url in normalised_urls:
-            
-            addee_media = set()
-            
-            for m in self._current_media:
-                
-                locations_manager = m.GetLocationsManager()
-                
-                if normalised_url not in locations_manager.GetURLs():
-                    
-                    addee_media.add( m )
-                    
-                
-            
-            if len( addee_media ) > 0:
-                
-                addee_hashes = { m.GetHash() for m in addee_media }
-                
-                content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_ADD, ( ( normalised_url, ), addee_hashes ) )
-                
-                for m in addee_media:
-                    
-                    m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
-                    
-                
-                self._pending_content_updates.append( content_update )
-                
-            
-        
-        #
-        
-        self._UpdateList()
-        
-    
-    def _Paste( self ):
-        
-        try:
-            
-            raw_text = CG.client_controller.GetClipboardText()
-            
-        except HydrusExceptions.DataMissing as e:
-            
-            ClientGUIDialogsMessage.ShowWarning( self, str(e) )
-            
-            return
-            
-        
-        try:
-            
-            urls = HydrusText.DeserialiseNewlinedTexts( raw_text )
-            
-            self._EnterURLs( urls, only_add = True )
-            
-        except Exception as e:
-            
-            ClientGUIDialogsQuick.PresentClipboardParseError( self, raw_text, 'Lines of URLs', e )
-            
-        
-    
-    def _RemoveURL( self, url ):
-        
-        removee_media = set()
-        
-        for m in self._current_media:
-            
-            locations_manager = m.GetLocationsManager()
-            
-            if url in locations_manager.GetURLs():
-                
-                removee_media.add( m )
-                
-            
-        
-        if len( removee_media ) > 0:
-            
-            removee_hashes = { m.GetHash() for m in removee_media }
-            
-            content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_URLS, HC.CONTENT_UPDATE_DELETE, ( ( url, ), removee_hashes ) )
-            
-            for m in removee_media:
-                
-                m.GetMediaResult().ProcessContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
-                
-            
-            self._pending_content_updates.append( content_update )
-            
-        
-        #
-        
-        self._UpdateList()
-        
-    
-    def _SetSearchFocus( self ):
-        
-        self._url_input.setFocus( QC.Qt.OtherFocusReason )
-        
-    
-    def _UpdateList( self ):
-        
-        self._urls_listbox.clear()
-        
-        self._current_urls_count = collections.Counter()
-        
-        for m in self._current_media:
-            
-            locations_manager = m.GetLocationsManager()
-            
-            for url in locations_manager.GetURLs():
-                
-                self._current_urls_count[ url ] += 1
-                
-            
-        
-        for ( url, count ) in self._current_urls_count.items():
-            
-            if len( self._current_media ) == 1:
-                
-                label = url
-                
-            else:
-                
-                label = '{} ({})'.format( url, count )
-                
-            
-            item = QW.QListWidgetItem()
-            item.setText( label )
-            item.setData( QC.Qt.UserRole, url )
-            
-            self._urls_listbox.addItem( item )
-            
-        
-    
-    def EventListDoubleClick( self, item ):
-    
-        urls = [ QP.GetClientData( self._urls_listbox, selection.row() ) for selection in list( self._urls_listbox.selectedIndexes() ) ]
-        
-        for url in urls:
-            
-            self._RemoveURL( url )
-            
-        
-        if len( urls ) == 1:
-            
-            url = urls[0]
-            
-            self._url_input.setText( url )
-            
-        
-    
-    def EventListKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ClientGUIShortcuts.DELETE_KEYS_QT:
-            
-            urls = [ QP.GetClientData( self._urls_listbox, selection.row() ) for selection in list( self._urls_listbox.selectedIndexes() ) ]
-            
-            for url in urls:
-                
-                self._RemoveURL( url )
-                
-            
-        else:
-            
-            return True # was: event.ignore()
-            
-        
-    
-    def AddURL( self ):
-        
-        url = self._url_input.text()
-        
-        if url == '':
-            
-            self.parentWidget().DoOK()
-            
-        else:
-            
-            try:
-                
-                self._EnterURLs( [ url ] )
-                
-                self._url_input.clear()
-                
-            except Exception as e:
-                
-                ClientGUIDialogsMessage.ShowCritical( self, 'Problem with URL!', f'I could not add that URL: {e}' )
-                
-            
-        
-    
-    def CommitChanges( self ):
-        
-        if len( self._pending_content_updates ) > 0:
-            
-            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, self._pending_content_updates )
-            
-            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
-            
-        
-    
-    def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):
-        
-        command_processed = True
-        
-        if command.IsSimpleCommand():
-            
-            action = command.GetSimpleAction()
-            
-            if action == CAC.SIMPLE_MANAGE_FILE_URLS:
-                
-                self._OKParent()
-                
-            elif action == CAC.SIMPLE_SET_SEARCH_FOCUS:
-                
-                self._SetSearchFocus()
-                
-            else:
-                
-                command_processed = False
-                
-            
-        else:
-            
-            command_processed = False
-            
-        
-        return command_processed
-        
-    
-    def UserIsOKToOK( self ):
-        
-        current_text = self._url_input.text()
-        
-        if current_text != '':
-            
-            message = 'You have text still in the input! Sure you are ok to apply?'
-            
-            result = ClientGUIDialogsQuick.GetYesNo( self, message )
-            
-            if result != QW.QDialog.Accepted:
-                
-                return False
-                
-            
-        
-        return True
         
     
 

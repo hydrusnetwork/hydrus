@@ -4,8 +4,8 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 
 def ShowMenuDialog( window: QW.QWidget, menu: QW.QMenu ):
     

@@ -7,13 +7,13 @@ from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageHandling
 from hydrus.core.files.images import HydrusImageNormalisation
 
-class GIFRenderer( object ):
+class AnimationRendererPIL( object ):
     
     def __init__( self, path, num_frames, target_resolution ):
         
         if HG.media_load_report_mode:
             
-            HydrusData.ShowText( 'Loading GIF: ' + path )
+            HydrusData.ShowText( 'Loading animation: ' + path )
             
         
         self._path = path
@@ -47,7 +47,7 @@ class GIFRenderer( object ):
         
         if HG.media_load_report_mode:
             
-            HydrusData.ShowText( 'Loading GIF with PIL' )
+            HydrusData.ShowText( 'Loading animation with PIL' )
             
         
         # dequantize = False since we'll be doing that later for each frame in turn
@@ -66,7 +66,7 @@ class GIFRenderer( object ):
             
         except Exception as e:
             
-            raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not initialise GIF!' ) from e 
+            raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not initialise animation!' ) from e 
             
         '''
         
@@ -79,7 +79,7 @@ class GIFRenderer( object ):
         
         if self._current_render_index == 0 or we_are_in_the_dangerzone:
             
-            self._RewindGIF( reinitialise = True )
+            self._RewindAnimation( reinitialise = True )
             
         else:
             
@@ -93,7 +93,7 @@ class GIFRenderer( object ):
                 # 8GB memory 20 second fail render
                 if size[0] > 16384 or size[1] > 16384:
                     
-                    raise HydrusExceptions.DamagedOrUnusualFileException( 'Crazy GIF frame went bananas!' )
+                    raise HydrusExceptions.DamagedOrUnusualFileException( 'Crazy animation frame went bananas!' )
                     
                 
             except:
@@ -109,7 +109,7 @@ class GIFRenderer( object ):
                     self._cannot_seek_to_or_beyond_this_index = min( self._cannot_seek_to_or_beyond_this_index, self._current_render_index )
                     
                 
-                self._RewindGIF( reinitialise = True )
+                self._RewindAnimation( reinitialise = True )
                 
             
         
@@ -179,7 +179,7 @@ class GIFRenderer( object ):
         return resized_numpy_image
         
     
-    def _RewindGIF( self, reinitialise = False ):
+    def _RewindAnimation( self, reinitialise = False ):
         
         self._pil_image.seek( 0 )
         
@@ -213,7 +213,7 @@ class GIFRenderer( object ):
             
         elif index < self._current_render_index:
             
-            self._RewindGIF()
+            self._RewindAnimation()
             
         
         while self._current_render_index < index:

@@ -24,11 +24,12 @@ from hydrus.client import ClientThreading
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui import ClientGUIScrolledPanelsReview
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
+from hydrus.client.gui.metadata import ClientGUIEditTimestamps
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.media import ClientMedia
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -402,7 +403,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditFileTimestampsPanel( dlg, ordered_medias )
+        panel = ClientGUIEditTimestamps.EditFileTimestampsPanel( dlg, ordered_medias )
         
         dlg.SetPanel( panel )
         

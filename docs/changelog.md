@@ -7,6 +7,33 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 578](https://github.com/hydrusnetwork/hydrus/releases/tag/v578)
+
+### animated webp
+
+* we now have animated webp support! despite many libraries having trouble with this, it turns out that modern PIL can decode and render them. I have figured out a solution using my old native gif renderer, so webps will now play in the program
+* I'm going the same route as gifs and (a)pngs--the program now tracks 'webp' vs 'animated webp' as different filetypes. all your image webps will be queued for a scan on update, and any with animation will become the new type, with num frames and duration, and will be fully viewable in the media viewer
+* I don't know when PIL added this tech, so if you are a source user and haven't rebuilt your venv in a while, this is probably a good time!
+
+### misc
+
+* the five new 'draw hover-window text in the background of media viewer' options are now copied to the media viewer itself, under a new 'eye' icon menu button. I'll be hanging more stuff off here, like 'always on top' in future!
+* the 'known urls' media submenu is now just 'urls', and it now has A) the 'manage' command, moved from the manage menu and B) 'open in a new page' for the focused file's specific URLs or 'any of them' (i.e. it opens a new search page with 'system:known url=blah', so if you need to find which files share a URL, it is now just one click
+* fixed the gelbooru 0.2.5 post parser's fetching of multiple source urls. it was not splitting them correctly due to a (recent?) change on gelbooru's end and adding unhelpful `https://gelbooru.com/%7C` gumpf as an additional source url
+* added a 'network report mode (silent)' to the `help-&gt;debug` menu, which does everything the network report mode does but with silent logging rather than a million popups. should help with longer-term debugging
+* fixed an issue with fetching gif variable framerate timings in the native renderer
+* added variable framerate tech to the native renderer for all animation types PIL can figure out except apng (previously it could only do it for gif)
+* tightened up some of the file metadata checks. apng is now scanned for exif data, the HEIF types are now scanned for transparency. these jobs are also queued up on update
+* the media viewer's top hover's center buttons (usually inbox/delete stuff) are finally centered correctly, aligned with the text below. apologies for the delay; it took several years of under-waterfall mediation to gather enough chi, but I finally have a beginner's understanding of `QSizePolicy.Expanding`
+
+### boring cleanup
+
+* fixed some more long tooltips to wrap into nice newlines
+* converted the 'manage urls' dialog to the decoupled 'edit' paradigm
+* refactored most of the 'scrolling panel' code to a new `gui.panels` module
+* broke up some of the bloated scrolling panel code into smaller files, moved Migrate Tags and Edit Timestamps to new files in `gui.metadata`, and replaced/deleted some old code
+* refactored `ClientGUITime` to `gui.metadata`, `ClientGUILogin` to `gui.networking`
+
 ## [Version 577](https://github.com/hydrusnetwork/hydrus/releases/tag/v577)
 
 ### explorer integration
@@ -345,80 +372,3 @@ title: Changelog
 * rewrote an unhealthy call that indirectly caused the above multi-file post parsing problem
 * fixed some None/0 `NumberTest` stuff if you manage to enter '&lt;0' or &gt;-5 and similar
 * I figured out the problems with PyInstaller 6.x and some other stuff, there should be a 'Future Build' alongside this release in github for advanced users to test with
-
-## [Version 568](https://github.com/hydrusnetwork/hydrus/releases/tag/v568)
-
-### user contributions
-
-* thanks to a user, the new docx, pptx, and xlsx support is improved, with better thumbnails (better ratio, better icon itself, and sometimes an actual preview thumbnail for pptx), better file detection (fewer false positives with stuff like ppt templates), and word count for docx and pptx. I am queueing everyone's existing docx and pptx files for a metadata rescan and thumbnail regen on update
-* thanks to a user, the cbz scanner now ignores the `__MACOSX` folder
-* thanks to a user, setting the Qt style in *options->style* should be more reliable (fixing some name case sensitivity issues)
-* thanks to a user, there's a new 'default' dark mode QSS stylesheet that has nicer valid/invalid colours. we'll build on this and try to detect dark mode better in future and auto-switch to this as the base when the application is in dark mode.
-
-### misc improvements
-
-* added a 'tag in reverse' checkbox to the new incremental tagger panel. this simply applies the given iterator to the last file first and then works backwards, e.g. 5, 4, 3, 2, 1 for start=1, step=1 on five files
-* all _new_ system:url predicates will have slightly different (standardised) labels, and all these labels should parse correctly in the system predicate parser if you copy/paste
-* the file log's right-click menu, the part where it says 'additional urls', is now more compact and will show the 'request url', if that differs from the main url, either because of the new ephemeral parameters or an api/redirect. it is now much easier to debug the various 'what was actually sent to the server?' problems!
-* you should now be able to enter 'system:has url matching regex (regex with upper case)' and 'system:has url (url with upper case)' and it'll propagate through parsing. this definitely has not™ broken any other predicate parsing. you can enter url class names with upper case if you want, but url class names should now match regardless of letter case
-* if you have added, edited, or deleted any url classes and try to cancel the 'manage url classes' dialog, it will now ask if that is correct
-* added a new EXPERIMENTAL checkbox to _options->tag presentation_ that will replace emojis and other unicode symbol garbage with □. if you have crazy rendering for emoji stuff, try it out
-* the tag summary generators that make thumbnail banners now wash their tags through the 'render tag for user' system, which will apply this new emoji rule and 'replace underscores with spaces'
-* added the 'rating' parser from the default gelbooru 0.2.5 parser to the 0.2.0 parser; this should add for more 'rating' parsing from a variety of boorus
-
-### misc fixes
-
-* fixed a typo bug when deleting domain-based timestamps in the edit times dialog
-* fixed the 'system:has url matching class (blah)' predicate edit panel's initialisation. it was always initialising to the top of the list, not remembering the 'default' or 'I want to edit this' value it was initialising with
-* 'manage urls' now asks if it is ok to ok if you have any text still in the input
-* you can now open the 'extra info' button (up top of a media viewer) on a jpeg if that jpeg has no exif or other human-readable metadata (to see just the progressive and subsampling info)
-* updated the QuickSync link to its new home at https://breadthread.duckdns.org/
-
-### append random text
-
-* the String Converter has a new step type: 'append random text'. you supply the population (e.g. '0123456789abcdef') and the number of characters (e.g. 16), and it will append 'b2f96e8eda457a1e', and then the next time you check, '1fa591ad9786ea3b', etc... useful if you want to, say, make up a new token
-
-### URL storage/display changes
-
-* today I correct a foolish decision I made when I first implemented the hydrus downloader engine--handling and storing URLs internally as 'pretty' decoded text, rather than with the proper ugly '%20" stuff you sometimes see. I now store urls as the 'encoded' variant all the time, and only convert to the pretty version when the user sees it. this improves support for weird URLs and simplifies some behind the scenes. you do not need to do anything, and everything should work pretty much as before, but there is a chance some particularly funky URLs will redownload one more time if your subscription runs into them again (this change breaks some 'known url' checking logic, since what is stored is now slightly different, but this 99% doesn't affect Post URLs, so no big worries)
-* so, while URLs still show pretty in a file/search log, if you copy them to clipboard, you now get the encoded version--pretty much how your web browser address bar works. I have made it show 'pretty' in the file log and search log lists, 'copy url' menu labels, and hyperlink tooltips, but in the more technical 'manage url classes' and 'manage GUGs' and so on where you are actually editing a URL, it shows the encoded version. let me know if I have forgotten to display them pretty anywhere!
-* **IF YOU ARE AN ADVANCED USER WHO MAKES CRAZY URL CLASSES:** since URLs are now stored as the %-encoded version in all cases, component and parameter tests now apply to %-encoding (e.g. you are now testing for `post%5Bid%5D`, not `post[id]`). when your URL Classes update this week, I convert existing path component defaults, parameter names and defaults, and `fixed_text` String Matches for path component names and parameter values to their %-encoded value. I hope this will provide for a clean transition where it matters. unfortunately, if the String Matches were a regex or you were pulling a rabbit out of your hat with edge-case pre-%-encoded default values, I just can't auto-convert that, so please scroll down your crazier URL Classes and see if any say they don't match their example URLs!
-* there's also some GUG work. when you enter a query text like `male/female` or `blonde_hair%20blue_eyes`, some new logic tries to infer whether what you entered is pre-encoded or not. it should handle pretty much everything well unless you have a single-tag query with a legit percent character in the middle (in which case you'll have to enter `%25` instead, but we'll see if it ever happens)
-* these changes simplify the url parsing routine, eliminating plenty of nonsense hackery I've inserted over the years to make things like `6+girls blonde_hair`/`6%2Bgirls+blonde_hair` work with a merged system. this has mostly been a delicate cleanup job; long planned, finally triggered
-
-### allow all ephemeral parameters
-
-* URL Classes have a new checkbox, 'keep extra parameters for server', which will determine whether URLs should hang on to undefined parameters in the first stage of normalisation, which governs what is sent to the server. this is now default True on all new URL Classes! existing URL Classes will default True only if the URL Class is a Gallery/Watchable URL without an API/redirect converter (which was essentially the previous hardcoded behaviour). you cannot set this value if the URL has an API/redirect converter
-
-### allow specific ephemeral parameters
-
-* alternately, you can now specify single 'ephemeral token' parameters in the new parameter edit dialog. it is just a check box that says 'use this for the request, but don't save it'. these _are_ kept for the API/redirect URL
-* if you are feeling extremely big brain, there is now a String Processor for the default value, if both 'is ephemeral?' is checked and 'default value' is not 'None'. this lets you append/replace your fixed default value with the current time, or, now, just some random hex or something! hence we can now define our own basic one-time token generators for telling caches to give us original quality etc...
-
-### manage url classes dialog
-
-* there's a new read-only text field with the 'example url' and 'normalised url' section called 'request url'. this shows either the example URL with its extra, ephemeral parameters, or it will show the API/redirect URL. it shows what will be sent to the server
-* URL Class parameters now have their own edit panel, with everything available in one place, rather than the three-dialogs-in-a-row mess of before. also, the name and value widgets have locked normal/%-encoded text inputs that will live update each other, so you can paste whatever is convenient for you and see a preview either way
-* URL Class path components also have their own edit panel. same deal as for parameters, but a little simpler
-
-### client api
-
-* the `/add_urls/get_url_info` command now returns `request_url` value, which is either the 'for server' normalised URL, which may include ephemeral tokens, or the API/redirect URL, just as in the new 'manage url classes' dialog
-* the `/add_files/undelete_files` command now filters the files you give it to make sure that they are actually in your file storage. no more undeleting files you don't have!
-* added a new `/add_files/clear_file_deletion_record` command, which erases deletion records for physically deleted files
-* updated api help docs and unit tests for the above
-* client api version is now 63
-
-### boring stuff
-
-* the client is now much more robust if any of its URL Classes do not match their own example URLs. it will boot, to start with (lol), and you can now open the 'manage url classes' dialog without UI error popups. manage url classes now notes which URL Classes do not match their own example URLs, for easy skimming
-* the 'URL Class' class has a new buddy 'Parameter' class to handle param testing
-* simplified some of the guts of URL normalisation, from path/param clipping to how API URL generation is navigated
-* rewrote how the query string of a URL is deconstructed and scanned against your parameters. less chance of edge-case errors/merges and easier to expand in future
-* when you paste a URL, some new normalisation tech tries to figure out if it is pre-encoded or not
-* brushed up the URL Class unit tests to account for the above changes and added new tests for encoding, 'is ephemeral', 'keep extra params for server', default parameter string processors, and simple default parameter values (which must have been missed a long time ago)
-* also broke the monolithic url class unit test into eight smaller (albeit ugly for now) pieces
-* added a unit test for the new 'append random text' converter
-* cleaned up some misc URL Class code
-
-## Version 567 was cancelled, its changes folded into 568.

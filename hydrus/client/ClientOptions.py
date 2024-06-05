@@ -83,7 +83,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         media_view[ HC.APPLICATION_PSD ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, preview_start_paused, preview_start_with_embed, image_zoom_info )
 
         media_view[ HC.APPLICATION_KRITA ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, preview_start_paused, preview_start_with_embed, image_zoom_info )
-
+        
+        media_view[ HC.ANIMATION_WEBP ] = ( CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, media_start_paused, media_start_with_embed, CC.MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE, preview_start_paused, preview_start_with_embed, gif_zoom_info )
+        
         return media_view
         
     

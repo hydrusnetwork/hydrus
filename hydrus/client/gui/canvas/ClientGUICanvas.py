@@ -26,9 +26,6 @@ from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
-from hydrus.client.gui import ClientGUIScrolledPanelsCommitFiltering
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -39,6 +36,9 @@ from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaMenus
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
@@ -551,13 +551,23 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         title = 'manage known urls'
         
-        with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, ( self._current_media, ) )
+            panel = ClientGUIScrolledPanelsEdit.EditURLsPanel( dlg, ( self._current_media, ) )
             
             dlg.SetPanel( panel )
             
-            dlg.exec()
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                pending_content_updates = panel.GetValue()
+                
+                if len( pending_content_updates ) > 0:
+                    
+                    content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, pending_content_updates )
+                    
+                    CG.client_controller.Write( 'content_updates', content_update_package )
+                    
+                
             
         
     
@@ -1482,8 +1492,6 @@ class CanvasPanel( Canvas ):
                 ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'urls', 'Manage this file\'s known URLs.', self._ManageURLs )
-            
             num_notes = self._current_media.GetNotesManager().GetNumNotes()
             
             notes_str = 'notes'
@@ -1502,7 +1510,7 @@ class CanvasPanel( Canvas ):
             
             ClientGUIMenus.AppendMenu( menu, manage_menu, 'manage' )
             
-            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media, 1 )
             
             ClientGUIMediaMenus.AddOpenMenu( self, menu, self._current_media, [ self._current_media ] )
             
@@ -4605,8 +4613,6 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage this file\'s ratings.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'urls', 'Manage this file\'s known urls.', self._ManageURLs )
-            
             num_notes = self._current_media.GetNotesManager().GetNumNotes()
             
             notes_str = 'notes'
@@ -4638,7 +4644,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
                 ClientGUIMenus.AppendMenu( menu, files_menu, 'files' )
                 
             
-            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._current_media, 1 )
             
             ClientGUIMediaMenus.AddOpenMenu( self, menu, self._current_media, [ self._current_media ] )
             

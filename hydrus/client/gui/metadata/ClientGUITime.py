@@ -16,12 +16,14 @@ from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUINumberTest
 from hydrus.client.importing.options import ClientImportOptions
+
+# TODO: maybe break this into ClientGUITimeWidgets for gui.widgets and then shoot EditCheckerOptions off to something appropriate
 
 def QDateTimeToPrettyString( dt: typing.Optional[ QC.QDateTime ], include_milliseconds = False ):
     

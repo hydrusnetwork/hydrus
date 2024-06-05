@@ -34,8 +34,6 @@ from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIDuplicates
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUITags
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -48,6 +46,8 @@ from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaMenus
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.pages import ClientGUIManagementController
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
@@ -1022,13 +1022,23 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             title = 'manage urls for {} files'.format( num_files )
             
-            with ClientGUITopLevelWindowsPanels.DialogManage( self, title ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsManagement.ManageURLsPanel( dlg, flat_media )
+                panel = ClientGUIScrolledPanelsEdit.EditURLsPanel( dlg, flat_media )
                 
                 dlg.SetPanel( panel )
                 
-                dlg.exec()
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    pending_content_updates = panel.GetValue()
+                    
+                    if len( pending_content_updates ) > 0:
+                        
+                        content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, pending_content_updates )
+                        
+                        CG.client_controller.Write( 'content_updates', content_update_package )
+                        
+                    
                 
             
             self.setFocus( QC.Qt.OtherFocusReason )
@@ -4117,8 +4127,6 @@ class MediaPanelThumbnails( MediaPanel ):
                 ClientGUIMenus.AppendMenuItem( manage_menu, 'ratings', 'Manage ratings for the selected files.', self._ManageRatings )
                 
             
-            ClientGUIMenus.AppendMenuItem( manage_menu, 'urls', 'Manage urls for the selected files.', self._ManageURLs )
-            
             num_notes = focus_singleton.GetNotesManager().GetNumNotes()
             
             notes_str = 'notes'
@@ -4260,7 +4268,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             #
             
-            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._focused_media, selected_media = self._selected_media )
+            ClientGUIMediaMenus.AddKnownURLsViewCopyMenu( self, menu, self._focused_media, num_selected, selected_media = self._selected_media )
             
             ClientGUIMediaMenus.AddOpenMenu( self, menu, self._focused_media, self._selected_media )
             

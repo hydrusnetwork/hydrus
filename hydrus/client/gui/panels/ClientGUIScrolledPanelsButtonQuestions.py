@@ -2,8 +2,8 @@ from qtpy import QtWidgets as QW
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 
 class QuestionYesNoPanel( ClientGUIScrolledPanels.ResizingScrolledPanel ):

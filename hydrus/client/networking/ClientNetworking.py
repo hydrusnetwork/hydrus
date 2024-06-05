@@ -90,7 +90,16 @@ class NetworkEngine( object ):
         
         if HG.network_report_mode:
             
-            HydrusData.ShowText( 'Network Job Added: ' + job._method + ' ' + job._url )
+            message = f'Network Job Added: {job._method}  {job._url}'
+            
+            if HG.network_report_mode_silent:
+                
+                HydrusData.Print( message )
+                
+            else:
+                
+                HydrusData.ShowText( message )
+                
             
         
         with self._lock:
@@ -412,7 +421,16 @@ class NetworkEngine( object ):
                     
                     if HG.network_report_mode:
                         
-                        HydrusData.ShowText( 'Network Job Starting: ' + job._method + ' ' + job._url )
+                        message = f'Network Job Starting: {job._method} {job._url}'
+                        
+                        if HG.network_report_mode_silent:
+                            
+                            HydrusData.Print( message )
+                            
+                        else:
+                            
+                            HydrusData.ShowText( message )
+                            
                         
                     
                     self._active_domains_counter[ job.GetSecondLevelDomain() ] += 1
@@ -438,7 +456,16 @@ class NetworkEngine( object ):
                 
                 if HG.network_report_mode:
                     
-                    HydrusData.ShowText( 'Network Job Done: ' + job._method + ' ' + job._url )
+                    message = f'Network Job Done: {job._method} {job._url}'
+                    
+                    if HG.network_report_mode_silent:
+                        
+                        HydrusData.Print( message )
+                        
+                    else:
+                        
+                        HydrusData.ShowText( message )
+                        
                     
                 
                 second_level_domain = job.GetSecondLevelDomain()

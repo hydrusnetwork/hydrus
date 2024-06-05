@@ -984,7 +984,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             with ClientGUITopLevelWindowsPanels.DialogManage( None, 'repair file system' ) as dlg:
                 
-                from hydrus.client.gui import ClientGUIScrolledPanelsManagement
+                from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
                 
                 panel = ClientGUIScrolledPanelsManagement.RepairFileSystemPanel( dlg, missing_subfolders )
                 

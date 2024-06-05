@@ -1963,7 +1963,7 @@ def HasTransparency( path, mime, duration = None, num_frames = None, resolution 
             
             return HydrusImageColours.NumPyImageHasUsefulAlphaChannel( numpy_image )
             
-        elif mime in ( HC.ANIMATION_GIF, HC.ANIMATION_APNG ):
+        elif mime in HC.ANIMATIONS:
             
             if num_frames is None or resolution is None:
                 
@@ -1972,11 +1972,11 @@ def HasTransparency( path, mime, duration = None, num_frames = None, resolution 
             
             we_checked_alpha_channel = False
             
-            if mime == HC.ANIMATION_GIF:
+            if mime in ( HC.ANIMATION_GIF, HC.ANIMATION_WEBP ):
                 
-                renderer = ClientVideoHandling.GIFRenderer( path, num_frames, resolution )
+                renderer = ClientVideoHandling.AnimationRendererPIL( path, num_frames, resolution )
                 
-            else: # HC.ANIMATION_APNG
+            else:
                 
                 renderer = HydrusVideoHandling.VideoRendererFFMPEG( path, mime, duration, num_frames, resolution )
                 

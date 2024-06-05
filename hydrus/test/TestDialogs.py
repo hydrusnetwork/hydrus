@@ -6,10 +6,10 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusGlobals as HG
 
 from hydrus.client.gui import ClientGUIDialogs
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUISubscriptions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 
 def HitButton( button ):
     

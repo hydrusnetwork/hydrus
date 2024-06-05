@@ -19,7 +19,6 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUIRatings
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUIShortcuts
 from hydrus.client.gui import ClientGUIShortcutControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -28,6 +27,8 @@ from hydrus.client.gui.canvas import ClientGUIMPV
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaControls
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientContentUpdates
@@ -669,7 +670,12 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._current_zoom = 1.0
         self._current_index_string = ''
         
+        self._top_left_hbox = QP.HBoxLayout()
+        self._top_center_hbox = QP.HBoxLayout()
+        self._top_right_hbox = QP.HBoxLayout()
         self._top_hbox = QP.HBoxLayout()
+        
+        self._top_right_hbox.addStretch( 1 )
         
         self._title_text = ClientGUICommon.BetterStaticText( self, 'title', ellipsize_end = True )
         self._info_text = ClientGUICommon.BetterStaticText( self, 'info', ellipsize_end = True )
@@ -678,10 +684,14 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._info_text.setAlignment( QC.Qt.AlignHCenter | QC.Qt.AlignVCenter )
         
         self._PopulateLeftButtons()
-        self._top_hbox.addStretch( 1 )
         self._PopulateCenterButtons()
-        self._top_hbox.addStretch( 1 )
         self._PopulateRightButtons()
+        
+        self._top_left_hbox.addStretch( 1 )
+        
+        QP.AddToLayout( self._top_hbox, self._top_left_hbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
+        QP.AddToLayout( self._top_hbox, self._top_center_hbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_hbox, self._top_right_hbox, CC.FLAGS_CENTER_PERPENDICULAR_EXPAND_DEPTH )
         
         vbox = QP.VBoxLayout()
         
@@ -753,17 +763,17 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._undelete_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'undelete' ) )
         self._undelete_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._archive_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._undelete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_center_hbox, self._archive_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_center_hbox, self._trash_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_center_hbox, self._delete_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_center_hbox, self._undelete_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _PopulateLeftButtons( self ):
         
         self._index_text = ClientGUICommon.BetterStaticText( self, 'index' )
         
-        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _PopulateRightButtons( self ):
@@ -796,6 +806,10 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         self._show_embedded_metadata_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().listctrl, self._ShowFileEmbeddedMetadata )
         self._show_embedded_metadata_button.setFocusPolicy( QC.Qt.TabFocus )
         
+        view_options = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().eye, self._ShowViewOptionsMenu )
+        view_options.setToolTip( ClientGUIFunctions.WrapToolTip( 'view options' ) )
+        view_options.setFocusPolicy( QC.Qt.TabFocus )
+        
         fullscreen_switch = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().fullscreen_switch, CG.client_controller.pub, 'canvas_fullscreen_switch', self._canvas_key )
         fullscreen_switch.setToolTip( ClientGUIFunctions.WrapToolTip( 'fullscreen switch' ) )
         fullscreen_switch.setFocusPolicy( QC.Qt.TabFocus )
@@ -820,17 +834,18 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         close.setToolTip( ClientGUIFunctions.WrapToolTip( 'close' ) )
         close.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._zoom_text, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, zoom_in, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, zoom_out, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, zoom_switch, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._volume_control, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, shortcuts, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._show_embedded_metadata_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, fullscreen_switch, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, open_externally, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, drag_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, close, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, self._zoom_text, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, zoom_in, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, zoom_out, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, zoom_switch, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, self._volume_control, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, shortcuts, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, self._show_embedded_metadata_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, view_options, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, fullscreen_switch, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, open_externally, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, drag_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_right_hbox, close, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _ResetArchiveButton( self ):
@@ -1010,6 +1025,31 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         CGC.core().PopupMenu( self, menu )
         
     
+    def _ShowViewOptionsMenu( self ):
+        
+        def flip_background_boolean( name ):
+            
+            new_options.FlipBoolean( name )
+            
+            self.update()
+            
+        
+        new_options = CG.client_controller.new_options
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        # add 'disable hover window x' here too, but not the top hover lol
+        # add 'always on top' here too
+        
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw tags hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_tags_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_tags_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw top hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw top-right hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_top_right_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'draw bottom-right index text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
     def DragButtonHit( self ):
         
         if self._current_media is None:
@@ -1114,7 +1154,7 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
         self._back_button.SetToolTipWithShortcuts( 'back', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_BACK )
         self._back_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._back_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._back_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         CanvasHoverFrameTop._PopulateLeftButtons( self )
         
@@ -1122,7 +1162,7 @@ class CanvasHoverFrameTopArchiveDeleteFilter( CanvasHoverFrameTop ):
         self._skip_button.SetToolTipWithShortcuts( 'skip', CAC.SIMPLE_ARCHIVE_DELETE_FILTER_SKIP )
         self._skip_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._skip_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._skip_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
     def _ResetArchiveButton( self ):
@@ -1145,9 +1185,9 @@ class CanvasHoverFrameTopNavigable( CanvasHoverFrameTop ):
         self._next_button.SetToolTipWithShortcuts( 'next', CAC.SIMPLE_VIEW_NEXT )
         self._next_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._previous_button, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
-        QP.AddToLayout( self._top_hbox, self._next_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._previous_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._index_text, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._next_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
 class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
@@ -1158,7 +1198,7 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         self._first_button.SetToolTipWithShortcuts( 'go back a pair', CAC.SIMPLE_DUPLICATE_FILTER_BACK )
         self._first_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         CanvasHoverFrameTopNavigable._PopulateLeftButtons( self )
         
@@ -1166,7 +1206,7 @@ class CanvasHoverFrameTopDuplicatesFilter( CanvasHoverFrameTopNavigable ):
         self._last_button.SetToolTipWithShortcuts( 'show a different pair', CAC.SIMPLE_DUPLICATE_FILTER_SKIP )
         self._last_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
 class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
@@ -1177,7 +1217,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         self._first_button.SetToolTipWithShortcuts( 'first', CAC.SIMPLE_VIEW_FIRST )
         self._first_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._first_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
         CanvasHoverFrameTopNavigable._PopulateLeftButtons( self )
         
@@ -1185,7 +1225,7 @@ class CanvasHoverFrameTopNavigableList( CanvasHoverFrameTopNavigable ):
         self._last_button.SetToolTipWithShortcuts( 'last', CAC.SIMPLE_VIEW_LAST )
         self._last_button.setFocusPolicy( QC.Qt.TabFocus )
         
-        QP.AddToLayout( self._top_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( self._top_left_hbox, self._last_button, CC.FLAGS_CENTER_PERPENDICULAR )
         
     
 class CanvasHoverFrameTopRight( CanvasHoverFrame ):
@@ -1963,15 +2003,19 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
             
             with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit lighten/darken intensity' ) as dlg:
                 
-                panel = ClientGUIScrolledPanelsEdit.EditNoneableIntegerPanel( dlg, value, message = message, none_phrase = 'do not change', min = 1, max = 9 )
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
                 
-                panel.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
+                control = ClientGUICommon.NoneableSpinCtrl( panel, message = message, none_phrase = 'do not change', min = 1, max = 9 )
+                control.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
+                control.SetValue( value )
+                
+                panel.SetControl( control )
                 
                 dlg.SetPanel( panel )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    new_value = panel.GetValue()
+                    new_value = control.GetValue()
                     
                     new_options.SetNoneableInteger( variable_name, new_value )
                     

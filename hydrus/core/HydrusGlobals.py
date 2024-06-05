@@ -67,6 +67,7 @@ hover_window_report_mode = False
 file_import_report_mode = False
 phash_generation_report_mode = False
 network_report_mode = False
+network_report_mode_silent = False
 pubsub_report_mode = False
 daemon_report_mode = False
 mpv_report_mode = False

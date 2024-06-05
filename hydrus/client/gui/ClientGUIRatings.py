@@ -353,7 +353,7 @@ class RatingIncDec( QW.QWidget ):
             elif button == QC.Qt.MiddleButton:
                 
                 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-                from hydrus.client.gui import ClientGUIScrolledPanels
+                from hydrus.client.gui.panels import ClientGUIScrolledPanels
                 
                 with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
                     

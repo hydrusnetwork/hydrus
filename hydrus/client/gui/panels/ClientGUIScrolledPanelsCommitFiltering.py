@@ -8,9 +8,9 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIScrolledPanels
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 
 def GetFinishArchiveDeleteFilteringAnswer( win, kept_label, deletion_options ):

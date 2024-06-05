@@ -189,11 +189,13 @@ media_viewer_action_string_lookup = {
 
 unsupported_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_OPEN_EXTERNALLY_BUTTON, MEDIA_VIEWER_ACTION_DO_NOT_SHOW_ON_ACTIVATION_OPEN_EXTERNALLY, MEDIA_VIEWER_ACTION_DO_NOT_SHOW ]
 static_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
+webp_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_NATIVE ] + unsupported_media_actions
 animated_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ] + static_media_actions
 audio_media_actions = [ MEDIA_VIEWER_ACTION_SHOW_WITH_MPV, MEDIA_VIEWER_ACTION_SHOW_WITH_QMEDIAPLAYER ] + unsupported_media_actions
 
 # actions, can_start_paused, can_start_with_embed
 static_full_support = ( static_media_actions, False, True )
+webp_support = ( webp_media_actions, True, True )
 animated_full_support = ( animated_media_actions, True, True )
 audio_full_support = ( audio_media_actions, True, True )
 no_support = ( unsupported_media_actions, False, False )
@@ -210,7 +212,11 @@ media_viewer_capabilities = {
 
 for mime in HC.SEARCHABLE_MIMES:
     
-    if mime in HC.VIEWABLE_ANIMATIONS:
+    if mime == HC.ANIMATION_WEBP:
+        
+        media_viewer_capabilities[ mime ] = webp_support
+        
+    elif mime in HC.VIEWABLE_ANIMATIONS:
         
         media_viewer_capabilities[ mime ] = animated_full_support
         
@@ -539,6 +545,7 @@ class GlobalPixmaps( object ):
         self.zoom_in = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_in.png' ) )
         self.zoom_out = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_out.png' ) )
         self.zoom_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'zoom_switch.png' ) )
+        self.eye = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'eye.png' ) )
         self.fullscreen_switch = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'fullscreen_switch.png' ) )
         self.open_externally = QG.QPixmap( os.path.join( HC.STATIC_DIR, 'open_externally.png' ) )
         

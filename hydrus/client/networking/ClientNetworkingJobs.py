@@ -750,7 +750,16 @@ class NetworkJob( object ):
             
             if HG.network_report_mode:
                 
-                HydrusData.ShowText( 'Network Jobs Referral URLs for {}:{}Given: {}{}Used: {}'.format( url, '\n', self._referral_url, '\n', referral_url ) )
+                message = f'Network Jobs Referral URLs for {url}:\nGiven: {self._referral_url}\nUsed: {referral_url}'
+                
+                if HG.network_report_mode_silent:
+                    
+                    HydrusData.Print( message )
+                    
+                else:
+                    
+                    HydrusData.ShowText( message )
+                    
                 
             
             if referral_url is not None:
@@ -775,7 +784,16 @@ class NetworkJob( object ):
                     
                     if HG.network_report_mode:
                         
-                        HydrusData.ShowText( 'Network Jobs Quoted Referral URL for {}:{}{}'.format( url, '\n', referral_url ) )
+                        message = f'Network Jobs Quoted Referral URL for {url}:\n{referral_url}'
+                        
+                        if HG.network_report_mode_silent:
+                            
+                            HydrusData.Print( message )
+                            
+                        else:
+                            
+                            HydrusData.ShowText( message )
+                            
                         
                     
                 
@@ -840,9 +858,18 @@ class NetworkJob( object ):
         
         if HG.network_report_mode:
             
-            HydrusData.ShowText( 'Network error should follow:' )
-            HydrusData.ShowException( e )
-            HydrusData.ShowText( error )
+            if HG.network_report_mode_silent:
+                
+                HydrusData.Print( 'Network error should follow:' )
+                HydrusData.PrintException( e )
+                HydrusData.Print( error )
+                
+            else:
+                
+                HydrusData.ShowText( 'Network error should follow:' )
+                HydrusData.ShowException( e )
+                HydrusData.ShowText( error )
+                
             
         
         self._SetDone()
@@ -1584,9 +1611,19 @@ class NetworkJob( object ):
                     # but this will do as a patch for now
                     self._actual_fetched_url = response.url
                     
-                    if self._actual_fetched_url != self._url and HG.network_report_mode:
+                    if HG.network_report_mode and self._actual_fetched_url != self._url:
                         
-                        HydrusData.ShowText( 'Network Jobs Redirect: {} -> {}'.format( self._url, self._actual_fetched_url ) )
+                        message = f'Network Jobs Redirect: {self._url} -> {self._actual_fetched_url}'
+                        
+                        if HG.network_report_mode_silent:
+                            
+                            HydrusData.Print( message )
+                            
+                        else:
+                            
+                            HydrusData.ShowText( message )
+                            
+                        
                         
                     
                     self._ParseFirstResponseHeaders( response )

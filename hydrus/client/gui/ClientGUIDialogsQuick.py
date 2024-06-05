@@ -12,9 +12,10 @@ from hydrus.core import HydrusTime
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientPaths
 from hydrus.client.gui import ClientGUIDialogsMessage
-from hydrus.client.gui import ClientGUIScrolledPanelsButtonQuestions
-from hydrus.client.gui import ClientGUIScrolledPanelsEdit
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsButtonQuestions
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
+from hydrus.client.gui.panels import ClientGUIScrolledPanelsSelectFromList
 
 def GetDeleteFilesJobs( win, media, default_reason, suggested_file_service_key = None ):
     
@@ -205,7 +206,7 @@ def SelectFromList( win, title, choice_tuples, value_to_select = None, sort_tupl
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditSelectFromListPanel( dlg, choice_tuples, value_to_select = value_to_select, sort_tuples = sort_tuples )
+        panel = ClientGUIScrolledPanelsSelectFromList.EditSelectFromListPanel( dlg, choice_tuples, value_to_select = value_to_select, sort_tuples = sort_tuples )
         
         dlg.SetPanel( panel )
         
@@ -233,7 +234,7 @@ def SelectFromListButtons( win, title, choice_tuples, message = '' ):
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title, hide_buttons = True ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditSelectFromListButtonsPanel( dlg, choice_tuples, message = message )
+        panel = ClientGUIScrolledPanelsSelectFromList.EditSelectFromListButtonsPanel( dlg, choice_tuples, message = message )
         
         dlg.SetPanel( panel )
         
@@ -254,7 +255,7 @@ def SelectMultipleFromList( win, title, choice_tuples ):
     
     with ClientGUITopLevelWindowsPanels.DialogEdit( win, title ) as dlg:
         
-        panel = ClientGUIScrolledPanelsEdit.EditChooseMultiple( dlg, choice_tuples )
+        panel = ClientGUIScrolledPanelsSelectFromList.EditSelectMultiple( dlg, choice_tuples )
         
         dlg.SetPanel( panel )
         
