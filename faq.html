@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.25">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.27">
     
     
       
@@ -170,7 +170,7 @@
       
     </form>
     <div class="md-search__output">
-      <div class="md-search__scrollwrap" data-md-scrollfix>
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
         <div class="md-search-result" data-md-component="search-result">
           <div class="md-search-result__meta">
             Initializing search
@@ -1998,6 +1998,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#i_just_imported_files_from_my_hard_drive_collection_how_can_i_get_their_tags_from_the_boorus" class="md-nav__link">
+    <span class="md-ellipsis">
+      I just imported files from my hard drive collection. How can I get their tags from the boorus?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#encryption" class="md-nav__link">
     <span class="md-ellipsis">
       Does Hydrus run ok off an encrypted drive partition?
@@ -2277,6 +2286,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#i_just_imported_files_from_my_hard_drive_collection_how_can_i_get_their_tags_from_the_boorus" class="md-nav__link">
+    <span class="md-ellipsis">
+      I just imported files from my hard drive collection. How can I get their tags from the boorus?
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#encryption" class="md-nav__link">
     <span class="md-ellipsis">
       Does Hydrus run ok off an encrypted drive partition?
@@ -2398,6 +2416,13 @@
 <p>Not really. Unless your situation involves millions of richly locally tagged files and a gigantic deleted:kept file ratio, don't worry about it.</p>
 <h3 id="does_the_metadata_for_files_i_deleted_mean_there_is_some_kind_of_a_permanent_record_of_which_files_my_client_has_heard_about_andor_seen_directly_even_if_i_purge_the_deletion_record">Does the metadata for files I deleted mean there is some kind of a permanent record of which files my client has heard about and/or seen directly, even if I purge the deletion record?<a class="headerlink" href="#does_the_metadata_for_files_i_deleted_mean_there_is_some_kind_of_a_permanent_record_of_which_files_my_client_has_heard_about_andor_seen_directly_even_if_i_purge_the_deletion_record" title="Permanent link">&para;</a></h3>
 <p>Yes. I am working on updating the database infrastructure to allow a full purge, but the structure is complicated, so it will take some time. If you are afraid of someone stealing your hard drive and matriculating your sordid MLP collection (or, in this case, the historical log of horrors that you rejected), do some research into drive encryption. Hydrus runs fine off an encrypted disk.</p>
+<h2 id="i_just_imported_files_from_my_hard_drive_collection_how_can_i_get_their_tags_from_the_boorus">I just imported files from my hard drive collection. How can I get their tags from the boorus?<a class="headerlink" href="#i_just_imported_files_from_my_hard_drive_collection_how_can_i_get_their_tags_from_the_boorus" title="Permanent link">&para;</a></h2>
+<p>The problem of 'what tags should these files have?' is technically difficult to solve, and there isn't a fast and easy way to query a booru and say 'hey, what are your tags for this?', particularly <em>en masse</em>. It is even more difficult to keep up with updates (e.g. someone adding a tag to a file some months or years after it was uploaded). This is the main problem I designed the PTR to solve.</p>
+<p>If you cannot or do not want to devote the local resources to sync with the PTR, there are a few hacky ways to perform tag lookups, mostly with manual hash-based lookups. The big boorus support file search based on 'md5' hash, so there are ways to build a workflow where you can 'search' a booru or iqdb for one file at a time to see if there is a hit, and then get tags as if you were downloading it. An old system in the client called 'file lookup scripts' works like this, in the <em>manage tags</em> dialog, and some users have figured out ways to make it work with some clever downloaders.</p>
+<p>Be careful with these systems. They tend to be slow and use a lot of resources serverside, so you will be rude if you hit them too hard. They work for a handful of files every now and then, but please do not set up jobs of many many thousands of files, and absolutely do not repeat the job for the same files regularly--you will just waste a lot of CPU and network time for everyone, and only gain a couple of tags in the process. Note that the hash-based lookups only work if your files have not changed since being downloaded; if you have scaled them, stripped metadata, or optimised quality, then they will count as new files and the hashes will have changed, and you will need to think about services like iqdb or saucenao, or ultimately the hydrus duplicate resolution system.</p>
+<p>That said, here is <a href="https://wiki.hydrus.network/books/hydrus-manual/page/file-look-up">a user guide on how to perform various kinds of file lookups</a>.</p>
+<p>If you are feeling adventurous, you can also explore the newer <a href="client_api.html#auto-taggers">AI-tagging tools</a> that users are working on.</p>
+<p>Ultimately, though, a good and simple way to backfill your files' tags is just rely on normal downloading workflows. Try downloading your favourite artists (and later set up subscriptions) and you will naturally get files you like, with tags, and if, by (expected) serendipity, a file on the site is the same as one you already imported, hydrus will add the tags to it retroactively. </p>
 <h2 id="encryption">Does Hydrus run ok off an encrypted drive partition?<a class="headerlink" href="#encryption" title="Permanent link">&para;</a></h2>
 <p>Yes! Both the database and your files should be fine on any of the popular software solutions. These programs give your OS a virtual drive that on my end looks and operates like any other. I have yet to encounter one that SQLite has a problem with. Make sure you don't have auto-dismount set--or at least be hawkish that it will never trigger while hydrus is running--or you could damage your database.</p>
 <p>Drive encryption is a good idea for all your private things. If someone steals your laptop or USB stick, it means you only have to deal with frustration and replacement expenses (rather than also a nightmare of anxiety and identity-loss as some bad guy combs through all your things).</p>
@@ -2425,7 +2450,7 @@
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">October 18, 2023</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 19, 2024</span>
   </span>
 
     
@@ -2550,7 +2575,7 @@
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.081f42fc.min.js"></script>
+      <script src="assets/javascripts/bundle.ad660dcc.min.js"></script>
       
     
   </body>

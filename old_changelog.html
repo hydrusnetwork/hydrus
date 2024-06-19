@@ -35,6 +35,41 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_579"><a href="#version_579">version 579</a></h2>
+                    <ul>
+                        <li><h3>some url-checking logic</h3></li>
+                        <li>the 'during URL check, check for neighbour-spam?' checkbox in _file import options_ has some sophisticated new logic. check the issue for a longer explanation, but long story short is if you have two different booru URLs that share the same source URL (with one or both simply being incorrect e.g. both point to the same 'clean' source, even though one is 'messy'), then that bad source URL will no longer cause the second booru import job to get 'already in db'. it now recognises this is an untrustworthy mapping and goes ahead with the download, just as you actually want. once the file is imported, it is still able, as normal, to quickly recognise the true positive 'already in db' result, so I believe have successfully plugged a logical hole here without affecting normal good operation! (issue #1563)</li>
+                        <li>the 'associate source urls' option in file import options is more careful about the above logic. source urls are now definitely not included in the pre-import file url checks if this option is off</li>
+                        <li><h3>some regex quality of life</h3></li>
+                        <li>regex input text boxes have been given a pass. the regex 'help' links are folded into the button, the links are updated to something newer (one of the older ones seems to have died), the button is now put aside the input and labelled `.*`, the menu is a little neater, and the input has placeholder text and now shows green/red (valid/invalid in the stylesheet) depending on whether the current regex text compiles ok. just a nicer widget overall</li>
+                        <li>this widget is now in filename tagging, the String Match panel regex match, the String Converter panel regex step, and the 'regex favourites' options panel, which I was surprised to learn the existence of</li>
+                        <li>the regex menu for the String Converter regex step also now shows how to do grouping in python regex. I hadn't experimented with this properly in python, but I learned this past week that this thing can handle `(...) -> \1` group-replace fine and can do named groups with `(?P<name>...) -> \g<name>` too!</li>
+                        <li>for convenience, when editing a String Match, if you flick from 'any' to 'fixed' or 'regex', it now puts whatever was in your example text beforehand as the new value for the fixed text or regex</li>
+                        <li><h3>list selecting and scrolling</h3></li>
+                        <li>I added some new scroll-to tech to my multi-column lists</li>
+                        <li>pasting a URL into the 'edit URL Classes' dialog's test input now selects and scrolls to the matching URL Class</li>
+                        <li>the following lists should all have better list sort/select preservation, and will now scroll to and maintain visibility, on various edit/add events: edit url classes, edit gugs, edit parsers, edit shortcut sets, edit shortcut set, the options dialog frame locations, the options dialog media viewer options, manage services, manage account types, manage logins, manage login scripts, edit login script, and some weird legacy stuff. lots more to do in future</li>
+                        <li>when you 'add from defaults' for many lists, it will now try and scroll to what was just added. may not be perfect!</li>
+                        <li>same deal with 'import' buttons. it will now try and scroll to what you import!</li>
+                        <li>I am also moving to 'when you edit, you only edit one row at a time'. in general, when I have written list edit functions, I write them to edit each row of a multi-selection in turn with a new dialog, but: this is not used very much, can be confusing/annoying to the user, and increases code complexity, so I am undoing it. as I continue to work here, if you have a multi-selection, an edit call will increasingly just edit the top selected row. maybe in this case I'll reduce the selection, maybe I'll add some different way to do multi-edit again, let me know what you think</li>
+                        <li><h3>misc</h3></li>
+                        <li>import folders now work in a far more efficient way. previously, the client loaded import folders every three minutes to see which were ready to run; now, it loads them once on startup or change and then consults each folder to determine how long to wait until loading it again. it isn't perfect yet, but this ancient, terrible code from back when 100 files was a lot is now far more efficient. users with large import folders may notice less background lag, let me know how you get on. thanks to the users who spotted this--there's doubtless more out there</li>
+                        <li>to help muscle memory, the 'undo' menu is now disabled when there is nothing for it to hold, not invisible. same deal for the 'pending' menu, although this will still hide if you have no services to pend to (ipfs, hydrus repositories). see how this feels, maybe I'll add options for it</li>
+                        <li>the new 'is this webp animated?' check is now a little faster</li>
+                        <li>if your similar file search tree is missing a branch (this can happen after db damage or crash desync during a file import) and a new file import (wanting to add a new leaf) runs into this gap, the database now imports the file successfully and the user gets a popup message telling them to regen their similar files search tree when convenient (rather than raising an error and failing the import)</li>
+                        <li>added a FAQ question 'I just imported files from my hard drive collection. How can I get their tags from the boorus?', to talk about my feelings on this technical question and to link to the user guide here: https://wiki.hydrus.network/books/hydrus-manual/page/file-look-up</li>
+                        <li>the default bandwidth rules for a hydrus repository are boosted from 512MB a day to 2GB. my worries about a database syncing 'too fast' for maintenance timers to kick in are less critical these days</li>
+                        <li><h3>build and cleanup</h3></li>
+                        <li>since the recent test 'future build' went without any problems, I am folding its library updates into the normal build. Qt (PySide6) goes from 6.6.0 to 6.6.3.1 for Linux and Windows, there's a newer SQLite dll on Windows, and there's a newer mpv dll on Windows</li>
+                        <li>updated all the requirements.txts to specify to not use the brand new numpy 2.0.0, which it seems just released this week and breaks anything that was compiled to work with 1.x.x. if you tried to set up a new venv in the past few days and got weird numpy errors, please rebuild your venv in v579, it should work again</li>
+                        <li>thanks to a user, the Docker build's `requests` 'no_proxy' patch is fixed for python &gt;3.10</li>
+                        <li>cleaned up a ton of `SyntaxWarnings` boot logspam on python &gt;=3.12 due to un-`r`-texted escape sequences like `\s`. thanks to the user who submitted all this, let me know if I missed any</li>
+                        <li>cleaned up some regex ui code</li>
+                        <li>cleaned up some garbage in the string panel ui code</li>
+                        <li>fixed some weird vertical stretch in some single-control dialogs</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_578"><a href="#version_578">version 578</a></h2>
                     <ul>
                         <li><h3>animated webp</h3></li>
