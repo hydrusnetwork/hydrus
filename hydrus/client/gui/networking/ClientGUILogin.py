@@ -1,4 +1,5 @@
 import os
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -475,9 +476,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
         
-        self._domains_and_login_info.AddDatas( ( domain_and_login_info, ) )
-        
-        self._domains_and_login_info.Sort()
+        self._domains_and_login_info.AddDatas( ( domain_and_login_info, ), select_sort_and_scroll = True )
         
     
     def _CanDoLogin( self ):
@@ -524,25 +523,29 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _CanEditCreds( self ):
         
-        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
+        data = self._domains_and_login_info.GetTopSelectedData()
         
-        for domain_and_login_info in domain_and_login_infos:
+        if data is None:
             
-            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            return
             
-            try:
+        
+        domain_and_login_info = data
+        
+        ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+        
+        try:
+            
+            login_script = self._GetLoginScript( login_script_key_and_name )
+            
+            if len( login_script.GetCredentialDefinitions() ) > 0:
                 
-                login_script = self._GetLoginScript( login_script_key_and_name )
+                return True
                 
-                if len( login_script.GetCredentialDefinitions() ) > 0:
-                    
-                    return True
-                    
-                
-            except HydrusExceptions.DataMissing:
-                
-                continue
-                
+            
+        except HydrusExceptions.DataMissing:
+            
+            return False
             
         
         return False
@@ -786,240 +789,230 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditCredentials( self ):
         
-        edited_datas = []
+        data = self._domains_and_login_info.GetTopSelectedData()
         
-        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
-        
-        for domain_and_login_info in domain_and_login_infos:
+        if data is None:
             
-            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
-            
-            try:
-                
-                login_script = self._GetLoginScript( login_script_key_and_name )
-                
-            except HydrusExceptions.DataMissing:
-                
-                ClientGUIDialogsMessage.ShowWarning( self, f'Could not find a login script for "{login_domain}"! Please re-add the login script in the other dialog or update the entry here to a new one!' )
-                
-                return
-                
-            
-            credential_definitions = login_script.GetCredentialDefinitions()
-            
-            if len( credential_definitions ) > 0:
-                
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login' ) as dlg:
-                    
-                    credentials = dict( credentials_tuple )
-                    
-                    panel = EditLoginCredentialsPanel( dlg, credential_definitions, credentials )
-                    
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        credentials = panel.GetValue()
-                        
-                    else:
-                        
-                        return
-                        
-                    
-                
-            else:
-                
-                continue
-                
-            
-            try:
-                
-                login_script.CheckCanLogin( credentials )
-                
-                validity = ClientNetworkingLogin.VALIDITY_UNTESTED
-                validity_error_text = ''
-                
-                # hacky: if there are creds, is at least one not empty string?
-                creds_are_good = len( credentials ) == 0 or True in ( value != '' for value in list(credentials.values()) )
-                
-            except HydrusExceptions.ValidationException as e:
-                
-                validity = ClientNetworkingLogin.VALIDITY_INVALID
-                validity_error_text = str( e )
-                
-                creds_are_good = False
-                
-            
-            credentials_tuple = tuple( credentials.items() )
-            
-            if creds_are_good:
-                
-                if not active:
-                    
-                    message = 'Activate this login script for this domain?'
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                    
-                    if result == QW.QDialog.Accepted:
-                        
-                        active = True
-                        
-                    
-                
-            else:
-                
-                active = False
-                
-            
-            no_work_until = 0
-            no_work_until_reason = ''
-            
-            edited_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
-            
-            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
-            self._domains_and_login_info.AddDatas( ( edited_domain_and_login_info, ) )
-            
-            edited_datas.append( edited_domain_and_login_info )
+            return
             
         
-        self._domains_and_login_info.SelectDatas( edited_datas )
+        domain_and_login_info = data
         
-        self._domains_and_login_info.Sort()
+        ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+        
+        try:
+            
+            login_script = self._GetLoginScript( login_script_key_and_name )
+            
+        except HydrusExceptions.DataMissing:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, f'Could not find a login script for "{login_domain}"! Please re-add the login script in the other dialog or update the entry here to a new one!' )
+            
+            return
+            
+        
+        credential_definitions = login_script.GetCredentialDefinitions()
+        
+        if len( credential_definitions ) > 0:
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login' ) as dlg:
+                
+                credentials = dict( credentials_tuple )
+                
+                panel = EditLoginCredentialsPanel( dlg, credential_definitions, credentials )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    credentials = panel.GetValue()
+                    
+                else:
+                    
+                    return
+                    
+                
+            
+        else:
+            
+            return
+            
+        
+        try:
+            
+            login_script.CheckCanLogin( credentials )
+            
+            validity = ClientNetworkingLogin.VALIDITY_UNTESTED
+            validity_error_text = ''
+            
+            # hacky: if there are creds, is at least one not empty string?
+            creds_are_good = len( credentials ) == 0 or True in ( value != '' for value in list(credentials.values()) )
+            
+        except HydrusExceptions.ValidationException as e:
+            
+            validity = ClientNetworkingLogin.VALIDITY_INVALID
+            validity_error_text = str( e )
+            
+            creds_are_good = False
+            
+        
+        credentials_tuple = tuple( credentials.items() )
+        
+        if creds_are_good:
+            
+            if not active:
+                
+                message = 'Activate this login script for this domain?'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    active = True
+                    
+                
+            
+        else:
+            
+            active = False
+            
+        
+        no_work_until = 0
+        no_work_until_reason = ''
+        
+        edited_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+        
+        self._domains_and_login_info.ReplaceData( domain_and_login_info, edited_domain_and_login_info, sort_and_scroll = True )
         
     
     def _EditLoginScript( self ):
         
-        edited_datas = []
+        data = self._domains_and_login_info.GetTopSelectedData()
         
-        domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
-        
-        for domain_and_login_info in domain_and_login_infos:
+        if data is None:
             
-            ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+            return
+            
+        
+        domain_and_login_info = data
+        
+        ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
+        
+        try:
+            
+            current_login_script = self._GetLoginScript( login_script_key_and_name )
+            
+        except HydrusExceptions.DataMissing:
+            
+            current_login_script = None
+            
+        
+        potential_login_scripts = list( self._login_scripts )
+        
+        potential_login_scripts.sort( key = lambda ls: ls.GetName() )
+        
+        matching_potential_login_scripts = [ login_script for login_script in potential_login_scripts if login_domain in login_script.GetExampleDomains() ]
+        unmatching_potential_login_scripts = [ login_script for login_script in potential_login_scripts if login_domain not in login_script.GetExampleDomains() ]
+        
+        choice_tuples = [ ( login_script.GetName(), login_script ) for login_script in matching_potential_login_scripts ]
+        
+        if len( matching_potential_login_scripts ) > 0 and len( unmatching_potential_login_scripts ) > 0:
+            
+            choice_tuples.append( ( '------', None ) )
+            
+        
+        choice_tuples.extend( [ ( login_script.GetName(), login_script ) for login_script in unmatching_potential_login_scripts ] )
+        
+        try:
+            
+            login_script = ClientGUIDialogsQuick.SelectFromList( self, 'select the login script to use', choice_tuples, value_to_select = current_login_script, sort_tuples = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if login_script is None:
+            
+            return
+            
+        
+        if login_script == current_login_script:
+            
+            return
+            
+        
+        login_script_key_and_name = login_script.GetLoginScriptKeyAndName()
+        
+        try:
+            
+            ( login_access_type, login_access_text ) = login_script.GetExampleDomainInfo( login_domain )
+            
+        except HydrusExceptions.DataMissing:
+            
+            a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
+            
+            choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
             
             try:
                 
-                current_login_script = self._GetLoginScript( login_script_key_and_name )
-                
-            except HydrusExceptions.DataMissing:
-                
-                current_login_script = None
-                
-            
-            potential_login_scripts = list( self._login_scripts )
-            
-            potential_login_scripts.sort( key = lambda ls: ls.GetName() )
-            
-            matching_potential_login_scripts = [ login_script for login_script in potential_login_scripts if login_domain in login_script.GetExampleDomains() ]
-            unmatching_potential_login_scripts = [ login_script for login_script in potential_login_scripts if login_domain not in login_script.GetExampleDomains() ]
-            
-            choice_tuples = [ ( login_script.GetName(), login_script ) for login_script in matching_potential_login_scripts ]
-            
-            if len( matching_potential_login_scripts ) > 0 and len( unmatching_potential_login_scripts ) > 0:
-                
-                choice_tuples.append( ( '------', None ) )
-                
-            
-            choice_tuples.extend( [ ( login_script.GetName(), login_script ) for login_script in unmatching_potential_login_scripts ] )
-            
-            try:
-                
-                login_script = ClientGUIDialogsQuick.SelectFromList( self, 'select the login script to use', choice_tuples, value_to_select = current_login_script, sort_tuples = False )
+                login_access_type = ClientGUIDialogsQuick.SelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, sort_tuples = False )
                 
             except HydrusExceptions.CancelledException:
                 
-                break
+                return
                 
             
-            if login_script is None:
-                
-                break
-                
+            login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
             
-            if login_script == current_login_script:
+            with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
                 
-                break
-                
-            
-            login_script_key_and_name = login_script.GetLoginScriptKeyAndName()
-            
-            try:
-                
-                ( login_access_type, login_access_text ) = login_script.GetExampleDomainInfo( login_domain )
-                
-            except HydrusExceptions.DataMissing:
-                
-                a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
-                
-                choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
-                
-                try:
+                if dlg.exec() == QW.QDialog.Accepted:
                     
-                    login_access_type = ClientGUIDialogsQuick.SelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, sort_tuples = False )
+                    login_access_text = dlg.GetValue()
                     
-                except HydrusExceptions.CancelledException:
+                else:
                     
-                    break
+                    return
                     
                 
-                login_access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ login_access_type ]
-                
-                with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = login_access_text, allow_blank = False ) as dlg:
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        login_access_text = dlg.GetValue()
-                        
-                    else:
-                        
-                        break
-                        
-                    
-                
-            
-            credentials = dict( credentials_tuple )
-            
-            try:
-                
-                login_script.CheckCanLogin( credentials )
-                
-                validity = ClientNetworkingLogin.VALIDITY_UNTESTED
-                validity_error_text = ''
-                
-                creds_are_good = True
-                
-            except HydrusExceptions.ValidationException as e:
-                
-                validity = ClientNetworkingLogin.VALIDITY_INVALID
-                validity_error_text = str( e )
-                
-                creds_are_good = False
-                
-            
-            if not creds_are_good:
-                
-                active = False
-                
-            
-            no_work_until = 0
-            no_work_until_reason = ''
-            
-            edited_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
-            
-            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
-            self._domains_and_login_info.AddDatas( ( edited_domain_and_login_info, ) )
-            
-            edited_datas.append( edited_domain_and_login_info )
             
         
-        self._domains_and_login_info.SelectDatas( edited_datas )
+        credentials = dict( credentials_tuple )
         
-        self._domains_and_login_info.Sort()
+        try:
+            
+            login_script.CheckCanLogin( credentials )
+            
+            validity = ClientNetworkingLogin.VALIDITY_UNTESTED
+            validity_error_text = ''
+            
+            creds_are_good = True
+            
+        except HydrusExceptions.ValidationException as e:
+            
+            validity = ClientNetworkingLogin.VALIDITY_INVALID
+            validity_error_text = str( e )
+            
+            creds_are_good = False
+            
+        
+        if not creds_are_good:
+            
+            active = False
+            
+        
+        no_work_until = 0
+        no_work_until_reason = ''
+        
+        edited_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+        
+        self._domains_and_login_info.ReplaceData( domain_and_login_info, edited_domain_and_login_info, sort_and_scroll = True )
         
     
     def _FlipActive( self ):
         
-        edited_datas = []
+        edit_tuples = []
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
@@ -1031,15 +1024,10 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             flipped_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
             
-            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
-            self._domains_and_login_info.AddDatas( ( flipped_domain_and_login_info, ) )
-            
-            edited_datas.append( flipped_domain_and_login_info )
+            edit_tuples.append( ( domain_and_login_info, flipped_domain_and_login_info ) )
             
         
-        self._domains_and_login_info.SelectDatas( edited_datas )
-        
-        self._domains_and_login_info.Sort()
+        self._domains_and_login_info.ReplaceDatas( edit_tuples, sort_and_scroll = True )
         
     
     def _GetLoginScript( self, login_script_key_and_name ):
@@ -1067,7 +1055,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _ScrubDelays( self ):
         
-        edited_datas = []
+        edit_tuples = []
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
@@ -1080,20 +1068,15 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             scrubbed_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
             
-            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
-            self._domains_and_login_info.AddDatas( ( scrubbed_domain_and_login_info, ) )
-            
-            edited_datas.append( scrubbed_domain_and_login_info )
+            edit_tuples.append( ( domain_and_login_info, scrubbed_domain_and_login_info ) )
             
         
-        self._domains_and_login_info.SelectDatas( edited_datas )
-        
-        self._domains_and_login_info.Sort()
+        self._domains_and_login_info.ReplaceDatas( edit_tuples, sort_and_scroll = True )
         
     
     def _ScrubInvalidity( self ):
         
-        edited_datas = []
+        edit_tuples = []
         
         domain_and_login_infos = self._domains_and_login_info.GetData( only_selected = True )
         
@@ -1132,15 +1115,10 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             scrubbed_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
             
-            self._domains_and_login_info.DeleteDatas( ( domain_and_login_info, ) )
-            self._domains_and_login_info.AddDatas( ( scrubbed_domain_and_login_info, ) )
-            
-            edited_datas.append( scrubbed_domain_and_login_info )
+            edit_tuples.append( domain_and_login_info, scrubbed_domain_and_login_info )
             
         
-        self._domains_and_login_info.SelectDatas( edited_datas )
-        
-        self._domains_and_login_info.Sort()
+        self._domains_and_login_info.ReplaceDatas( edit_tuples, sort_and_scroll = True )
         
     
     def GetDomainsToLoginAfterOK( self ):
@@ -1439,9 +1417,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 HydrusSerialisable.SetNonDupeName( new_credential_definition, self._GetExistingCredentialDefinitionNames() )
                 
-                self._credential_definitions.AddDatas( ( new_credential_definition, ) )
-                
-                self._credential_definitions.Sort()
+                self._credential_definitions.AddDatas( ( new_credential_definition, ), select_sort_and_scroll = True )
                 
             
         
@@ -1505,9 +1481,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_domain_info = ( domain, access_type, access_text )
         
-        self._example_domains_info.AddDatas( ( example_domain_info, ) )
-        
-        self._example_domains_info.Sort()
+        self._example_domains_info.AddDatas( ( example_domain_info, ), select_sort_and_scroll = True )
         
     
     def _AddLoginStep( self ):
@@ -1577,40 +1551,34 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditCredentialDefinitions( self ):
         
-        edited_datas = []
+        data = self._credential_definitions.GetTopSelectedData()
         
-        credential_definitions = self._credential_definitions.GetData( only_selected = True )
-        
-        for credential_definition in credential_definitions:
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                panel = EditLoginCredentialDefinitionPanel( dlg, credential_definition )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_credential_definition = panel.GetValue()
-                    
-                    self._credential_definitions.DeleteDatas( ( credential_definition, ) )
-                    
-                    HydrusSerialisable.SetNonDupeName( edited_credential_definition, self._GetExistingCredentialDefinitionNames() )
-                    
-                    self._credential_definitions.AddDatas( ( edited_credential_definition, ) )
-                    
-                    edited_datas.append( edited_credential_definition )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._credential_definitions.SelectDatas( edited_datas )
+        credential_definition = data
         
-        self._credential_definitions.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditLoginCredentialDefinitionPanel( dlg, credential_definition )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_credential_definition = panel.GetValue()
+                
+                existing_names = self._GetExistingCredentialDefinitionNames()
+                
+                existing_names.discard( credential_definition.GetName() )
+                
+                HydrusSerialisable.SetNonDupeName( edited_credential_definition, existing_names )
+                
+                self._credential_definitions.ReplaceData( credential_definition, edited_credential_definition, sort_and_scroll = True )
+                
+            
         
     
     def _DoTest( self ):
@@ -1759,79 +1727,73 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditExampleDomainsInfo( self ):
         
-        edited_datas = []
+        data = self._example_domains_info.GetTopSelectedData()
         
-        selected_example_domains_info = self._example_domains_info.GetData( only_selected = True )
-        
-        for example_domain_info in selected_example_domains_info:
+        if data is None:
             
-            ( original_domain, access_type, access_text ) = example_domain_info
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = original_domain, allow_blank = False ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    domain = dlg.GetValue()
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            existing_domains = self._GetExistingDomains()
-            
-            if domain != original_domain and domain in existing_domains:
-                
-                ClientGUIDialogsMessage.ShowWarning( self, 'That domain already exists!' )
-                
-                break
-                
-            
-            a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
-            
-            choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
-            
-            try:
-                
-                new_access_type = ClientGUIDialogsQuick.SelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, value_to_select = access_type, sort_tuples = False )
-                
-            except HydrusExceptions.CancelledException:
-                
-                break
-                
-            
-            if new_access_type != access_type:
-                
-                access_type = new_access_type
-                
-                access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ access_type ]
-                
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = access_text, allow_blank = False ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    access_text = dlg.GetValue()
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            self._example_domains_info.DeleteDatas( ( example_domain_info, ) )
-            
-            edited_example_domain_info = ( domain, access_type, access_text )
-            
-            self._example_domains_info.AddDatas( ( edited_example_domain_info, ) )
-            
-            edited_datas.append( edited_example_domain_info )
+            return
             
         
-        self._example_domains_info.SelectDatas( edited_datas )
+        example_domain_info = data
         
-        self._example_domains_info.Sort()
+        ( original_domain, access_type, access_text ) = example_domain_info
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'edit the domain', default = original_domain, allow_blank = False ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                domain = dlg.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        existing_domains = self._GetExistingDomains()
+        
+        if domain != original_domain and domain in existing_domains:
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'That domain already exists!' )
+            
+            return
+            
+        
+        a_types = [ ClientNetworkingLogin.LOGIN_ACCESS_TYPE_EVERYTHING, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_NSFW, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_SPECIAL, ClientNetworkingLogin.LOGIN_ACCESS_TYPE_USER_PREFS_ONLY ]
+        
+        choice_tuples = [ ( ClientNetworkingLogin.login_access_type_str_lookup[ a_type ], a_type ) for a_type in a_types ]
+        
+        try:
+            
+            new_access_type = ClientGUIDialogsQuick.SelectFromList( self, 'select what type of access the login gives to this domain', choice_tuples, value_to_select = access_type, sort_tuples = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if new_access_type != access_type:
+            
+            access_type = new_access_type
+            
+            access_text = ClientNetworkingLogin.login_access_type_default_description_lookup[ access_type ]
+            
+        
+        with ClientGUIDialogs.DialogTextEntry( self, 'edit the access description, if needed', default = access_text, allow_blank = False ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                access_text = dlg.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        edited_example_domain_info = ( domain, access_type, access_text )
+        
+        self._example_domains_info.ReplaceData( example_domain_info, edited_example_domain_info, sort_and_scroll = True )
         
     
     def _EditLoginStep( self, login_step ):
@@ -1855,7 +1817,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _GetExistingCredentialDefinitionNames( self ):
+    def _GetExistingCredentialDefinitionNames( self ) -> typing.Set[ str ]:
         
         return { credential_definition.GetName() for credential_definition in self._credential_definitions.GetData() }
         
@@ -1973,8 +1935,6 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._AddLoginScript( new_login_script )
                 
-                self._login_scripts.Sort()
-                
             
         
     
@@ -1984,7 +1944,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         login_script.RegenerateLoginScriptKey()
         
-        self._login_scripts.AddDatas( ( login_script, ) )
+        self._login_scripts.AddDatas( ( login_script, ), select_sort_and_scroll = True )
         
     
     def _ConvertLoginScriptToListCtrlTuples( self, login_script ):
@@ -2004,40 +1964,33 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        edited_datas = []
+        data = self._login_scripts.GetTopSelectedData()
         
-        login_scripts = self._login_scripts.GetData( only_selected = True )
-        
-        for login_script in login_scripts:
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                panel = EditLoginScriptPanel( dlg, login_script )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_login_script = panel.GetValue()
-                    
-                    self._login_scripts.DeleteDatas( ( login_script, ) )
-                    
-                    HydrusSerialisable.SetNonDupeName( edited_login_script, self._GetExistingNames() )
-                    
-                    self._login_scripts.AddDatas( ( edited_login_script, ) )
-                    
-                    edited_datas.append( edited_login_script )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._login_scripts.SelectDatas( edited_datas )
+        login_script = data
         
-        self._login_scripts.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit login script', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditLoginScriptPanel( dlg, login_script )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_login_script = panel.GetValue()
+                
+                existing_names = self._GetExistingNames()
+                existing_names.discard( login_script.GetName() )
+                
+                HydrusSerialisable.SetNonDupeName( edited_login_script, existing_names )
+                
+                self._login_scripts.ReplaceData( login_script, edited_login_script, sort_and_scroll = True )
+                
+            
         
     
     def _GetExistingNames( self ):
@@ -2052,6 +2005,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._login_scripts.GetData()
         
     
+
 class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, login_step ):

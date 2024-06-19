@@ -20,6 +20,7 @@ from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIRegex
 
 class Dialog( QP.Dialog ):
     
@@ -263,12 +264,7 @@ class DialogInputNamespaceRegex( Dialog ):
         
         self._namespace = QW.QLineEdit( self )
         
-        self._regex = QW.QLineEdit( self )
-        
-        self._shortcuts = ClientGUICommon.RegexButton( self )
-        
-        self._regex_intro_link = ClientGUICommon.BetterHyperLink( self, 'a good regex introduction', 'https://www.aivosto.com/vbtips/regex.html' )
-        self._regex_practise_link = ClientGUICommon.BetterHyperLink( self, 'regex practice', 'https://regexr.com/3cvmf' )
+        self._regex = ClientGUIRegex.RegexInput( self )
         
         self._ok = QW.QPushButton( 'OK', self )
         self._ok.clicked.connect( self.EventOK )
@@ -279,9 +275,9 @@ class DialogInputNamespaceRegex( Dialog ):
         self._cancel.setObjectName( 'HydrusCancel' )
         
         #
-    
+        
         self._namespace.setText( namespace )
-        self._regex.setText( regex )
+        self._regex.SetValue( regex )
         
         #
         
@@ -301,9 +297,6 @@ class DialogInputNamespaceRegex( Dialog ):
         
         QP.AddToLayout( vbox, ClientGUICommon.BetterStaticText(self,intro), CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, control_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._shortcuts, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, self._regex_intro_link, CC.FLAGS_ON_RIGHT )
-        QP.AddToLayout( vbox, self._regex_practise_link, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, b_box, CC.FLAGS_ON_RIGHT )
         
         self.setLayout( vbox )
@@ -348,11 +341,12 @@ class DialogInputNamespaceRegex( Dialog ):
         
         namespace = self._namespace.text()
         
-        regex = self._regex.text()
+        regex = self._regex.GetValue()
         
         return ( namespace, regex )
         
     
+
 class DialogInputTags( Dialog ):
     
     def __init__( self, parent, service_key, tag_display_type, tags, message = '' ):

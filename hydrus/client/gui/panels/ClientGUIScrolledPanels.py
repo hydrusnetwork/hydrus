@@ -242,10 +242,11 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
         if hasattr( self._control, 'GetValue' ):
             
             return self._control.GetValue()
-        
+            
         elif hasattr( self._control, 'toPlainText' ):
             
             return self._control.toPlainText()
+            
         
         return self._control.value()
         
@@ -275,13 +276,28 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
         return command_processed
         
     
-    def SetControl( self, control ):
+    def SetControl( self, control, perpendicular = False ):
         
         self._control = control
         
-        QP.AddToLayout( self._vbox, control, CC.FLAGS_EXPAND_BOTH_WAYS )
+        if perpendicular:
+            
+            flag = CC.FLAGS_EXPAND_PERPENDICULAR
+            
+        else:
+            
+            flag = CC.FLAGS_EXPAND_BOTH_WAYS
+            
+        
+        QP.AddToLayout( self._vbox, control, flag )
+        
+        if perpendicular:
+            
+            self._vbox.addStretch( 1 )
+            
         
     
+
 class ManagePanel( ResizingScrolledPanel ):
     
     def CommitChanges( self ):
@@ -289,6 +305,8 @@ class ManagePanel( ResizingScrolledPanel ):
         raise NotImplementedError()
         
     
+
 class ReviewPanel( ResizingScrolledPanel ):
     
     pass
+    

@@ -1560,22 +1560,28 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EditFrameLocations( self ):
             
-            for listctrl_list in self._frame_locations.GetData( only_selected = True ):
+            data = self._frame_locations.GetTopSelectedData()
+            
+            if data is None:
                 
-                title = 'set frame location information'
+                return
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+            
+            listctrl_list = data
+            
+            title = 'set frame location information'
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditFrameLocationPanel( dlg, listctrl_list )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
                     
-                    panel = ClientGUIScrolledPanelsEdit.EditFrameLocationPanel( dlg, listctrl_list )
+                    new_listctrl_list = panel.GetValue()
                     
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        new_listctrl_list = panel.GetValue()
-                        
-                        self._frame_locations.ReplaceData( listctrl_list, new_listctrl_list )
-                        
+                    self._frame_locations.ReplaceData( listctrl_list, new_listctrl_list, sort_and_scroll = True )
                     
                 
             
@@ -2955,22 +2961,26 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def EditMediaViewerOptions( self ):
             
-            for data in self._filetype_handling_listctrl.GetData( only_selected = True ):
+            data = self._filetype_handling_listctrl.GetTopSelectedData()
+            
+            if data is None:
                 
-                title = 'edit media view options information'
+                return
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+            
+            title = 'edit media view options information'
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, title ) as dlg:
+                
+                panel = ClientGUIScrolledPanelsEdit.EditMediaViewOptionsPanel( dlg, data )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
                     
-                    panel = ClientGUIScrolledPanelsEdit.EditMediaViewOptionsPanel( dlg, data )
+                    new_data = panel.GetValue()
                     
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        new_data = panel.GetValue()
-                        
-                        self._filetype_handling_listctrl.ReplaceData( data, new_data )
-                        
+                    self._filetype_handling_listctrl.ReplaceData( data, new_data, sort_and_scroll = True )
                     
                 
             
@@ -4921,7 +4931,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                         
                         control = ClientGUICommon.BetterSpinBox( panel, initial = 100, min = 0, max = 10000 )
                         
-                        panel.SetControl( control )
+                        panel.SetControl( control, perpendicular = True )
                         
                         dlg_2.SetPanel( panel )
                         
@@ -5006,7 +5016,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     control = ClientGUICommon.BetterSpinBox( panel, initial = weight, min = 0, max = 10000 )
                     
-                    panel.SetControl( control )
+                    panel.SetControl( control, perpendicular = True )
                     
                     dlg.SetPanel( panel )
                     

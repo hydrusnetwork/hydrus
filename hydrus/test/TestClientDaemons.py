@@ -1,5 +1,6 @@
 import os
 import shutil
+import time
 import unittest
 
 from hydrus.core import HydrusConstants as HC
@@ -54,23 +55,34 @@ class TestDaemons( unittest.TestCase ):
             HG.test_controller.ClearWrites( 'import_file' )
             HG.test_controller.ClearWrites( 'serialisable' )
             
-            ClientDaemons.DAEMONCheckImportFolders()
+            manager = ClientImportLocal.ImportFoldersManager( HG.controller )
             
-            import_file = HG.test_controller.GetWrite( 'import_file' )
+            manager.Start()
             
-            self.assertEqual( len( import_file ), 3 )
+            time.sleep( 8 )
             
-            # I need to expand tests here with the new file system
-            
-            [ ( ( updated_import_folder, ), empty_dict ) ] = HG.test_controller.GetWrite( 'serialisable' )
-            
-            self.assertEqual( updated_import_folder, import_folder )
-            
-            self.assertTrue( not os.path.exists( os.path.join( test_dir, '0' ) ) )
-            self.assertTrue( not os.path.exists( os.path.join( test_dir, '1' ) ) )
-            self.assertTrue( not os.path.exists( os.path.join( test_dir, '2' ) ) )
-            self.assertTrue( os.path.exists( os.path.join( test_dir, '3' ) ) )
-            self.assertTrue( os.path.exists( os.path.join( test_dir, '4' ) ) )
+            try:
+                
+                import_file = HG.test_controller.GetWrite( 'import_file' )
+                
+                self.assertEqual( len( import_file ), 3 )
+                
+                # I need to expand tests here with the new file system
+                
+                [ ( ( updated_import_folder, ), empty_dict ) ] = HG.test_controller.GetWrite( 'serialisable' )
+                
+                self.assertEqual( updated_import_folder, import_folder )
+                
+                self.assertTrue( not os.path.exists( os.path.join( test_dir, '0' ) ) )
+                self.assertTrue( not os.path.exists( os.path.join( test_dir, '1' ) ) )
+                self.assertTrue( not os.path.exists( os.path.join( test_dir, '2' ) ) )
+                self.assertTrue( os.path.exists( os.path.join( test_dir, '3' ) ) )
+                self.assertTrue( os.path.exists( os.path.join( test_dir, '4' ) ) )
+                
+            finally:
+                
+                manager.Shutdown()
+                
             
         finally:
             

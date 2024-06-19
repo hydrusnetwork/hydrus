@@ -105,7 +105,7 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 578
+SOFTWARE_VERSION = 579
 CLIENT_API_VERSION = 64
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
@@ -1296,7 +1296,7 @@ mime_mimetype_string_lookup = {
 mime_mimetype_string_lookup[ UNDETERMINED_WM ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_WMA ], mime_mimetype_string_lookup[ VIDEO_WMV ] )
 mime_mimetype_string_lookup[ UNDETERMINED_MP4 ] = '{} or {}'.format( mime_mimetype_string_lookup[ AUDIO_MP4 ], mime_mimetype_string_lookup[ VIDEO_MP4 ] )
 mime_mimetype_string_lookup[ UNDETERMINED_PNG ] = '{} or {}'.format( mime_mimetype_string_lookup[ IMAGE_PNG ], mime_mimetype_string_lookup[ ANIMATION_APNG ] )
-mime_mimetype_string_lookup[ UNDETERMINED_WEBP ] = '{} or {}'.format( mime_mimetype_string_lookup[ IMAGE_WEBP ], mime_mimetype_string_lookup[ ANIMATION_WEBP ] )
+mime_mimetype_string_lookup[ UNDETERMINED_WEBP ] = 'image/webp, static or animated'
 
 mime_ext_lookup = {
     APPLICATION_HYDRUS_CLIENT_COLLECTION : '.collection',

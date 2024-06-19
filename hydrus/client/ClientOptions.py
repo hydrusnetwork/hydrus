@@ -660,7 +660,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         exclude_deleted = True
         preimport_hash_check_type = FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
         preimport_url_check_type = FileImportOptions.DO_CHECK
-        preimport_url_check_looks_for_neighbours = True
+        preimport_url_check_looks_for_neighbour_spam = True
         allow_decompression_bombs = True
         min_size = None
         max_size = None
@@ -681,7 +681,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         quiet_file_import_options = FileImportOptions.FileImportOptions()
         
         quiet_file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        quiet_file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
+        quiet_file_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
         quiet_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         quiet_file_import_options.SetPresentationImportOptions( presentation_import_options )
         quiet_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
@@ -691,7 +691,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
         loud_file_import_options = FileImportOptions.FileImportOptions()
         
         loud_file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-        loud_file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
+        loud_file_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
         loud_file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
         loud_file_import_options.SetDestinationLocationContext( ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) )
         

@@ -9,3 +9,7 @@ This is still a bit of a test. I think to do this properly we'll want to move to
 Here's some examples, there are some QSS files buried here:
 
 https://wiki.qt.io/Gallery_of_Qt_CSS_Based_Styles
+
+And a bunch of random projects have some too, such as:
+
+https://github.com/ModOrganizer2/modorganizer/tree/master/src/stylesheets

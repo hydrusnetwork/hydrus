@@ -383,6 +383,14 @@ class BetterListCtrl( QW.QTreeWidget ):
         return indices
         
     
+    def _IterateTopLevelItems( self ) -> typing.Iterator[ QW.QTreeWidgetItem ]:
+        
+        for i in range( self.topLevelItemCount() ):
+            
+            yield self.topLevelItem( i )
+            
+        
+    
     def _RecalculateIndicesAfterDelete( self ):
         
         indices_and_data_info = sorted( self._indices_to_data_info.items() )
@@ -533,13 +541,31 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
-    def AddDatas( self, datas: typing.Iterable[ object ] ):
+    def AddDatas( self, datas: typing.Iterable[ object ], select_sort_and_scroll = False ):
+        
+        datas = list( datas )
+        
+        if len( datas ) == 0:
+            
+            return
+            
         
         for data in datas:
             
             ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( data )
             
             self._AddDataInfo( ( data, display_tuple, sort_tuple ) )
+            
+        
+        if select_sort_and_scroll:
+            
+            self.SelectDatas( datas )
+            
+            self.Sort()
+            
+            first_data = sorted( ( ( self._data_to_indices[ data ], data ) for data in datas ) )[0][1]
+            
+            self.ScrollToData( first_data )
             
         
         self.columnListContentsChanged.emit()
@@ -726,6 +752,24 @@ class BetterListCtrl( QW.QTreeWidget ):
         return result
         
     
+    def GetTopSelectedData( self ) -> typing.Optional[ object ]:
+        
+        indices = self._GetSelectedIndices() 
+        
+        if len( indices ) > 0:
+            
+            top_index = min( indices )
+            
+            ( data, display_tuple, sort_tuple ) = self._indices_to_data_info[ top_index ]
+            
+            return data
+            
+        else:
+            
+            return None
+            
+        
+    
     def HasData( self, data: object ):
         
         return data in self._data_to_indices
@@ -832,17 +876,38 @@ class BetterListCtrl( QW.QTreeWidget ):
             
         
     
-    def SelectDatas( self, datas: typing.Iterable[ object ] ):
+    def ScrollToData( self, data: object ):
+        
+        if data in self._data_to_indices:
+            
+            index = self._data_to_indices[ data ]
+            
+            item = self.topLevelItem( index )
+            
+            self.scrollToItem( item, hint = QW.QAbstractItemView.ScrollHint.PositionAtCenter )
+            
+        
+    
+    def SelectDatas( self, datas: typing.Iterable[ object ], deselect_others = False ):
         
         self.clearFocus()
         
-        for data in datas:
+        selectee_indices = { self._data_to_indices[ data ] for data in datas if data in self._data_to_indices }
+        
+        if deselect_others:
             
-            if data in self._data_to_indices:
+            for ( index, item ) in enumerate( self._IterateTopLevelItems() ):
                 
-                index = self._data_to_indices[ data ]
+                item.setSelected( index in selectee_indices )
                 
-                self.topLevelItem( index ).setSelected( True )
+            
+        else:
+            
+            for index in selectee_indices:
+                
+                item = self.topLevelItem( index )
+                
+                item.setSelected( True )
                 
             
         
@@ -1089,31 +1154,54 @@ class BetterListCtrl( QW.QTreeWidget ):
     
 
     def SetNonDupeName( self, obj: object ):
-
+        
         current_names = { o.GetName() for o in self.GetData() if o is not obj }
 
         HydrusSerialisable.SetNonDupeName( obj, current_names )
         
     
-    def ReplaceData( self, old_data: object, new_data: object ):
+    def ReplaceData( self, old_data: object, new_data: object, sort_and_scroll = False ):
         
-        new_data = QP.ListsToTuples( new_data )
-        
-        data_index = self._data_to_indices[ old_data ]
-
-        ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( new_data )
-        
-        data_info = ( new_data, display_tuple, sort_tuple )
-        
-        self._indices_to_data_info[ data_index ] = data_info
-        
-        del self._data_to_indices[ old_data ]
-        
-        self._data_to_indices[ new_data ] = data_index
-        
-        self._UpdateRow( data_index, display_tuple )
+        self.ReplaceDatas( [ ( old_data, new_data ) ], sort_and_scroll = sort_and_scroll )
         
     
+    def ReplaceDatas( self, replacement_tuples, sort_and_scroll = False ):
+        
+        first_new_data = None
+        
+        for ( old_data, new_data ) in replacement_tuples:
+            
+            if first_new_data is None:
+                
+                first_new_data = new_data
+                
+            
+            new_data = QP.ListsToTuples( new_data )
+            
+            data_index = self._data_to_indices[ old_data ]
+            
+            ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( new_data )
+            
+            data_info = ( new_data, display_tuple, sort_tuple )
+            
+            self._indices_to_data_info[ data_index ] = data_info
+            
+            del self._data_to_indices[ old_data ]
+            
+            self._data_to_indices[ new_data ] = data_index
+            
+            self._UpdateRow( data_index, display_tuple )
+            
+        
+        if sort_and_scroll and first_new_data is not None:
+            
+            self.Sort()
+            
+            self.ScrollToData( first_new_data )
+            
+        
+    
+
 class BetterListCtrlPanel( QW.QWidget ):
     
     def __init__( self, parent ):
@@ -1124,7 +1212,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self._buttonbox = QP.HBoxLayout()
         
-        self._listctrl = None
+        self._listctrl: typing.Optional[ BetterListCtrl ] = None
         
         self._permitted_object_types = []
         self._import_add_callable = lambda x: None
@@ -1137,12 +1225,20 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         defaults = defaults_callable()
         
+        if len( defaults ) == 0:
+            
+            return
+            
+        
         for default in defaults:
             
             add_callable( default )
             
         
+        # try it, it might not work, if what is actually added differs, but it may!
+        self._listctrl.SelectDatas( defaults )
         self._listctrl.Sort()
+        self._listctrl.ScrollToData( list( defaults )[0] )
         
     
     def _AddButton( self, button, enabled_only_on_selection = False, enabled_only_on_single_selection = False, enabled_check_func = None ):
@@ -1184,12 +1280,20 @@ class BetterListCtrlPanel( QW.QWidget ):
             return
             
         
+        if len( defaults_to_add ) == 0:
+            
+            return
+            
+        
         for default in defaults_to_add:
             
             add_callable( default )
             
         
+        # try it, it might not work, if what is actually added differs, but it may!
+        self._listctrl.SelectDatas( defaults_to_add )
         self._listctrl.Sort()
+        self._listctrl.ScrollToData( list( defaults_to_add )[0] )
         
     
     def _Duplicate( self ):
@@ -1446,16 +1550,16 @@ class BetterListCtrlPanel( QW.QWidget ):
     
     def _ImportObject( self, obj, can_present_messages = True ):
         
-        num_added = 0
         bad_object_type_names = set()
+        objects_added = []
         
         if isinstance( obj, HydrusSerialisable.SerialisableList ):
             
             for sub_obj in obj:
                 
-                ( sub_num_added, sub_bad_object_type_names ) = self._ImportObject( sub_obj, can_present_messages = False )
+                ( sub_objects_added, sub_bad_object_type_names ) = self._ImportObject( sub_obj, can_present_messages = False )
                 
-                num_added += sub_num_added
+                objects_added.extend( sub_objects_added )
                 bad_object_type_names.update( sub_bad_object_type_names )
                 
             
@@ -1465,7 +1569,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 self._import_add_callable( obj )
                 
-                num_added += 1
+                objects_added.append( obj )
                 
             else:
                 
@@ -1486,14 +1590,20 @@ class BetterListCtrlPanel( QW.QWidget ):
             ClientGUIDialogsMessage.ShowWarning( self, message )
             
         
+        num_added = len( objects_added )
+        
         if can_present_messages and num_added > 0:
             
             message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
+            self._listctrl.SelectDatas( objects_added )
+            self._listctrl.Sort()
+            self._listctrl.ScrollToData( objects_added[0] )
+            
         
-        return ( num_added, bad_object_type_names )
+        return ( objects_added, bad_object_type_names )
         
     
     def _ImportJSONs( self, paths ):

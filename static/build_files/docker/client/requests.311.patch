@@ -1,0 +1,37 @@
+--- sessions.py
++++ sessions.py
+@@ -576,6 +576,14 @@
+
+         proxies = proxies or {}
+
++        # Append proxies to self.proxies if necessary and update proxies with new list or use self.proxies for proxies
++        if isinstance(proxies,dict):
++            self_proxies_tmp = self.proxies.copy()
++            self_proxies_tmp.update(proxies)
++            proxies = self_proxies_tmp.copy()
++        else:
++            proxies = self.proxies.copy()
++
+         settings = self.merge_environment_settings(
+             prep.url, proxies, stream, verify, cert
+         )
+@@ -771,8 +779,18 @@
+                     or verify
+                 )
+
++        # Check for existing no_proxy and no since they could be loaded from environment
++        no_proxy = proxies.get('no_proxy') if proxies is not None else None
++        no = proxies.get('no') if proxies is not None else None
++        if any([no_proxy,no]):
++            no_proxy = ','.join(filter(None, (no_proxy, no)))
++
++        # Check if we should bypass proxy for this URL
+         # Merge all the kwargs.
+-        proxies = merge_setting(proxies, self.proxies)
++        if should_bypass_proxies(url, no_proxy):
++            proxies = {}
++        else:
++            proxies = merge_setting(proxies, self.proxies)
+         stream = merge_setting(stream, self.stream)
+         verify = merge_setting(verify, self.verify)
+         cert = merge_setting(cert, self.cert)

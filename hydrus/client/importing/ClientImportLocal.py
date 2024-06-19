@@ -24,6 +24,7 @@ from hydrus.client.importing import ClientImporting
 from hydrus.client.importing import ClientImportFileSeeds
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.importing.options import TagImportOptions
+from hydrus.client.interfaces import ClientControllerInterface
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
@@ -1204,6 +1205,26 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         return self._last_modified_time_skip_period
         
     
+    def GetNextWorkTime( self ):
+        
+        if self._paused:
+            
+            return None
+            
+        
+        if self._check_now:
+            
+            return HydrusTime.GetNow()
+            
+        
+        if self._check_regularly:
+            
+            return self._last_checked + self._period
+            
+        
+        return None
+        
+    
     def GetMetadataRouters( self ):
         
         return list( self._metadata_routers )
@@ -1277,4 +1298,227 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         self._publish_files_to_page = publish_files_to_page
         
     
+
 HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER ] = ImportFolder
+
+class ImportFoldersManager( object ):
+    
+    def __init__( self, controller: ClientControllerInterface.ClientControllerInterface ):
+        
+        self._controller = controller
+        
+        self._lock = threading.Lock()
+        
+        self._serious_error_encountered = False
+        
+        self._import_folder_names_fetched = False
+        self._import_folder_names_to_next_work_time_cache: typing.Dict[ str, int ] = {}
+        
+        self._wake_event = threading.Event()
+        self._shutdown = threading.Event()
+        
+        self._controller.sub( self, 'Shutdown', 'shutdown' )
+        self._controller.sub( self, 'NotifyImportFoldersHaveChanged', 'notify_new_import_folders' )
+        
+    
+    def _DoWork( self ):
+        
+        if self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
+            
+            return
+            
+        
+        name = self._GetImportFolderNameThatIsDue()
+        
+        if name is None:
+            
+            return
+            
+        
+        try:
+            
+            import_folder = self._controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
+            
+        except HydrusExceptions.DBException as e:
+            
+            if isinstance( e.db_e, HydrusExceptions.DataMissing ):
+                
+                with self._lock:
+                    
+                    del self._import_folder_names_to_next_work_time_cache[ name ]
+                    
+                    return
+                    
+                
+            else:
+                
+                raise
+                
+            
+        
+        import_folder.DoWork()
+        
+        with self._lock:
+            
+            next_work_time = import_folder.GetNextWorkTime()
+            
+            if next_work_time is None:
+                
+                del self._import_folder_names_to_next_work_time_cache[ name ]
+                
+            else:
+                
+                self._import_folder_names_to_next_work_time_cache[ name ] = max( next_work_time, HydrusTime.GetNow() + 180 )
+                
+            
+        
+    
+    def _GetImportFolderNameThatIsDue( self ):
+        
+        if not self._import_folder_names_fetched:
+            
+            import_folder_names = self._controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
+            
+            with self._lock:
+                
+                for name in import_folder_names:
+                    
+                    self._import_folder_names_to_next_work_time_cache[ name ] = HydrusTime.GetNow()
+                    
+                
+                self._import_folder_names_fetched = True
+                
+            
+        
+        with self._lock:
+            
+            for ( name, time_due ) in self._import_folder_names_to_next_work_time_cache.items():
+                
+                if HydrusTime.TimeHasPassed( time_due ):
+                    
+                    return name
+                    
+                
+            
+        
+        return None
+        
+    
+    def _GetTimeUntilNextWork( self ):
+        
+        if self._controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
+            
+            return 1800
+            
+        
+        if not self._import_folder_names_fetched:
+            
+            return 180
+            
+        
+        if len( self._import_folder_names_to_next_work_time_cache ) == 0:
+            
+            return 1800
+            
+        
+        next_work_time = min( self._import_folder_names_to_next_work_time_cache.values() )
+        
+        return max( HydrusTime.TimeUntil( next_work_time ), 1 )
+        
+    
+    def MainLoop( self ):
+        
+        def check_shutdown():
+            
+            if HydrusThreading.IsThreadShuttingDown() or self._shutdown.is_set() or self._serious_error_encountered:
+                
+                raise HydrusExceptions.ShutdownException()
+                
+            
+        
+        try:
+            
+            time_to_start = HydrusTime.GetNow() + 5
+            
+            while not HydrusTime.TimeHasPassed( time_to_start ):
+                
+                check_shutdown()
+                
+                time.sleep( 1 )
+                
+            
+            while True:
+                
+                check_shutdown()
+                
+                self._controller.WaitUntilViewFree()
+                
+                try:
+                    
+                    HG.import_folders_running = True
+                    
+                    self._DoWork()
+                    
+                except Exception as e:
+                    
+                    self._serious_error_encountered = True
+                    
+                    HydrusData.PrintException( e )
+                    
+                    message = 'There was an unexpected problem during import folders work! They will not run again this boot. A full traceback of this error should be written to the log.'
+                    message += '\n' * 2
+                    message += str( e )
+                    
+                    HydrusData.ShowText( message )
+                    
+                    return
+                    
+                finally:
+                    
+                    HG.import_folders_running = False
+                    
+                
+                with self._lock:
+                    
+                    wait_period = self._GetTimeUntilNextWork()
+                    
+                
+                self._wake_event.wait( wait_period )
+                
+                self._wake_event.clear()
+                
+            
+        except HydrusExceptions.ShutdownException:
+            
+            pass
+            
+        
+    
+    def NotifyImportFoldersHaveChanged( self ):
+        
+        with self._lock:
+            
+            self._import_folder_names_fetched = False
+            self._import_folder_names_to_next_work_time_cache = {}
+            
+        
+        self.Wake()
+        
+    
+    def Shutdown( self ):
+        
+        self._shutdown.set()
+        
+        self.Wake()
+        
+    
+    def Start( self ):
+        
+        self._controller.CallToThreadLongRunning( self.MainLoop )
+        
+    
+    def Wake( self ):
+        
+        self._wake_event.set()
+        
+    

@@ -331,7 +331,7 @@ def GetTimesToPlayPILAnimationFromPIL( pil_image: PILImage.Image ) -> int:
 
 def PILAnimationHasDuration( path ):
     
-    pil_image = HydrusImageHandling.GeneratePILImage( path, dequantize = False )
+    pil_image = HydrusImageOpening.RawOpenPILImage( path )
     
     try:
         

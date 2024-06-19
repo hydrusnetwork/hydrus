@@ -49,7 +49,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._exclude_deleted = True
         self._preimport_hash_check_type = DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
         self._preimport_url_check_type = DO_CHECK
-        self._preimport_url_check_looks_for_neighbours = True
+        self._preimport_url_check_looks_for_neighbour_spam = True
         self._allow_decompression_bombs = True
         self._filetype_filter_predicate = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, value = set( HC.GENERAL_FILETYPES ) )
         self._min_size = None
@@ -82,7 +82,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         serialisable_filetype_filter_predicate = self._filetype_filter_predicate.GetSerialisableTuple()
         
-        pre_import_options = ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbours, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context )
+        pre_import_options = ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbour_spam, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context )
         post_import_options = ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls )
         serialisable_presentation_import_options = self._presentation_import_options.GetSerialisableTuple()
         
@@ -93,7 +93,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         
         ( pre_import_options, post_import_options, serialisable_presentation_import_options, self._is_default ) = serialisable_info
         
-        ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbours, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context ) = pre_import_options
+        ( self._exclude_deleted, self._preimport_hash_check_type, self._preimport_url_check_type, self._preimport_url_check_looks_for_neighbour_spam, self._allow_decompression_bombs, serialisable_filetype_filter_predicate, self._min_size, self._max_size, self._max_gif_size, self._min_resolution, self._max_resolution, serialisable_import_destination_location_context ) = pre_import_options
         ( self._automatic_archive, self._associate_primary_urls, self._associate_source_urls ) = post_import_options
         self._presentation_import_options = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_presentation_import_options )
         
@@ -268,9 +268,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
                 preimport_url_check_type = DO_CHECK
                 
             
-            preimport_url_check_looks_for_neighbours = True
+            preimport_url_check_looks_for_neighbour_spam = True
             
-            pre_import_options = ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbours, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context )
+            pre_import_options = ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbour_spam, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context )
             
             new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default )
             
@@ -281,7 +281,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default ) = old_serialisable_info
             
-            ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbours, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
+            ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbour_spam, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context ) = pre_import_options
             
             filetype_filter_predicate = HydrusSerialisable.CreateFromSerialisableTuple( serialisable_filetype_filter_predicate )
             
@@ -297,7 +297,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
             
             serialisable_filetype_filter_predicate = filetype_filter_predicate.GetSerialisableTuple()
             
-            pre_import_options = ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbours, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context )
+            pre_import_options = ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, preimport_url_check_looks_for_neighbour_spam, allow_decompression_bombs, serialisable_filetype_filter_predicate, min_size, max_size, max_gif_size, min_resolution, max_resolution, serialisable_import_destination_location_context )
             
             new_serialisable_info = ( pre_import_options, post_import_options, serialisable_presentation_import_options, is_default )
             
@@ -518,9 +518,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         return self._is_default
         
     
-    def PreImportURLCheckLooksForNeighbours( self ) -> bool:
+    def PreImportURLCheckLooksForNeighbourSpam( self ) -> bool:
         
-        return self._preimport_url_check_looks_for_neighbours
+        return self._preimport_url_check_looks_for_neighbour_spam
         
     
     def SetAllowedSpecificFiletypes( self, mimes ) -> None:
@@ -547,9 +547,9 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
         self._associate_source_urls = associate_source_urls
         
     
-    def SetPreImportURLCheckLooksForNeighbours( self, preimport_url_check_looks_for_neighbours: bool ):
+    def SetPreImportURLCheckLooksForNeighbourSpam( self, preimport_url_check_looks_for_neighbour_spam: bool ):
         
-        self._preimport_url_check_looks_for_neighbours = preimport_url_check_looks_for_neighbours
+        self._preimport_url_check_looks_for_neighbour_spam = preimport_url_check_looks_for_neighbour_spam
         
     
     def SetPresentationImportOptions( self, presentation_import_options: PresentationImportOptions.PresentationImportOptions ):

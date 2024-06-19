@@ -34,6 +34,7 @@ from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIRegex
 from hydrus.client.importing import ClientImporting
 from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
@@ -208,13 +209,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._regexes = ClientGUIListBoxes.BetterQListWidget( self._regexes_panel )
             self._regexes.itemDoubleClicked.connect( self.EventRemoveRegex )
             
-            self._regex_box = QW.QLineEdit()
-            self._regex_box.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._regexes, self.AddRegex ) )
-            
-            self._regex_shortcuts = ClientGUICommon.RegexButton( self._regexes_panel )
-            
-            self._regex_intro_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'a good regex introduction', 'https://www.aivosto.com/vbtips/regex.html' )
-            self._regex_practise_link = ClientGUICommon.BetterHyperLink( self._regexes_panel, 'regex practice', 'https://regexr.com/3cvmf' )
+            self._regex_input = ClientGUIRegex.RegexInput( self )
             
             #
             
@@ -257,10 +252,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             #
             
             self._regexes_panel.Add( self._regexes, CC.FLAGS_EXPAND_BOTH_WAYS )
-            self._regexes_panel.Add( self._regex_box, CC.FLAGS_EXPAND_PERPENDICULAR )
-            self._regexes_panel.Add( self._regex_shortcuts, CC.FLAGS_ON_RIGHT )
-            self._regexes_panel.Add( self._regex_intro_link, CC.FLAGS_ON_RIGHT )
-            self._regexes_panel.Add( self._regex_practise_link, CC.FLAGS_ON_RIGHT )
+            self._regexes_panel.Add( self._regex_input, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             #
             
@@ -294,6 +286,8 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self.setLayout( hbox )
             
             self._quick_namespaces_list.columnListContentsChanged.connect( self.tagsChanged )
+            
+            self._regex_input.userHitEnter.connect( self.AddRegex )
             
         
         def _ConvertQuickRegexDataToListCtrlTuples( self, data ):
@@ -356,7 +350,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def AddRegex( self ):
             
-            regex = self._regex_box.text()
+            regex = self._regex_input.GetValue()
             
             if regex != '':
                 
@@ -377,7 +371,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
                 self._regexes.Append( regex, regex )
                 
-                self._regex_box.clear()
+                self._regex_input.SetValue( '' )
                 
                 self.tagsChanged.emit()
                 
@@ -389,7 +383,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
                 
                 selected = list( self._regexes.GetData( only_selected = True ) )
                 
-                self._regex_box.setText( selected[0] )
+                self._regex_input.SetValue( selected[0] )
                 
                 self._regexes.DeleteSelected()
                 

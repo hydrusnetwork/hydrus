@@ -22,6 +22,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         self.modules_services = modules_services
         self.modules_files_storage = modules_files_storage
         
+        self._reported_on_a_broken_branch = False
+        
         ClientDBModule.ClientDBModule.__init__( self, 'client similar files', cursor )
         
         self._perceptual_hash_id_to_vp_tree_node_cache = {}
@@ -50,7 +52,32 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 
                 ancestor_id = next_ancestor_id
                 
-                ( ancestor_perceptual_hash, ancestor_radius, ancestor_inner_id, ancestor_inner_population, ancestor_outer_id, ancestor_outer_population ) = self._Execute( 'SELECT phash, radius, inner_id, inner_population, outer_id, outer_population FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id = ?;', ( ancestor_id, ) ).fetchone()
+                result = self._Execute( 'SELECT phash, radius, inner_id, inner_population, outer_id, outer_population FROM shape_perceptual_hashes NATURAL JOIN shape_vptree WHERE phash_id = ?;', ( ancestor_id, ) ).fetchone()
+                
+                if result is None:
+                    
+                    if not self._reported_on_a_broken_branch:
+                        
+                        message = 'Hey, while trying to import a file, hydrus discovered a hole in the similar files search tree. Please run _database->regenerate->similar files search tree_ when it is convenient!'
+                        message += '\n' * 2
+                        message += 'You will not see this message again this boot.'
+                        
+                        HydrusData.ShowText( message )
+                        
+                        self._reported_on_a_broken_branch = True
+                        
+                    
+                    # ok so there is a missing branch. typically from an import crash desync, is my best bet
+                    # we still want to add our leaf because we need to add the file to the tree population, but we will add it to the ghost of the branch. no worries, the regen code will sort it all out
+                    parent_id = ancestor_id
+                    
+                    # TODO: there's a secondary issue that we should add the ancestor_id's files to the file maintenance queue to check for presence in the similar files search system, I think
+                    # but we are too low level to talk to the maintenance queue here, so it'll have to be a more complicated answer
+                    
+                    break
+                    
+                
+                ( ancestor_perceptual_hash, ancestor_radius, ancestor_inner_id, ancestor_inner_population, ancestor_outer_id, ancestor_outer_population ) = result
                 
                 distance_to_ancestor = HydrusData.Get64BitHammingDistance( perceptual_hash, ancestor_perceptual_hash )
                 

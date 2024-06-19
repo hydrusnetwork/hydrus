@@ -336,7 +336,7 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._SetNonDupePort( new_service )
                 
-                self._services_listctrl.AddDatas( ( new_service, ) )
+                self._services_listctrl.AddDatas( ( new_service, ), select_sort_and_scroll = True )
                 
             
         
@@ -368,35 +368,37 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def _Edit( self ):
         
-        for service in self._services_listctrl.GetData( only_selected = True ):
+        data = self._services_listctrl.GetTopSelectedData()
+        
+        if data is None:
             
-            original_name = service.GetName()
+            return
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
+        
+        service = data
+        
+        original_name = service.GetName()
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit serverside service' ) as dlg_edit:
+            
+            panel = EditServersideService( dlg_edit, service )
+            
+            dlg_edit.SetPanel( panel )
+            
+            result = dlg_edit.exec()
+            
+            if result == QW.QDialog.Accepted:
                 
-                panel = EditServersideService( dlg_edit, service )
+                edited_service = panel.GetValue()
                 
-                dlg_edit.SetPanel( panel )
+                if edited_service.GetName() != original_name:
+                    
+                    self._services_listctrl.SetNonDupeName( edited_service )
+                    
                 
-                result = dlg_edit.exec()
+                self._SetNonDupePort( edited_service )
                 
-                if result == QW.QDialog.Accepted:
-                    
-                    edited_service = panel.GetValue()
-                    
-                    if edited_service.GetName() != original_name:
-                        
-                        self._services_listctrl.SetNonDupeName( edited_service )
-                        
-                    
-                    self._SetNonDupePort( edited_service )
-                    
-                    self._services_listctrl.ReplaceData( service, edited_service )
-                    
-                elif dlg_edit.WasCancelled():
-                    
-                    break
-                    
+                self._services_listctrl.ReplaceData( service, edited_service, sort_and_scroll = True )
                 
             
         

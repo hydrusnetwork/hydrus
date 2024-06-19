@@ -14,7 +14,7 @@ if ! source venv/bin/activate; then
     exit 1
 fi
 
-# You can copy this file to 'client-user.sh' and add in your own launch parameters here if you like, and a git pull won't overwrite the file.
+# You can copy this file to 'hydrus_client-user.sh' and add in your own launch parameters here if you like, and a git pull won't overwrite the file.
 # Just tack new hardcoded params on like this:
 #
 # python hydrus_client.py -d="/path/to/hydrus/db" "$@"

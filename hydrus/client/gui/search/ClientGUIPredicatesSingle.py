@@ -20,9 +20,10 @@ from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.metadata import ClientGUITime
-from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUIBytes
+from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.gui.widgets import ClientGUINumberTest
+from hydrus.client.gui.widgets import ClientGUIRegex
 from hydrus.client.search import ClientSearch
 
 class StaticSystemPredicateButton( QW.QWidget ):
@@ -1456,7 +1457,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         self._operator.addItem( 'has', True )
         self._operator.addItem( 'does not have', False )
         
-        self._regex = QW.QLineEdit( self )
+        self._regex = ClientGUIRegex.RegexInput( self )
         
         #
         
@@ -1465,7 +1466,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         ( operator, rule_type, rule, description ) = predicate.GetValue()
         
         self._operator.SetValue( operator )
-        self._regex.setText( rule )
+        self._regex.SetValue( rule )
         
         #
         
@@ -1491,7 +1492,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
     
     def CheckValid( self ):
         
-        regex = self._regex.text()
+        regex = self._regex.GetValue()
         
         try:
             
@@ -1518,7 +1519,7 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         
         rule_type = 'regex'
         
-        regex = self._regex.text()
+        regex = self._regex.GetValue()
         
         rule = regex
         

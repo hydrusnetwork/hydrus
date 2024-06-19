@@ -354,7 +354,7 @@ IRL_SIBLING_PAIRS = {
     ( 'tracer (overwatch', 'character:lena "tracer" oxton' ),
     ( 'tracer (overwatch)doll joints', 'character:lena "tracer" oxton' ),
     ( 'tracer overwatch', 'character:lena "tracer" oxton' ),
-    ( 'tracer\overwatch', 'character:lena "tracer" oxton' ),
+    ( r'tracer\overwatch', 'character:lena "tracer" oxton' ),
     ( 'tracer_(cosplay)', 'character:lena "tracer" oxton' ),
     ( 'tracer_(overwatch)', 'character:lena "tracer" oxton' ),
     ( 'tracer_(overwatch)_(cosplay)', 'character:lena "tracer" oxton' ),

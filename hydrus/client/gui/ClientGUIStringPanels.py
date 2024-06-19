@@ -1,4 +1,3 @@
-import os
 import re
 import typing
 
@@ -23,6 +22,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIRegex
 
 NO_RESULTS_TEXT = 'no results'
 
@@ -721,11 +721,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_number = ClientGUICommon.BetterSpinBox( self._control_panel, min=0, max=65535 )
             self._data_encoding = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_decoding = ClientGUICommon.BetterChoice( self._control_panel )
+            self._data_regex_pattern = ClientGUIRegex.RegexInput( self._control_panel, show_group_menu = True )
             self._data_regex_repl = QW.QLineEdit( self._control_panel )
             self._data_date_link = ClientGUICommon.BetterHyperLink( self._control_panel, 'link to date info', 'https://docs.python.org/3/library/datetime.html#strftime-strptime-behavior' )
             self._data_timezone_decode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_encode = ClientGUICommon.BetterChoice( self._control_panel )
             self._data_timezone_offset = ClientGUICommon.BetterSpinBox( self._control_panel, min=-86400, max=86400 )
+            
+            self._data_regex_pattern.setToolTip( f'Whatever this matches{HC.UNICODE_ELLIPSIS}' )
+            self._data_regex_repl.setToolTip( f'{HC.UNICODE_ELLIPSIS}will be replaced with this.' )
             
             self._data_hash_function = ClientGUICommon.BetterChoice( self._control_panel )
             tt = 'This hashes the string\'s UTF-8-decoded bytes to hexadecimal.'
@@ -799,7 +803,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 ( pattern, repl ) = data
                 
-                self._data_text.setText( pattern )
+                self._data_regex_pattern.SetValue( pattern )
                 self._data_regex_repl.setText( repl )
                 
             elif conversion_type == ClientStrings.STRING_CONVERSION_DATE_DECODE:
@@ -854,6 +858,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_number_label = ClientGUICommon.BetterStaticText( self, 'number data: ' )
             self._data_encoding_label = ClientGUICommon.BetterStaticText( self, 'encoding type: ' )
             self._data_decoding_label = ClientGUICommon.BetterStaticText( self, 'decoding type: ' )
+            self._data_regex_pattern_label = ClientGUICommon.BetterStaticText( self, 'regex pattern: ' )
             self._data_regex_repl_label = ClientGUICommon.BetterStaticText( self, 'regex replacement: ' )
             self._data_date_link_label = ClientGUICommon.BetterStaticText( self, 'date info: ' )
             self._data_timezone_decode_label = ClientGUICommon.BetterStaticText( self, 'date decode timezone: ' )
@@ -868,6 +873,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             rows.append( ( self._data_number_label, self._data_number ) )
             rows.append( ( self._data_encoding_label, self._data_encoding ) )
             rows.append( ( self._data_decoding_label, self._data_decoding ) )
+            rows.append( ( self._data_regex_pattern_label, self._data_regex_pattern ) )
             rows.append( ( self._data_regex_repl_label, self._data_regex_repl ) )
             rows.append( ( self._data_date_link_label, self._data_date_link ) )
             rows.append( ( self._data_timezone_decode_label, self._data_timezone_decode ) )
@@ -908,11 +914,12 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._conversion_type.currentIndexChanged.connect( self._UpdateDataControls )
             self._conversion_type.currentIndexChanged.connect( self._UpdateExampleText )
             
-            self._data_text.textEdited.connect( self._UpdateExampleText )
+            self._data_text.textChanged.connect( self._UpdateExampleText )
             self._data_number.valueChanged.connect( self._UpdateExampleText )
             self._data_encoding.currentIndexChanged.connect( self._UpdateExampleText )
             self._data_decoding.currentIndexChanged.connect( self._UpdateExampleText )
-            self._data_regex_repl.textEdited.connect( self._UpdateExampleText )
+            self._data_regex_pattern.textChanged.connect( self._UpdateExampleText )
+            self._data_regex_repl.textChanged.connect( self._UpdateExampleText )
             self._data_timezone_decode.currentIndexChanged.connect( self._UpdateExampleText )
             self._data_timezone_offset.valueChanged.connect( self._UpdateExampleText )
             self._data_timezone_encode.currentIndexChanged.connect( self._UpdateExampleText )
@@ -930,6 +937,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_number_label.setVisible( False )
             self._data_encoding_label.setVisible( False )
             self._data_decoding_label.setVisible( False )
+            self._data_regex_pattern_label.setVisible( False )
             self._data_regex_repl_label.setVisible( False )
             self._data_date_link_label.setVisible( False )
             self._data_timezone_decode_label.setVisible( False )
@@ -942,6 +950,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             self._data_number.setVisible( False )
             self._data_encoding.setVisible( False )
             self._data_decoding.setVisible( False )
+            self._data_regex_pattern.setVisible( False )
             self._data_regex_repl.setVisible( False )
             self._data_date_link.setVisible( False )
             self._data_timezone_decode.setVisible( False )
@@ -983,7 +992,15 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._data_number.setMinimum( 1 )
                 
-            elif conversion_type in ( ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE, ClientStrings.STRING_CONVERSION_REGEX_SUB ):
+            elif conversion_type == ClientStrings.STRING_CONVERSION_REGEX_SUB:
+                
+                self._data_regex_pattern_label.setVisible( True )
+                self._data_regex_pattern.setVisible( True )
+                
+                self._data_regex_repl_label.setVisible( True )
+                self._data_regex_repl.setVisible( True )
+                
+            elif conversion_type in ( ClientStrings.STRING_CONVERSION_PREPEND_TEXT, ClientStrings.STRING_CONVERSION_APPEND_TEXT, ClientStrings.STRING_CONVERSION_DATE_DECODE, ClientStrings.STRING_CONVERSION_DATE_ENCODE ):
                 
                 self._data_text_label.setVisible( True )
                 self._data_text.setVisible( True )
@@ -1023,13 +1040,6 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                         self._data_timezone_encode_label.setVisible( True )
                         self._data_timezone_encode.setVisible( True )
                         
-                    
-                elif conversion_type == ClientStrings.STRING_CONVERSION_REGEX_SUB:
-                    
-                    data_text_label = 'regex pattern: '
-                    
-                    self._data_regex_repl_label.setVisible( True )
-                    self._data_regex_repl.setVisible( True )
                     
                 
                 self._data_text_label.setText( data_text_label )
@@ -1129,7 +1139,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             elif conversion_type == ClientStrings.STRING_CONVERSION_REGEX_SUB:
                 
-                pattern = self._data_text.text()
+                pattern = self._data_regex_pattern.GetValue()
                 repl = self._data_regex_repl.text()
                 
                 data = ( pattern, repl )
@@ -1310,7 +1320,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._match_type.addItem( 'regex', ClientStrings.STRING_MATCH_REGEX )
         
         self._match_value_fixed_input = QW.QLineEdit( self )
-        self._match_value_regex_input = QW.QLineEdit( self )
+        self._match_value_regex_input = ClientGUIRegex.RegexInput( self )
         
         self._match_value_flexible_input = ClientGUICommon.BetterChoice( self )
         
@@ -1386,7 +1396,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
         elif match_type == ClientStrings.STRING_MATCH_REGEX:
             
-            match_value = self._match_value_regex_input.text()
+            match_value = self._match_value_regex_input.GetValue()
             
         
         if match_type == ClientStrings.STRING_MATCH_FIXED:
@@ -1430,6 +1440,11 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             self._match_value_fixed_input_label.setVisible( True )
             self._match_value_fixed_input.setVisible( True )
             
+            if self._match_value_fixed_input.text() == '':
+                
+                self._match_value_fixed_input.setText( self._example_string.text() )
+                
+            
         else:
             
             self._min_chars_label.setVisible( True )
@@ -1449,6 +1464,11 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._match_value_regex_input_label.setVisible( True )
                 self._match_value_regex_input.setVisible( True )
+                
+                if self._match_value_regex_input.GetValue() == '':
+                    
+                    self._match_value_regex_input.SetValue( self._example_string.text() )
+                    
                 
             
         
@@ -1514,13 +1534,13 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._match_value_fixed_input.setText( match_value )
             
+        elif match_type == ClientStrings.STRING_MATCH_REGEX:
+            
+            self._match_value_regex_input.SetValue( match_value )
+            
         elif match_type == ClientStrings.STRING_MATCH_FLEXIBLE:
             
             self._match_value_flexible_input.SetValue( match_value )
-            
-        elif match_type == ClientStrings.STRING_MATCH_REGEX:
-            
-            self._match_value_regex_input.setText( match_value )
             
         
         self._min_chars.SetValue( min_chars )
@@ -2127,35 +2147,7 @@ class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         return string_match
         
     
-    def SetValue( self, string_match: ClientStrings.StringMatch ):
-        
-        ( match_type, match_value, min_chars, max_chars, example_string ) = string_match.ToTuple()
-        
-        self._match_type.SetValue( match_type )
-        
-        self._match_value_flexible_input.SetValue( ClientStrings.ALPHA )
-        
-        if match_type == ClientStrings.STRING_MATCH_FIXED:
-            
-            self._match_value_fixed_input.setText( match_value )
-            
-        elif match_type == ClientStrings.STRING_MATCH_FLEXIBLE:
-            
-            self._match_value_flexible_input.SetValue( match_value )
-            
-        elif match_type == ClientStrings.STRING_MATCH_REGEX:
-            
-            self._match_value_regex_input.setText( match_value )
-            
-        
-        self._min_chars.SetValue( min_chars )
-        self._max_chars.SetValue( max_chars )
-        
-        self._example_string.setText( example_string )
-        
-        self._UpdateControlVisibility()
-        
-    
+
 class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, string_processor: ClientStrings.StringProcessor, test_data: ClientParsing.ParsingTestData ):

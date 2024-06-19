@@ -191,7 +191,7 @@ def GetPDFInfo( path: str ):
         
         depunctuated_text = re.sub( r'[^\w\s]', ' ', text )
         
-        despaced_text = re.sub( '\s\s+', ' ', depunctuated_text )
+        despaced_text = re.sub( r'\s\s+', ' ', depunctuated_text )
         
         if despaced_text not in ( '', ' ' ):
             

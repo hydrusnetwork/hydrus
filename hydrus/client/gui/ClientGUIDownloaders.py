@@ -657,9 +657,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 gug = panel.GetValue()
                 
-                self._AddGUG( gug )
-                
-                self._gug_list_ctrl.Sort()
+                self._AddGUG( gug, select_sort_and_scroll = True )
                 
             
         
@@ -680,29 +678,27 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 ngug = panel.GetValue()
                 
-                self._AddNGUG( ngug )
-                
-                self._ngug_list_ctrl.Sort()
+                self._AddNGUG( ngug, select_sort_and_scroll = True )
                 
             
         
     
-    def _AddGUG( self, gug ):
+    def _AddGUG( self, gug, select_sort_and_scroll = False ):
         
         HydrusSerialisable.SetNonDupeName( gug, self._GetExistingNames() )
         
         gug.RegenerateGUGKey()
         
-        self._gug_list_ctrl.AddDatas( ( gug, ) )
+        self._gug_list_ctrl.AddDatas( ( gug, ), select_sort_and_scroll = select_sort_and_scroll )
         
     
-    def _AddNGUG( self, ngug ):
+    def _AddNGUG( self, ngug, select_sort_and_scroll = False ):
         
         HydrusSerialisable.SetNonDupeName( ngug, self._GetExistingNames() )
         
         ngug.RegenerateGUGKey()
         
-        self._ngug_list_ctrl.AddDatas( ( ngug, ) )
+        self._ngug_list_ctrl.AddDatas( ( ngug, ), select_sort_and_scroll = select_sort_and_scroll )
         
     
     def _ConvertGUGToListCtrlTuples( self, gug ):
@@ -819,76 +815,67 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditGUG( self ):
         
-        edited_datas = []
+        data = self._gug_list_ctrl.GetTopSelectedData()
         
-        for gug in self._gug_list_ctrl.GetData( only_selected = True ):
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit gallery url generator' ) as dlg:
-                
-                panel = EditGUGPanel( dlg, gug )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    self._gug_list_ctrl.DeleteDatas( ( gug, ) )
-                    
-                    gug = panel.GetValue()
-                    
-                    HydrusSerialisable.SetNonDupeName( gug, self._GetExistingNames() )
-                    
-                    self._gug_list_ctrl.AddDatas( ( gug, ) )
-                    
-                    edited_datas.append( gug )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._gug_list_ctrl.SelectDatas( edited_datas )
+        gug: ClientNetworkingGUG.GalleryURLGenerator = data
         
-        self._gug_list_ctrl.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit gallery url generator' ) as dlg:
+            
+            panel = EditGUGPanel( dlg, gug )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                existing_names = self._GetExistingNames()
+                existing_names.discard( gug.GetName() )
+                
+                edited_gug = panel.GetValue()
+                
+                HydrusSerialisable.SetNonDupeName( edited_gug, existing_names )
+                
+                self._gug_list_ctrl.ReplaceData( gug, edited_gug, sort_and_scroll = True )
+                
+            
         
+    
     
     def _EditNGUG( self ):
         
+        data = self._ngug_list_ctrl.GetTopSelectedData()
+        
+        if data is None:
+            
+            return
+            
+        
+        ngug: ClientNetworkingGUG.NestedGalleryURLGenerator = data
+        
         available_gugs = self._gug_list_ctrl.GetData()
         
-        edited_datas = []
-        
-        for ngug in self._ngug_list_ctrl.GetData( only_selected = True ):
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit nested gallery url generator' ) as dlg:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit nested gallery url generator' ) as dlg:
+            panel = EditNGUGPanel( dlg, ngug, available_gugs )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
                 
-                panel = EditNGUGPanel( dlg, ngug, available_gugs )
+                existing_names = self._GetExistingNames()
+                existing_names.discard( ngug.GetName() )
                 
-                dlg.SetPanel( panel )
+                edited_ngug = panel.GetValue()
                 
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    self._ngug_list_ctrl.DeleteDatas( ( ngug, ) )
-                    
-                    ngug = panel.GetValue()
-                    
-                    HydrusSerialisable.SetNonDupeName( ngug, self._GetExistingNames() )
-                    
-                    self._ngug_list_ctrl.AddDatas( ( ngug, ) )
-                    
-                    edited_datas.append( ngug )
-                    
-                else:
-                    
-                    break
-                    
+                HydrusSerialisable.SetNonDupeName( edited_ngug, existing_names )
+                
+                self._ngug_list_ctrl.ReplaceData( ngug, edited_ngug, sort_and_scroll = True )
                 
             
-        
-        self._ngug_list_ctrl.SelectDatas( edited_datas )
-        
-        self._ngug_list_ctrl.Sort()
         
     
     def _GetExistingNames( self ):
@@ -2368,20 +2355,20 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 url_class = panel.GetValue()
                 
-                self._AddURLClass( url_class )
+                self._AddURLClass( url_class, select_sort_and_scroll = True )
                 
                 self._list_ctrl.Sort()
                 
             
         
     
-    def _AddURLClass( self, url_class ):
+    def _AddURLClass( self, url_class, select_sort_and_scroll = False ):
         
         HydrusSerialisable.SetNonDupeName( url_class, self._GetExistingNames() )
         
         url_class.RegenerateClassKey()
         
-        self._list_ctrl.AddDatas( ( url_class, ) )
+        self._list_ctrl.AddDatas( ( url_class, ), select_sort_and_scroll = select_sort_and_scroll )
         
         self._changes_made = True
         
@@ -2412,40 +2399,35 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        edited_datas = []
+        data = self._list_ctrl.GetTopSelectedData()
         
-        for url_class in self._list_ctrl.GetData( only_selected = True ):
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit url class' ) as dlg:
-                
-                panel = EditURLClassPanel( dlg, url_class )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    self._list_ctrl.DeleteDatas( ( url_class, ) )
-                    
-                    url_class = panel.GetValue()
-                    
-                    HydrusSerialisable.SetNonDupeName( url_class, self._GetExistingNames() )
-                    
-                    self._list_ctrl.AddDatas( ( url_class, ) )
-                    
-                    edited_datas.append( url_class )
-                    
-                    self._changes_made = True
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._list_ctrl.SelectDatas( edited_datas )
+        url_class = data
         
-        self._list_ctrl.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit url class' ) as dlg:
+            
+            panel = EditURLClassPanel( dlg, url_class )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                existing_names = self._GetExistingNames()
+                existing_names.discard( url_class.GetName() )
+                
+                edited_url_class = panel.GetValue()
+                
+                HydrusSerialisable.SetNonDupeName( edited_url_class, existing_names )
+                
+                self._list_ctrl.ReplaceData( url_class, edited_url_class, sort_and_scroll = True )
+                
+                self._changes_made = True
+                
+            
         
     
     def _GetExistingNames( self ):
@@ -2488,6 +2470,9 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
                 else:
                     
                     text = 'Matches "' + url_class.GetName() + '"'
+                    
+                    self._list_ctrl.SelectDatas( ( url_class, ), deselect_others = True )
+                    self._list_ctrl.ScrollToData( url_class )
                     
                 
             except HydrusExceptions.URLClassException as e:

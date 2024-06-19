@@ -257,7 +257,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_account_type = panel.GetValue()
                 
-                self._account_types_listctrl.AddDatas( ( new_account_type, ) )
+                self._account_types_listctrl.AddDatas( ( new_account_type, ), select_sort_and_scroll = True )
                 
             
         
@@ -337,33 +337,33 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        datas = self._account_types_listctrl.GetData( only_selected = True )
+        data = self._account_types_listctrl.GetTopSelectedData()
         
-        if True in ( at.IsNullAccount() for at in datas ):
+        if data is None:
+            
+            return
+            
+        
+        account_type = data
+        
+        if account_type.IsNullAccount():
             
             ClientGUIDialogsMessage.ShowWarning( self, 'You cannot edit the null account type!' )
             
             return
             
         
-        for account_type in datas:
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit account type' ) as dlg_edit:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit account type' ) as dlg_edit:
+            panel = EditAccountTypePanel( dlg_edit, self._service_type, account_type )
+            
+            dlg_edit.SetPanel( panel )
+            
+            if dlg_edit.exec() == QW.QDialog.Accepted:
                 
-                panel = EditAccountTypePanel( dlg_edit, self._service_type, account_type )
+                edited_account_type = panel.GetValue()
                 
-                dlg_edit.SetPanel( panel )
-                
-                if dlg_edit.exec() == QW.QDialog.Accepted:
-                    
-                    edited_account_type = panel.GetValue()
-                    
-                    self._account_types_listctrl.ReplaceData( account_type, edited_account_type )
-                    
-                else:
-                    
-                    return
-                    
+                self._account_types_listctrl.ReplaceData( account_type, edited_account_type, sort_and_scroll = True )
                 
             
         

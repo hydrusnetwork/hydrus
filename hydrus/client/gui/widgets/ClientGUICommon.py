@@ -1,6 +1,3 @@
-import collections.abc
-import os
-import re
 import typing
 
 from qtpy import QtCore as QC
@@ -1467,100 +1464,6 @@ class OnOffButton( QW.QPushButton ):
     def SetOnOff( self, value ):
         
         self._SetValue( value )
-        
-    
-
-class RegexButton( BetterButton ):
-    
-    def __init__( self, parent ):
-        
-        BetterButton.__init__( self, parent, 'regex shortcuts', self._ShowMenu )
-        
-    
-    def _ShowMenu( self ):
-        
-        menu = ClientGUIMenus.GenerateMenu( self )
-        
-        ClientGUIMenus.AppendMenuLabel( menu, 'click on a phrase to copy it to the clipboard' )
-        
-        ClientGUIMenus.AppendSeparator( menu )
-        
-        submenu = ClientGUIMenus.GenerateMenu( menu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, r'whitespace character - \s', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'\s' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'number character - \d', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'\d' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'alphanumeric or underscore character - \w', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'\w' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'any character - .', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'.' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'backslash character - \\', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'\\' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'beginning of line - ^', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'^' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'end of line - $', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'$' )
-        ClientGUIMenus.AppendMenuItem( submenu, f'any of these - [{HC.UNICODE_ELLIPSIS}]', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', f'text', '[{HC.UNICODE_ELLIPSIS}]' )
-        ClientGUIMenus.AppendMenuItem( submenu, f'anything other than these - [^{HC.UNICODE_ELLIPSIS}]', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', f'[^{HC.UNICODE_ELLIPSIS}]' )
-        
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, r'0 or more matches, consuming as many as possible - *', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'*' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'1 or more matches, consuming as many as possible - +', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'+' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'0 or 1 matches, preferring 1 - ?', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'?' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'0 or more matches, consuming as few as possible - *?', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'*?' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'1 or more matches, consuming as few as possible - +?', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'+?' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'0 or 1 matches, preferring 0 - ??', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'??' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'exactly m matches - {m}', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'{m}' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'm to n matches, consuming as many as possible - {m,n}', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'{m,n}' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'm to n matches, consuming as few as possible - {m,n}?', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'{m,n}?' )
-        
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, f'the next characters are: (non-consuming) - (?={HC.UNICODE_ELLIPSIS})', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', f'(?={HC.UNICODE_ELLIPSIS})' )
-        ClientGUIMenus.AppendMenuItem( submenu, f'the next characters are not: (non-consuming) - (?!{HC.UNICODE_ELLIPSIS})', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', f'(?!{HC.UNICODE_ELLIPSIS})' )
-        ClientGUIMenus.AppendMenuItem( submenu, f'the previous characters are: (non-consuming) - (?<={HC.UNICODE_ELLIPSIS})', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', f'(?<={HC.UNICODE_ELLIPSIS})' )
-        ClientGUIMenus.AppendMenuItem( submenu, f'the previous characters are not: (non-consuming) - (?<!{HC.UNICODE_ELLIPSIS})', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', f'(?<!{HC.UNICODE_ELLIPSIS})' )
-        
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, r'0074 -> 74 - [1-9]+\d*', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', r'[1-9]+\d*' )
-        ClientGUIMenus.AppendMenuItem( submenu, r'filename - (?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)', 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', '(?<=' + re.escape( os.path.sep ) + r')[^' + re.escape( os.path.sep ) + r']*?(?=\..*$)' )
-        
-        ClientGUIMenus.AppendMenu( menu, submenu, 'regex components' )
-        
-        submenu = ClientGUIMenus.GenerateMenu( menu )
-        
-        ClientGUIMenus.AppendMenuItem( submenu, 'manage favourites', 'manage some custom favourite phrases', self._ManageFavourites )
-        
-        ClientGUIMenus.AppendSeparator( submenu )
-        
-        for ( regex_phrase, description ) in HC.options[ 'regex_favourites' ]:
-            
-            ClientGUIMenus.AppendMenuItem( submenu, description, 'copy this phrase to the clipboard', CG.client_controller.pub, 'clipboard', 'text', regex_phrase )
-            
-        
-        ClientGUIMenus.AppendMenu( menu, submenu, 'favourites' )
-        
-        CGC.core().PopupMenu( self, menu )
-        
-    
-    def _ManageFavourites( self ):
-        
-        regex_favourites = HC.options[ 'regex_favourites' ]
-        
-        from hydrus.client.gui import ClientGUITopLevelWindowsPanels
-        from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
-        
-        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'manage regex favourites' ) as dlg:
-            
-            panel = ClientGUIScrolledPanelsEdit.EditRegexFavourites( dlg, regex_favourites )
-            
-            dlg.SetPanel( panel )
-            
-            if dlg.exec() == QW.QDialog.Accepted:
-                
-                regex_favourites = panel.GetValue()
-                
-                HC.options[ 'regex_favourites' ] = regex_favourites
-                
-                CG.client_controller.Write( 'save_options', HC.options )
-                
-            
         
     
 

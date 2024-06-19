@@ -69,7 +69,7 @@ def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.
     if HC.PLATFORM_MACOS:
         
         menu_item.setMenuRole( role if role is not None else QW.QAction.MenuRole.NoRole )
-    
+        
     
     SetMenuTexts( menu_item, label, description )
     
@@ -80,21 +80,28 @@ def AppendMenuItem( menu, label, description, callable, *args, role: QW.QAction.
     return menu_item
     
 
-def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
+def AppendMenuLabel( menu, label, description = '', copy_text = '', no_copy = False ):
     
-    if description == label:
+    if no_copy:
         
         description = ''
         
-    
-    if copy_text == '':
+    else:
         
-        copy_text = label
+        if description == label:
+            
+            description = ''
+            
         
-    
-    if description == '':
+        if copy_text == '':
+            
+            copy_text = label
+            
         
-        description = f'copy "{copy_text}" to clipboard'
+        if description == '':
+            
+            description = f'copy "{copy_text}" to clipboard'
+            
         
     
     menu_item = QW.QAction( menu )
@@ -103,7 +110,10 @@ def AppendMenuLabel( menu, label, description = '', copy_text = '' ):
     
     menu.addAction( menu_item )
     
-    BindMenuItem( menu_item, CG.client_controller.pub, 'clipboard', 'text', copy_text )
+    if not no_copy:
+        
+        BindMenuItem( menu_item, CG.client_controller.pub, 'clipboard', 'text', copy_text )
+        
     
     return menu_item
     

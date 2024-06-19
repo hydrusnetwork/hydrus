@@ -129,6 +129,20 @@ Not really. Unless your situation involves millions of richly locally tagged fil
 
 Yes. I am working on updating the database infrastructure to allow a full purge, but the structure is complicated, so it will take some time. If you are afraid of someone stealing your hard drive and matriculating your sordid MLP collection (or, in this case, the historical log of horrors that you rejected), do some research into drive encryption. Hydrus runs fine off an encrypted disk.
 
+## I just imported files from my hard drive collection. How can I get their tags from the boorus?
+
+The problem of 'what tags should these files have?' is technically difficult to solve, and there isn't a fast and easy way to query a booru and say 'hey, what are your tags for this?', particularly _en masse_. It is even more difficult to keep up with updates (e.g. someone adding a tag to a file some months or years after it was uploaded). This is the main problem I designed the PTR to solve.
+
+If you cannot or do not want to devote the local resources to sync with the PTR, there are a few hacky ways to perform tag lookups, mostly with manual hash-based lookups. The big boorus support file search based on 'md5' hash, so there are ways to build a workflow where you can 'search' a booru or iqdb for one file at a time to see if there is a hit, and then get tags as if you were downloading it. An old system in the client called 'file lookup scripts' works like this, in the _manage tags_ dialog, and some users have figured out ways to make it work with some clever downloaders.
+
+Be careful with these systems. They tend to be slow and use a lot of resources serverside, so you will be rude if you hit them too hard. They work for a handful of files every now and then, but please do not set up jobs of many many thousands of files, and absolutely do not repeat the job for the same files regularly--you will just waste a lot of CPU and network time for everyone, and only gain a couple of tags in the process. Note that the hash-based lookups only work if your files have not changed since being downloaded; if you have scaled them, stripped metadata, or optimised quality, then they will count as new files and the hashes will have changed, and you will need to think about services like iqdb or saucenao, or ultimately the hydrus duplicate resolution system.
+
+That said, here is [a user guide on how to perform various kinds of file lookups](https://wiki.hydrus.network/books/hydrus-manual/page/file-look-up).
+
+If you are feeling adventurous, you can also explore the newer [AI-tagging tools](client_api.html#auto-taggers) that users are working on.
+
+Ultimately, though, a good and simple way to backfill your files' tags is just rely on normal downloading workflows. Try downloading your favourite artists (and later set up subscriptions) and you will naturally get files you like, with tags, and if, by (expected) serendipity, a file on the site is the same as one you already imported, hydrus will add the tags to it retroactively. 
+
 ## Does Hydrus run ok off an encrypted drive partition? { id="encryption" }
 
 Yes! Both the database and your files should be fine on any of the popular software solutions. These programs give your OS a virtual drive that on my end looks and operates like any other. I have yet to encounter one that SQLite has a problem with. Make sure you don't have auto-dismount set--or at least be hawkish that it will never trigger while hydrus is running--or you could damage your database.

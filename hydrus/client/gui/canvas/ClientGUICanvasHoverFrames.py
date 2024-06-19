@@ -2009,7 +2009,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                 control.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
                 control.SetValue( value )
                 
-                panel.SetControl( control )
+                panel.SetControl( control, perpendicular = True )
                 
                 dlg.SetPanel( panel )
                 

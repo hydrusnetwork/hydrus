@@ -121,15 +121,15 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._preimport_hash_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         self._preimport_url_check_type.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._preimport_url_check_looks_for_neighbours = QW.QCheckBox( pre_import_panel )
+        self._preimport_url_check_looks_for_neighbour_spam = QW.QCheckBox( pre_import_panel )
         
-        tt = 'When a file-url mapping is found, and additional check can be performed to see if it is trustworthy.'
+        tt = 'When a file-url mapping is found, an additional check can be performed to see if it is trustworthy.'
         tt += '\n' * 2
-        tt += 'If the URL has a Post URL Class, and the file has multiple other URLs with the same domain & URL Class (basically the file has multiple URLs on the same site), then the mapping is assumed to be some parse spam and not trustworthy (leading to more "this file looks new" results in the pre-check).'
+        tt += 'If the URL we are checking is recognised as a Post URL, and the file it appears to refer to has other URLs with the same domain & URL Class as what we parsed for the current job (basically the file has or would get multiple URLs on the same site), then this discovered mapping is assumed to be some parse spam and not trustworthy (leading to a "this file looks new" result in the pre-check).'
         tt += '\n' * 2
         tt += 'This test is best left on unless you are doing a single job that is messed up by the logic.'
         
-        self._preimport_url_check_looks_for_neighbours.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
+        self._preimport_url_check_looks_for_neighbour_spam.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #
         
@@ -199,7 +199,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._associate_primary_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        tt = 'If the parser discovers and additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
+        tt = 'If the parser discovers an additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
         tt += '\n' * 2
         tt += 'You should turn this off if the site supplies bad (incorrect or imprecise or malformed) source urls.'
         
@@ -242,13 +242,13 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             rows.append( ( 'check hashes to determine "already in db/previously deleted"?: ', self._preimport_hash_check_type ) )
             rows.append( ( 'check URLs to determine "already in db/previously deleted"?: ', self._preimport_url_check_type ) )
-            rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbours ) )
+            rows.append( ( 'during URL check, check for neighbour-spam?: ', self._preimport_url_check_looks_for_neighbour_spam ) )
             
         else:
             
             self._preimport_hash_check_type.setVisible( False )
             self._preimport_url_check_type.setVisible( False )
-            self._preimport_url_check_looks_for_neighbours.setVisible( False )
+            self._preimport_url_check_looks_for_neighbour_spam.setVisible( False )
             
         
         rows.append( ( 'allow decompression bombs: ', self._allow_decompression_bombs ) )
@@ -362,7 +362,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution ) = file_import_options.GetPreImportOptions()
         
-        preimport_url_check_looks_for_neighbours = file_import_options.PreImportURLCheckLooksForNeighbours()
+        preimport_url_check_looks_for_neighbour_spam = file_import_options.PreImportURLCheckLooksForNeighbourSpam()
         
         mimes = file_import_options.GetAllowedSpecificFiletypes()
         
@@ -371,7 +371,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._exclude_deleted.setChecked( exclude_deleted )
         self._preimport_hash_check_type.SetValue( preimport_hash_check_type )
         self._preimport_url_check_type.SetValue( preimport_url_check_type )
-        self._preimport_url_check_looks_for_neighbours.setChecked( preimport_url_check_looks_for_neighbours )
+        self._preimport_url_check_looks_for_neighbour_spam.setChecked( preimport_url_check_looks_for_neighbour_spam )
         self._allow_decompression_bombs.setChecked( allow_decompression_bombs )
         self._min_size.SetValue( min_size )
         self._max_size.SetValue( max_size )
@@ -456,7 +456,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             self._preimport_hash_check_type.SetValue( FileImportOptions.DO_CHECK )
             
         
-        self._preimport_url_check_looks_for_neighbours.setEnabled( preimport_url_check_type != FileImportOptions.DO_NOT_CHECK )
+        self._preimport_url_check_looks_for_neighbour_spam.setEnabled( preimport_url_check_type != FileImportOptions.DO_NOT_CHECK )
         
     
     def _UpdateIsDefault( self ):
@@ -512,7 +512,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             exclude_deleted = self._exclude_deleted.isChecked()
             preimport_hash_check_type = self._preimport_hash_check_type.GetValue()
             preimport_url_check_type = self._preimport_url_check_type.GetValue()
-            preimport_url_check_looks_for_neighbours = self._preimport_url_check_looks_for_neighbours.isChecked()
+            preimport_url_check_looks_for_neighbour_spam = self._preimport_url_check_looks_for_neighbour_spam.isChecked()
             allow_decompression_bombs = self._allow_decompression_bombs.isChecked()
             min_size = self._min_size.GetValue()
             max_size = self._max_size.GetValue()
@@ -529,7 +529,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             destination_location_context = self._destination_location_context.GetValue()
             
             file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-            file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
+            file_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
             file_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
             file_import_options.SetDestinationLocationContext( destination_location_context )
             file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )

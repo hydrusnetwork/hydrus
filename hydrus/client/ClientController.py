@@ -345,8 +345,8 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
     def _ShutdownManagers( self ):
         
         self.database_maintenance_manager.Shutdown()
+        self.import_folders_manager.Shutdown()
         self.files_maintenance_manager.Shutdown()
-        
         self.quick_download_manager.Shutdown()
         
         managers = [ self.subscriptions_manager, self.tag_display_maintenance_manager ]
@@ -1291,15 +1291,19 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.frame_splash_status.SetTitleText( 'booting gui' + HC.UNICODE_ELLIPSIS )
         
-        subscriptions = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
-        
         self.files_maintenance_manager = ClientFiles.FilesMaintenanceManager( self )
         
         from hydrus.client import ClientDBMaintenanceManager
         
         self.database_maintenance_manager = ClientDBMaintenanceManager.DatabaseMaintenanceManager( self )
         
+        from hydrus.client.importing import ClientImportLocal
+        
+        self.import_folders_manager = ClientImportLocal.ImportFoldersManager( self )
+        
         from hydrus.client.importing import ClientImportSubscriptions
+        
+        subscriptions = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION )
         
         self.subscriptions_manager = ClientImportSubscriptions.SubscriptionsManager( self, subscriptions )
         
@@ -1638,13 +1642,13 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         job.WakeOnPubSub( 'wake_idle_workers' )
         job.WakeOnPubSub( 'notify_network_traffic_unpaused' )
         self._daemon_jobs[ 'synchronise_repositories' ] = job
-        
+        '''
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckImportFolders )
         job.WakeOnPubSub( 'notify_restart_import_folders_daemon' )
         job.WakeOnPubSub( 'notify_new_import_folders' )
         job.ShouldDelayOnWakeup( True )
         self._daemon_jobs[ 'import_folders' ] = job
-        
+        '''
         job = self.CallRepeating( 5.0, 180.0, ClientDaemons.DAEMONCheckExportFolders )
         job.WakeOnPubSub( 'notify_restart_export_folders_daemon' )
         job.WakeOnPubSub( 'notify_new_export_folders' )
@@ -1673,6 +1677,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.files_maintenance_manager.Start()
         self.database_maintenance_manager.Start()
+        self.import_folders_manager.Start()
         self.subscriptions_manager.Start()
         
     

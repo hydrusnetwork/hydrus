@@ -1049,7 +1049,7 @@ class TimeDeltaButton( QW.QPushButton ):
             
             control.SetValue( self._value )
             
-            panel.SetControl( control )
+            panel.SetControl( control, perpendicular = True )
             
             dlg.SetPanel( panel )
             

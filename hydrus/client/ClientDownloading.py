@@ -317,7 +317,7 @@ class QuickDownloadManager( object ):
                                     exclude_deleted = False # this is the important part here
                                     preimport_hash_check_type = FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
                                     preimport_url_check_type = FileImportOptions.DO_CHECK
-                                    preimport_url_check_looks_for_neighbours = True
+                                    preimport_url_check_looks_for_neighbour_spam = True
                                     allow_decompression_bombs = True
                                     min_size = None
                                     max_size = None
@@ -331,7 +331,7 @@ class QuickDownloadManager( object ):
                                     file_import_options = FileImportOptions.FileImportOptions()
                                     
                                     file_import_options.SetPreImportOptions( exclude_deleted, preimport_hash_check_type, preimport_url_check_type, allow_decompression_bombs, min_size, max_size, max_gif_size, min_resolution, max_resolution )
-                                    file_import_options.SetPreImportURLCheckLooksForNeighbours( preimport_url_check_looks_for_neighbours )
+                                    file_import_options.SetPreImportURLCheckLooksForNeighbourSpam( preimport_url_check_looks_for_neighbour_spam )
                                     file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
                                     
                                     file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = f'Downloaded File - {hash.hex()}' )

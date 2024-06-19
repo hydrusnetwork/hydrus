@@ -361,7 +361,7 @@ class RatingIncDec( QW.QWidget ):
                     
                     control = ClientGUICommon.BetterSpinBox( self, initial = self._rating, min = 0, max = 1000000 )
                     
-                    panel.SetControl( control )
+                    panel.SetControl( control, perpendicular = True )
                     
                     dlg.SetPanel( panel )
                     

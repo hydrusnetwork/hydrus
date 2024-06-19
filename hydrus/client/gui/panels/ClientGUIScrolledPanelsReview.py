@@ -830,7 +830,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     control.SetValue( max_num_bytes )
                     
-                    panel.SetControl( control )
+                    panel.SetControl( control, perpendicular = True )
                     
                     dlg.SetPanel( panel )
                     

@@ -34,6 +34,7 @@ from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIRegex
 from hydrus.client.importing.options import NoteImportOptions
 from hydrus.client.importing.options import TagImportOptions
 from hydrus.client.media import ClientMedia
@@ -2694,11 +2695,21 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
             
             ( regex_phrase, description ) = row
             
-            with ClientGUIDialogs.DialogTextEntry( self, 'Update regex.', default = regex_phrase ) as dlg:
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit regex' ) as dlg:
+                
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                
+                control = ClientGUIRegex.RegexInput( panel )
+                
+                control.SetValue( regex_phrase )
+                
+                panel.SetControl( control, perpendicular = True )
+                
+                dlg.SetPanel( panel )
                 
                 if dlg.exec() == QW.QDialog.Accepted:
                     
-                    regex_phrase = dlg.GetValue()
+                    regex_phrase = control.GetValue()
                     
                     with ClientGUIDialogs.DialogTextEntry( self, 'Update description.', default = description ) as dlg_2:
                         
@@ -2713,6 +2724,10 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
                             self._regexes.AddDatas( ( edited_row, ) )
                             
                             edited_datas.append( edited_row )
+                            
+                        else:
+                            
+                            break
                             
                         
                     

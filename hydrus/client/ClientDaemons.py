@@ -41,36 +41,7 @@ def DAEMONCheckExportFolders():
             
         
     
-def DAEMONCheckImportFolders():
-    
-    controller = CG.client_controller
-    
-    if not controller.new_options.GetBoolean( 'pause_import_folders_sync' ):
-        
-        HG.import_folders_running = True
-        
-        try:
-            
-            import_folder_names = controller.Read( 'serialisable_names', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER )
-            
-            for name in import_folder_names:
-                
-                import_folder = controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_IMPORT_FOLDER, name )
-                
-                if controller.new_options.GetBoolean( 'pause_import_folders_sync' ) or HydrusThreading.IsThreadShuttingDown():
-                    
-                    break
-                    
-                
-                import_folder.DoWork()
-                
-            
-        finally:
-            
-            HG.import_folders_running = False
-            
-        
-    
+
 def DAEMONMaintainTrash():
     
     # TODO: Looking at it, this whole thing is whack

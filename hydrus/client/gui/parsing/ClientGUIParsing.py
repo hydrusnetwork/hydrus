@@ -1693,20 +1693,18 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_parser = panel.GetValue()
                 
-                self._AddParser( new_parser )
-                
-                self._parsers.Sort()
+                self._AddParser( new_parser, select_sort_and_scroll = True )
                 
             
         
     
-    def _AddParser( self, parser ):
+    def _AddParser( self, parser, select_sort_and_scroll = False ):
         
         HydrusSerialisable.SetNonDupeName( parser, self._GetExistingNames() )
         
         parser.RegenerateParserKey()
         
-        self._parsers.AddDatas( ( parser, ) )
+        self._parsers.AddDatas( ( parser, ), select_sort_and_scroll = select_sort_and_scroll )
         
     
     def _ConvertParserToListCtrlTuples( self, parser ):
@@ -1732,40 +1730,33 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        edited_datas = []
+        data = self._parsers.GetTopSelectedData()
         
-        parsers = self._parsers.GetData( only_selected = True )
-        
-        for parser in parsers:
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+            return
+            
+        
+        parser: ClientParsing.PageParser = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit parser', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = EditPageParserPanel( dlg, parser )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
                 
-                panel = EditPageParserPanel( dlg, parser )
+                edited_parser = panel.GetValue()
                 
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_parser = panel.GetValue()
-                    
-                    self._parsers.DeleteDatas( ( parser, ) )
+                if edited_parser.GetName() != parser.GetName():
                     
                     HydrusSerialisable.SetNonDupeName( edited_parser, self._GetExistingNames() )
                     
-                    self._parsers.AddDatas( ( edited_parser, ) )
-                    
-                    edited_datas.append( edited_parser )
-                    
-                else:
-                    
-                    break
-                    
+                
+                self._parsers.ReplaceData( parser, edited_parser, sort_and_scroll = True )
                 
             
-        
-        self._parsers.SelectDatas( edited_datas )
-        
-        self._parsers.Sort()
         
     
     def _GetExistingNames( self ):

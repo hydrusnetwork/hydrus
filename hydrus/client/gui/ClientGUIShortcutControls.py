@@ -279,40 +279,41 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 data = ( shortcut, command )
                 
-                self._shortcuts.AddDatas( ( data, ) )
+                self._shortcuts.AddDatas( ( data, ), select_sort_and_scroll = True )
                 
             
         
     
     def EditShortcuts( self ):
         
-        name = self._name.text()
+        data = self._shortcuts.GetTopSelectedData()
         
-        for data in self._shortcuts.GetData( only_selected = True ):
-        
-            ( shortcut, command ) = data
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcut command' ) as dlg:
-                
-                panel = EditShortcutAndCommandPanel( dlg, shortcut, command, name )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    ( new_shortcut, new_command ) = panel.GetValue()
-                    
-                    new_data = ( new_shortcut, new_command )
-                    
-                    self._shortcuts.ReplaceData( data, new_data )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
+        ( shortcut, command ) = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcut command' ) as dlg:
+            
+            name = self._name.text()
+            
+            panel = EditShortcutAndCommandPanel( dlg, shortcut, command, name )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                ( new_shortcut, new_command ) = panel.GetValue()
+                
+                new_data = ( new_shortcut, new_command )
+                
+                self._shortcuts.ReplaceData( data, new_data, sort_and_scroll = True )
+                
+            
+        
+    
     
     def GetValue( self ):
         
@@ -490,7 +491,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 new_shortcuts = panel.GetValue()
                 
-                self._custom_shortcuts.AddDatas( ( new_shortcuts, ) )
+                self._custom_shortcuts.AddDatas( ( new_shortcuts, ), select_sort_and_scroll = True )
                 
             
         
@@ -507,55 +508,56 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditCustom( self ):
         
-        all_selected = self._custom_shortcuts.GetData( only_selected = True )
+        data = self._custom_shortcuts.GetTopSelectedData()
         
-        for shortcuts in all_selected:
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            return
+            
+        
+        shortcuts = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            
+            panel = EditShortcutSetPanel( dlg, shortcuts )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
                 
-                panel = EditShortcutSetPanel( dlg, shortcuts )
+                edited_shortcuts = panel.GetValue()
                 
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_shortcuts = panel.GetValue()
-                    
-                    self._custom_shortcuts.ReplaceData( shortcuts, edited_shortcuts )
-                    
-                else:
-                    
-                    break
-                    
+                self._custom_shortcuts.ReplaceData( shortcuts, edited_shortcuts, sort_and_scroll = True )
                 
             
         
     
     def _EditReserved( self ):
         
-        all_selected = self._reserved_shortcuts.GetData( only_selected = True )
+        data = self._reserved_shortcuts.GetTopSelectedData()
         
-        for shortcuts in all_selected:
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
-                
-                panel = EditShortcutSetPanel( dlg, shortcuts )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_shortcuts = panel.GetValue()
-                    
-                    self._reserved_shortcuts.ReplaceData( shortcuts, edited_shortcuts )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
+        shortcuts = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit shortcuts' ) as dlg:
+            
+            panel = EditShortcutSetPanel( dlg, shortcuts )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_shortcuts = panel.GetValue()
+                
+                self._reserved_shortcuts.ReplaceData( shortcuts, edited_shortcuts, sort_and_scroll = True )
+                
+            
+        
+    
     
     def _GetTuples( self, shortcuts ):
         
@@ -627,7 +629,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if result == QW.QDialog.Accepted:
                 
-                self._reserved_shortcuts.ReplaceData( existing_data, new_data )
+                self._reserved_shortcuts.ReplaceData( existing_data, new_data, sort_and_scroll = True )
                 
             
         

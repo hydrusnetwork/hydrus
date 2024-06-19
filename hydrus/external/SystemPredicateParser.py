@@ -234,7 +234,7 @@ SYSTEM_PREDICATES = {
     'has tags': (Predicate.HAS_TAGS, None, None, None),
     'untagged|no tags': (Predicate.UNTAGGED, None, None, None),
     'num(ber)?( of)? tags': (Predicate.NUM_OF_TAGS, Operators.RELATIONAL, Value.NATURAL, None),
-    'num(ber)?( of)? (?=[^\\s].* tags)': (Predicate.NUM_OF_TAGS_WITH_NAMESPACE, None, Value.NAMESPACE_AND_NUM_TAGS, None),
+    r'num(ber)?( of)? (?=[^\s].* tags)': (Predicate.NUM_OF_TAGS_WITH_NAMESPACE, None, Value.NAMESPACE_AND_NUM_TAGS, None),
     'num(ber)?( of)? urls': (Predicate.NUM_OF_URLS, Operators.RELATIONAL, Value.NATURAL, None),
     'num(ber)?( of)? words': (Predicate.NUM_OF_WORDS, Operators.RELATIONAL_EXACT, Value.NATURAL, None),
     'height': (Predicate.HEIGHT, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS_OR_NONE),
@@ -254,8 +254,8 @@ SYSTEM_PREDICATES = {
     'num(ber)?( of)? frames': (Predicate.NUM_OF_FRAMES, Operators.RELATIONAL, Value.NATURAL, None),
     'file service': (Predicate.FILE_SERVICE, Operators.FILESERVICE_STATUS, Value.ANY_STRING, None),
     'num(ber)?( of)? file relationships': (Predicate.NUM_FILE_RELS, Operators.RELATIONAL, Value.NATURAL, Units.FILE_RELATIONSHIP_TYPE),
-    'ratio(?=.*\d)': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
-    'ratio(?!.*\d)': (Predicate.RATIO_SPECIAL, Operators.RATIO_OPERATORS_SPECIAL, Value.RATIO_SPECIAL, None),
+    r'ratio(?=.*\d)': (Predicate.RATIO, Operators.RATIO_OPERATORS, Value.RATIO, None),
+    r'ratio(?!.*\d)': (Predicate.RATIO_SPECIAL, Operators.RATIO_OPERATORS_SPECIAL, Value.RATIO_SPECIAL, None),
     'num pixels': (Predicate.NUM_PIXELS, Operators.RELATIONAL, Value.NATURAL, Units.PIXELS),
     'media views': (Predicate.MEDIA_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
     'preview views': (Predicate.PREVIEW_VIEWS, Operators.RELATIONAL, Value.NATURAL, None),
@@ -279,9 +279,9 @@ SYSTEM_PREDICATES = {
     '((has )?no|does not have( a)?|doesn\'t have( a)?) note (with name|named)': (Predicate.NO_NOTE_NAME, None, Value.ANY_STRING, None),
     'has( a)? rating( for)?': (Predicate.HAS_RATING, None, Value.ANY_STRING, None ),
     '((has )?no|does not have( a)?|doesn\'t have( a)?) rating( for)?': (Predicate.NO_RATING, None, Value.ANY_STRING, None ),
-    'rating( for)?(?=.+?\d+/\d+$)': (Predicate.RATING_SPECIFIC_NUMERICAL, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_NUMERICAL_VALUE, None ),
+    r'rating( for)?(?=.+?\d+/\d+$)': (Predicate.RATING_SPECIFIC_NUMERICAL, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_NUMERICAL_VALUE, None ),
     'rating( for)?(?=.+?(like|dislike)$)': (Predicate.RATING_SPECIFIC_LIKE_DISLIKE, None, Value.RATING_SERVICE_NAME_AND_LIKE_DISLIKE, None ),
-    'rating( for)?(?=.+?[^/]\d+$)': (Predicate.RATING_SPECIFIC_INCDEC, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_INCDEC, None ),
+    r'rating( for)?(?=.+?[^/]\d+$)': (Predicate.RATING_SPECIFIC_INCDEC, Operators.RELATIONAL_FOR_RATING_SERVICE, Value.RATING_SERVICE_NAME_AND_INCDEC, None ),
 }
 
 def string_looks_like_date( string ):
@@ -426,9 +426,9 @@ def parse_value( string: str, spec ):
             
         
     elif spec == Value.SHA256_HASHLIST_WITH_DISTANCE:
-        match = re.match( '(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
+        match = re.match( r'(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
         if match:
-            hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
+            hashes = set( hsh.strip() for hsh in re.sub( r'\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             
             d = match.groupdict()
             
@@ -444,9 +444,9 @@ def parse_value( string: str, spec ):
             return string[ len( match[ 0 ] ): ], (hashes, distance)
         raise ValueError( "Invalid value, expected a list of hashes with distance" )
     elif spec == Value.SIMILAR_TO_HASHLIST_WITH_DISTANCE:
-        match = re.match( '(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
+        match = re.match( r'(?P<hashes>([0-9a-f]{4}[0-9a-f]+(\s|,)*)+)(with\s+)?(distance\s+)?(of\s+)?(?P<distance>0|([1-9][0-9]*))?', string )
         if match:
-            hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
+            hashes = set( hsh.strip() for hsh in re.sub( r'\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             pixel_hashes = { hash for hash in hashes if len( hash ) == 64 }
             perceptual_hashes = { hash for hash in hashes if len( hash ) == 16 }
             
@@ -466,7 +466,7 @@ def parse_value( string: str, spec ):
     elif spec == Value.HASHLIST_WITH_ALGORITHM:
         
         # hydev KISS hijack here, instead of clever regex to capture algorithm in all sorts of situations, let's just grab the hex we see and scan the rest for non-hex phrases mate
-        # old pattern: match = re.match( '(?P<hashes>([0-9a-f]+(\s|,)*)+)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )
+        # old pattern: match = re.match( r'(?P<hashes>([0-9a-f]+(\s|,)*)+)((with\s+)?algorithm)?\s*(?P<algorithm>sha256|sha512|md5|sha1|)', string )
         
         algorithm = 'sha256'
         
@@ -481,10 +481,10 @@ def parse_value( string: str, spec ):
             
         
         # {8} here to make sure we are looking at proper hash hex and not some short 'a' or 'de' word
-        match = re.search( '(?P<hashes>([0-9a-f]{8}[0-9a-f]+(\s|,)*)+)', string )
+        match = re.search( r'(?P<hashes>([0-9a-f]{8}[0-9a-f]+(\s|,)*)+)', string )
         
         if match:
-            hashes = set( hsh.strip() for hsh in re.sub( '\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
+            hashes = set( hsh.strip() for hsh in re.sub( r'\s', ' ', match[ 'hashes' ].replace( ',', ' ' ) ).split( ' ' ) if len( hsh ) > 0 )
             return string[ match.endpos : ], (hashes, algorithm)
         
         raise ValueError( "Invalid value, expected a list of hashes and perhaps an algorithm" )
@@ -494,11 +494,11 @@ def parse_value( string: str, spec ):
         
         valid_values = sorted( FILETYPES.keys(), key = lambda k: len( k ), reverse = True )
         ftype_regex = '(' + '|'.join( [ '(' + val + ')' for val in valid_values ] ) + ')'
-        match = re.match( '(' + ftype_regex + '(\s|,)+)*' + ftype_regex, string )
+        match = re.match( '(' + ftype_regex + r'(\s|,)+)*' + ftype_regex, string )
         
         if match:
             
-            found_ftypes_all = re.sub( '\s', ' ', match[ 0 ].replace( ',', '|' ) ).split( '|' )
+            found_ftypes_all = re.sub( r'\s', ' ', match[ 0 ].replace( ',', '|' ) ).split( '|' )
             found_ftypes_good = [ ]
             for ftype in found_ftypes_all:
                 ftype = ftype.strip()
@@ -545,7 +545,7 @@ def parse_value( string: str, spec ):
             
         else:
             
-            match = re.match( '((?P<year>0|([1-9][0-9]*))\s*(years|year))?\s*((?P<month>0|([1-9][0-9]*))\s*(months|month))?\s*((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?', string )
+            match = re.match( r'((?P<year>0|([1-9][0-9]*))\s*(years|year))?\s*((?P<month>0|([1-9][0-9]*))\s*(months|month))?\s*((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?', string )
             if match and (match.group( 'year' ) or match.group( 'month' ) or match.group( 'day' ) or match.group( 'hour' )):
                 years = int( match.group( 'year' ) ) if match.group( 'year' ) else 0
                 months = int( match.group( 'month' ) ) if match.group( 'month' ) else 0
@@ -562,7 +562,7 @@ def parse_value( string: str, spec ):
                 return string_result, (years, months, days, hours)
                 
             
-            match = re.match( '(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
+            match = re.match( r'(?P<year>[0-9][0-9][0-9][0-9])-(?P<month>[0-9][0-9]?)-(?P<day>[0-9][0-9]?)', string )
             if match:
                 # good expansion here would be to parse a full date with 08:20am kind of thing, but we'll wait for better datetime parsing library for that I think!
                 return string[ len( match[ 0 ] ): ], datetime.datetime( int( match.group( 'year' ) ), int( match.group( 'month' ) ), int( match.group( 'day' ) ) )
@@ -577,7 +577,7 @@ def parse_value( string: str, spec ):
             return '', ( 0, 0 )
             
         
-        match = re.match( '((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
+        match = re.match( r'((?P<sec>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?\s*((?P<msec>0|([1-9][0-9]*))\s*(milliseconds|millisecond|msecs|msec|ms))?', string )
         if match and (match.group( 'sec' ) or match.group( 'msec' )):
             seconds = int( match.group( 'sec' ) ) if match.group( 'sec' ) else 0
             mseconds = int( match.group( 'msec' ) ) if match.group( 'msec' ) else 0
@@ -588,7 +588,7 @@ def parse_value( string: str, spec ):
     elif spec == Value.ANY_STRING:
         return "", string
     elif spec == Value.TIME_INTERVAL:
-        match = re.match( '((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?\s*((?P<minute>0|([1-9][0-9]*))\s*(minutes|minute|mins|min))?\s*((?P<second>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?', string )
+        match = re.match( r'((?P<day>0|([1-9][0-9]*))\s*(days|day))?\s*((?P<hour>0|([1-9][0-9]*))\s*(hours|hour|h))?\s*((?P<minute>0|([1-9][0-9]*))\s*(minutes|minute|mins|min))?\s*((?P<second>0|([1-9][0-9]*))\s*(seconds|second|secs|sec|s))?', string )
         if match and (match.group( 'day' ) or match.group( 'hour' ) or match.group( 'minute' ) or match.group( 'second' )):
             days = int( match.group( 'day' ) ) if match.group( 'day' ) else 0
             hours = int( match.group( 'hour' ) ) if match.group( 'hour' ) else 0
@@ -603,7 +603,7 @@ def parse_value( string: str, spec ):
             return string[ len( match[ 0 ] ): ], (days, hours, minutes, seconds)
         raise ValueError( "Invalid value, expected a time interval" )
     elif spec == Value.RATIO:
-        match = re.match( '(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string )
+        match = re.match( r'(?P<first>0|([1-9][0-9]*)):(?P<second>0|([1-9][0-9]*))', string )
         if match: return string[ len( match[ 0 ] ): ], (int( match[ 'first' ] ), int( match[ 'second' ] ))
         raise ValueError( "Invalid value, expected a ratio" )
     elif spec == Value.RATIO_SPECIAL:
@@ -616,7 +616,7 @@ def parse_value( string: str, spec ):
         
         # 'my favourites 3/5' (no operator here)
         
-        match = re.match( '(?P<name>.+?)\s+(?P<num>\d+)/(?P<den>\d+)$', string )
+        match = re.match( r'(?P<name>.+?)\s+(?P<num>\d+)/(?P<den>\d+)$', string )
         
         if match:
             
@@ -679,7 +679,7 @@ def parse_value( string: str, spec ):
         
         # 'I'm cooooollecting counter 123' (no operator here)
         
-        match = re.match( '(?P<name>.+?)\s+(?P<num>\d+)$', string )
+        match = re.match( r'(?P<name>.+?)\s+(?P<num>\d+)$', string )
         
         if match:
             
@@ -789,7 +789,7 @@ def parse_operator( string: str, spec ):
         
         # "favourites service name > 3/5"
         # since service name can be all sorts of gubbins, we'll work backwards and KISS
-        match = re.match( '(?P<first>.*?)(?P<second>(dislike|like|\d+/\d+|\d+))$', string )
+        match = re.match( r'(?P<first>.*?)(?P<second>(dislike|like|\d+/\d+|\d+))$', string )
         
         if match:
             
@@ -855,7 +855,7 @@ def parse_operator( string: str, spec ):
         # note this is in the correct order, also, to eliminate = vs == ambiguity
         all_operators_piped = '|'.join( ( s_r[0] for s_r in operator_strings_and_results ) )
         
-        match = re.match( f'(?P<namespace>.*)\s+(?P<op>({all_operators_piped}))', string )
+        match = re.match( r'(?P<namespace>.*)\s+' + f'(?P<op>({all_operators_piped}))', string )
         
         if match:
             

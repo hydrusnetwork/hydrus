@@ -227,31 +227,35 @@ class EditNodes( QW.QWidget ):
     
     def Edit( self ):
         
-        for node in self._nodes.GetData( only_selected = True ):
+        data = self._nodes.GetTopSelectedData()
+        
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit node', frame_key = 'deeply_nested_dialog' ) as dlg:
+            return
+            
+        
+        node = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit node', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            example_data = self._example_data_callable()
+            
+            if isinstance( node, ClientParsing.ContentParser ):
                 
-                referral_url = self._referral_url_callable()
-                example_data = self._example_data_callable()
+                panel = ClientGUIParsing.EditContentParserPanel( dlg, node, ClientParsing.ParsingTestData( {}, ( example_data, ) ), [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_VETO ] )
                 
-                if isinstance( node, ClientParsing.ContentParser ):
-                    
-                    panel = ClientGUIParsing.EditContentParserPanel( dlg, node, ClientParsing.ParsingTestData( {}, ( example_data, ) ), [ HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_TYPE_VETO ] )
-                    
-                elif isinstance( node, ClientParsing.ParseNodeContentLink ):
-                    
-                    panel = EditParseNodeContentLinkPanel( dlg, node, example_data = example_data )
-                    
+            elif isinstance( node, ClientParsing.ParseNodeContentLink ):
                 
-                dlg.SetPanel( panel )
+                panel = EditParseNodeContentLinkPanel( dlg, node, example_data = example_data )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_node = panel.GetValue()
-                    
-                    self._nodes.ReplaceData( node, edited_node )
-                    
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
                 
+                edited_node = panel.GetValue()
+                
+                self._nodes.ReplaceData( node, edited_node, sort_and_scroll = True )
                 
             
         
@@ -1057,35 +1061,40 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
     
     def Edit( self ):
         
-        for script in self._scripts.GetData( only_selected = True ):
-
-            if isinstance( script, ClientParsing.ParseRootFileLookup ):
-                
-                panel_class = EditParsingScriptFileLookupPanel
-                
-                dlg_title = 'edit file lookup script'
-                
+        data = self._scripts.GetTopSelectedData()
+        
+        if data is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+            return
+            
+        
+        script = data
+        
+        if isinstance( script, ClientParsing.ParseRootFileLookup ):
+            
+            panel_class = EditParsingScriptFileLookupPanel
+            
+            dlg_title = 'edit file lookup script'
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, dlg_title, frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            original_name = script.GetName()
+            
+            panel = panel_class( dlg, script )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
                 
-                original_name = script.GetName()
+                edited_script = panel.GetValue()
                 
-                panel = panel_class( dlg, script )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
+                if edited_script.GetName() != original_name:
                     
-                    edited_script = panel.GetValue()
-                    
-                    if edited_script.GetName() != original_name:
-                        
-                        self._scripts.SetNonDupeName( edited_script )
-                        
-                    
-                    self._scripts.ReplaceData( script, edited_script )
+                    self._scripts.SetNonDupeName( edited_script )
                     
                 
+                self._scripts.ReplaceData( script, edited_script, sort_and_scroll = True )
                 
             
         

@@ -37,72 +37,88 @@ from hydrus.client.networking import ClientNetworkingFunctions
 FILE_SEED_TYPE_HDD = 0
 FILE_SEED_TYPE_URL = 1
 
-def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, url: str ):
+def FilterOneFileURLs( urls ):
+    
+    one_file_urls = []
+    
+    for url in urls:
+        
+        url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url )
+        
+        if url_class is None:
+            
+            continue
+            
+        
+        # direct file URLs do not care about neighbours, since that can mean tokenised or different CDN URLs, so skip file/unknown
+        if url_class.GetURLType() != HC.URL_TYPE_POST:
+            
+            continue
+            
+        
+        if not url_class.RefersToOneFile():
+            
+            continue
+            
+        
+        one_file_urls.append( url )
+        
+    
+    return one_file_urls
+    
+
+def FileURLMappingHasUntrustworthyNeighbours( hash: bytes, lookup_urls: typing.Collection[ str ] ):
     
     # let's see if the file that has this url has any other interesting urls
-    # if the file has another url with the same url class, then this is prob an unreliable 'alternate' source url attribution, and untrustworthy
+    # if the file has--or would have, after import--multiple URLs from the same domain with the same URL Class, but those URLs are supposed to only refer to one file, then we have a dodgy spam URL mapping so we cannot trust it
+    # maybe this is the correct file, but we can't trust that it is mate
     
-    try:
+    lookup_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( lookup_urls )
+    
+    # this has probably already been done by the caller, but let's be sure
+    lookup_urls = FilterOneFileURLs( lookup_urls )
+    
+    if len( lookup_urls ) == 0:
         
-        url = CG.client_controller.network_engine.domain_manager.NormaliseURL( url )
-        
-    except HydrusExceptions.URLClassException:
-        
-        # this url is so borked it doesn't parse. can't make neighbour inferences about it
-        return False
+        # what is going on, yes, whatever garbage you just threw at me is not to be trusted to produce a dispositive result
+        return True
         
     
-    url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( url )
+    lookup_url_domains = { ClientNetworkingFunctions.ConvertURLIntoDomain( lookup_url ) for lookup_url in lookup_urls } 
+    lookup_url_classes = { CG.client_controller.network_engine.domain_manager.GetURLClass( lookup_url ) for lookup_url in lookup_urls }
     
-    # direct file URLs do not care about neighbours, since that can mean tokenised or different CDN URLs
-    url_is_worried_about_neighbours = url_class is not None and url_class.GetURLType() not in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN )
+    media_result = CG.client_controller.Read( 'media_result', hash )
     
-    if url_is_worried_about_neighbours:
+    existing_file_urls = media_result.GetLocationsManager().GetURLs()
+    
+    # normalise to collapse http/https dupes
+    existing_file_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( existing_file_urls )
+    
+    existing_file_urls = FilterOneFileURLs( existing_file_urls )
+    
+    for file_url in existing_file_urls:
         
-        media_result = CG.client_controller.Read( 'media_result', hash )
+        if file_url in lookup_urls:
+            
+            # obviously when we find ourselves, that's fine
+            # this should happen at least once every time this method is called, since that's how we found the file!
+            continue
+            
         
-        file_urls = media_result.GetLocationsManager().GetURLs()
+        if ClientNetworkingFunctions.ConvertURLIntoDomain( file_url ) not in lookup_url_domains:
+            
+            # this existing URL has a unique domain, so there is no domain spam here
+            continue
+            
         
-        # normalise to collapse http/https dupes
-        file_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( file_urls )
+        file_url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( file_url )
         
-        for file_url in file_urls:
+        if file_url_class in lookup_url_classes:
             
-            if file_url == url:
-                
-                # obviously when we find ourselves, that's not a dupe
-                continue
-                
+            # oh no, the file these lookup urls refer to has a different known url in the same domain+url_class
+            # it is likely that an edit on this site points to the original elsewhere
             
-            if ClientNetworkingFunctions.ConvertURLIntoDomain( file_url ) != ClientNetworkingFunctions.ConvertURLIntoDomain( url ):
-                
-                # checking here for the day when url classes can refer to multiple domains
-                continue
-                
-            
-            try:
-                
-                file_url_class = CG.client_controller.network_engine.domain_manager.GetURLClass( file_url )
-                
-            except HydrusExceptions.URLClassException:
-                
-                # this is borked text, not matchable
-                continue
-                
-            
-            if file_url_class is None or url_class.GetURLType() in ( HC.URL_TYPE_FILE, HC.URL_TYPE_UNKNOWN ):
-                
-                # being slightly superfluous here, but this file url can't be an untrustworthy neighbour
-                continue
-                
-            
-            if file_url_class == url_class:
-                
-                # oh no, the file this source url refers to has a different known url in this same domain
-                # it is more likely that an edit on this site points to the original elsewhere
-                
-                return True
-                
+            return True
             
         
     
@@ -887,7 +903,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         preimport_url_check_type = file_import_options.GetPreImportURLCheckType()
         
-        preimport_url_check_looks_for_neighbours = file_import_options.PreImportURLCheckLooksForNeighbours()
+        preimport_url_check_looks_for_neighbour_spam = file_import_options.PreImportURLCheckLooksForNeighbourSpam()
         
         match_found = False
         matches_are_dispositive = preimport_url_check_type == FileImportOptions.DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE
@@ -899,35 +915,50 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         # urls
         
-        urls = []
+        lookup_urls = []
         
         if self.file_seed_type == FILE_SEED_TYPE_URL:
             
-            urls.append( self.file_seed_data_for_comparison )
+            lookup_urls.append( self.file_seed_data_for_comparison )
             
         
         if file_url is not None:
             
-            urls.append( file_url )
+            lookup_urls.append( file_url )
             
         
-        urls.extend( self._primary_urls )
+        lookup_urls.extend( self._primary_urls )
         
         # now that we store primary and source urls separately, we'll trust any primary but be careful about source
         # trusting classless source urls was too much of a hassle with too many boorus providing bad source urls like user account pages
         
-        urls.extend( ( url for url in self._source_urls if CG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) ) )
+        source_lookup_urls = [ url for url in self._source_urls if CG.client_controller.network_engine.domain_manager.URLDefinitelyRefersToOneFile( url ) ]
+        
+        all_neighbour_useful_lookup_urls = list( lookup_urls )
+        all_neighbour_useful_lookup_urls.extend( source_lookup_urls )
+        
+        if file_import_options.ShouldAssociateSourceURLs():
+            
+            lookup_urls.extend( source_lookup_urls )
+            
         
         # now discard gallery pages or post urls that can hold multiple files
-        urls = [ url for url in urls if not CG.client_controller.network_engine.domain_manager.URLCanReferToMultipleFiles( url ) ]
+        lookup_urls = [ url for url in lookup_urls if not CG.client_controller.network_engine.domain_manager.URLCanReferToMultipleFiles( url ) ]
         
-        lookup_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( urls )
+        lookup_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( lookup_urls )
+        
+        all_neighbour_useful_lookup_urls = [ url for url in all_neighbour_useful_lookup_urls if not CG.client_controller.network_engine.domain_manager.URLCanReferToMultipleFiles( url ) ]
+        
+        all_neighbour_useful_lookup_urls = CG.client_controller.network_engine.domain_manager.NormaliseURLs( all_neighbour_useful_lookup_urls )
         
         untrustworthy_domains = set()
+        untrustworthy_hashes = set()
         
         for lookup_url in lookup_urls:
             
-            if ClientNetworkingFunctions.ConvertURLIntoDomain( lookup_url ) in untrustworthy_domains:
+            lookup_url_domain = ClientNetworkingFunctions.ConvertURLIntoDomain( lookup_url )
+            
+            if lookup_url_domain in untrustworthy_domains:
                 
                 continue
                 
@@ -948,9 +979,19 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 
                 file_import_status = ClientImportFiles.CheckFileImportStatus( file_import_status )
                 
-                if preimport_url_check_looks_for_neighbours and FileURLMappingHasUntrustworthyNeighbours( file_import_status.hash, lookup_url ):
+                possible_hash = file_import_status.hash
+                
+                if possible_hash in untrustworthy_hashes:
                     
-                    untrustworthy_domains.add( ClientNetworkingFunctions.ConvertURLIntoDomain( lookup_url ) )
+                    untrustworthy_domains.add( lookup_url_domain )
+                    
+                    continue
+                    
+                
+                if preimport_url_check_looks_for_neighbour_spam and FileURLMappingHasUntrustworthyNeighbours( possible_hash, all_neighbour_useful_lookup_urls ):
+                    
+                    untrustworthy_domains.add( lookup_url_domain )
+                    untrustworthy_hashes.add( possible_hash )
                     
                     continue
                     

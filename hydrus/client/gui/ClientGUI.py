@@ -2904,7 +2904,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             ClientGUIMenus.SetMenuTitle( self._menubar_pending_submenu, 'pending ({})'.format( HydrusData.ToHumanInt( total_num_pending ) ) )
             
-            self._menubar_pending_submenu.menuAction().setVisible( total_num_pending > 0 )
+            self._menubar_pending_submenu.menuAction().setEnabled( total_num_pending > 0 )
+            
+            has_pending_services = len( self._controller.services_manager.GetServiceKeys( ( HC.TAG_REPOSITORY, HC.FILE_REPOSITORY, HC.IPFS ) ) ) > 0
+            
+            self._menubar_pending_submenu.menuAction().setVisible( has_pending_services )
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
@@ -3112,7 +3116,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                 
             
-            self._menubar_undo_submenu.menuAction().setVisible( have_closed_pages or have_undo_stuff )
+            self._menubar_undo_submenu.menuAction().setEnabled( have_closed_pages or have_undo_stuff )
             
         
         return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable )
@@ -4290,8 +4294,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     controller.new_options.SetBoolean( 'pause_import_folders_sync', original_pause_status )
                     
-                    controller.pub( 'notify_new_import_folders' )
-                    
                 
             
         
@@ -4534,7 +4536,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             control.SetValue( nullification_period )
             
-            panel.SetControl( control )
+            panel.SetControl( control, perpendicular = True )
             
             dlg.SetPanel( panel )
             
@@ -4659,7 +4661,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             control.SetValue( update_period )
             
-            panel.SetControl( control )
+            panel.SetControl( control, perpendicular = True )
             
             dlg.SetPanel( panel )
             
@@ -5129,7 +5131,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             self._controller.new_options.FlipBoolean( 'pause_import_folders_sync' )
             
-            self._controller.pub( 'notify_restart_import_folders_daemon' )
+            self._controller.import_folders_manager.Wake()
             
         
         self._controller.Write( 'save_options', HC.options )
