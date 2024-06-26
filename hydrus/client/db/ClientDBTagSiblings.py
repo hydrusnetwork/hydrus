@@ -176,11 +176,18 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         self._ExecuteMany( 'INSERT OR IGNORE INTO tag_siblings ( service_id, bad_tag_id, good_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( bad_tag_id, good_tag_id ) in pairs ) )
         
     
-    def ClearActual( self, service_id ):
+    def ClearActual( self, service_id, tag_ids = None ):
         
         cache_actual_tag_sibling_lookup_table_name = GenerateTagSiblingsLookupCacheTableName( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, service_id )
         
-        self._Execute( 'DELETE FROM {};'.format( cache_actual_tag_sibling_lookup_table_name ) )
+        if tag_ids is None:
+            
+            self._Execute( f'DELETE FROM {cache_actual_tag_sibling_lookup_table_name};' )
+            
+        else:
+            
+            self._ExecuteMany( f'DELETE FROM {cache_actual_tag_sibling_lookup_table_name} WHERE bad_tag_id = ? OR ideal_tag_id = ?;', ( ( tag_id, tag_id ) for tag_id in tag_ids ) )
+            
         
         if service_id in self._service_ids_to_display_application_status:
             

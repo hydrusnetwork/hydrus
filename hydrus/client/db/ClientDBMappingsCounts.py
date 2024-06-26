@@ -180,25 +180,47 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         return ( new_tag_ids, new_local_tag_ids )
         
     
-    def ClearCounts( self, tag_display_type, file_service_id, tag_service_id, keep_current = False, keep_pending = False ):
+    def ClearCounts( self, tag_display_type, file_service_id, tag_service_id, keep_current = False, keep_pending = False, tag_ids = None ):
         
         table_name = self.GetCountsCacheTableName( tag_display_type, file_service_id, tag_service_id )
         
-        if keep_current:
+        if tag_ids is None:
             
-            self._Execute( 'UPDATE {} SET pending_count = 0 WHERE pending_count > 0;'.format( table_name ) )
-            
-            self._Execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( table_name ) )
-            
-        elif keep_pending:
-            
-            self._Execute( 'UPDATE {} SET current_count = 0 WHERE current_count > 0;'.format( table_name ) )
-            
-            self._Execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( table_name ) )
+            if keep_current:
+                
+                self._Execute( 'UPDATE {} SET pending_count = 0 WHERE pending_count > 0;'.format( table_name ) )
+                
+                self._Execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( table_name ) )
+                
+            elif keep_pending:
+                
+                self._Execute( 'UPDATE {} SET current_count = 0 WHERE current_count > 0;'.format( table_name ) )
+                
+                self._Execute( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0;'.format( table_name ) )
+                
+            else:
+                
+                self._Execute( 'DELETE FROM {};'.format( table_name ) )
+                
             
         else:
             
-            self._Execute( 'DELETE FROM {};'.format( table_name ) )
+            if keep_current:
+                
+                self._ExecuteMany( 'UPDATE {} SET pending_count = 0 WHERE pending_count > 0 AND tag_id = ?;'.format( table_name ), ( ( tag_id, ) for tag_id in tag_ids ) )
+                
+                self._ExecuteMany( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0 AND tag_id = ?;'.format( table_name ), ( ( tag_id, ) for tag_id in tag_ids ) )
+                
+            elif keep_pending:
+                
+                self._ExecuteMany( 'UPDATE {} SET current_count = 0 WHERE current_count > 0 AND tag_id = ?;'.format( table_name ), ( ( tag_id, ) for tag_id in tag_ids ) )
+                
+                self._ExecuteMany( 'DELETE FROM {} WHERE current_count = 0 AND pending_count = 0 AND tag_id = ?;'.format( table_name ), ( ( tag_id, ) for tag_id in tag_ids ) )
+                
+            else:
+                
+                self._ExecuteMany( 'DELETE FROM {} WHERE tag_id = ?;'.format( table_name ), ( ( tag_id, ) for tag_id in tag_ids ) )
+                
             
         
     

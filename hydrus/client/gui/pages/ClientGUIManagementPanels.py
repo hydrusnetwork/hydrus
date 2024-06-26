@@ -689,7 +689,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         vbox = QP.VBoxLayout()
         
-        QP.AddToLayout( vbox, self._main_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._main_notebook, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         

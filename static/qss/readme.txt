@@ -1,4 +1,4 @@
-Place a .css or .qss Qt Stylesheet file in here, and hydrus will provide it as an UI stylesheet option.
+Place a .css or .qss Qt StyleSheet file in here, and hydrus will provide it as an UI stylesheet option.
 
 Don't edit any of the files in here in place--they'll just be overwritten the next time you update. Copy to your own custom filenames if you want to edit anything.
 

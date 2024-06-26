@@ -5,11 +5,14 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client.importing.options import PresentationImportOptions
+from hydrus.client.media import ClientMediaResult
+from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.search import ClientSearch
 
 IMPORT_TYPE_QUIET = 0
@@ -416,6 +419,44 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     def GetAllowedSpecificFiletypes( self ) -> typing.Collection[ int ]:
         
         return ClientSearch.ConvertSummaryFiletypesToSpecific( self._filetype_filter_predicate.GetValue(), only_searchable = False )
+        
+    
+    def GetAlreadyInDBPostImportContentUpdatePackage( self, media_result: ClientMediaResult.MediaResult ):
+        
+        # this guy is actually called by two guys, both the file seed and the import job, so expect it to do a bit of redundant work in a normal import
+        # this is because we need to run it in both an isolated file import job from the client api (file import job, no file seed) and a 'url checked, already in db' (file seed, no file import job)
+        # but when we have 'novel url, file already in db', we'll be running it in the file import job and in the file seed post-import writecontentupdates. no worries, even if the media result isn't updated yet this is idempotent
+        
+        content_update_package = ClientContentUpdates.ContentUpdatePackage()
+        
+        destination_location_context = self.GetDestinationLocationContext()
+        
+        desired_file_service_keys = destination_location_context.current_service_keys
+        current_file_service_keys = media_result.GetLocationsManager().GetCurrent()
+        
+        file_service_keys_to_add_to = set( desired_file_service_keys ).difference( current_file_service_keys )
+        
+        if len( file_service_keys_to_add_to ) > 0:
+            
+            file_info_manager = media_result.GetFileInfoManager()
+            now_ms = HydrusTime.GetNowMS()
+            
+            for service_key in file_service_keys_to_add_to:
+                
+                content_update_package.AddContentUpdate( service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) )
+                
+            
+        
+        #
+        
+        if self.AutomaticallyArchives():
+            
+            hashes = { media_result.GetHash() }
+            
+            content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
+            
+        
+        return content_update_package
         
     
     def GetDestinationLocationContext( self ) -> ClientLocation.LocationContext:

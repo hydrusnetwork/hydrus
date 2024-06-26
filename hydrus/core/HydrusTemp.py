@@ -30,6 +30,8 @@ def CleanUpTempPath( os_file_handle, temp_path ):
             
         
     
+    HydrusPaths.TryToMakeFileWriteable( temp_path )
+    
     try:
         
         os.remove( temp_path )

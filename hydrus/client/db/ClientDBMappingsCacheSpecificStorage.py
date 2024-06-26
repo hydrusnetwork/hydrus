@@ -83,7 +83,16 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance, modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts, modules_mappings_counts_update: ClientDBMappingsCountsUpdate.ClientDBMappingsCountsUpdate, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage, modules_mappings_cache_specific_display: ClientDBMappingsCacheSpecificDisplay.ClientDBMappingsCacheSpecificDisplay ):
+    def __init__(
+        self,
+        cursor: sqlite3.Cursor,
+        modules_services: ClientDBServices.ClientDBMasterServices,
+        modules_db_maintenance: ClientDBMaintenance.ClientDBMaintenance,
+        modules_mappings_counts: ClientDBMappingsCounts.ClientDBMappingsCounts,
+        modules_mappings_counts_update: ClientDBMappingsCountsUpdate.ClientDBMappingsCountsUpdate,
+        modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage,
+        modules_mappings_cache_specific_display: ClientDBMappingsCacheSpecificDisplay.ClientDBMappingsCacheSpecificDisplay
+    ):
         
         self.modules_services = modules_services
         self.modules_db_maintenance = modules_db_maintenance
@@ -559,6 +568,52 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
                 
             
             self.modules_mappings_cache_specific_display.PendMappings( file_service_id, tag_service_id, tag_id, filtered_hash_ids )
+            
+        
+    
+    def RegenerateTags( self, tag_service_id, tag_ids ):
+        
+        file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
+        
+        for file_service_id in file_service_ids:
+            
+            ( cache_current_mappings_table_name, cache_deleted_mappings_table_name, cache_pending_mappings_table_name ) = ClientDBMappingsStorage.GenerateSpecificMappingsCacheTableNames( file_service_id, tag_service_id )
+            
+            # delete what we have
+            
+            self._ExecuteMany( f'DELETE FROM {cache_current_mappings_table_name} WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in tag_ids ) )
+            self._ExecuteMany( f'DELETE FROM {cache_deleted_mappings_table_name} WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in tag_ids ) )
+            self._ExecuteMany( f'DELETE FROM {cache_pending_mappings_table_name} WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in tag_ids ) )
+            
+            self.modules_mappings_counts.ClearCounts( ClientTags.TAG_DISPLAY_STORAGE, file_service_id, tag_service_id, tag_ids = tag_ids )
+            
+        
+        # we do this here, which wipes the display cache and adds nothing (since we just deleted it from here above), because the following AddMappings et al calls do it 'properly'
+        self.modules_mappings_cache_specific_display.RegenerateTags( tag_service_id, tag_ids )
+        
+        # add what we should
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+        
+        for tag_id in tag_ids:
+            
+            hash_ids = self._STL( self._Execute( f'SELECT hash_id FROM {current_mappings_table_name} WHERE tag_id = ?;', ( tag_id, ) ) )
+            
+            filtered_hashes_generator = self.GetFilteredHashesGenerator( file_service_ids, tag_service_id, hash_ids )
+            
+            self.AddMappings( tag_service_id, tag_id, hash_ids, filtered_hashes_generator )
+            
+            hash_ids = self._STL( self._Execute( f'SELECT hash_id FROM {deleted_mappings_table_name} WHERE tag_id = ?;', ( tag_id, ) ) )
+            
+            filtered_hashes_generator = self.GetFilteredHashesGenerator( file_service_ids, tag_service_id, hash_ids )
+            
+            self.DeleteMappings( tag_service_id, tag_id, hash_ids, filtered_hashes_generator )
+            
+            hash_ids = self._STL( self._Execute( f'SELECT hash_id FROM {pending_mappings_table_name} WHERE tag_id = ?;', ( tag_id, ) ) )
+            
+            filtered_hashes_generator = self.GetFilteredHashesGenerator( file_service_ids, tag_service_id, hash_ids )
+            
+            self.PendMappings( tag_service_id, tag_id, hash_ids, filtered_hashes_generator )
             
         
     

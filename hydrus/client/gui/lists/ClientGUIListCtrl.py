@@ -552,6 +552,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         for data in datas:
             
+            data = QP.ListsToTuples( data )
+            
             ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( data )
             
             self._AddDataInfo( ( data, display_tuple, sort_tuple ) )
@@ -580,6 +582,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
     
     def DeleteDatas( self, datas: typing.Iterable[ object ] ):
+        
+        datas = [ QP.ListsToTuples( data ) for data in datas ]
         
         deletees = [ ( self._data_to_indices[ data ], data ) for data in datas if data in self._data_to_indices ]
         
@@ -772,6 +776,8 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def HasData( self, data: object ):
         
+        data = QP.ListsToTuples( data )
+        
         return data in self._data_to_indices
         
     
@@ -878,6 +884,8 @@ class BetterListCtrl( QW.QTreeWidget ):
     
     def ScrollToData( self, data: object ):
         
+        data = QP.ListsToTuples( data )
+        
         if data in self._data_to_indices:
             
             index = self._data_to_indices[ data ]
@@ -889,6 +897,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
     
     def SelectDatas( self, datas: typing.Iterable[ object ], deselect_others = False ):
+        
+        datas = [ QP.ListsToTuples( data ) for data in datas ]
         
         self.clearFocus()
         
@@ -913,6 +923,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
     
     def SetData( self, datas: typing.Iterable[ object ] ):
+        
+        datas = [ QP.ListsToTuples( data ) for data in datas ]
         
         existing_datas = set( self._data_to_indices.keys() )
         
@@ -1104,6 +1116,10 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             datas = [ data for ( index, data ) in indices_and_datas ]
             
+        else:
+            
+            datas = [ QP.ListsToTuples( data ) for data in datas ]
+            
         
         sort_data_has_changed = False
         sort_index = self._column_list_status.GetColumnIndexFromType( self._sort_column_type )
@@ -1171,12 +1187,13 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         for ( old_data, new_data ) in replacement_tuples:
             
+            old_data = QP.ListsToTuples( old_data )
+            new_data = QP.ListsToTuples( new_data )
+            
             if first_new_data is None:
                 
                 first_new_data = new_data
                 
-            
-            new_data = QP.ListsToTuples( new_data )
             
             data_index = self._data_to_indices[ old_data ]
             

@@ -3968,7 +3968,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             try:
                 
-                for name in ClientGUIStyle.GetAvailableStylesheets():
+                for name in ClientGUIStyle.GetAvailableStyleSheets():
                     
                     self._qt_stylesheet_name.addItem( name, name )
                     
@@ -4043,11 +4043,11 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 if qt_stylesheet_name is None:
                     
-                    ClientGUIStyle.ClearStylesheet()
+                    ClientGUIStyle.ClearStyleSheet()
                     
                 else:
                     
-                    ClientGUIStyle.SetStylesheetFromPath( qt_stylesheet_name )
+                    ClientGUIStyle.SetStyleSheetFromPath( qt_stylesheet_name )
                     
                 
             except Exception as e:

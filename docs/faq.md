@@ -139,7 +139,7 @@ Be careful with these systems. They tend to be slow and use a lot of resources s
 
 That said, here is [a user guide on how to perform various kinds of file lookups](https://wiki.hydrus.network/books/hydrus-manual/page/file-look-up).
 
-If you are feeling adventurous, you can also explore the newer [AI-tagging tools](client_api.html#auto-taggers) that users are working on.
+If you are feeling adventurous, you can also explore the newer [AI-tagging tools](client_api.md#auto-taggers) that users are working on.
 
 Ultimately, though, a good and simple way to backfill your files' tags is just rely on normal downloading workflows. Try downloading your favourite artists (and later set up subscriptions) and you will naturally get files you like, with tags, and if, by (expected) serendipity, a file on the site is the same as one you already imported, hydrus will add the tags to it retroactively. 
 

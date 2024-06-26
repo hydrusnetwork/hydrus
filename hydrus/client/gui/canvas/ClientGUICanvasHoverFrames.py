@@ -1047,6 +1047,10 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw notes hover-window text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ), flip_background_boolean, 'draw_notes_hover_in_media_viewer_background' )
         ClientGUIMenus.AppendMenuCheckItem( menu, 'draw bottom-right index text in the background', 'Draw a copy of the respective hover window\'s text in the background of the media viewer canvas.', new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ), flip_background_boolean, 'draw_bottom_right_index_in_media_viewer_background' )
         
+        ClientGUIMenus.AppendSeparator( menu )
+        
+        ClientGUIMenus.AppendMenuCheckItem( menu, 'apply image ICC Profile colour adjustments', 'Set whether images with ICC Profiles should have them applied. This may be useful to flip back and forth if you are in the duplicate filter.', new_options.GetBoolean( 'do_icc_profile_normalisation' ), self.sendApplicationCommand.emit, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION ) )
+        
         CGC.core().PopupMenu( self, menu )
         
     

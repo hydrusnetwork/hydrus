@@ -7,6 +7,33 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 580](https://github.com/hydrusnetwork/hydrus/releases/tag/v580)
+
+### misc
+
+* I _may_, and a very hesitant _may_, have fixed the program hanging after minimising to system tray from the close button. thanks to the user who pinned down that it was the close button doing this rather than the other ways to minimise to system tray. if you have had trouble with minimising to the system tray, please try again when it is convenient and let me know how you get on. please also note which exact command, whether it was the file menu, system tray icon menu, minimise button, or close button, that you hit to trigger the minimise event that ultimately would not restore correctly
+* the taglist right-click menu now has a _maintenance-&gt;regenerate tag display_ command, which is basically the 'regenerate mappings storage cache' command in the database menu, but limited just to your selection. this _should_, with luck, fix incorrect autocomplete counts or sibling/parent presentation for any tags you see that are weird. I've wanted this for years, since the whole-cache regen is so large that it is essentially impossible to run on the PTR, but now we can debug individual tag presentation problems a lot easier!
+* fixed an issue where read-only import files would not delete from the temp dir after import, despite, if desired, successfully deleting from their original locations. it turns out the read-only property was being copied to the temp path for import, and the 'I'm done with the temp file, delete it' routine, unlike the normal file delete, wasn't checking for and undoing read-only status. note this was also screwing with the 'delete the hydrus temp dir on shutdown' routine, so if you do a lot of unusual/misc hard drive imports, feel free to shut your client down, check your temp folder (hit _help->about_ to find it), and delete anything called hydrusXXXXXXXX
+* the new 'eye' icon in the media viewer now has 'apply image ICC Profile colour adjustments', which will flip on/off the fairly newish checkbox added to _options->media playback_. it updates the image live!
+* added a shortcut for the 'flip apply image ICC Profile colour adjustments' to the 'media viewer' set! if you are big into this stuff and also do duplicate filtering, set it up and let me know how it goes
+* important but subtle file import options fix: when you set a file to import to a specific destination in file import options, or you say to archive all imports, this is supposed to work even when the file is 'already in db'. this was not working when 'already in db' was caused by a 'url/hash recognised' result in the downloader system. I have fixed this; it now works for 'already in db' for url/hash/file recognised states. thank you to the user who noticed this and did the debug legwork to figure out what was going on
+* import _file logs_ now have a menu item 'search for URLs', which does the same as the recent 'urls' media right-click menu command, opening a search page for any files that share these URLs
+* added a shortcut command 'reload the current qss stylesheet' to the 'main gui' shortcut set. moreover, the 'reload current ui session' entry in the debug menu, which was just above this before, is renamed to 'close and reload current ui session' because of common misclicks
+* the options panel uses less CPU on ok/cancel to set/reset style as needed. same deal with the old hack that makes the colour-picker work--it'll now be more efficient about setting/resetting style
+* fixed a stupid list/tuple type error when trying to edit the 'frame locations' in options->gui. this was from an accident during the selection/scroll rewrites last week
+* generally improved the reliability of the multi-column list against the above bug in its various forms
+* added a simple click-through login script to fix recent changes to the 8chan.moe TOS filter, which broke the respective watcher. all users get this and it should just work out of the box
+* thanks to a user, the default danbooru parsers are fixed to fetch md5 hash correctly
+* some misc tooltip and description fixes
+* improved some media result testing stuff
+
+### client api
+
+* the `/add_tags/add_tags` command has two new parameters, `override_previously_deleted_mappings`, and `create_new_deleted_mappings`, both True by default (which was also previous behaviour). turning either off allows you to, respectively, not force-add a tag mapping when it has been previously deleted (like how the gallery downloader works) and not force-delete (and thus make a 'delete' record) when deleting a tag mapping unless it already exists
+* updated the Client API help to talk about these
+* added some unit tests to test these
+* the client api is now version 65
+
 ## [Version 579](https://github.com/hydrusnetwork/hydrus/releases/tag/v579)
 
 ### some url-checking logic
@@ -325,52 +352,3 @@ title: Changelog
 * wrote a new help document, 'help my db disappeared.txt' for the db directory that tells you what to do if you boot one day and suddenly get the 'this looks like the first time you ran this program' popup
 * clarified the Windows 'running from source' help a little around 'git' and added a 'here is the Python version you want' link for Win 7 users
 * gave the install help a very light pass, just fixing and updating a few things here and there. I also warn Linux users that the AUR package may throw errors if Arch updates a Qt library or something before we have had a chance to test it (as we have seen a couple times recently), and I generally suggest AUR people run from source manually if they can
-
-## [Version 570](https://github.com/hydrusnetwork/hydrus/releases/tag/v570)
-
-### UI stuff
-
-* wrote a thing to wrap tooltips and applied it everywhere. every tooltip in the program should now wrap to 80 characters
-* the thumbnail view is now better about pausing the current video if you open it externally in various ways
-* the 'open' submenu you get off of a file right-click is now exactly the same for the thumbnail menu and the media viewer menu, with all commands working in either place, the labels are also brushed up a little
-* added a shortcut action for 'open file in web browser' to the media shortcut set
-* added a shortcut action for 'open files in a new duplicates filter page' to the media shortcut set
-* added/updated the shortcut action for 'open similar looking files in a new page' in the media shortcut set. this is now one job that lets you set any distance, and it now works from the media viewer too. all existing `show similar files: 0 (exact)` fixed-distance simple actions will be converted to the new action when you update
-* I removed 'open externally' and 'open in file explorer' shortcuts from the media viewer/preview viewer/thumbnails sets. these sets are technically awkward and were really meant for a different thing, like pause/play or 'close media viewer', and having the media command code duplicated here was getting spammy. if you have any of these now-defunct commands set, please move them up to the general 'media' set, where it'll work everywhere. sorry if this breaks a very complicated set you have, but let's KISS!
-* the 'files' submenu off thumbnails or the media viewer is flattened one level. the 'upload to' remote services stuff still isn't available for the media viewer, but I'll do the same as I did above for that in the near future
-
-### misc
-
-* fixed an issue with the 'manage tag siblings/parents' dialogs where the mass-import button was, in 'add or delete' mode, not doing any deletes/rescinds if there were any new pairs in what was being imported. this was probably applying to large regular adds in the UI, also
-* this mass-import button of 'manage tag siblings/parents' also dedupes the pairs coming in. it now shouldn't do anything like 'add, then ask to remove' if you have the same pair twice!
-* the nitter downloaders are removed from the defaults. I can't keep up with whatever the situation is there
-* the style and stylesheet names in the options are now sorted
-* sidecar importers will now work on sidecars that have uppercase .TXT or .JSON extensions
-
-### more URL stuff (advanced, can be ignored by most)
-
-* fixed up the recent URL encoding tech to properly follow the encoding exceptions as under RFC 3986. an '@' in an URL shouldn't get messed up now. thanks to the user(s) who helped here
-* incoming URLs can now have a mix of encoded and non-encoded characters and the 'ensure URL is encoded' process will accept it and encode the non-encoded parts, idempotently. it only fails on ingesting a legit decoded percent character that happens to be followed by two hex chars, but that's rare enough we don't really have to worry
-* you can similarly now enter multiple tags in a query text that are a mix of encoded and non-encoded, a mix of %20 and spaces, and it should figure it out
-* the 'ensure URL is encoded' process now applies to GUG-generated URLs, and in the edit GUG UI, you now see the normalised 'for server' URL, with any additional tokens or whatever the URL class has
-* GUGs also try to recognise if their replacement phrase is going into the path or the parameters now, and only force-encodes everything if it looks like our tags are going into a query param
-* ensured that what you paste into an 'edit URL Class' panel's 'example url' section gets encoded before normalisation just as it would in engine
-* the file log right-click now shows both the normalised and request urls under the 'additional urls' section, if they differ from the pretty human URL in the list
-* right-clicking a single item in the downloader search log now previews the specific request URL to be copied
-
-### boring stuff
-
-* all instances of URL path or parameter encoding now go through one location that obeys RFC 3986
-* replaced my various uses of the unusual `ParseResult` with `urllib.parse.urlunparse`
-* added a couple unit tests for the improved URL encoding tech
-* added some unit tests for the GUGs' new encoding tech
-* harmonised how a file is opened in the OS file explorer in the media results and media canvas pages. what was previously random hardcode, duplicated internal method calls, and ancient pubsub redirects now all goes thorugh the application command system to a singular isolated media-actioning method
-* did the same harmonisation for opening files externally
-* and for opening files in your web browser, which gets additional new infrastructure so it can plug into the shortcuts system
-* and to a lesser degree the 'open in a new page' and 'open in a new duplicates filter page' commands
-* moved the various gui-side media python files to a new 'gui.media' module. renamed `ClientGUIMedia` to `ClientGUISimpleActions` and `ClientGUIMediaActions` to `ClientGUIModalActions` and shuffled their methods back and forth a bit
-* cleaned up `ClientGUIFunctions` and `ClientGUICommon` and their imports a little with some similar shuffle-refactoring
-* broke up `ClientGUIControls` into a bunch of smaller, defined files, mostly to untangle imports
-* cleaned up how some text and exceptions are split by newlines to handle different sorts of newline, and cleaned up how I fetch the first 'summary' line of text in all cases across the program
-* replaced `os.linesep` with `\n` across the program. Qt only wants `\n` anyway, most logging wants `\n` (and sometimes converts on the fly behind the scenes), and this helps KISS otherwise. I might bring back `os.linesep` for sidecars and stuff if it proves a problem, but most text editors and scripting languages are very happy with `\n`, so we'll see
-* multi-column lists now show multiline tooltips if the underlying text in the cell was originally multiline (although tbh this is rare)

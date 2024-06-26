@@ -2512,8 +2512,6 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
-        
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', { hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
@@ -2537,8 +2535,6 @@ class TestClientAPI( unittest.TestCase ):
         data = response.read()
         
         self.assertEqual( response.status, 200 )
-        
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test_add', { hash } ) ),
@@ -2569,8 +2565,6 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
-        
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_tag_repo_service_key, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test', { hash } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test2', { hash } ) ) ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
@@ -2594,8 +2588,6 @@ class TestClientAPI( unittest.TestCase ):
         data = response.read()
         
         self.assertEqual( response.status, 200 )
-        
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( HG.test_controller.example_tag_repo_service_key, [
             ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_PEND, ( 'test_add', { hash } ) ),
@@ -2626,9 +2618,90 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response.status, 200 )
         
-        content_update_package = ClientContentUpdates.ContentUpdatePackage()
-        
         expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test', { hash, hash2 } ) ), ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test2', { hash, hash2 } ) ) ] )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+        
+        # now testing these two new deletion override parameters
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_tags/add_tags'
+        
+        # two files. hash_hex is ok, hash2_hex will block
+        # 1) override_previously_deleted_mappings
+        
+        body_dict = {
+            'hashes' : [ hash_hex, hash2_hex ],
+            'service_keys_to_actions_to_tags' : {
+                CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : {
+                    str( HC.CONTENT_UPDATE_ADD ) : [ 'test_add' ],
+                    str( HC.CONTENT_UPDATE_DELETE ) : [ 'test_delete' ]
+                }
+            },
+            'override_previously_deleted_mappings' : False
+        }
+        
+        media_results = [ HF.GetFakeMediaResult( bytes.fromhex( hash_hex ) ) for hash_hex in [ hash_hex, hash2_hex ] ]
+        
+        media_results[1].GetTagsManager().GetDeleted( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ).add( 'test_add' ) # cannot add when there is a deletion record
+        
+        HG.test_controller.SetRead( 'media_results', media_results )
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test_add', { hash } ) ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete', { hash, hash2 } ) )
+        ] )
+        
+        [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+        
+        HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+        
+        # 2) create_new_deleted_mappings
+        
+        body_dict = {
+            'hashes' : [ hash_hex, hash2_hex ],
+            'service_keys_to_actions_to_tags' : {
+                CC.DEFAULT_LOCAL_TAG_SERVICE_KEY.hex() : {
+                    str( HC.CONTENT_UPDATE_ADD ) : [ 'test_add' ],
+                    str( HC.CONTENT_UPDATE_DELETE ) : [ 'test_delete' ]
+                }
+            },
+            'create_new_deleted_mappings' : False
+        }
+        
+        media_results = [ HF.GetFakeMediaResult( bytes.fromhex( hash_hex ) ) for hash_hex in [ hash_hex, hash2_hex ] ]
+        
+        media_results[0].GetTagsManager().GetCurrent( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, ClientTags.TAG_DISPLAY_STORAGE ).add( 'test_delete' ) # can only delete when it already exists
+        
+        HG.test_controller.SetRead( 'media_results', media_results )
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.DEFAULT_LOCAL_TAG_SERVICE_KEY, [
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_ADD, ( 'test_add', { hash, hash2 } ) ),
+            ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, HC.CONTENT_UPDATE_DELETE, ( 'test_delete', { hash } ) )
+        ] )
         
         [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
         

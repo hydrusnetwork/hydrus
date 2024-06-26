@@ -1,9 +1,7 @@
 import collections
-import os
 import threading
 import time
 import typing
-import urllib.parse
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG

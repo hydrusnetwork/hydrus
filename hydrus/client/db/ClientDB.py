@@ -7403,6 +7403,115 @@ class DB( HydrusDB.HydrusDB ):
             
         
     
+    def _RegenerateTagMappingsTags( self, tags, tag_service_key = None ):
+        
+        # TODO: Make a 'display'-only variant of this, for a faster display-only regen
+        
+        job_status = ClientThreading.JobStatus( cancellable = True )
+        
+        try:
+            
+            job_status.SetStatusTitle( 'regenerating tag mappings' )
+            
+            self._controller.pub( 'message', job_status )
+            
+            tag_ids = set( self.modules_tags_local_cache.GetTagIdsToTags( tags = tags ).keys() )
+            
+            if tag_service_key is None:
+                
+                tag_service_ids = self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES )
+                
+            else:
+                
+                tag_service_ids = ( self.modules_services.GetServiceId( tag_service_key ), )
+                
+            
+            tag_service_ids_to_affected_tag_ids = {}
+            
+            file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_MAPPING_CACHES )
+            tag_cache_file_service_ids = self.modules_services.GetServiceIds( HC.FILE_SERVICES_WITH_SPECIFIC_TAG_LOOKUP_CACHES )
+            
+            for tag_service_id in tag_service_ids:
+                
+                # yes we do want 'actual' here I think. we are regenning the actual current computation
+                # maybe we'll ultimately expand this to the ideal also, we'll see how it goes
+                affected_tag_ids = HydrusData.MassUnion( ( self.modules_tag_display.GetChainsMembers( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ( tag_id, ) ) for tag_id in tag_ids ) )
+                
+                tag_service_ids_to_affected_tag_ids[ tag_service_id ] = affected_tag_ids
+                
+                self.modules_tag_siblings.ClearActual( tag_service_id, tag_ids = affected_tag_ids )
+                self.modules_tag_parents.ClearActual( tag_service_id, tag_ids = affected_tag_ids )
+                
+            
+            if tag_service_key is None:
+                
+                message = 'regenerating local tag cache'
+                
+                job_status.SetStatusText( message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                all_affected_tag_ids = HydrusData.MassUnion( tag_service_ids_to_affected_tag_ids.values() )
+                
+                self.modules_tags_local_cache.DropTagIdsFromCache( all_affected_tag_ids )
+                # I think the clever add is done by later regen gubbins here
+                
+            
+            time.sleep( 0.01 )
+            
+            for tag_service_id in tag_service_ids:
+                
+                affected_tag_ids = tag_service_ids_to_affected_tag_ids[ tag_service_id ]
+                
+                if job_status.IsCancelled():
+                    
+                    HydrusData.ShowText( 'Since you cancelled the job early, you should run the job again or run _database->regenerate->local tags cache_ when it is convenient!' )
+                    
+                    break
+                    
+                
+                for file_service_id in file_service_ids:
+                    
+                    message = 'regenerating specific {}_{}'.format( file_service_id, tag_service_id )
+                    
+                    job_status.SetStatusText( message )
+                    self._controller.frame_splash_status.SetSubtext( message )
+                    
+                    time.sleep( 0.01 )
+                    
+                    if file_service_id in tag_cache_file_service_ids:
+                        
+                        self.modules_tag_search.DeleteTags( file_service_id, tag_service_id, affected_tag_ids )
+                        #self.modules_tag_search.AddTags( file_service_id, tag_service_id, affected_tag_ids ) # I think this is done naturally by future regen gubbins
+                        
+                    
+                
+                self.modules_mappings_cache_specific_storage.RegenerateTags( tag_service_id, affected_tag_ids )
+                
+                message = 'regenerating combined {}'.format( tag_service_id )
+                
+                job_status.SetStatusText( message )
+                self._controller.frame_splash_status.SetSubtext( message )
+                
+                time.sleep( 0.01 )
+                
+                self.modules_tag_search.DeleteTags( self.modules_services.combined_file_service_id, tag_service_id, affected_tag_ids )
+                
+                self.modules_mappings_cache_combined_files_storage.RegenerateTags( tag_service_id, affected_tag_ids )
+                
+                self._cursor_transaction_wrapper.CommitAndBegin()
+                
+            
+        finally:
+            
+            job_status.SetStatusText( 'done!' )
+            
+            job_status.FinishAndDismiss( 5 )
+            
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
+            self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
+            
+        
+    
     def _RegenerateTagParentsCache( self, only_these_service_ids = None ):
         
         if only_these_service_ids is None:
@@ -8478,359 +8587,6 @@ class DB( HydrusDB.HydrusDB ):
     def _UpdateDB( self, version ):
         
         self._controller.frame_splash_status.SetText( 'updating db to v' + str( version + 1 ) )
-        
-        if version == 513:
-            
-            try:
-                
-                self._controller.frame_splash_status.SetSubtext( 'cleaning some surplus records' )
-                
-                # clear deletion record wasn't purging on 'all my files'
-                
-                all_my_deleted_hash_ids = set( self.modules_files_storage.GetDeletedHashIdsList( self.modules_services.combined_local_media_service_id ) )
-                
-                all_local_current_hash_ids = self.modules_files_storage.GetCurrentHashIdsList( self.modules_services.combined_local_file_service_id )
-                all_local_deleted_hash_ids = self.modules_files_storage.GetDeletedHashIdsList( self.modules_services.combined_local_file_service_id )
-                
-                erroneous_hash_ids = all_my_deleted_hash_ids.difference( all_local_current_hash_ids ).difference( all_local_deleted_hash_ids )
-                
-                if len( erroneous_hash_ids ) > 0:
-                    
-                    service_ids_to_nums_cleared = self.modules_files_storage.ClearLocalDeleteRecord( erroneous_hash_ids )
-                    
-                    self._ExecuteMany( 'UPDATE service_info SET info = info + ? WHERE service_id = ? AND info_type = ?;', ( ( -num_cleared, clear_service_id, HC.SERVICE_INFO_NUM_DELETED_FILES ) for ( clear_service_id, num_cleared ) in service_ids_to_nums_cleared.items() ) )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to clean up some bad delete records failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                def ask_what_to_do_twitter_stuff():
-                    
-                    message = 'Twitter removed their old API that we were using, breaking all the old downloaders! I am going to delete your old twitter downloaders and add a new limited one that can only get the first ~20 tweets of a profile. Make sure to check your subscriptions are linked to it, and you might want to speed up their check times! OK?'
-                    
-                    from hydrus.client.gui import ClientGUIDialogsQuick
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( None, message, title = 'Swap to new twitter downloader?', yes_label = 'do it', no_label = 'do not do it, I need to keep the old broken stuff' )
-                    
-                    return result == QW.QDialog.Accepted
-                    
-                
-                do_twitter_stuff = self._controller.CallBlockingToQt( None, ask_what_to_do_twitter_stuff )
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'danbooru file page parser - get webm ugoira',
-                    'deviant art file page parser',
-                    'pixiv file page api parser'
-                ] )
-                
-                if do_twitter_stuff:
-                    
-                    domain_manager.DeleteGUGs( [
-                        'twitter collection lookup',
-                        'twitter likes lookup',
-                        'twitter list lookup'
-                    ] )
-                    
-                    url_classes = domain_manager.GetURLClasses()
-                    
-                    deletee_url_class_names = [ url_class.GetName() for url_class in url_classes if url_class.GetName() == 'twitter list' or url_class.GetName().startswith( 'twitter syndication api' ) ]
-                    
-                    domain_manager.DeleteURLClasses( deletee_url_class_names )
-                    
-                    # we're going to leave the one spare non-overwritten parser in place
-                    
-                    #
-                    
-                    domain_manager.OverwriteDefaultGUGs( [
-                        'twitter profile lookup',
-                        'twitter profile lookup (with replies)'
-                    ] )
-                    
-                    domain_manager.OverwriteDefaultURLClasses( [
-                        'twitter tweet (i/web/status)',
-                        'twitter tweet',
-                        'twitter syndication api tweet-result',
-                        'twitter syndication api timeline-profile'
-                    ] )
-                    
-                    domain_manager.OverwriteDefaultParsers( [
-                        'twitter syndication api timeline-profile parser',
-                        'twitter syndication api tweet parser'
-                    ] )
-                    
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 514:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                if not new_options.GetBoolean( 'show_related_tags' ):
-                    
-                    new_options.SetBoolean( 'show_related_tags', True )
-                    
-                    self.modules_serialisable.SetJSONDump( new_options )
-                    
-                    message = 'Hey, I made it so your manage tags dialog shows the updated "related tags" suggestion column (showing it is the new default). If you do not like it, turn it off again under _options->tag suggestions_, thanks!'
-                    
-                    self.pub_initial_message( message )
-                    
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update your options to show related tags failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'sankaku file page parser',
-                    'pixiv file page api parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 515:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'deviant art file page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 518:
-            
-            result = self._Execute( 'SELECT 1 FROM sqlite_master WHERE name = ?;', ( 'local_incdec_ratings', ) ).fetchone()
-            
-            if result is None:
-                
-                self._Execute( 'CREATE TABLE IF NOT EXISTS local_incdec_ratings ( service_id INTEGER, hash_id INTEGER, rating INTEGER, PRIMARY KEY ( service_id, hash_id ) );' )
-                self._CreateIndex( 'local_incdec_ratings', [ 'hash_id' ] )
-                self._CreateIndex( 'local_incdec_ratings', [ 'rating' ] )
-                
-            
-        
-        if version == 519:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'deviant art file page parser'
-                ] )
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'deviant art file (login-only redirect)',
-                    'deviant art file (original quality) (alt)',
-                    'deviant art file (original quality)',
-                    'deviant art resized file (low quality)',
-                    'deviant art resized file (medium quality)'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 520:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'pixiv file page api parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 523:
-            
-            try:
-                
-                new_options = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_CLIENT_OPTIONS )
-                
-                duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( HC.DUPLICATE_BETTER )
-                
-                duplicate_content_merge_options.SetSyncFileModifiedDateAction( HC.CONTENT_MERGE_ACTION_COPY )
-                
-                new_options.SetDuplicateContentMergeOptions( HC.DUPLICATE_BETTER, duplicate_content_merge_options )
-                
-                duplicate_content_merge_options = new_options.GetDuplicateContentMergeOptions( HC.DUPLICATE_SAME_QUALITY )
-                
-                duplicate_content_merge_options.SetSyncFileModifiedDateAction( HC.CONTENT_MERGE_ACTION_TWO_WAY_MERGE )
-                
-                new_options.SetDuplicateContentMergeOptions( HC.DUPLICATE_SAME_QUALITY, duplicate_content_merge_options )
-                
-                self.modules_serialisable.SetJSONDump( new_options )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Updating some duplicate merge options failed! This is not super important, but hydev would be interested in seeing the error that was printed to the log.'
-                
-                self.pub_initial_message( message )
-                
-            
-        
-        if version == 524:
-            
-            try:
-                
-                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
-                
-                domain_manager.Initialise()
-                
-                #
-                
-                domain_manager.OverwriteDefaultURLClasses( [
-                    'sankaku chan file page (md5)'
-                ] )
-                
-                domain_manager.OverwriteDefaultParsers( [
-                    'sankaku gallery page parser',
-                    'sankaku file page parser'
-                ] )
-                
-                #
-                
-                domain_manager.TryToLinkURLClassesAndParsers()
-                
-                #
-                
-                self.modules_serialisable.SetJSONDump( domain_manager )
-                
-            except Exception as e:
-                
-                HydrusData.PrintException( e )
-                
-                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
-                
-                self.pub_initial_message( message )
-                
-            
-            # when I brought these services in, I forgot to clear their ratings on service deletion! cleaning up here
-            self._Execute( 'DELETE FROM local_incdec_ratings WHERE service_id NOT IN ( SELECT service_id FROM services );' )
-            
         
         if version == 530:
             
@@ -10477,6 +10233,61 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 579:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'danbooru file page parser',
+                    'danbooru file page parser - get webm ugoira'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                login_manager: ClientNetworkingLogin.NetworkLoginManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                # due to stuff I added this week, this should auto-link this guy, no 'set active' needed
+                login_manager.OverwriteDefaultLoginScripts( [
+                    '8chan.moe TOS click-through'
+                ] )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( login_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some login stuff failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -11003,6 +10814,7 @@ class DB( HydrusDB.HydrusDB ):
         elif action == 'regenerate_tag_display_mappings_cache': self._RegenerateTagDisplayMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_display_pending_mappings_cache': self._RegenerateTagDisplayPendingMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_mappings_cache': self._RegenerateTagMappingsCache( *args, **kwargs )
+        elif action == 'regenerate_tag_mappings_tags': self._RegenerateTagMappingsTags( *args, **kwargs )
         elif action == 'regenerate_tag_parents_cache': self._RegenerateTagParentsCache( *args, **kwargs )
         elif action == 'regenerate_tag_pending_mappings_cache': self._RegenerateTagPendingMappingsCache( *args, **kwargs )
         elif action == 'regenerate_tag_siblings_and_parents_cache': self.modules_tag_display.RegenerateTagSiblingsAndParentsCache( *args, **kwargs )

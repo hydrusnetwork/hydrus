@@ -4060,7 +4060,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             if has_local:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'archive/delete filter', 'Launch a special media viewer that will quickly archive (left-click) and delete (right-click) the selected media.', self._ArchiveDeleteFilter )
+                ClientGUIMenus.AppendMenuItem( menu, 'archive/delete filter', 'Launch a special media viewer that will quickly archive or delete the selected media. Check the help if you are unfamiliar with this mode!', self._ArchiveDeleteFilter )
                 
             
         

@@ -1,3 +1,4 @@
+import collections
 import random
 import unittest
 
@@ -52,8 +53,11 @@ def GetFakeMediaResult( hash: bytes ):
     file_info_manager.has_exif = True
     file_info_manager.has_icc_profile = True
     
-    service_keys_to_statuses_to_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'blue_eyes', 'blonde_hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit' } } }
-    service_keys_to_statuses_to_display_tags = { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : { HC.CONTENT_STATUS_CURRENT : { 'blue eyes', 'blonde hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit', 'clothing' } } }
+    service_keys_to_statuses_to_tags = collections.defaultdict( HydrusData.default_dict_set )
+    service_keys_to_statuses_to_tags[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ].update( { HC.CONTENT_STATUS_CURRENT : { 'blue_eyes', 'blonde_hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit' } } )
+    
+    service_keys_to_statuses_to_display_tags = collections.defaultdict( HydrusData.default_dict_set )
+    service_keys_to_statuses_to_display_tags[ CC.DEFAULT_LOCAL_TAG_SERVICE_KEY ].update( { HC.CONTENT_STATUS_CURRENT : { 'blue eyes', 'blonde hair' }, HC.CONTENT_STATUS_PENDING : { 'bodysuit', 'clothing' } } )
     
     service_keys_to_filenames = {}
     

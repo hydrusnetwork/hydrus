@@ -833,7 +833,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
                 
                 if not self._get_tags_overwrite_deleted:
                     
-                    filtered_tags = ClientImportOptions.FilterDeletedTags( service_key, media_result, filtered_tags )
+                    filtered_tags = ClientImportOptions.FilterNotPreviouslyDeletedTags( service_key, media_result, filtered_tags )
                     
                 
                 tags.update( filtered_tags )
@@ -846,7 +846,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             
             if not self._additional_tags_overwrite_deleted:
                 
-                additional_tags = ClientImportOptions.FilterDeletedTags( service_key, media_result, additional_tags )
+                additional_tags = ClientImportOptions.FilterNotPreviouslyDeletedTags( service_key, media_result, additional_tags )
                 
             
             tags.update( additional_tags )

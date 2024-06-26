@@ -569,6 +569,28 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
         self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
         
     
+    def RegenerateTags( self, tag_service_id, tag_ids ):
+        
+        # delete what we have
+        
+        self.modules_mappings_counts.ClearCounts( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, self.modules_services.combined_file_service_id, tag_service_id, tag_ids = tag_ids )
+        
+        # add what we should
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+        
+        for tag_id in tag_ids:
+            
+            hash_ids = self._STL( self._Execute( f'SELECT hash_id FROM {current_mappings_table_name} WHERE tag_id = ?;', ( tag_id, ) ) )
+            
+            self.AddMappingsForChained( tag_service_id, tag_id, hash_ids )
+            
+            hash_ids = self._STL( self._Execute( f'SELECT hash_id FROM {pending_mappings_table_name} WHERE tag_id = ?;', ( tag_id, ) ) )
+            
+            self.PendMappingsForChained( tag_service_id, tag_id, hash_ids )
+            
+        
+    
     def RescindPendingMappingsForChained( self, tag_service_id, storage_tag_id, hash_ids ):
         
         ac_counts = collections.Counter()

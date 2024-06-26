@@ -1768,6 +1768,8 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
         
         potentially_associable_urls = set()
         
+        media_result = None
+        
         if file_import_options is not None:
             
             if file_import_options.ShouldAssociatePrimaryURLs():
@@ -1819,6 +1821,18 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                 potentially_associable_urls.update( self._source_urls )
                 
             
+            if self.status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
+                
+                if media_result is None:
+                    
+                    media_result = CG.client_controller.Read( 'media_result', hash )
+                    
+                
+                extra_content_update_package = file_import_options.GetAlreadyInDBPostImportContentUpdatePackage( media_result )
+                
+                content_update_package.AddContentUpdatePackage( extra_content_update_package )
+                
+            
         
         associable_urls = ClientNetworkingFunctions.NormaliseAndFilterAssociableURLs( potentially_associable_urls )
         
@@ -1828,8 +1842,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             
             content_update_package.AddContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, content_update )
             
-        
-        media_result = None
         
         if tag_import_options is None:
             

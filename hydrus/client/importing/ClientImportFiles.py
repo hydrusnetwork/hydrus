@@ -207,34 +207,6 @@ class FileImportJob( object ):
             
         else:
             
-            # if the file is already in the database but not in all the desired file services, let's push content updates to make it happen
-            if self._pre_import_file_status.status == CC.STATUS_SUCCESSFUL_BUT_REDUNDANT:
-                
-                media_result = CG.client_controller.Read( 'media_result', self._pre_import_file_status.hash )
-                
-                destination_location_context = self._file_import_options.GetDestinationLocationContext()
-                
-                desired_file_service_keys = destination_location_context.current_service_keys
-                current_file_service_keys = media_result.GetLocationsManager().GetCurrent()
-                
-                file_service_keys_to_add_to = set( desired_file_service_keys ).difference( current_file_service_keys )
-                
-                if len( file_service_keys_to_add_to ) > 0:
-                    
-                    file_info_manager = media_result.GetFileInfoManager()
-                    now_ms = HydrusTime.GetNowMS()
-                    
-                    content_update_package = ClientContentUpdates.ContentUpdatePackage()
-                    
-                    for service_key in file_service_keys_to_add_to:
-                        
-                        content_update_package.AddContentUpdate( service_key, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( file_info_manager, now_ms ) ) )
-                        
-                    
-                    CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
-                    
-                
-            
             self._post_import_file_status = self._pre_import_file_status.Duplicate()
             
         
@@ -243,7 +215,7 @@ class FileImportJob( object ):
             HydrusData.ShowText( 'File import job is done, now publishing content updates' )
             
         
-        self.PubsubContentUpdates()
+        self.WriteContentUpdates()
         
         return self._post_import_file_status
         
@@ -548,15 +520,15 @@ class FileImportJob( object ):
         return self._blurhash
         
     
-    def PubsubContentUpdates( self ):
+    def WriteContentUpdates( self ):
         
-        if self._post_import_file_status.AlreadyInDB() and self._file_import_options.AutomaticallyArchives():
+        if self._post_import_file_status.AlreadyInDB():
             
-            hashes = { self.GetHash() }
+            media_result = CG.client_controller.Read( 'media_result', self._post_import_file_status.hash )
             
-            content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( CC.COMBINED_LOCAL_FILE_SERVICE_KEY, ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ARCHIVE, hashes ) )
+            content_update_package = self._file_import_options.GetAlreadyInDBPostImportContentUpdatePackage( media_result )
             
-            CG.client_controller.Write( 'content_updates', content_update_package )
+            CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
             
         
     

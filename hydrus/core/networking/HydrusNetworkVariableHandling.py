@@ -4,6 +4,7 @@ import os
 import traceback
 import typing
 import urllib
+import urllib.parse # if we still need urllib, do not remove this
 
 CBOR_AVAILABLE = False
 try:

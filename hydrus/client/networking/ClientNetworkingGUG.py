@@ -1,12 +1,7 @@
-import re
-import urllib.parse
-
 from hydrus.core import HydrusConstants as HC
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.networking import ClientNetworkingFunctions

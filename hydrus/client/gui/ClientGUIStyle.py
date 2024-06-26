@@ -17,9 +17,9 @@ ORIGINAL_STYLESHEET = None
 CURRENT_STYLESHEET = None
 CURRENT_STYLESHEET_FILENAME = None
 
-def ClearStylesheet():
+def ClearStyleSheet():
     
-    SetStyleSheet( ORIGINAL_STYLESHEET )
+    SetStyleSheet( ORIGINAL_STYLESHEET, None )
     
 
 def GetAvailableStyles():
@@ -29,11 +29,11 @@ def GetAvailableStyles():
     return sorted( QW.QStyleFactory.keys(), key = HydrusData.HumanTextSortKey )
     
 
-def GetAvailableStylesheets():
+def GetAvailableStyleSheets():
     
     if not os.path.exists( STYLESHEET_DIR ) or not os.path.isdir( STYLESHEET_DIR ):
         
-        raise HydrusExceptions.DataMissing( 'Stylesheet dir "{}" is missing or not a directory!'.format( STYLESHEET_DIR ) )
+        raise HydrusExceptions.DataMissing( 'StyleSheet dir "{}" is missing or not a directory!'.format( STYLESHEET_DIR ) )
         
     
     stylesheet_filenames = []
@@ -91,13 +91,13 @@ def InitialiseDefaults():
 
 def ReloadStyleSheet():
     
-    ClearStylesheet()
+    stylesheet_to_set = CURRENT_STYLESHEET_FILENAME
     
-    if CURRENT_STYLESHEET_FILENAME is not None:
+    ClearStyleSheet()
+    
+    if stylesheet_to_set is not None:
         
-        ClearStylesheet()
-        
-        SetStylesheetFromPath( CURRENT_STYLESHEET_FILENAME )
+        SetStyleSheetFromPath( stylesheet_to_set )
         
     
 
@@ -121,6 +121,10 @@ def SetStyleFromName( name: str ):
         
         new_style = QW.QApplication.instance().setStyle( name )
         
+        global CURRENT_STYLE_NAME
+        
+        CURRENT_STYLE_NAME = name
+        
         if new_style is None:
             
             raise HydrusExceptions.DataMissing( 'Style "{}" does not exist! If this is the default, perhaps a third-party custom style, you may have to restart the client to re-set it.'.format( name ) )
@@ -132,7 +136,7 @@ def SetStyleFromName( name: str ):
         
     
 
-def SetStyleSheet( stylesheet, prepend_hydrus = True ):
+def SetStyleSheet( stylesheet, name, prepend_hydrus = True ):
     
     stylesheet_to_use = stylesheet
     
@@ -142,6 +146,10 @@ def SetStyleSheet( stylesheet, prepend_hydrus = True ):
         
         stylesheet_to_use = DEFAULT_HYDRUS_STYLESHEET + '\n' * 2 + stylesheet
         
+    
+    global CURRENT_STYLESHEET_FILENAME
+    
+    CURRENT_STYLESHEET_FILENAME = name
     
     global CURRENT_STYLESHEET
     
@@ -153,17 +161,13 @@ def SetStyleSheet( stylesheet, prepend_hydrus = True ):
         
     
 
-def SetStylesheetFromPath( filename ):
-    
-    global CURRENT_STYLESHEET_FILENAME
-    
-    CURRENT_STYLESHEET_FILENAME = filename
+def SetStyleSheetFromPath( filename ):
     
     path = os.path.join( STYLESHEET_DIR, filename )
     
     if not os.path.exists( path ):
         
-        raise HydrusExceptions.DataMissing( 'Stylesheet "{}" does not exist!'.format( path ) )
+        raise HydrusExceptions.DataMissing( 'StyleSheet "{}" does not exist!'.format( path ) )
         
     
     with open( path, 'r', encoding = 'utf-8' ) as f:
@@ -171,5 +175,5 @@ def SetStylesheetFromPath( filename ):
         qss = f.read()
         
     
-    SetStyleSheet( qss )
+    SetStyleSheet( qss, filename )
     

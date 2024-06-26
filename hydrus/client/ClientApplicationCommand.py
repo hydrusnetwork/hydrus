@@ -171,6 +171,8 @@ SIMPLE_COPY_FILE_ID = 158
 SIMPLE_COPY_FILE_SERVICE_FILENAMES = 159
 SIMPLE_NATIVE_OPEN_FILE_PROPERTIES = 160
 SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG = 161
+SIMPLE_RELOAD_CURRENT_STYLESHEET = 162
+SIMPLE_FLIP_ICC_PROFILE_APPLICATION = 163
 
 REARRANGE_THUMBNAILS_TYPE_FIXED = 0
 REARRANGE_THUMBNAILS_TYPE_COMMAND = 1
@@ -265,7 +267,7 @@ simple_enum_to_str_lookup = {
     SIMPLE_EXIT_APPLICATION : 'exit program: close',
     SIMPLE_EXPORT_FILES : 'export these files',
     SIMPLE_EXPORT_FILES_QUICK_AUTO_EXPORT : 'export these files (quick auto-export)',
-    SIMPLE_FLIP_DARKMODE : 'flip darkmode (will be replaced by style/qss soon)',
+    SIMPLE_FLIP_DARKMODE : 'flip fixed darkmode colours',
     SIMPLE_FLIP_DEBUG_FORCE_IDLE_MODE_DO_NOT_SET_THIS : 'force debug idle mode (do not use this!)',
     SIMPLE_FOCUS_MEDIA_VIEWER : 'keyboard focus: to the media viewer',
     LEGACY_SIMPLE_GET_SIMILAR_TO_EXACT : 'show similar files: 0 (exact)',
@@ -386,8 +388,10 @@ simple_enum_to_str_lookup = {
     SIMPLE_REARRANGE_THUMBNAILS : 'move thumbnails',
     SIMPLE_MAC_QUICKLOOK : 'open quick look for selected file (macOS only)',
     SIMPLE_COPY_URLS : 'copy file known urls',
-    SIMPLE_NATIVE_OPEN_FILE_PROPERTIES: 'open file properties',
-    SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG: 'open in another program'
+    SIMPLE_NATIVE_OPEN_FILE_PROPERTIES : 'open file properties',
+    SIMPLE_NATIVE_OPEN_FILE_WITH_DIALOG : 'open in another program',
+    SIMPLE_RELOAD_CURRENT_STYLESHEET : 'reload current qss stylesheet',
+    SIMPLE_FLIP_ICC_PROFILE_APPLICATION : 'flip apply image ICC Profile colour adjustments' 
 }
 
 legacy_simple_str_to_enum_lookup = {

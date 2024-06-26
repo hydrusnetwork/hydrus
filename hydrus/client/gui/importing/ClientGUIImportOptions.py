@@ -175,7 +175,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         destination_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'import destinations' )
         
-        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file service, you can send these imports to other/multiple locations.' )
+        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file service, you can send these imports to other/multiple locations. This will still apply if the file is \'already in db\' by ensuring the file is added to any and all of the services if it is not already.' )
         
         destination_location_context = file_import_options.GetDestinationLocationContext()
         
@@ -190,19 +190,19 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         post_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'post-import actions' )
         
         self._auto_archive = QW.QCheckBox( post_import_panel )
-        self._associate_primary_urls = QW.QCheckBox( post_import_panel )
-        self._associate_source_urls = QW.QCheckBox( post_import_panel )
+        tt = 'Instead of adding imports to the inbox for further processing, this will archive them immediately. You can do this on an import you absolutely know is all good. This will still apply to \'already in db\' results.'
+        self._auto_archive.setToolTip( tt )
         
+        self._associate_primary_urls = QW.QCheckBox( post_import_panel )
         tt = 'Any URL in the \'chain\' to the file will be linked to it as a \'known url\' unless that URL has a matching URL Class that is set otherwise. Normally, since Gallery URL Classes are by default set not to associate, this means the file will get a visible Post URL and a less prominent direct File URL.'
         tt += '\n' * 2
         tt += 'If you are doing a one-off job and do not want to associate these URLs, disable it here. Do not unset this unless you have a reason to!'
-        
         self._associate_primary_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
+        self._associate_source_urls = QW.QCheckBox( post_import_panel )
         tt = 'If the parser discovers an additional source URL for another site (e.g. "This file on wewbooru was originally posted to Bixiv [here]."), should that URL be associated with the final URL? Should it be trusted to make \'already in db/previously deleted\' determinations?'
         tt += '\n' * 2
         tt += 'You should turn this off if the site supplies bad (incorrect or imprecise or malformed) source urls.'
-        
         self._associate_source_urls.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         #

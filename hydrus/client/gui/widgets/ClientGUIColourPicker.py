@@ -66,6 +66,8 @@ def EditColour( win: QW.QWidget, colour: QG.QColor ):
     
     old_stylesheet = ClientGUIStyle.CURRENT_STYLESHEET
     
+    original_stylesheet_name = ClientGUIStyle.CURRENT_STYLESHEET_FILENAME
+    
     try:
         
         qt_version_tuple = tuple( map( int, qtpy.QT_VERSION.split( '.' ) ) ) # 6.6.0 -> ( 6, 6, 0 )
@@ -82,11 +84,13 @@ def EditColour( win: QW.QWidget, colour: QG.QColor ):
     # if QWidget::item:hover is set in the QSS, even as an empty block, the colour-picker gradient square thing will update on normal mouse moves, not just drags, lmao
     # so we do this laggy nonsense, but it fixes it
     
-    if qt_version_is_dangerzone and ( 'QWidget::item:hover' in ClientGUIStyle.CURRENT_STYLESHEET or 'QWidget:item:hover' in ClientGUIStyle.CURRENT_STYLESHEET ):
+    yes_do_qss_switch = qt_version_is_dangerzone and ( 'QWidget::item:hover' in ClientGUIStyle.CURRENT_STYLESHEET or 'QWidget:item:hover' in ClientGUIStyle.CURRENT_STYLESHEET )
+    
+    if yes_do_qss_switch:
         
         new_stylesheet = old_stylesheet.replace( 'QWidget::item:hover', 'QWidget::fugg:fugg' ).replace( 'QWidget:item:hover', 'QWidget:fugg:fugg' )
         
-        ClientGUIStyle.SetStyleSheet( new_stylesheet, prepend_hydrus = False )
+        ClientGUIStyle.SetStyleSheet( new_stylesheet, 'temp art hack', prepend_hydrus = False )
         
     
     # note you can set alpha support here with a flag
@@ -103,7 +107,10 @@ def EditColour( win: QW.QWidget, colour: QG.QColor ):
             
         
     
-    ClientGUIStyle.SetStyleSheet( old_stylesheet, prepend_hydrus = False )
+    if yes_do_qss_switch:
+        
+        ClientGUIStyle.SetStyleSheet( old_stylesheet, original_stylesheet_name )
+        
     
     return return_value
     

@@ -1148,7 +1148,9 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _CheckDBIntegrity( self ):
         
-        message = 'This will check the SQLite database files for missing and invalid data. It may take several minutes to complete.'
+        message = 'This will check the SQLite database files for corruption. It may take several minutes to complete.'
+        message += '\n' * 2
+        message += 'In general, this routine is quite laggy, especially as it checks always checks your entire database, and is better done from the command line where you have more control. If you are worried your database is malformed, check [install_dir/db/help my db is broke.txt].'
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Run integrity check?', yes_label = 'do it', no_label = 'forget it' )
         
@@ -3223,7 +3225,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         check_submenu = ClientGUIMenus.GenerateMenu( menu )
         
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity' + HC.UNICODE_ELLIPSIS, 'Have the database examine all its records for internal consistency.', self._CheckDBIntegrity )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity' + HC.UNICODE_ELLIPSIS, 'Examine the database for file corruption.', self._CheckDBIntegrity )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables' + HC.UNICODE_ELLIPSIS, 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'resync tag mappings cache files' + HC.UNICODE_ELLIPSIS, 'Check the tag mappings cache for surplus or missing files.', self._ResyncTagMappingsCacheFiles )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings' + HC.UNICODE_ELLIPSIS, 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
@@ -3239,8 +3241,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (all, deferred siblings & parents calculation)' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag display mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayMappingsCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (just pending tags, instant calculation)' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag display pending mappings cache, fixing bad tags or miscounts.', self._RegenerateTagDisplayPendingMappingsCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag display mappings cache (missing file repopulation)' + HC.UNICODE_ELLIPSIS, 'Repopulate the mappings cache if you know it is lacking files, fixing bad tags or miscounts.', self._RepopulateTagDisplayMappingsCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag siblings lookup cache' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag siblings cache.', self._RegenerateTagSiblingsLookupCache )
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag parents lookup cache' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag siblings cache.', self._RegenerateTagParentsLookupCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag siblings lookup cache' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag siblings cache. Useful if you see an error in sibling presentation.', self._RegenerateTagSiblingsLookupCache )
+        ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag parents lookup cache' + HC.UNICODE_ELLIPSIS, 'Delete and recreate the tag parents cache. Useful if you see an error in parent presentation.', self._RegenerateTagParentsLookupCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache' + HC.UNICODE_ELLIPSIS, 'Delete and regenerate the cache hydrus uses for fast tag search.', self._RegenerateTagCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (subtags repopulation)' + HC.UNICODE_ELLIPSIS, 'Repopulate the subtags for the cache hydrus uses for fast tag search.', self._RepopulateTagCacheMissingSubtags )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'tag text search cache (searchable subtag maps)' + HC.UNICODE_ELLIPSIS, 'Regenerate the searchable subtag maps.', self._RegenerateTagCacheSearchableSubtagsMaps )
@@ -3462,6 +3464,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
         ClientGUIMenus.AppendMenuCheckItem( gui_actions, 'autocomplete delay mode', 'Delay all autocomplete requests at the database level by three seconds.', HG.autocomplete_delay_mode, self._SwitchBoolean, 'autocomplete_delay_mode' )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'close and reload current gui session', 'Save, clear, and then reload the current GUI Session. Might help with some forced style reloading.', self._ReloadCurrentGUISession )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'force a main gui layout now', 'Tell the gui to relayout--useful to test some gui bootup layout issues.', self.adjustSize )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'isolate existing mpv widgets', 'Tell the client to hide and do not re-use all existing mpv widgets, forcing new ones to be created on next request. This helps test out busted mpv windows that lose audio etc..', self._DebugIsolateMPVWindows )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make a long text popup', 'Make a popup with text that will grow in size.', self._DebugLongTextPopup )
@@ -3474,8 +3477,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         ClientGUIMenus.AppendMenuItem( gui_actions, 'make some popups', 'Throw some varied popups at the message manager, just to check it is working.', self._DebugMakeSomePopups )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'publish some sub files in five seconds', 'Publish some files like a subscription would.', self._controller.CallLater, 5, lambda: CG.client_controller.pub( 'imported_files_to_page', [ HydrusData.GenerateKey() for i in range( 5 ) ], 'example sub files' ) )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'refresh pages menu in five seconds', 'Delayed refresh the pages menu, giving you time to minimise or otherwise alter the client before it arrives.', self._controller.CallLater, 5, self._menu_updater_pages.update )
-        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current gui session', 'Save, clear, and then reload the current GUI Session. Might help with some forced style reloading.', self._ReloadCurrentGUISession )
-        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current stylesheet', 'Reload the current QSS stylesheet. Helps if you just edited it on disk and do not want to restart.', ClientGUIStyle.ReloadStyleSheet )
+        ClientGUIMenus.AppendMenuItem( gui_actions, 'reload current qss stylesheet', 'Reload the current QSS stylesheet. Helps if you just edited it on disk and do not want to restart.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_RELOAD_CURRENT_STYLESHEET ) )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'reset multi-column list settings to default', 'Reset all multi-column list widths and other display settings to default.', self._DebugResetColumnListManager )
         ClientGUIMenus.AppendMenuItem( gui_actions, 'save \'last session\' gui session', 'Make an immediate save of the \'last session\' gui session. Mostly for testing crashes, where last session is not saved correctly.', self.ProposeSaveGUISession, CC.LAST_SESSION_SESSION_NAME )
         
@@ -4394,36 +4396,42 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         qt_style_name = self._controller.new_options.GetNoneableString( 'qt_style_name' )
         qt_stylesheet_name = self._controller.new_options.GetNoneableString( 'qt_stylesheet_name' )
         
-        try:
+        if qt_style_name != ClientGUIStyle.CURRENT_STYLE_NAME:
             
-            if qt_style_name is None:
+            try:
                 
-                ClientGUIStyle.SetStyleFromName( ClientGUIStyle.ORIGINAL_STYLE_NAME )
+                if qt_style_name is None:
+                    
+                    ClientGUIStyle.SetStyleFromName( ClientGUIStyle.ORIGINAL_STYLE_NAME )
+                    
+                else:
+                    
+                    ClientGUIStyle.SetStyleFromName( qt_style_name )
+                    
                 
-            else:
+            except Exception as e:
                 
-                ClientGUIStyle.SetStyleFromName( qt_style_name )
+                HydrusData.ShowException( e )
                 
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
             
         
-        try:
+        if qt_stylesheet_name != ClientGUIStyle.CURRENT_STYLESHEET_FILENAME:
             
-            if qt_stylesheet_name is None:
+            try:
                 
-                ClientGUIStyle.ClearStylesheet()
+                if qt_stylesheet_name is None:
+                    
+                    ClientGUIStyle.ClearStyleSheet()
+                    
+                else:
+                    
+                    ClientGUIStyle.SetStyleSheetFromPath( qt_stylesheet_name )
+                    
                 
-            else:
+            except Exception as e:
                 
-                ClientGUIStyle.SetStylesheetFromPath( qt_stylesheet_name )
+                HydrusData.ShowException( e )
                 
-            
-        except Exception as e:
-            
-            HydrusData.ShowException( e )
             
         
         ClientGUIFunctions.UpdateAppDisplayName()
@@ -7159,16 +7167,21 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def closeEvent( self, event ):
         
-        if self._controller.new_options.GetBoolean( 'close_client_to_system_tray' ):
+        try:
             
-            self._FlipShowHideWholeUI()
+            if self._controller.new_options.GetBoolean( 'close_client_to_system_tray' ):
+                
+                self._FlipShowHideWholeUI()
+                
+                return
+                
             
-            return
+            self.TryToExit()
             
-        
-        self.TryToExit()
-        
-        event.ignore() # we always ignore, as we'll close through the window through other means
+        finally:
+            
+            event.ignore() # we always ignore, as we'll close through the window through other means
+            
         
     
     def CreateNewSubscriptionGapDownloader( self, gug_key_and_name, query_text, file_import_options, tag_import_options, note_import_options, file_limit ):
@@ -7278,6 +7291,8 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                             if not self._currently_minimised_to_system_tray and self._controller.new_options.GetBoolean( 'minimise_client_to_system_tray' ):
                                 
                                 self._FlipShowHideWholeUI()
+                                
+                                return True
                                 
                             
                         
@@ -7899,6 +7914,10 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             elif action == CAC.SIMPLE_OPEN_COMMAND_PALETTE:
                 
                 self._locator_widget.start()
+                
+            elif action == CAC.SIMPLE_RELOAD_CURRENT_STYLESHEET:
+                
+                ClientGUIStyle.ReloadStyleSheet()
                 
             elif action == CAC.SIMPLE_SHOW_HIDE_SPLITTERS:
                 

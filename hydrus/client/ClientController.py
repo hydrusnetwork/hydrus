@@ -1331,13 +1331,13 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             if qt_stylesheet_name is None:
                 
-                ClientGUIStyle.ClearStylesheet()
+                ClientGUIStyle.ClearStyleSheet()
                 
             else:
                 
                 try:
                     
-                    ClientGUIStyle.SetStylesheetFromPath( qt_stylesheet_name )
+                    ClientGUIStyle.SetStyleSheetFromPath( qt_stylesheet_name )
                     
                 except Exception as e:
                     

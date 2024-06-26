@@ -1500,6 +1500,7 @@ class TagsManager( object ):
             
             self._RecalcStorageCache()
             
+        
         if tag_display_type == ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL and self._display_cache_is_dirty:
             
             self._RecalcDisplayCache()

@@ -3195,6 +3195,9 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._my_shortcut_handler = ClientGUIShortcuts.ShortcutsHandler( self, [ shortcut_set ], catch_mouse = True )
         
+        CG.client_controller.sub( self, '_ClearCanvasTileCache', 'clear_image_tile_cache' )
+        CG.client_controller.sub( self, 'NotifyImageCacheCleared', 'clear_image_cache' )
+        
     
     def _ClearCanvasTileCache( self ):
         
@@ -3593,6 +3596,25 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     def IsRendered( self ):
         
         return self._is_rendered
+        
+    
+    def NotifyImageCacheCleared( self ):
+        
+        if self._media is not None:
+            
+            self._ClearCanvasTileCache()
+            
+            image_cache = CG.client_controller.GetCache( 'images' )
+            
+            self._image_renderer = image_cache.GetImageRenderer( self._media )
+            
+            if not self._image_renderer.IsReady():
+                
+                CG.client_controller.gui.RegisterAnimationUpdateWindow( self )
+                
+            
+            self.update()
+            
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):

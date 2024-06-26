@@ -31,6 +31,7 @@ from hydrus.client.importing.options import PresentationImportOptions
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTagSorting
 from hydrus.client.networking import ClientNetworkingFunctions
+from hydrus.client.search import ClientSearch
 
 def ClearFileSeeds( win: QW.QWidget, file_seed_cache: ClientImportFileSeeds.FileSeedCache, statuses_to_remove ):
     
@@ -481,18 +482,22 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             return menu
             
         
+        we_are_looking_at_urls = self._file_seed_cache.IsURLFileSeeds()
+        
         ClientGUIMenus.AppendSeparator( menu )
         
         can_show_files_in_new_page = True in ( file_seed.HasHash() for file_seed in selected_file_seeds )
         
         if can_show_files_in_new_page:
             
-            ClientGUIMenus.AppendMenuItem( menu, 'open selected import files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
+            ClientGUIMenus.AppendMenuItem( menu, 'open selected files in a new page', 'Show all the known selected files in a new thumbnail page. This is complicated, so cannot always be guaranteed, even if the import says \'success\'.', self._ShowSelectionInNewPage )
             
             ClientGUIMenus.AppendSeparator( menu )
             
         
-        ClientGUIMenus.AppendMenuItem( menu, 'copy sources', 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
+        label = 'copy urls' if we_are_looking_at_urls else 'copy paths'
+        
+        ClientGUIMenus.AppendMenuItem( menu, label, 'Copy all the selected sources to clipboard.', self._CopySelectedFileSeedData )
         ClientGUIMenus.AppendMenuItem( menu, 'copy notes', 'Copy all the selected notes to clipboard.', self._CopySelectedNotes )
         
         if len( selected_file_seeds ) == 1:
@@ -629,7 +634,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         ClientGUIMenus.AppendSeparator( menu )
         
-        if self._file_seed_cache.IsURLFileSeeds():
+        if we_are_looking_at_urls:
             
             open_sources_text = 'open URLs'
             
@@ -639,6 +644,25 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         ClientGUIMenus.AppendMenuItem( menu, open_sources_text, 'Open all the selected sources in your file explorer or web browser.', self._OpenSelectedFileSeedData )
+        
+        if we_are_looking_at_urls:
+            
+            location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+            
+            file_seed_datas = [ file_seed.file_seed_data for file_seed in selected_file_seeds ]
+            urls = [ file_seed_data for file_seed_data in file_seed_datas if isinstance( file_seed_data, str ) and file_seed_data.startswith( 'http' ) ]
+            
+            url_preds = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_SYSTEM_KNOWN_URLS, value = ( True, 'exact_match', url, f'has url {url}' ) ) for url in urls ]
+            
+            predicates = [ ClientSearch.Predicate( predicate_type = ClientSearch.PREDICATE_TYPE_OR_CONTAINER, value = url_preds ) ]
+            
+            page_name = 'url search'
+            activate_window = False
+            
+            c = HydrusData.Call( CG.client_controller.pub, 'new_page_query', location_context, initial_predicates = predicates, page_name = page_name, activate_window = activate_window )
+            
+            ClientGUIMenus.AppendMenuItem( menu, 'search for URLs', 'Open a new page with the files that share any of these selected URLs.', c )
+            
         
         ClientGUIMenus.AppendSeparator( menu )
         

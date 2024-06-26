@@ -3498,6 +3498,33 @@ class ListBoxTags( ListBox ):
         
         self.AddAdditionalMenuItems( menu )
         
+        if len( selected_actual_tags ) > 0:
+            
+            def regen_tags():
+                
+                message = '!!WARNING EXPERIMENTAL!!'
+                message += '\n' * 2
+                message += 'This will delete and then regenerate all the display calculations for the selected tags and their siblings and parents, with the intention of fixing bad autocomplete counts or sibling/parent presentation. It is functionally similar to the \'tag storage mappings cache\' regeneration job, but just for these tags.'
+                message += '\n' * 2
+                message += 'It might take a while to run, perhaps many minutes for a heavily-siblinged/-parented/-mapped tag, during which the database will be locked. Doing it on a thousand tags is going to completely gonk you. Also, any sibling or parent rules will be reset, and they will have to be recalculated, which will probably occur in a few seconds in the background after the regeneration job completes.'
+                
+                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Regen tags?', yes_label = 'let\'s go', no_label = 'forget it' )
+                
+                if result == QW.QDialog.Accepted:
+                    
+                    CG.client_controller.Write( 'regenerate_tag_mappings_tags', selected_actual_tags )
+                    
+                
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            submenu = ClientGUIMenus.GenerateMenu( menu )
+            
+            ClientGUIMenus.AppendMenuItem( submenu, 'regenerate tag display', 'Delete and regenerate the cached mappings for just these tags.', regen_tags )
+            
+            ClientGUIMenus.AppendMenu( menu, submenu, 'maintenance' )
+            
+        
         CGC.core().PopupMenu( self, menu )
         
     

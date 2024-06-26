@@ -1,7 +1,7 @@
 #made by prkc for Hydrus Network
 #Licensed under the same terms as Hydrus Network
 
-"""
+r"""
 Accepted operators: not (!, -), and (&&), or (||), implies (=>), xnor (iff, <=>), nand, nor.
 Parentheses work the usual way. \ can be used to escape characters (eg. to search for tags including parentheses)
 The usual precedence rules apply.

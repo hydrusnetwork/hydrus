@@ -1121,6 +1121,8 @@ Arguments (in JSON):
 *   [files](#parameters_files)
 *   `service_keys_to_tags`: (selective B, an Object of service keys to lists of tags to be 'added' to the files)
 *   `service_keys_to_actions_to_tags`: (selective B, an Object of service keys to content update actions to lists of tags)
+*   `override_previously_deleted_mappings`: (optional, default `true`)
+*   `create_new_deleted_mappings`: (optional, default `true`)
 
     In 'service\_keys\_to...', the keys are as in [/get\_services](#get_services). You may need some selection UI on your end so the user can pick what to do if there are multiple choices.
     
@@ -1177,9 +1179,13 @@ Some example requests:
 }
 ```
 
-    This last example is far more complicated than you will usually see. Pend rescinds and petition rescinds are not common. Petitions are also quite rare, and gathering a good petition reason for each tag is often a pain.
+This last example is far more complicated than you will usually see. Pend rescinds and petition rescinds are not common. Petitions are also quite rare, and gathering a good petition reason for each tag is often a pain.
 
-    Note that the enumerated status keys in the service\_keys\_to\_actions\_to_tags structure are strings, not ints (JSON does not support int keys for Objects).
+Note that the enumerated status keys in the service\_keys\_to\_actions\_to_tags structure are strings, not ints (JSON does not support int keys for Objects).
+
+The `override_previously_deleted_mappings` parameter adjusts your Add/Pend actions. In the client, if a human, in the _manage tags dialog_, tries to add a tag mapping that has been previously deleted, that deleted record will be overwritten. An automatic system like a gallery parser will filter/skip any Add/Pend actions in this case (so that repeat downloads do not overwrite a human user delete, etc..). The Client API acts like a human, by default, overwriting previously deleted mappings. If you want to spam a lot of new mappings but do not want to overwrite previously deletion decisions, then set this to `false`.
+
+The `create_new_deleted_mappings` parameter adjusts your Delete/Petition actions. Particularly, whether a delete record should be made _even if the tag does not exist on the file_. There are not many ways to spontaneously create a delete record in the normal hydrus UI, but you as the Client API should think whether this is what you want. Are you saying 'migrate these deleted tag records from A to B'? Then you want this `true`. Are you saying 'I accidentally spammed this tag to the wrong places, so remove all instances of it on any of these files so I can try again'? Then set it `false`.
 
 Response description:
 :  200 and no content.
@@ -1188,11 +1194,6 @@ Response description:
     Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended, or add a tag that already exists, and not worry about an error--the surplus add action will be discarded. The same is true if you try to pend a tag that actually already exists, or rescinding a petition that doesn't. Any invalid actions will fail silently.
     
     It is fine to just throw your 'process this' tags at every file import and not have to worry about checking which files you already added them to.
-
-!!! danger "HOWEVER"
-    When you delete a tag, a deletion record is made _even if the tag does not exist on the file_. This is important if you expect to add the tags again via parsing, because, in general, when hydrus adds tags through a downloader, it will not overwrite a previously 'deleted' tag record (this is to stop re-downloads overwriting the tags you hand-removed previously). Undeletes usually have to be done manually by a human.  
-    
-    So, _do_ be careful about how you spam delete unless it is something that doesn't matter or it is something you'll only be touching again via the API anyway.
 
 ## Editing File Ratings
 

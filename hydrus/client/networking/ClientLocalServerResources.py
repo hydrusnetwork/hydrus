@@ -47,6 +47,7 @@ from hydrus.client import ClientRendering
 from hydrus.client import ClientImageHandling
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.importing import ClientImportFiles
+from hydrus.client.importing.options import ClientImportOptions
 from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
@@ -1807,7 +1808,8 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
         
         #
         
-        service_keys_to_tags = None
+        override_previously_deleted_mappings = request.parsed_request_args.GetValue( 'override_previously_deleted_mappings', bool, default_value = True )
+        create_new_deleted_mappings = request.parsed_request_args.GetValue( 'create_new_deleted_mappings', bool, default_value = True )
         
         service_keys_to_actions_to_tags = None
         
@@ -1908,6 +1910,13 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
         
         content_update_package = ClientContentUpdates.ContentUpdatePackage()
         
+        media_results = []
+        
+        if not override_previously_deleted_mappings or not create_new_deleted_mappings:
+            
+            media_results = CG.client_controller.Read( 'media_results', hashes )
+            
+        
         for ( service_key, actions_to_tags ) in service_keys_to_actions_to_tags.items():
             
             for ( content_action, tags ) in actions_to_tags.items():
@@ -1960,13 +1969,32 @@ class HydrusResourceClientAPIRestrictedAddTagsAddTags( HydrusResourceClientAPIRe
                     continue
                     
                 
-                if content_action == HC.CONTENT_UPDATE_PETITION:
+                content_updates = []
+                
+                for tag in content_update_tags:
                     
-                    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ), reason = tags_to_reasons[ tag ] ) for tag in content_update_tags ]
+                    hashes_for_this_package = hashes
                     
-                else:
+                    if content_action in ( HC.CONTENT_UPDATE_ADD, HC.CONTENT_UPDATE_PEND ) and not override_previously_deleted_mappings:
+                        
+                        hashes_for_this_package = ClientImportOptions.FilterNotPreviouslyDeletedTagHashes( service_key, media_results, tag )
+                        
                     
-                    content_updates = [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes ) ) for tag in content_update_tags ]
+                    if content_action in ( HC.CONTENT_UPDATE_DELETE, HC.CONTENT_UPDATE_PETITION ) and not create_new_deleted_mappings:
+                        
+                        hashes_for_this_package = ClientImportOptions.FilterCurrentTagHashes( service_key, media_results, tag )
+                        
+                    
+                    if content_action == HC.CONTENT_UPDATE_PETITION:
+                        
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes_for_this_package ), reason = tags_to_reasons[ tag ] )
+                        
+                    else:
+                        
+                        content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_MAPPINGS, content_action, ( tag, hashes_for_this_package ) )
+                        
+                    
+                    content_updates.append( content_update )
                     
                 
                 content_update_package.AddContentUpdates( service_key, content_updates )

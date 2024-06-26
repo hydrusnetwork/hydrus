@@ -596,7 +596,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             new_login_scripts.extend( [ login_script for login_script in default_login_scripts if login_script.GetName() in login_script_names ] )
             
         
-        self.SetLoginScripts( new_login_scripts )
+        self.SetLoginScripts( new_login_scripts, auto_link_these_names = login_script_names )
         
     
     def SetClean( self ):
@@ -648,7 +648,12 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
             
         
     
-    def SetLoginScripts( self, login_scripts, auto_link = False ):
+    def SetLoginScripts( self, login_scripts, auto_link = False, auto_link_these_names = None ):
+        
+        if auto_link_these_names is None:
+            
+            auto_link_these_names = set()
+            
         
         with self._lock:
             
@@ -680,7 +685,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
                             
                         else:
                             
-                            if auto_link:
+                            if auto_link or login_script.GetName() in auto_link_these_names:
                                 
                                 credentials = {}
                                 

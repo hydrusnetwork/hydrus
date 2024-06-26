@@ -38,7 +38,6 @@ from hydrus.client.gui.media import ClientGUIMediaControls
 from hydrus.client.gui.media import ClientGUIMediaMenus
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsCommitFiltering
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
@@ -1167,6 +1166,14 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             elif action == CAC.SIMPLE_SWITCH_BETWEEN_100_PERCENT_AND_CANVAS_ZOOM_VIEWER_CENTER:
                 
                 self._media_container.ZoomSwitch( zoom_center_type_override = ClientGUICanvasMedia.ZOOM_CENTERPOINT_VIEWER_CENTER )
+                
+            elif action == CAC.SIMPLE_FLIP_ICC_PROFILE_APPLICATION:
+                
+                result = CG.client_controller.new_options.FlipBoolean( 'do_icc_profile_normalisation' )
+                
+                from hydrus.core.files.images import HydrusImageNormalisation
+                
+                HydrusImageNormalisation.SetDoICCProfileNormalisation( result )
                 
             else:
                 

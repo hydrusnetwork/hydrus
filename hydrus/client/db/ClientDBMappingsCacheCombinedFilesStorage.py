@@ -124,7 +124,7 @@ class ClientDBMappingsCacheCombinedFilesStorage( ClientDBModule.ClientDBModule )
                 status_hook( message )
                 
             
-            ( pending_delta, ) = self._Execute( 'SELECT COUNT( DISTINCT hash_id ) FROM {} WHERE tag_id = ?;'.format( pending_mappings_table_name ), ( storage_tag_id, ) ).fetchone()
+            ( pending_delta, ) = self._Execute( 'SELECT COUNT( hash_id ) FROM {} WHERE tag_id = ?;'.format( pending_mappings_table_name ), ( storage_tag_id, ) ).fetchone()
             
             counts_cache_changes.append( ( storage_tag_id, 0, pending_delta ) )
             
@@ -133,3 +133,29 @@ class ClientDBMappingsCacheCombinedFilesStorage( ClientDBModule.ClientDBModule )
         
         self.modules_mappings_cache_combined_files_display.RegeneratePending( tag_service_id, status_hook = status_hook )
         
+    
+    def RegenerateTags( self, tag_service_id, tag_ids ):
+        
+        # delete what we have
+        
+        self.modules_mappings_counts.ClearCounts( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, tag_service_id, tag_ids = tag_ids )
+        
+        # add what we should
+        
+        ( current_mappings_table_name, deleted_mappings_table_name, pending_mappings_table_name, petitioned_mappings_table_name ) = ClientDBMappingsStorage.GenerateMappingsTableNames( tag_service_id )
+        
+        counts_cache_changes = []
+        
+        for tag_id in tag_ids:
+            
+            ( current_delta, ) = self._Execute( 'SELECT COUNT( hash_id ) FROM {} WHERE tag_id = ?;'.format( current_mappings_table_name ), ( tag_id, ) ).fetchone()
+            ( pending_delta, ) = self._Execute( 'SELECT COUNT( hash_id ) FROM {} WHERE tag_id = ?;'.format( pending_mappings_table_name ), ( tag_id, ) ).fetchone()
+            
+            counts_cache_changes.append( ( tag_id, current_delta, pending_delta ) )
+            
+        
+        self.modules_mappings_counts_update.AddCounts( ClientTags.TAG_DISPLAY_STORAGE, self.modules_services.combined_file_service_id, tag_service_id, counts_cache_changes )
+        
+        self.modules_mappings_cache_combined_files_display.RegenerateTags( tag_service_id, tag_ids )
+        
+    

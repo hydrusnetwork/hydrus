@@ -35,6 +35,32 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_580"><a href="#version_580">version 580</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>I _may_, and a very hesitant _may_, have fixed the program hanging after minimising to system tray from the close button. thanks to the user who pinned down that it was the close button doing this rather than the other ways to minimise to system tray. if you have had trouble with minimising to the system tray, please try again when it is convenient and let me know how you get on. please also note which exact command, whether it was the file menu, system tray icon menu, minimise button, or close button, that you hit to trigger the minimise event that ultimately would not restore correctly</li>
+                        <li>the taglist right-click menu now has a _maintenance-&gt;regenerate tag display_ command, which is basically the 'regenerate mappings storage cache' command in the database menu, but limited just to your selection. this _should_, with luck, fix incorrect autocomplete counts or sibling/parent presentation for any tags you see that are weird. I've wanted this for years, since the whole-cache regen is so large that it is essentially impossible to run on the PTR, but now we can debug individual tag presentation problems a lot easier!</li>
+                        <li>fixed an issue where read-only import files would not delete from the temp dir after import, despite, if desired, successfully deleting from their original locations. it turns out the read-only property was being copied to the temp path for import, and the 'I'm done with the temp file, delete it' routine, unlike the normal file delete, wasn't checking for and undoing read-only status. note this was also screwing with the 'delete the hydrus temp dir on shutdown' routine, so if you do a lot of unusual/misc hard drive imports, feel free to shut your client down, check your temp folder (hit _help->about_ to find it), and delete anything called hydrusXXXXXXXX</li>
+                        <li>the new 'eye' icon in the media viewer now has 'apply image ICC Profile colour adjustments', which will flip on/off the fairly newish checkbox added to _options->media playback_. it updates the image live!</li>
+                        <li>added a shortcut for the 'flip apply image ICC Profile colour adjustments' to the 'media viewer' set! if you are big into this stuff and also do duplicate filtering, set it up and let me know how it goes</li>
+                        <li>important but subtle file import options fix: when you set a file to import to a specific destination in file import options, or you say to archive all imports, this is supposed to work even when the file is 'already in db'. this was not working when 'already in db' was caused by a 'url/hash recognised' result in the downloader system. I have fixed this; it now works for 'already in db' for url/hash/file recognised states. thank you to the user who noticed this and did the debug legwork to figure out what was going on</li>
+                        <li>import _file logs_ now have a menu item 'search for URLs', which does the same as the recent 'urls' media right-click menu command, opening a search page for any files that share these URLs</li>
+                        <li>added a shortcut command 'reload the current qss stylesheet' to the 'main gui' shortcut set. moreover, the 'reload current ui session' entry in the debug menu, which was just above this before, is renamed to 'close and reload current ui session' because of common misclicks</li>
+                        <li>the options panel uses less CPU on ok/cancel to set/reset style as needed. same deal with the old hack that makes the colour-picker work--it'll now be more efficient about setting/resetting style</li>
+                        <li>fixed a stupid list/tuple type error when trying to edit the 'frame locations' in options->gui. this was from an accident during the selection/scroll rewrites last week</li>
+                        <li>generally improved the reliability of the multi-column list against the above bug in its various forms</li>
+                        <li>added a simple click-through login script to fix recent changes to the 8chan.moe TOS filter, which broke the respective watcher. all users get this and it should just work out of the box</li>
+                        <li>thanks to a user, the default danbooru parsers are fixed to fetch md5 hash correctly</li>
+                        <li>some misc tooltip and description fixes</li>
+                        <li>improved some media result testing stuff</li>
+                        <li><h3>client api</h3></li>
+                        <li>the `/add_tags/add_tags` command has two new parameters, `override_previously_deleted_mappings`, and `create_new_deleted_mappings`, both True by default (which was also previous behaviour). turning either off allows you to, respectively, not force-add a tag mapping when it has been previously deleted (like how the gallery downloader works) and not force-delete (and thus make a 'delete' record) when deleting a tag mapping unless it already exists</li>
+                        <li>updated the Client API help to talk about these</li>
+                        <li>added some unit tests to test these</li>
+                        <li>the client api is now version 65</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_579"><a href="#version_579">version 579</a></h2>
                     <ul>
                         <li><h3>some url-checking logic</h3></li>
@@ -43,7 +69,7 @@
                         <li><h3>some regex quality of life</h3></li>
                         <li>regex input text boxes have been given a pass. the regex 'help' links are folded into the button, the links are updated to something newer (one of the older ones seems to have died), the button is now put aside the input and labelled `.*`, the menu is a little neater, and the input has placeholder text and now shows green/red (valid/invalid in the stylesheet) depending on whether the current regex text compiles ok. just a nicer widget overall</li>
                         <li>this widget is now in filename tagging, the String Match panel regex match, the String Converter panel regex step, and the 'regex favourites' options panel, which I was surprised to learn the existence of</li>
-                        <li>the regex menu for the String Converter regex step also now shows how to do grouping in python regex. I hadn't experimented with this properly in python, but I learned this past week that this thing can handle `(...) -> \1` group-replace fine and can do named groups with `(?P<name>...) -> \g<name>` too!</li>
+                        <li>the regex menu for the String Converter regex step also now shows how to do grouping in python regex. I hadn't experimented with this properly in python, but I learned this past week that this thing can handle `(...) -&gt; \1` group-replace fine and can do named groups with (?P&lt;name&gt;...) -&gt; \g&lt;name&gt; too!</li>
                         <li>for convenience, when editing a String Match, if you flick from 'any' to 'fixed' or 'regex', it now puts whatever was in your example text beforehand as the new value for the fixed text or regex</li>
                         <li><h3>list selecting and scrolling</h3></li>
                         <li>I added some new scroll-to tech to my multi-column lists</li>

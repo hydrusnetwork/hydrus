@@ -1030,6 +1030,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             
             self._dictionary[ 'booleans' ][ name ] = not self._dictionary[ 'booleans' ][ name ]
             
+            return self._dictionary[ 'booleans' ][ name ]
+            
         
     
     def GetBoolean( self, name ):

@@ -2307,7 +2307,7 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         x = self._default_gravity_x.GetValue()
         y = self._default_gravity_y.GetValue()
         
-        default_gravity = [ x, y ]
+        default_gravity = ( x, y )
         
         default_position = self._default_position.GetValue()
         
