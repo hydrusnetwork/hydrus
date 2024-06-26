@@ -4936,6 +4936,8 @@ Accept: application/json
 <li><a href="#parameters_files">files</a></li>
 <li><code>service_keys_to_tags</code>: (selective B, an Object of service keys to lists of tags to be 'added' to the files)</li>
 <li><code>service_keys_to_actions_to_tags</code>: (selective B, an Object of service keys to content update actions to lists of tags)</li>
+<li><code>override_previously_deleted_mappings</code>: (optional, default <code>true</code>)</li>
+<li><code>create_new_deleted_mappings</code>: (optional, default <code>true</code>)</li>
 </ul>
 <p>In 'service_keys_to...', the keys are as in <a href="#get_services">/get_services</a>. You may need some selection UI on your end so the user can pick what to do if there are multiple choices.</p>
 <p>Also, you can use either '...to_tags', which is simple and add-only, or '...to_actions_to_tags', which is more complicated and allows you to remove/petition or rescind pending content.</p>
@@ -4951,8 +4953,7 @@ Accept: application/json
 <p>When you petition a tag from a repository, a 'reason' for the petition is typically needed. If you send a normal list of tags here, a default reason of "Petitioned from API" will be given. If you want to set your own reason, you can instead give a list of [ tag, reason ] pairs.</p>
 </dd>
 <dt>Some example requests:</dt>
-<dd>
-<p><div class="highlight"><span class="filename">Adding some tags to a file</span><pre><span></span><code><span class="p">{</span>
+<dd><div class="highlight"><span class="filename">Adding some tags to a file</span><pre><span></span><code><span class="p">{</span>
 <span class="w">  </span><span class="nt">&quot;hash&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;df2a7b286d21329fc496e3aa8b8a08b67bb1747ca32749acb3f5d544cbfc0f56&quot;</span><span class="p">,</span>
 <span class="w">  </span><span class="nt">&quot;service_keys_to_tags&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;6c6f63616c2074616773&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;character:supergirl&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rating:safe&quot;</span><span class="p">]</span>
@@ -4985,10 +4986,13 @@ Accept: application/json
 <span class="w">    </span><span class="p">}</span>
 <span class="w">  </span><span class="p">}</span>
 <span class="p">}</span>
-</code></pre></div></p>
+</code></pre></div></dd>
+</dl>
 <p>This last example is far more complicated than you will usually see. Pend rescinds and petition rescinds are not common. Petitions are also quite rare, and gathering a good petition reason for each tag is often a pain.</p>
 <p>Note that the enumerated status keys in the service_keys_to_actions_to_tags structure are strings, not ints (JSON does not support int keys for Objects).</p>
-</dd>
+<p>The <code>override_previously_deleted_mappings</code> parameter adjusts your Add/Pend actions. In the client, if a human, in the <em>manage tags dialog</em>, tries to add a tag mapping that has been previously deleted, that deleted record will be overwritten. An automatic system like a gallery parser will filter/skip any Add/Pend actions in this case (so that repeat downloads do not overwrite a human user delete, etc..). The Client API acts like a human, by default, overwriting previously deleted mappings. If you want to spam a lot of new mappings but do not want to overwrite previously deletion decisions, then set this to <code>false</code>.</p>
+<p>The <code>create_new_deleted_mappings</code> parameter adjusts your Delete/Petition actions. Particularly, whether a delete record should be made <em>even if the tag does not exist on the file</em>. There are not many ways to spontaneously create a delete record in the normal hydrus UI, but you as the Client API should think whether this is what you want. Are you saying 'migrate these deleted tag records from A to B'? Then you want this <code>true</code>. Are you saying 'I accidentally spammed this tag to the wrong places, so remove all instances of it on any of these files so I can try again'? Then set it <code>false</code>.</p>
+<dl>
 <dt>Response description:</dt>
 <dd>200 and no content.</dd>
 </dl>
@@ -4996,11 +5000,6 @@ Accept: application/json
 <p class="admonition-title">Note</p>
 <p>Note also that hydrus tag actions are safely idempotent. You can pend a tag that is already pended, or add a tag that already exists, and not worry about an error--the surplus add action will be discarded. The same is true if you try to pend a tag that actually already exists, or rescinding a petition that doesn't. Any invalid actions will fail silently.</p>
 <p>It is fine to just throw your 'process this' tags at every file import and not have to worry about checking which files you already added them to.</p>
-</div>
-<div class="admonition danger">
-<p class="admonition-title">HOWEVER</p>
-<p>When you delete a tag, a deletion record is made <em>even if the tag does not exist on the file</em>. This is important if you expect to add the tags again via parsing, because, in general, when hydrus adds tags through a downloader, it will not overwrite a previously 'deleted' tag record (this is to stop re-downloads overwriting the tags you hand-removed previously). Undeletes usually have to be done manually by a human.  </p>
-<p>So, <em>do</em> be careful about how you spam delete unless it is something that doesn't matter or it is something you'll only be touching again via the API anyway.</p>
 </div>
 <h2 id="editing_file_ratings">Editing File Ratings<a class="headerlink" href="#editing_file_ratings" title="Permanent link">&para;</a></h2>
 <h3 id="edit_ratings_set_rating"><strong>POST <code>/edit_ratings/set_rating</code></strong><a class="headerlink" href="#edit_ratings_set_rating" title="Permanent link">&para;</a></h3>
@@ -7095,7 +7094,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">April 17, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">June 26, 2024</span>
   </span>
 
     
