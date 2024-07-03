@@ -6,7 +6,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -469,7 +469,7 @@ The formula should attempt to parse full or relative urls. If the url is relativ
                 self._test_fetch_result.setEnabled( True )
                 
             
-            result_lines = [ '*** ' + HydrusData.ToHumanInt( len( parsed_urls ) ) + ' RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusNumbers.ToHumanInt( len( parsed_urls ) ) + ' RESULTS BEGIN ***' ]
             
             result_lines.extend( parsed_urls )
             
@@ -788,7 +788,7 @@ And pass that html to a number of 'parsing children' that will each look through
                 return
                 
             
-            result_lines = [ '*** ' + HydrusData.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
+            result_lines = [ '*** ' + HydrusNumbers.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
             
             result_lines.extend( ( ClientParsing.ConvertParseResultToPrettyString( result ) for result in results ) )
             

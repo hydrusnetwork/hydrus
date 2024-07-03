@@ -9,6 +9,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusDBModule
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
@@ -351,7 +352,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
             CG.client_controller.pub( 'modal_message', job_status )
             
             job_status.SetStatusTitle( prefix_string + 'running' )
-            job_status.SetStatusText( 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
+            job_status.SetStatusText( 'errors found so far: ' + HydrusNumbers.ToHumanInt( num_errors ) )
             
             db_names = [ name for ( index, name, path ) in self._Execute( 'PRAGMA database_list;' ) if name not in ( 'mem', 'temp', 'durable_temp' ) ]
             
@@ -364,7 +365,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                     if should_quit:
                         
                         job_status.SetStatusTitle( prefix_string + 'cancelled' )
-                        job_status.SetStatusText( 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
+                        job_status.SetStatusText( 'errors found: ' + HydrusNumbers.ToHumanInt( num_errors ) )
                         
                         return
                         
@@ -381,14 +382,14 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
                         num_errors += 1
                         
                     
-                    job_status.SetStatusText( 'errors found so far: ' + HydrusData.ToHumanInt( num_errors ) )
+                    job_status.SetStatusText( 'errors found so far: ' + HydrusNumbers.ToHumanInt( num_errors ) )
                     
                 
             
         finally:
             
             job_status.SetStatusTitle( prefix_string + 'completed' )
-            job_status.SetStatusText( 'errors found: ' + HydrusData.ToHumanInt( num_errors ) )
+            job_status.SetStatusText( 'errors found: ' + HydrusNumbers.ToHumanInt( num_errors ) )
             
             HydrusData.Print( job_status.ToString() )
             

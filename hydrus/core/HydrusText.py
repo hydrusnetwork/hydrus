@@ -16,6 +16,7 @@ import re
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 
 re_one_or_more_whitespace = re.compile( r'\s+' ) # this does \t and friends too
 # want to keep the 'leading space' part here, despite tag.strip() elsewhere, in case of some crazy '- test' tag
@@ -56,6 +57,92 @@ def CleanNoteText( t: str ):
         
     
     return t
+    
+
+def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ str ], do_sort: bool = True ) -> str:
+    """
+    The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
+    """
+    texts = list( texts )
+    
+    if do_sort:
+        
+        SortStringsIgnoringCase( texts )
+        
+    
+    if len( texts ) == 1:
+        
+        return f' "{texts[0]}" '
+        
+    else:
+        
+        if len( texts ) <= 4:
+            
+            t = '\n'.join( texts )
+            
+        else:
+            
+            t = ', '.join( texts )
+            
+        
+        return f'\n\n{t}\n\n'
+        
+    
+
+def ConvertManyStringsToNiceInsertableHumanSummarySingleLine( texts: typing.Collection[ str ], collective_description_noun: str, do_sort: bool = True ) -> str:
+    """
+    The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
+    Suitable for a menu!
+    """
+    if len( texts ) == 0:
+        
+        return f'0(?) {collective_description_noun}'
+        
+    
+    texts = list( texts )
+    
+    if do_sort:
+        
+        SortStringsIgnoringCase( texts )
+        
+    
+    LINE_NO_LONGER_THAN = 48
+    
+    if len( texts ) == 1:
+        
+        text = texts[0]
+        
+        if len( text ) + 2 > LINE_NO_LONGER_THAN:
+            
+            return f'1 {collective_description_noun}'
+            
+        else:
+            
+            return f'"{text}"'
+            
+        
+    else:
+        
+        if sum( ( len( text ) + 4 for text in texts ) ) > LINE_NO_LONGER_THAN:
+            
+            first_text = texts[0]
+            
+            possible = f'"{first_text}" & {HydrusNumbers.ToHumanInt(len(texts)-1)} other {collective_description_noun}'
+            
+            if len( possible ) <= LINE_NO_LONGER_THAN:
+                
+                return possible
+                
+            else:
+                
+                return f'{HydrusNumbers.ToHumanInt(len(texts))} {collective_description_noun}'
+                
+            
+        else:
+            
+            return ', '.join( ( f'"{text}"' for text in texts ) )
+            
+        
     
 
 def HexFilter( text ):
@@ -307,7 +394,7 @@ def RemoveNewlines( text: str ) -> str:
     return text
     
 
-def SortStringsIgnoringCase( list_of_strings ):
+def SortStringsIgnoringCase( list_of_strings: typing.List[ str ] ):
     
     list_of_strings.sort( key = lambda s: s.lower() )
     

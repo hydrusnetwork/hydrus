@@ -10,6 +10,7 @@ import traceback
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusTime
 from hydrus.core.interfaces import HydrusThreadingInterface
@@ -638,7 +639,7 @@ class JobScheduler( threading.Thread ):
         
         with self._waiting_lock:
             
-            return HydrusData.ToHumanInt( len( self._waiting ) ) + ' jobs'
+            return HydrusNumbers.ToHumanInt( len( self._waiting ) ) + ' jobs'
             
         
     
@@ -658,7 +659,7 @@ class JobScheduler( threading.Thread ):
             
             job_lines = [ repr( job ) for job in self._waiting ]
             
-            lines = [ HydrusData.ToHumanInt( num_jobs ) + ' jobs:' ] + job_lines
+            lines = [ HydrusNumbers.ToHumanInt( num_jobs ) + ' jobs:' ] + job_lines
             
             text = '\n'.join( lines )
             
@@ -1043,7 +1044,7 @@ def WaitForProcessToFinish( p, timeout ):
             
             p.kill()
             
-            raise Exception( 'Process did not finish within ' + HydrusData.ToHumanInt( timeout ) + ' seconds!' )
+            raise Exception( 'Process did not finish within ' + HydrusNumbers.ToHumanInt( timeout ) + ' seconds!' )
             
         
         time.sleep( 2 )

@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -266,7 +267,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
             
         else:
             
-            text = '{} sidecar actions'.format( HydrusData.ToHumanInt( len( self._routers ) ) )
+            text = '{} sidecar actions'.format( HydrusNumbers.ToHumanInt( len( self._routers ) ) )
             
         
         elided_text = HydrusText.ElideText( text, 64 )

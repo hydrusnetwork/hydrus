@@ -10,6 +10,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusText
 from hydrus.core.files import HydrusFileHandling
@@ -661,7 +662,7 @@ class TestPanelPageParserSubsidiary( TestPanelPageParser ):
                     preview = 'PREVIEW:' + '\n' + str( preview[:1024] )
                     
                 
-                description = HydrusData.ToHumanInt( len( separation_example_data ) ) + ' subsidiary posts parsed'
+                description = HydrusNumbers.ToHumanInt( len( separation_example_data ) ) + ' subsidiary posts parsed'
                 
             except Exception as e:
                 

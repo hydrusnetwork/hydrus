@@ -6,6 +6,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import QtPorting as QP
@@ -71,7 +72,7 @@ def DrawIncDec( painter: QG.QPainter, x, y, service_key, rating_state, rating ):
         rating = 0
         
     
-    text = HydrusData.ToHumanInt( rating )
+    text = HydrusNumbers.ToHumanInt( rating )
     
     original_font = painter.font()
     

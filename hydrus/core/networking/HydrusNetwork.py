@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -1485,7 +1486,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             hashes = self._content_data
             
-            text = 'FILES: ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files'
+            text = 'FILES: ' + HydrusNumbers.ToHumanInt( len( hashes ) ) + ' files'
             
         elif self._content_type == HC.CONTENT_TYPE_MAPPING:
             
@@ -1497,7 +1498,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
             
             ( tag, hashes ) = self._content_data
             
-            text = 'MAPPINGS: ' + tag + ' for ' + HydrusData.ToHumanInt( len( hashes ) ) + ' files'
+            text = 'MAPPINGS: ' + tag + ' for ' + HydrusNumbers.ToHumanInt( len( hashes ) ) + ' files'
             
         elif self._content_type == HC.CONTENT_TYPE_TAG_PARENTS:
             
@@ -2565,11 +2566,11 @@ class Petition( HydrusSerialisable.SerialisableBase ):
         
         if self._petition_header.content_type == HC.CONTENT_TYPE_MAPPINGS and num_sub_petitions > 1:
             
-            return '{} mappings in {} petitions'.format( HydrusData.ToHumanInt( self.GetActualContentWeight() ), HydrusData.ToHumanInt( num_sub_petitions ) )
+            return '{} mappings in {} petitions'.format( HydrusNumbers.ToHumanInt( self.GetActualContentWeight() ), HydrusNumbers.ToHumanInt( num_sub_petitions ) )
             
         else:
             
-            return '{} {}'.format( HydrusData.ToHumanInt( self.GetActualContentWeight() ), HC.content_type_string_lookup[ self._petition_header.content_type ] )
+            return '{} {}'.format( HydrusNumbers.ToHumanInt( self.GetActualContentWeight() ), HC.content_type_string_lookup[ self._petition_header.content_type ] )
             
         
     

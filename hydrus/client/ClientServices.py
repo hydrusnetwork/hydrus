@@ -13,6 +13,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -535,7 +536,7 @@ class ServiceLocalRatingIncDec( ServiceLocalRating ):
             
         elif isinstance( rating, int ):
             
-            return HydrusData.ToHumanInt( rating )
+            return HydrusNumbers.ToHumanInt( rating )
             
         
         return 'unknown'
@@ -545,7 +546,7 @@ class ServiceLocalRatingIncDec( ServiceLocalRating ):
         
         if rating_state == ClientRatings.SET:
             
-            return HydrusData.ToHumanInt( rating )
+            return HydrusNumbers.ToHumanInt( rating )
             
         elif rating_state == ClientRatings.MIXED:
             
@@ -1639,9 +1640,9 @@ class ServiceRepository( ServiceRestricted ):
         
         it_took = HydrusTime.GetNowPrecise() - precise_timestamp
         
-        rows_s = HydrusData.ToHumanInt( int( total_rows / it_took ) )
+        rows_s = HydrusNumbers.ToHumanInt( int( total_rows / it_took ) )
         
-        summary = '{} processed {} {} at {} rows/s'.format( self._name, HydrusData.ToHumanInt( total_rows ), row_name, rows_s )
+        summary = '{} processed {} {} at {} rows/s'.format( self._name, HydrusNumbers.ToHumanInt( total_rows ), row_name, rows_s )
         
         HydrusData.Print( summary )
         
@@ -1650,7 +1651,7 @@ class ServiceRepository( ServiceRestricted ):
         
         it_took = HydrusTime.GetNowPrecise() - precise_timestamp
         
-        rows_s = HydrusData.ToHumanInt( int( rows_done_in_last_packet / it_took ) )
+        rows_s = HydrusNumbers.ToHumanInt( int( rows_done_in_last_packet / it_took ) )
         
         popup_message = '{} {}: processing at {} rows/s'.format( row_name, HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ), rows_s )
         

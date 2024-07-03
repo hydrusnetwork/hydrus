@@ -4,6 +4,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
 
@@ -51,7 +52,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
                 
             elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
                 
-                pretty_max_allowed = '{} requests'.format( HydrusData.ToHumanInt( max_allowed ) )
+                pretty_max_allowed = '{} requests'.format( HydrusNumbers.ToHumanInt( max_allowed ) )
                 
             
             pretty_time_delta = HydrusTime.TimeDeltaToPrettyTimeDelta( time_delta )
@@ -70,7 +71,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
         listctrl_panel.SetListCtrl( self._listctrl )
         
         listctrl_panel.AddButton( 'add', self._Add )
-        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         listctrl_panel.AddDeleteButton()
         
         #
@@ -117,7 +118,7 @@ class BandwidthRulesCtrl( ClientGUICommon.StaticBox ):
             
         elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
             
-            pretty_max_allowed = HydrusData.ToHumanInt( max_allowed ) + ' requests'
+            pretty_max_allowed = HydrusNumbers.ToHumanInt( max_allowed ) + ' requests'
             
         
         sort_time_delta = ClientGUIListCtrl.SafeNoneInt( time_delta )

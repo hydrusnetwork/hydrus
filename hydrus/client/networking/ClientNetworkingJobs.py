@@ -1348,7 +1348,7 @@ class NetworkJob( object ):
             
         
     
-    def GetNetworkContexts( self ):
+    def GetNetworkContexts( self ) -> typing.List[ ClientNetworkingContexts.NetworkContext ]:
         
         with self._lock:
             
@@ -1903,7 +1903,7 @@ class NetworkJob( object ):
                 
                 if consumed:
                     
-                    self._status_text = 'starting soon'
+                    self._status_text = 'gallery token ok - starting soon'
                     
                     self._gallery_token_consumed = True
                     

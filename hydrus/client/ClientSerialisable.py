@@ -10,7 +10,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusCompression
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
@@ -216,7 +216,7 @@ def GetPayloadTypeString( payload_obj ):
             type_string_counts[ GetPayloadTypeString( o ) ] += 1
             
         
-        type_string = ', '.join( ( HydrusData.ToHumanInt( count ) + ' ' + s for ( s, count ) in list(type_string_counts.items()) ) )
+        type_string = ', '.join( ( HydrusNumbers.ToHumanInt( count ) + ' ' + s for ( s, count ) in list(type_string_counts.items()) ) )
         
         return 'A list of ' + type_string
         

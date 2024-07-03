@@ -10,6 +10,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
@@ -94,7 +95,7 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddButton( 'copy tags', self._CopyTags, enabled_check_func = self._OnlyOneTIOSelected )
         self._list_ctrl_panel.AddButton( 'copy notes', self._CopyNotes, enabled_check_func = self._OnlyOneNIOSelected )
         self._list_ctrl_panel.AddButton( 'paste', self._Paste, enabled_only_on_selection = True )
-        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._list_ctrl_panel.AddButton( 'clear tags', self._ClearTags, enabled_check_func = self._AtLeastOneTIOSelected )
         self._list_ctrl_panel.AddButton( 'clear notes', self._ClearNotes, enabled_check_func = self._AtLeastOneNIOSelected )
         
@@ -823,7 +824,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    file_desc = '{} files'.format( HydrusData.ToHumanInt( num_to_delete ) )
+                    file_desc = '{} files'.format( HydrusNumbers.ToHumanInt( num_to_delete ) )
                     
                 
                 if self._num_actionable_local_file_service_domains == 1:
@@ -883,7 +884,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                     else:
                         
-                        file_desc = '{} files'.format( HydrusData.ToHumanInt( num_to_delete ) )
+                        file_desc = '{} files'.format( HydrusNumbers.ToHumanInt( num_to_delete ) )
                         
                     
                     if deletee_service.HasPermission( HC.CONTENT_TYPE_FILES, HC.PERMISSION_ACTION_MODERATE ):
@@ -931,7 +932,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    suffix = '{} {}files'.format( HydrusData.ToHumanInt( num_to_delete ), suffix )
+                    suffix = '{} {}files'.format( HydrusNumbers.ToHumanInt( num_to_delete ), suffix )
                     
                 
                 text = 'Permanently delete {}?'.format( suffix )
@@ -972,7 +973,7 @@ class EditDeleteFilesPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                 else:
                     
-                    text = 'Permanently delete these ' + HydrusData.ToHumanInt( num_to_delete ) + ' files and do not save a deletion record?'
+                    text = 'Permanently delete these ' + HydrusNumbers.ToHumanInt( num_to_delete ) + ' files and do not save a deletion record?'
                     
                 
                 chunks_of_hashes = list( HydrusLists.SplitListIntoChunks( hashes, 64 ) ) # iterator, so list it to use it more than once, jej
@@ -1187,7 +1188,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         tag_services_listctrl_panel.SetListCtrl( self._tag_service_actions )
         
         tag_services_listctrl_panel.AddButton( 'add', self._AddTag )
-        tag_services_listctrl_panel.AddButton( 'edit', self._EditTag, enabled_only_on_selection = True )
+        tag_services_listctrl_panel.AddButton( 'edit', self._EditTag, enabled_only_on_single_selection = True )
         tag_services_listctrl_panel.AddButton( 'delete', self._DeleteTag, enabled_only_on_selection = True )
         
         #
@@ -1204,7 +1205,7 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         if self._duplicate_action == HC.DUPLICATE_BETTER: # because there is only one valid action otherwise
             
-            rating_services_listctrl_panel.AddButton( 'edit', self._EditRating, enabled_only_on_selection = True )
+            rating_services_listctrl_panel.AddButton( 'edit', self._EditRating, enabled_only_on_single_selection = True )
             
         
         rating_services_listctrl_panel.AddButton( 'delete', self._DeleteRating, enabled_only_on_selection = True )
@@ -1798,7 +1799,7 @@ class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 count = original_mimes_count[ mime ]
                 
-                original_filetype_statements.append( f'{HydrusData.ToHumanInt(count)} {HC.mime_string_lookup[ mime ]}')
+                original_filetype_statements.append( f'{HydrusNumbers.ToHumanInt(count)} {HC.mime_string_lookup[ mime ]}')
                 
             
         
@@ -1818,7 +1819,7 @@ class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     count = forced_mimes_count[ mime ]
                     
-                    forced_filetype_statements.append( f'{HydrusData.ToHumanInt(count)} {HC.mime_string_lookup[ mime ]}')
+                    forced_filetype_statements.append( f'{HydrusNumbers.ToHumanInt(count)} {HC.mime_string_lookup[ mime ]}')
                     
                 
             
@@ -1830,7 +1831,7 @@ class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                forced_filetype_summary = f'{HydrusData.ToHumanInt(total_forced_mimes_count)} are currently being forced, to: {forced_filetype_summary}.'
+                forced_filetype_summary = f'{HydrusNumbers.ToHumanInt(total_forced_mimes_count)} are currently being forced, to: {forced_filetype_summary}.'
                 
             
         
@@ -1840,7 +1841,7 @@ class EditFilesForcedFiletypePanel( ClientGUIScrolledPanels.EditPanel ):
         text += '\n\n'
         text += 'This will override what hydrus thinks the filetype is for all of these files. Files will be renamed to receive their new file extensions. The original filetype is not forgotten, and this can be undone.'
         text += '\n\n'
-        text += f'Of the {HydrusData.ToHumanInt( total_file_count )} files, there are {original_filetype_summary}. {forced_filetype_summary}'
+        text += f'Of the {HydrusNumbers.ToHumanInt( total_file_count )} files, there are {original_filetype_summary}. {forced_filetype_summary}'
         
         st = ClientGUICommon.BetterStaticText( self, text )
         st.setWordWrap( True )
@@ -2625,7 +2626,7 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         regex_listctrl_panel.SetListCtrl( self._regexes )
         
         regex_listctrl_panel.AddButton( 'add', self._Add )
-        regex_listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        regex_listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         regex_listctrl_panel.AddDeleteButton()
         
         #

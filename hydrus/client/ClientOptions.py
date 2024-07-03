@@ -255,7 +255,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'slideshow_always_play_duration_media_once_through' : False,
             'enable_truncated_images_pil' : True,
             'do_icc_profile_normalisation' : True,
-            'mpv_available_at_start' : ClientGUIMPV.MPV_IS_AVAILABLE
+            'mpv_available_at_start' : ClientGUIMPV.MPV_IS_AVAILABLE,
+            'do_sleep_check' : True
         }
         
         #

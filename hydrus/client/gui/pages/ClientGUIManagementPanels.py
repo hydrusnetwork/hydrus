@@ -11,6 +11,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
@@ -949,7 +950,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         total_num_files = sum( searched_distances_to_count.values() )
         
-        self._eligible_files.setText( '{} eligible files in the system.'.format(HydrusData.ToHumanInt(total_num_files)) )
+        self._eligible_files.setText( '{} eligible files in the system.'.format(HydrusNumbers.ToHumanInt(total_num_files)) )
         
         self._max_hamming_distance_for_potential_discovery_button.setEnabled( True )
         self._max_hamming_distance_for_potential_discovery_spinctrl.setEnabled( True )
@@ -1009,7 +1010,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
         
         self._potential_duplicates_count = potential_duplicates_count
         
-        self._num_potential_duplicates.setText( '{} potential pairs.'.format( HydrusData.ToHumanInt( potential_duplicates_count ) ) )
+        self._num_potential_duplicates.setText( '{} potential pairs.'.format( HydrusNumbers.ToHumanInt( potential_duplicates_count ) ) )
         
         if self._potential_duplicates_count > 0:
             
@@ -1847,12 +1848,12 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
             
         
-        message = 'Remove the ' + HydrusData.ToHumanInt( len( removees ) ) + ' selected queries?'
+        message = 'Remove the ' + HydrusNumbers.ToHumanInt( len( removees ) ) + ' selected queries?'
         
         if num_working > 0:
             
             message += '\n' * 2
-            message += HydrusData.ToHumanInt( num_working ) + ' are still working.'
+            message += HydrusNumbers.ToHumanInt( num_working ) + ' are still working.'
             
         
         if self._highlighted_gallery_import is not None and self._highlighted_gallery_import in removees:
@@ -2225,7 +2226,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
                 ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
                 
-                text_top = '{} queries - {}'.format( HydrusData.ToHumanInt( num_gallery_imports ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
+                text_top = '{} queries - {}'.format( HydrusNumbers.ToHumanInt( num_gallery_imports ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
                 text_bottom = file_seed_cache_status.GetStatusText()
                 
             
@@ -2281,7 +2282,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         if num_working > 0:
             
-            raise HydrusExceptions.VetoException( HydrusData.ToHumanInt( num_working ) + ' queries are still importing.' )
+            raise HydrusExceptions.VetoException( HydrusNumbers.ToHumanInt( num_working ) + ' queries are still importing.' )
             
         
     
@@ -2986,18 +2987,18 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
             
         
-        message = 'Remove the ' + HydrusData.ToHumanInt( len( removees ) ) + ' selected watchers?'
+        message = 'Remove the ' + HydrusNumbers.ToHumanInt( len( removees ) ) + ' selected watchers?'
         
         if num_working > 0:
             
             message += '\n' * 2
-            message += HydrusData.ToHumanInt( num_working ) + ' are still working.'
+            message += HydrusNumbers.ToHumanInt( num_working ) + ' are still working.'
             
         
         if num_alive > 0:
             
             message += '\n' * 2
-            message += HydrusData.ToHumanInt( num_alive ) + ' are not yet DEAD.'
+            message += HydrusNumbers.ToHumanInt( num_alive ) + ' are not yet DEAD.'
             
         
         if self._highlighted_watcher is not None and self._highlighted_watcher in removees:
@@ -3352,14 +3353,14 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     
                 else:
                     
-                    num_dead_text = HydrusData.ToHumanInt( num_dead ) + ' DEAD - '
+                    num_dead_text = HydrusNumbers.ToHumanInt( num_dead ) + ' DEAD - '
                     
                 
                 file_seed_cache_status = self._multiple_watcher_import.GetTotalStatus()
                 
                 ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
                 
-                text_top = '{} watchers - {}'.format( HydrusData.ToHumanInt( num_watchers ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
+                text_top = '{} watchers - {}'.format( HydrusNumbers.ToHumanInt( num_watchers ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
                 text_bottom = file_seed_cache_status.GetStatusText()
                 
             
@@ -3415,7 +3416,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         if num_working > 0:
             
-            raise HydrusExceptions.VetoException( HydrusData.ToHumanInt( num_working ) + ' watchers are still importing.' )
+            raise HydrusExceptions.VetoException( HydrusNumbers.ToHumanInt( num_working ) + ' watchers are still importing.' )
             
         
     
@@ -3854,7 +3855,7 @@ class ManagementPanelImporterSimpleDownloader( ManagementPanelImporter ):
         
         selected_jobs = self._pending_jobs_listbox.GetData( only_selected = True )
         
-        message = 'Delete {} jobs?'.format( HydrusData.ToHumanInt( len( selected_jobs ) ) )
+        message = 'Delete {} jobs?'.format( HydrusNumbers.ToHumanInt( len( selected_jobs ) ) )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -4392,7 +4393,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if len( viable_petitions ) > 0:
             
-            text = 'Approve all the content in these {} petitions?'.format( HydrusData.ToHumanInt( len( viable_petitions ) ) )
+            text = 'Approve all the content in these {} petitions?'.format( HydrusNumbers.ToHumanInt( len( viable_petitions ) ) )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
@@ -4564,7 +4565,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         if len( viable_petitions ) > 0:
             
-            text = 'Deny all the content in these {} petitions?'.format( HydrusData.ToHumanInt( len( viable_petitions ) ) )
+            text = 'Deny all the content in these {} petitions?'.format( HydrusNumbers.ToHumanInt( len( viable_petitions ) ) )
             
             result = ClientGUIDialogsQuick.GetYesNo( self, text )
             
@@ -4670,7 +4671,7 @@ class ManagementPanelPetitions( ManagementPanel ):
             
             ( st, button ) = self._petition_types_to_controls[ petition_type ]
             
-            st.setText( '{} petitions'.format( HydrusData.ToHumanInt( count ) ) )
+            st.setText( '{} petitions'.format( HydrusNumbers.ToHumanInt( count ) ) )
             
             button.setEnabled( count > 0 )
             
@@ -5361,7 +5362,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                         
                         text = '\n'.join( copyable_items )
                         
-                        ClientGUIMenus.AppendMenuItem( menu, 'copy {} tags'.format( HydrusData.ToHumanInt( len( copyable_items ) ) ), 'Copy this tag.', CG.client_controller.pub, 'clipboard', 'text', text )
+                        ClientGUIMenus.AppendMenuItem( menu, 'copy {} tags'.format( HydrusNumbers.ToHumanInt( len( copyable_items ) ) ), 'Copy this tag.', CG.client_controller.pub, 'clipboard', 'text', text )
                         
                     
                 

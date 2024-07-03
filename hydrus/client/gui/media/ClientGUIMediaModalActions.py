@@ -9,6 +9,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageMetadata
@@ -137,7 +138,7 @@ def ClearDeleteRecord( win, media ):
         return
         
     
-    result = ClientGUIDialogsQuick.GetYesNo( win, 'Clear the deletion record for {} previously deleted files?.'.format( HydrusData.ToHumanInt( len( clearable_media ) ) ) )
+    result = ClientGUIDialogsQuick.GetYesNo( win, 'Clear the deletion record for {} previously deleted files?.'.format( HydrusNumbers.ToHumanInt( len( clearable_media ) ) ) )
     
     if result == QW.QDialog.Accepted:
         
@@ -208,12 +209,12 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
                 
             else:
                 
-                message = 'Unfortunately, {} of the {} hashes could not be found.'.format( HydrusData.ToHumanInt( num_missing ), hash_type )
+                message = 'Unfortunately, {} of the {} hashes could not be found.'.format( HydrusNumbers.ToHumanInt( num_missing ), hash_type )
                 
             
             if num_remote_medias > 0:
                 
-                message += ' {} of the files you wanted are not currently in this client. If they have never visited this client, the lookup is impossible.'.format( HydrusData.ToHumanInt( num_remote_medias ) )
+                message += ' {} of the files you wanted are not currently in this client. If they have never visited this client, the lookup is impossible.'.format( HydrusNumbers.ToHumanInt( num_remote_medias ) )
                 
             
             if num_remote_medias < num_hashes:
@@ -247,7 +248,7 @@ def CopyHashesToClipboard( win: QW.QWidget, hash_type: str, medias: typing.Seque
         
         job_status = ClientThreading.JobStatus()
         
-        job_status.SetStatusText( '{} {} hashes copied'.format( HydrusData.ToHumanInt( len( desired_hashes ) ), hash_type ) )
+        job_status.SetStatusText( '{} {} hashes copied'.format( HydrusNumbers.ToHumanInt( len( desired_hashes ) ), hash_type ) )
         
         CG.client_controller.pub( 'message', job_status )
         
@@ -268,7 +269,7 @@ def DoClearFileViewingStats( win: QW.QWidget, flat_medias: typing.Collection[ Cl
         
     else:
         
-        insert = 'these {} files'.format( HydrusData.ToHumanInt( len( flat_medias ) ) )
+        insert = 'these {} files'.format( HydrusNumbers.ToHumanInt( len( flat_medias ) ) )
         
     
     message = 'Clear the file viewing count/duration and \'last viewed time\' for {}?'.format( insert )
@@ -743,7 +744,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
     ( local_duplicable_to_file_service_keys, local_moveable_from_and_to_file_service_keys ) = ClientGUIMediaSimpleActions.GetLocalFileActionServiceKeys( media )
     
     do_yes_no = do_yes_no = CG.client_controller.new_options.GetBoolean( 'confirm_multiple_local_file_services_copy' )
-    yes_no_text = 'Add {} files to {}?'.format( HydrusData.ToHumanInt( len( applicable_media ) ), dest_service_name )
+    yes_no_text = 'Add {} files to {}?'.format( HydrusNumbers.ToHumanInt( len( applicable_media ) ), dest_service_name )
     
     if action == HC.CONTENT_UPDATE_MOVE:
         
@@ -812,7 +813,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
         
         applicable_media = potential_source_service_keys_to_applicable_media[ source_service_key ]
         
-        yes_no_text = 'Move {} files from {} to {}?'.format( HydrusData.ToHumanInt( len( applicable_media ) ), source_service_name, dest_service_name )
+        yes_no_text = 'Move {} files from {} to {}?'.format( HydrusNumbers.ToHumanInt( len( applicable_media ) ), source_service_name, dest_service_name )
         
     
     if len( applicable_media ) == 0:

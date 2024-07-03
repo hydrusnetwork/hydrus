@@ -9,6 +9,7 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
@@ -1407,6 +1408,106 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         return result is not None
         
     
+    def PopulateTableFromTagFilter( self, file_service_id: int, tag_service_id: int, tag_filter: HydrusTags.TagFilter, temp_tag_ids_table_name: str, my_search_includes_deleted_tags: bool ):
+        
+        if my_search_includes_deleted_tags:
+            
+            tags_table_name = 'tags' # lol
+            
+        else:
+            
+            tags_table_name = self.GetTagsTableName( file_service_id, tag_service_id )
+            
+        
+        if tag_filter.AllowsEverything():
+            
+            self._Execute( f'INSERT OR IGNORE INTO {temp_tag_ids_table_name} ( tag_id ) SELECT tag_id FROM {tags_table_name};' )
+            
+        else:
+            
+            tag_slices_to_rules = tag_filter.GetTagSlicesToRules()
+            
+            # KISS: do 'alls', then namespaces, then tags
+            
+            include_all_unnamespaced = '' not in tag_slices_to_rules or ( '' in tag_slices_to_rules and tag_slices_to_rules[ '' ] == HC.FILTER_WHITELIST )
+            
+            if include_all_unnamespaced:
+                
+                self._Execute( f'INSERT OR IGNORE INTO {temp_tag_ids_table_name} ( tag_id ) SELECT tag_id FROM {tags_table_name} WHERE namespace_id = ?;', ( self.modules_tags.null_namespace_id, ) )
+                
+            
+            include_all_namespaced = ':' not in tag_slices_to_rules or ( ':' in tag_slices_to_rules and tag_slices_to_rules[ ':' ] == HC.FILTER_WHITELIST )
+            
+            if include_all_namespaced:
+                
+                self._Execute( f'INSERT OR IGNORE INTO {temp_tag_ids_table_name} ( tag_id ) SELECT tag_id FROM {tags_table_name} WHERE namespace_id != ?;', ( self.modules_tags.null_namespace_id, ) )
+                
+            
+            #
+            
+            for ( tag_slice, rule ) in tag_slices_to_rules.items():
+                
+                if tag_slice in ( '', ':' ):
+                    
+                    continue
+                    
+                
+                if HydrusTags.IsNamespaceTagSlice( tag_slice ):
+                    
+                    namespace = tag_slice[:-1]
+                    
+                    namespace_id = self.modules_tags.GetNamespaceId( namespace )
+                    
+                    if rule == HC.FILTER_WHITELIST:
+                        
+                        self._Execute( f'INSERT OR IGNORE INTO {temp_tag_ids_table_name} ( tag_id ) SELECT tag_id FROM {tags_table_name} WHERE namespace_id = ?;', ( namespace_id, ) )
+                        
+                    else:
+                        
+                        self._Execute( f'DELETE FROM {temp_tag_ids_table_name} WHERE tag_id IN ( SELECT tag_id FROM {tags_table_name} WHERE namespaced_id = ? );', ( namespace_id, ) )
+                        
+                    
+                
+            
+            #
+            
+            tag_ids_to_add = []
+            tag_ids_to_delete = []
+            
+            for ( tag_slice, rule ) in tag_slices_to_rules.items():
+                
+                if tag_slice in ( '', ':' ):
+                    
+                    continue
+                    
+                
+                if not HydrusTags.IsNamespaceTagSlice( tag_slice ):
+                    
+                    tag_id = self.modules_tags.GetTagId( tag_slice )
+                    
+                    if rule == HC.FILTER_WHITELIST:
+                        
+                        tag_ids_to_add.append( tag_id )
+                        
+                    else:
+                        
+                        tag_ids_to_delete.append( tag_id )
+                        
+                    
+                
+            
+            if len( tag_ids_to_add ) > 0:
+                
+                self._ExecuteMany( f'INSERT OR IGNORE INTO {temp_tag_ids_table_name} ( tag_id ) VALUES ( ? );', ( ( tag_id, ) for tag_id in tag_ids_to_add ) )
+                
+            
+            if len( tag_ids_to_delete ) > 0:
+                
+                self._ExecuteMany( f'DELETE FROM {temp_tag_ids_table_name} WHERE tag_id = ?;', ( ( tag_id, ) for tag_id in tag_ids_to_add ) )
+                
+            
+        
+    
     def RegenerateSearchableSubtagMap( self, file_service_id, tag_service_id, status_hook = None ):
         
         subtags_fts4_table_name = self.GetSubtagsFTS4TableName( file_service_id, tag_service_id )
@@ -1505,7 +1606,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         
         if len( missing_subtag_ids ) > 0:
             
-            HydrusData.ShowText( 'Repopulated {} missing subtags for {}_{}.'.format( HydrusData.ToHumanInt( len( missing_subtag_ids ) ), file_service_id, tag_service_id ) )
+            HydrusData.ShowText( 'Repopulated {} missing subtags for {}_{}.'.format( HydrusNumbers.ToHumanInt( len( missing_subtag_ids ) ), file_service_id, tag_service_id ) )
             
         
     

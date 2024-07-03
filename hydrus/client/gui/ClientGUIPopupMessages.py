@@ -11,6 +11,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -564,7 +565,7 @@ class PopupMessage( PopupWindow ):
             
             ( hashes, attached_files_label ) = result
             
-            text = '{} - show {} files'.format( attached_files_label, HydrusData.ToHumanInt( len( hashes ) ) )
+            text = '{} - show {} files'.format( attached_files_label, HydrusNumbers.ToHumanInt( len( hashes ) ) )
             
             if self._show_files_button.text() != text:
                 
@@ -1523,6 +1524,6 @@ class PopupMessageSummaryBar( QW.QFrame ):
             
         else:
             
-            self._text.setText( HydrusData.ToHumanInt(num_messages_pending)+' messages' )
+            self._text.setText( HydrusNumbers.ToHumanInt(num_messages_pending)+' messages' )
             
         

@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
@@ -1505,7 +1506,7 @@ class CanvasPanel( Canvas ):
             
             if num_notes > 0:
                 
-                notes_str = '{} ({})'.format( notes_str, HydrusData.ToHumanInt( num_notes ) )
+                notes_str = '{} ({})'.format( notes_str, HydrusNumbers.ToHumanInt( num_notes ) )
                 
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )
@@ -2644,12 +2645,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if num_committable > 0:
                 
-                components.append( '{} decisions'.format( HydrusData.ToHumanInt( num_committable ) ) )
+                components.append( '{} decisions'.format( HydrusNumbers.ToHumanInt( num_committable ) ) )
                 
             
             if num_deletable > 0:
                 
-                components.append( '{} deletes'.format( HydrusData.ToHumanInt( num_deletable ) ) )
+                components.append( '{} deletes'.format( HydrusNumbers.ToHumanInt( num_deletable ) ) )
                 
             
             if len( components ) == 0:
@@ -3017,12 +3018,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
                     
                     if num_committable > 0:
                         
-                        components.append( '{} decisions'.format( HydrusData.ToHumanInt( num_committable ) ) )
+                        components.append( '{} decisions'.format( HydrusNumbers.ToHumanInt( num_committable ) ) )
                         
                     
                     if num_deletable > 0:
                         
-                        components.append( '{} deletes'.format( HydrusData.ToHumanInt( num_deletable ) ) )
+                        components.append( '{} deletes'.format( HydrusNumbers.ToHumanInt( num_deletable ) ) )
                         
                     
                     label = 'commit {} and continue?'.format( ' and '.join( components ) )
@@ -3316,12 +3317,12 @@ class CanvasFilterDuplicates( CanvasWithHovers ):
             
             if num_committable > 0:
                 
-                components.append( '{} decisions'.format( HydrusData.ToHumanInt( num_committable ) ) )
+                components.append( '{} decisions'.format( HydrusNumbers.ToHumanInt( num_committable ) ) )
                 
             
             if num_deletable > 0:
                 
-                components.append( '{} deletes'.format( HydrusData.ToHumanInt( num_deletable ) ) )
+                components.append( '{} deletes'.format( HydrusNumbers.ToHumanInt( num_deletable ) ) )
                 
             
             label = 'commit {}?'.format( ' and '.join( components ) )
@@ -3430,7 +3431,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
         
         if self._current_media is None:
             
-            index_string = '-/' + HydrusData.ToHumanInt( len( self._sorted_media ) )
+            index_string = '-/' + HydrusNumbers.ToHumanInt( len( self._sorted_media ) )
             
         else:
             
@@ -3766,7 +3767,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
             
             if len( kept ) > 0:
                 
-                kept_label = 'keep {}'.format( HydrusData.ToHumanInt( len( kept ) ) )
+                kept_label = 'keep {}'.format( HydrusNumbers.ToHumanInt( len( kept ) ) )
                 
             else:
                 
@@ -3839,7 +3840,7 @@ class CanvasMediaListFilterArchiveDelete( CanvasMediaList ):
                             location_label = location_context.ToString( CG.client_controller.services_manager.GetName )
                             
                         
-                        delete_label = 'delete {} from {}'.format( HydrusData.ToHumanInt( num_deletable ), location_label )
+                        delete_label = 'delete {} from {}'.format( HydrusNumbers.ToHumanInt( num_deletable ), location_label )
                         
                         deletion_options.append( ( location_context, delete_label ) )
                         
@@ -4626,7 +4627,7 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if num_notes > 0:
                 
-                notes_str = '{} ({})'.format( notes_str, HydrusData.ToHumanInt( num_notes ) )
+                notes_str = '{} ({})'.format( notes_str, HydrusNumbers.ToHumanInt( num_notes ) )
                 
             
             ClientGUIMenus.AppendMenuItem( manage_menu, notes_str, 'Manage this file\'s notes.', self._ManageNotes )

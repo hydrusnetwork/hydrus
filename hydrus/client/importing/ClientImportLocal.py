@@ -7,6 +7,7 @@ import typing
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
@@ -682,7 +683,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         new_paths = [ path for ( path, file_seed ) in paths_to_file_seeds.items() if not self._file_seed_cache.HasFileSeed( file_seed ) ]
         
-        job_status.SetStatusText( f'checking: found {HydrusData.ToHumanInt( len( new_paths ) )} new files' )
+        job_status.SetStatusText( f'checking: found {HydrusNumbers.ToHumanInt( len( new_paths ) )} new files' )
         
         old_new_paths = HydrusPaths.FilterOlderModifiedFiles( new_paths, self._last_modified_time_skip_period )
         
@@ -690,7 +691,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         file_seeds = [ paths_to_file_seeds[ path ] for path in free_old_new_paths ]
         
-        job_status.SetStatusText( f'checking: found {HydrusData.ToHumanInt( len( file_seeds ) )} new files to import' )
+        job_status.SetStatusText( f'checking: found {HydrusNumbers.ToHumanInt( len( file_seeds ) )} new files to import' )
         
         self._file_seed_cache.AddFileSeeds( file_seeds )
         
@@ -880,7 +881,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if num_files_imported > 0:
             
-            HydrusData.Print( 'Import folder ' + self._name + ' imported ' + HydrusData.ToHumanInt( num_files_imported ) + ' files.' )
+            HydrusData.Print( 'Import folder ' + self._name + ' imported ' + HydrusNumbers.ToHumanInt( num_files_imported ) + ' files.' )
             
             if len( presentation_hashes ) > 0:
                 

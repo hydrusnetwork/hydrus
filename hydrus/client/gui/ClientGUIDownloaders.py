@@ -8,8 +8,9 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientDefaults
@@ -41,10 +42,10 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._gugs = gugs
-        self._gug_keys_to_gugs = { gug.GetGUGKey() : gug for gug in self._gugs }
+        self._gug_keys_to_gugs: typing.Dict[ bytes, ClientNetworkingGUG.GalleryURLGenerator ] = { gug.GetGUGKey() : gug for gug in self._gugs }
         
         self._url_classes = url_classes
-        self._url_class_keys_to_url_classes = { url_class.GetClassKey() : url_class for url_class in self._url_classes }
+        self._url_class_keys_to_url_classes: typing.Dict[ bytes, ClientNetworkingURLClass.URLClass ] = { url_class.GetClassKey() : url_class for url_class in self._url_classes }
         
         self._network_engine = network_engine
         
@@ -118,7 +119,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gridbox = ClientGUICommon.WrapInGrid( media_viewer_urls_panel, rows )
         
-        QP.AddToLayout( vbox, self._url_display_list_ctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
+        QP.AddToLayout( vbox, self._url_display_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_PERPENDICULAR )
         
         media_viewer_urls_panel.setLayout( vbox )
@@ -192,76 +193,70 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditGUGDisplay( self ):
         
-        edited_datas = []
+        gug_keys_and_displays = self._gug_display_list_ctrl.GetData( only_selected = True )
         
-        for data in self._gug_display_list_ctrl.GetData( only_selected = True ):
+        if len( gug_keys_and_displays ) == 0:
             
-            ( gug_key, display ) = data
-            
-            name = self._gug_keys_to_gugs[ gug_key ].GetName()
-            
-            message = 'Show "{}" in the main selector list?'.format( name )
-            
-            result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the first list?', check_for_cancelled = True )
-            
-            if not closed_by_user:
-                
-                display = result == QW.QDialog.Accepted
-                
-                self._gug_display_list_ctrl.DeleteDatas( ( data, ) )
-                
-                new_data = ( gug_key, display )
-                
-                self._gug_display_list_ctrl.AddDatas( ( new_data, ) )
-                
-                edited_datas.append( new_data )
-                
-            else:
-                
-                break
-                
+            return
             
         
-        self._gug_display_list_ctrl.SelectDatas( edited_datas )
+        names = [ self._gug_keys_to_gugs[ gug_key_and_display[0] ].GetName() for gug_key_and_display in gug_keys_and_displays ]
         
-        self._gug_display_list_ctrl.Sort()
+        message = f'Show{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( names )}in the main selector list?'
+        
+        ( result, closed_by_user ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the first list?', check_for_cancelled = True )
+        
+        if closed_by_user:
+            
+            return
+            
+        
+        should_display = result == QW.QDialog.Accepted
+        
+        replacement_tuples = []
+        
+        for gug_key_and_display in gug_keys_and_displays:
+            
+            new_gug_key_and_display = ( gug_key_and_display[0], should_display )
+            
+            replacement_tuples.append( ( gug_key_and_display, new_gug_key_and_display ) )
+            
+        
+        self._gug_display_list_ctrl.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
         
     
     def _EditURLDisplay( self ):
         
-        edited_datas = []
+        url_class_keys_and_displays = self._url_display_list_ctrl.GetData( only_selected = True )
         
-        for data in self._url_display_list_ctrl.GetData( only_selected = True ):
+        if len( url_class_keys_and_displays ) == 0:
             
-            ( url_class_key, display ) = data
-            
-            url_class_name = self._url_class_keys_to_url_classes[ url_class_key ].GetName()
-            
-            message = 'Show ' + url_class_name + ' in the media viewer?'
-            
-            result, closed_by_user = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the media viewer?', check_for_cancelled = True )
-            
-            if not closed_by_user:
-                
-                display = result == QW.QDialog.Accepted
-                
-                self._url_display_list_ctrl.DeleteDatas( ( data, ) )
-                
-                new_data = ( url_class_key, display )
-                
-                self._url_display_list_ctrl.AddDatas( ( new_data, ) )
-                
-                edited_datas.append( new_data )
-                
-            else:
-                
-                break
-                
+            return
             
         
-        self._url_display_list_ctrl.SelectDatas( edited_datas )
+        names = [ self._url_class_keys_to_url_classes[ url_class_key_and_display[0] ].GetName() for url_class_key_and_display in url_class_keys_and_displays ]
         
-        self._url_display_list_ctrl.Sort()
+        message = f'Show{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( names )}in the media viewer?'
+        
+        ( result, closed_by_user ) = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Show in the media viewer?', check_for_cancelled = True )
+        
+        if closed_by_user:
+            
+            return
+            
+        
+        should_display = result == QW.QDialog.Accepted
+        
+        replacement_tuples = []
+        
+        for url_class_key_and_display in url_class_keys_and_displays:
+            
+            new_url_class_key_and_display = ( url_class_key_and_display[0], should_display )
+            
+            replacement_tuples.append( ( url_class_key_and_display, new_url_class_key_and_display ) )
+            
+        
+        self._url_display_list_ctrl.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
         
     
     def GetValue( self ):
@@ -490,7 +485,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         gug_key_and_name = gug.GetGUGKeyAndName()
         
-        self._gug_list_ctrl.AddDatas( ( gug_key_and_name, ) )
+        self._gug_list_ctrl.AddDatas( ( gug_key_and_name, ), select_sort_and_scroll = True )
         
     
     def _AddGUGButtonClick( self ):
@@ -590,7 +585,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
         self._gug_list_ctrl_panel.AddButton( 'add', self._AddNewGUG )
-        self._gug_list_ctrl_panel.AddButton( 'edit', self._EditGUG, enabled_only_on_selection = True )
+        self._gug_list_ctrl_panel.AddButton( 'edit', self._EditGUG, enabled_only_on_single_selection = True )
         self._gug_list_ctrl_panel.AddDeleteButton()
         self._gug_list_ctrl_panel.AddSeparator()
         self._gug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.GalleryURLGenerator, ), self._AddGUG )
@@ -606,7 +601,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._ngug_list_ctrl_panel.SetListCtrl( self._ngug_list_ctrl )
         
         self._ngug_list_ctrl_panel.AddButton( 'add', self._AddNewNGUG )
-        self._ngug_list_ctrl_panel.AddButton( 'edit', self._EditNGUG, enabled_only_on_selection = True )
+        self._ngug_list_ctrl_panel.AddButton( 'edit', self._EditNGUG, enabled_only_on_single_selection = True )
         self._ngug_list_ctrl_panel.AddDeleteButton()
         self._ngug_list_ctrl_panel.AddSeparator()
         self._ngug_list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingGUG.NestedGalleryURLGenerator, ), self._AddNGUG )
@@ -1349,7 +1344,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         parameters_listctrl_panel.SetListCtrl( self._parameters )
         
         parameters_listctrl_panel.AddButton( 'add', self._AddParameters )
-        parameters_listctrl_panel.AddButton( 'edit', self._EditParameters, enabled_only_on_selection = True )
+        parameters_listctrl_panel.AddButton( 'edit', self._EditParameters, enabled_only_on_single_selection = True )
         parameters_listctrl_panel.AddDeleteButton()
         
         #
@@ -1965,7 +1960,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 if True in ( string_match.Matches( n ) for n in ( '0', '1', '10', '100', '42' ) ):
                     
-                    choices.append( ( HydrusData.ConvertIntToPrettyOrdinalString( index + 1 ) + ' path component', ( ClientNetworkingURLClass.GALLERY_INDEX_TYPE_PATH_COMPONENT, index ) ) )
+                    choices.append( ( HydrusNumbers.ConvertIntToPrettyOrdinalString( index + 1 ) + ' path component', ( ClientNetworkingURLClass.GALLERY_INDEX_TYPE_PATH_COMPONENT, index ) ) )
                     
                 
             
@@ -2306,7 +2301,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
         self._list_ctrl_panel.AddButton( 'add', self._Add )
-        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddSeparator()
         self._list_ctrl_panel.AddImportExportButtons( ( ClientNetworkingURLClass.URLClass, ), self._AddURLClass )
@@ -2544,7 +2539,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         
-        self._parser_list_ctrl_panel.AddButton( 'edit', self._EditParser, enabled_only_on_selection = True )
+        self._parser_list_ctrl_panel.AddButton( 'edit', self._EditParser, enabled_only_on_single_selection = True )
         self._parser_list_ctrl_panel.AddButton( 'clear', self._ClearParser, enabled_check_func = self._LinksOnCurrentSelection )
         self._parser_list_ctrl_panel.AddButton( 'try to fill in gaps based on example urls', self._TryToLinkURLClassesAndParsers, enabled_check_func = self._GapsExist )
         

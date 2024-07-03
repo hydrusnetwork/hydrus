@@ -11,11 +11,10 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
-from hydrus.core import HydrusText
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -2726,7 +2725,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             media_viewer_list_panel.SetListCtrl( self._filetype_handling_listctrl )
             
             media_viewer_list_panel.AddButton( 'add', self.AddMediaViewerOptions, enabled_check_func = self._CanAddMediaViewOption )
-            media_viewer_list_panel.AddButton( 'edit', self.EditMediaViewerOptions, enabled_only_on_selection = True )
+            media_viewer_list_panel.AddButton( 'edit', self.EditMediaViewerOptions, enabled_only_on_single_selection = True )
             media_viewer_list_panel.AddDeleteButton( enabled_check_func = self._CanDeleteMediaViewOptions )
             
             #
@@ -3824,7 +3823,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             image_cache_estimate = cache_size // estimated_bytes_per_fullscreen
             
-            self._estimated_number_fullscreens.setText( '(about {}-{} images the size of your screen)'.format( HydrusData.ToHumanInt( image_cache_estimate // 2 ), HydrusData.ToHumanInt( image_cache_estimate * 2 ) ) )
+            self._estimated_number_fullscreens.setText( '(about {}-{} images the size of your screen)'.format( HydrusNumbers.ToHumanInt( image_cache_estimate // 2 ), HydrusNumbers.ToHumanInt( image_cache_estimate * 2 ) ) )
             
             num_pixels = cache_size * ( self._image_cache_storage_limit_percentage.value() / 100 ) / 3
             
@@ -3834,7 +3833,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
             
-            self._image_cache_storage_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusData.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            self._image_cache_storage_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
             
             num_pixels = cache_size * ( self._image_cache_prefetch_limit_percentage.value() / 100 ) / 3
             
@@ -3844,7 +3843,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
             
-            self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusData.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
             
             #
             
@@ -3881,7 +3880,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimate = value // estimated_bytes_per_fullscreen
             
-            self._estimated_number_image_tiles.setText( '(about {} fullscreens)'.format( HydrusData.ToHumanInt( estimate ) ) )
+            self._estimated_number_image_tiles.setText( '(about {} fullscreens)'.format( HydrusNumbers.ToHumanInt( estimate ) ) )
             
         
         def EventThumbnailsUpdate( self ):
@@ -3896,7 +3895,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimated_thumbs = value // estimated_bytes_per_thumb
             
-            self._estimated_number_thumbnails.setText( '(at '+res_string+', about '+HydrusData.ToHumanInt(estimated_thumbs)+' thumbnails)' )
+            self._estimated_number_thumbnails.setText( '(at '+res_string+', about '+HydrusNumbers.ToHumanInt(estimated_thumbs)+' thumbnails)' )
             
         
         def EventVideoBufferUpdate( self ):
@@ -3905,7 +3904,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             estimated_720p_frames = int( value // ( 1280 * 720 * 3 ) )
             
-            self._estimated_number_video_frames.setText( '(about '+HydrusData.ToHumanInt(estimated_720p_frames)+' frames of 720p video)' )
+            self._estimated_number_video_frames.setText( '(about '+HydrusNumbers.ToHumanInt(estimated_720p_frames)+' frames of 720p video)' )
             
         
         def UpdateOptions( self ):
@@ -4077,6 +4076,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             sleep_panel = ClientGUICommon.StaticBox( self, 'system sleep' )
             
+            self._do_sleep_check = QW.QCheckBox( sleep_panel )
+            self._do_sleep_check.setToolTip( ClientGUIFunctions.WrapToolTip( 'Hydrus detects sleeps via a hacky method where it simply checks the clock every 15 seconds. If too long a time has passed since the last check, it assumes it has just woken up from sleep. This produces false positives in certain UI-hanging situations, so you may, for debugging purposes, wish to turn it off here. When functioning well, it is useful and you should leave it on!' ) )
+            
             self._wake_delay_period = ClientGUICommon.BetterSpinBox( sleep_panel, min = 0, max = 60 )
             
             tt = 'It sometimes takes a few seconds for your network adapter to reconnect after a wake. This adds a grace period after a detected wake-from-sleep to allow your OS to sort that out before Hydrus starts making requests.'
@@ -4088,6 +4090,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
+            self._do_sleep_check.setChecked( self._new_options.GetBoolean( 'do_sleep_check' ) )
+            
             self._wake_delay_period.setValue( self._new_options.GetInteger( 'wake_delay_period' ) )
             
             self._file_system_waits_on_wakeup.setChecked( self._new_options.GetBoolean( 'file_system_waits_on_wakeup' ) )
@@ -4096,6 +4100,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             rows = []
             
+            rows.append( ( 'Allow wake-from-system-sleep detection:', self._do_sleep_check ) )
             rows.append( ( 'After a wake from system sleep, wait this many seconds before allowing new network access:', self._wake_delay_period ) )
             rows.append( ( 'Include the file system in this wait: ', self._file_system_waits_on_wakeup ) )
             
@@ -4115,6 +4120,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def UpdateOptions( self ):
             
+            self._new_options.SetBoolean( 'do_sleep_check', self._do_sleep_check.isChecked() )
             self._new_options.SetInteger( 'wake_delay_period', self._wake_delay_period.value() )
             self._new_options.SetBoolean( 'file_system_waits_on_wakeup', self._file_system_waits_on_wakeup.isChecked() )
             
@@ -4521,7 +4527,14 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     namespace = namespace.lower().strip()
                     
-                    if namespace.endswith( ':' ):
+                    if namespace in ( '', ':' ):
+                        
+                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace means unnamespaced/default namespaced, which are already listed.' )
+                        
+                        return
+                        
+                    
+                    while namespace.endswith( ':' ):
                         
                         namespace = namespace[:-1]
                         
@@ -4529,13 +4542,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                     if namespace != 'system':
                         
                         namespace = HydrusTags.StripTextOfGumpf( namespace )
-                        
-                    
-                    if namespace in ( '', ':' ):
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'Sorry, that namespace means unnamespaced/default namespaced, which are already listed.' )
-                        
-                        return
                         
                     
                     existing_namespaces = self._namespace_colours.GetNamespaceColours().keys()
@@ -4982,7 +4988,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             pretty_tag_slice = HydrusTags.ConvertTagSliceToPrettyString( tag_slice )
             sort_tag_slice = pretty_tag_slice
             
-            pretty_weight = HydrusData.ToHumanInt( weight ) + '%'
+            pretty_weight = HydrusNumbers.ToHumanInt( weight ) + '%'
             
             display_tuple = ( pretty_tag_slice, pretty_weight )
             sort_tuple = ( sort_tag_slice, weight )

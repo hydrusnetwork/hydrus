@@ -8,7 +8,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -98,6 +98,61 @@ class CheckerOptionsButton( ClientGUICommon.BetterButton ):
         self._SetValue( checker_options )
         
     
+
+class CheckBoxLineEdit( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent, label ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._checkbox = QW.QCheckBox( self )
+        
+        self._lineedit = QW.QLineEdit( self )
+        self._lineedit.setMinimumWidth( 100 )
+        
+        self._checkbox.clicked.connect( self.valueChanged )
+        self._lineedit.textEdited.connect( self._LineEditChanged )
+        
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, label ), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._lineedit, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.setLayout( hbox )
+        
+    
+    def _LineEditChanged( self ):
+        
+        if self.IsChecked():
+            
+            self.valueChanged.emit()
+            
+        
+    
+    def GetValue( self ):
+        
+        return self._lineedit.text()
+        
+    
+    def IsChecked( self ):
+        
+        return self._checkbox.isChecked()
+        
+    
+    def SetChecked( self, value ):
+        
+        self._checkbox.setChecked( value )
+        
+    
+    def SetValue( self, text ):
+        
+        self._lineedit.setText( text )
+        
+    
+
 class FilenameTaggingOptionsPanel( QW.QWidget ):
     
     movePageLeft = QC.Signal()
@@ -199,7 +254,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             quick_namespaces_listctrl_panel.SetListCtrl( self._quick_namespaces_list )
             
             quick_namespaces_listctrl_panel.AddButton( 'add', self.AddQuickNamespace )
-            quick_namespaces_listctrl_panel.AddButton( 'edit', self.EditQuickNamespaces, enabled_only_on_selection = True )
+            quick_namespaces_listctrl_panel.AddButton( 'edit', self.EditQuickNamespaces, enabled_only_on_single_selection = True )
             quick_namespaces_listctrl_panel.AddDeleteButton()
             
             #
@@ -478,10 +533,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._checkboxes_panel = ClientGUICommon.StaticBox( self, 'misc' )
             
-            self._filename_namespace = QW.QLineEdit( self._checkboxes_panel )
-            self._filename_namespace.setMinimumWidth( 100 )
-            
-            self._filename_checkbox = QW.QCheckBox( 'add filename? [namespace]', self._checkboxes_panel )
+            self._filename_namespace = CheckBoxLineEdit( self._checkboxes_panel, 'add filename? [namespace]' )
             
             # TODO: Ok, when we move to arbitrary string processing from filenames, and we scrub this, we will want 'easy-add rule' buttons to do this
             # When we do, add a thing that adds the nth, including negative n index values. as some users want four deep
@@ -500,12 +552,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             for ( index, phrase ) in directory_items:
                 
-                dir_checkbox = QW.QCheckBox( 'add '+phrase+' directory? [namespace]', self._checkboxes_panel )
+                widget = CheckBoxLineEdit( self._checkboxes_panel, f'add {phrase} directory? [namespace]' )
                 
-                dir_namespace_textctrl = QW.QLineEdit( self._checkboxes_panel )
-                dir_namespace_textctrl.setMinimumWidth( 100 )
-                
-                self._directory_namespace_controls[ index ] = ( dir_checkbox, dir_namespace_textctrl )
+                self._directory_namespace_controls[ index ] = widget
                 
             
             #
@@ -516,18 +565,17 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             ( add_filename_boolean, add_filename_namespace ) = add_filename
             
-            self._filename_checkbox.setChecked( add_filename_boolean )
-            self._filename_namespace.setText( add_filename_namespace )
+            self._filename_namespace.SetChecked( add_filename_boolean )
+            self._filename_namespace.SetValue( add_filename_namespace )
             
             for ( index, ( dir_boolean, dir_namespace ) ) in directory_dict.items():
                 
-                ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
+                widget = self._directory_namespace_controls[ index ]
                 
-                dir_checkbox.setChecked( dir_boolean )
-                dir_namespace_textctrl.setText( dir_namespace )
+                widget.SetChecked( dir_boolean )
+                widget.SetValue( dir_namespace )
                 
-                dir_checkbox.clicked.connect( self.tagsChanged )
-                dir_namespace_textctrl.textChanged.connect( self.tagsChanged )
+                widget.valueChanged.connect( self.tagsChanged )
                 
             
             #
@@ -540,23 +588,13 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._single_tags_panel.Add( self._tag_autocomplete_selection, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._single_tags_panel.Add( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            filename_hbox = QP.HBoxLayout()
-            
-            QP.AddToLayout( filename_hbox, self._filename_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
-            QP.AddToLayout( filename_hbox, self._filename_namespace, CC.FLAGS_EXPAND_BOTH_WAYS )
-            
-            self._checkboxes_panel.Add( filename_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            self._checkboxes_panel.Add( self._filename_namespace, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             for index in ( 0, 1, 2, -3, -2, -1 ):
                 
-                hbox = QP.HBoxLayout()
+                widget = self._directory_namespace_controls[ index ]
                 
-                ( dir_checkbox, dir_namespace_textctrl ) = self._directory_namespace_controls[ index ]
-                
-                QP.AddToLayout( hbox, dir_checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
-                QP.AddToLayout( hbox, dir_namespace_textctrl, CC.FLAGS_EXPAND_BOTH_WAYS )
-                
-                self._checkboxes_panel.Add( hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+                self._checkboxes_panel.Add( widget, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
                 
             
             self._checkboxes_panel.Add( QW.QWidget( self._checkboxes_panel ), CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -574,8 +612,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._tags.tagsRemoved.connect( self.tagsChanged )
             self._single_tags.tagsRemoved.connect( self.SingleTagsRemoved )
             
-            self._filename_namespace.textChanged.connect( self.tagsChanged )
-            self._filename_checkbox.clicked.connect( self.tagsChanged )
+            self._filename_namespace.valueChanged.connect( self.tagsChanged )
             
             self._tag_autocomplete_all.tagsPasted.connect( self.EnterTagsOnlyAdd )
             self._tag_autocomplete_selection.tagsPasted.connect( self.EnterTagsSingleOnlyAdd )
@@ -769,13 +806,13 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             tags_for_all = self._tags.GetTags()
             
-            add_filename = ( self._filename_checkbox.isChecked(), self._filename_namespace.text() )
+            add_filename = ( self._filename_namespace.IsChecked(), self._filename_namespace.GetValue() )
             
             directories_dict = {}
             
-            for ( index, ( dir_checkbox, dir_namespace_textctrl ) ) in self._directory_namespace_controls.items():
+            for ( index, widget ) in self._directory_namespace_controls.items():
                 
-                directories_dict[ index ] = ( dir_checkbox.isChecked(), dir_namespace_textctrl.text() )
+                directories_dict[ index ] = ( widget.IsChecked(), widget.GetValue() )
                 
             
             filename_tagging_options.SimpleSetTuple( tags_for_all, add_filename, directories_dict )
@@ -955,7 +992,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             tags = self._GetTags( index, path )
             
-            pretty_index = HydrusData.ToHumanInt( index + 1 )
+            pretty_index = HydrusNumbers.ToHumanInt( index + 1 )
             
             pretty_path = path
             pretty_tags = ', '.join( tags )
@@ -1063,7 +1100,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             strings = self._GetStrings( path )
             
-            pretty_index = HydrusData.ToHumanInt( index + 1 )
+            pretty_index = HydrusNumbers.ToHumanInt( index + 1 )
             
             pretty_path = path
             pretty_strings = ', '.join( strings )

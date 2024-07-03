@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core.networking import HydrusNATPunch
 from hydrus.core import HydrusTime
 
@@ -41,7 +42,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             self._hashes.update( m.GetHashes() )
             
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusData.ToHumanInt( len( self._hashes ) ) + ' files', position = 'topleft' )
+        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusNumbers.ToHumanInt( len( self._hashes ) ) + ' files', position = 'topleft' )
         CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         #

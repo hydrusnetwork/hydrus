@@ -20,6 +20,7 @@ from hydrus.core import HydrusBoot
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusText
 
 def default_dict_list(): return collections.defaultdict( list )
@@ -111,99 +112,6 @@ def ConvertIntToPixels( i ):
     elif i == 1000000: return 'megapixels'
     else: return 'megapixels'
     
-def ConvertIndexToPrettyOrdinalString( index: int ):
-    
-    if index >= 0:
-        
-        return ConvertIntToPrettyOrdinalString( index + 1 )
-        
-    else:
-        
-        return ConvertIntToPrettyOrdinalString( index )
-        
-    
-def ConvertIntToPrettyOrdinalString( num: int ):
-    
-    if num == 0:
-        
-        return 'unknown position'
-        
-    
-    tens = ( abs( num ) % 100 ) // 10
-    
-    if tens == 1:
-        
-        ordinal = 'th'
-        
-    else:
-        
-        remainder = abs( num ) % 10
-        
-        if remainder == 1:
-            
-            ordinal = 'st'
-            
-        elif remainder == 2:
-            
-            ordinal = 'nd'
-            
-        elif remainder == 3:
-            
-            ordinal = 'rd'
-            
-        else:
-            
-            ordinal = 'th'
-            
-        
-    
-    s = '{}{}'.format( ToHumanInt( abs( num ) ), ordinal )
-    
-    if num < 0:
-        
-        if num == -1:
-            
-            s = 'last'
-            
-        else:
-            
-            s = '{} from last'.format( s )
-            
-        
-    
-    return s
-    
-
-def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ str ], do_sort: bool = True ) -> str:
-    """
-    The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
-    """
-    texts = list( texts )
-    
-    if do_sort:
-        
-        HydrusText.SortStringsIgnoringCase( texts )
-        
-    
-    if len( texts ) == 1:
-        
-        return f' "{texts[0]}" '
-        
-    else:
-        
-        if len( texts ) <= 4:
-            
-            t = '\n'.join( texts )
-            
-        else:
-            
-            t = ', '.join( texts )
-            
-        
-        return f'\n\n{t}\n\n'
-        
-    
-
 def ConvertIntToUnit( unit ):
     
     if unit == 1: return 'B'
@@ -270,7 +178,7 @@ def ConvertResolutionToPrettyString( resolution ):
     
     ( width, height ) = resolution
     
-    return '{}x{}'.format( ToHumanInt( width ), ToHumanInt( height ) )
+    return '{}x{}'.format( HydrusNumbers.ToHumanInt( width ), HydrusNumbers.ToHumanInt( height ) )
     
 def ConvertStatusToPrefix( status ):
     
@@ -313,7 +221,7 @@ def ConvertValueRangeToBytes( value, range ):
     
 def ConvertValueRangeToPrettyString( value, range ):
     
-    return ToHumanInt( value ) + '/' + ToHumanInt( range )
+    return HydrusNumbers.ToHumanInt( value ) + '/' + HydrusNumbers.ToHumanInt( range )
     
 def DebugPrint( debug_info ):
     
@@ -1211,7 +1119,7 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
     
     if size < 1024:
         
-        return ToHumanInt( size ) + 'B'
+        return HydrusNumbers.ToHumanInt( size ) + 'B'
         
     
     suffixes = ( '', 'K', 'M', 'G', 'T', 'P' )
@@ -1269,18 +1177,6 @@ def BaseToHumanBytes( size, sig_figs = 3 ):
     
 
 ToHumanBytes = BaseToHumanBytes
-
-def ToHumanInt( num ):
-    
-    num = int( num )
-    
-    # this got stomped on by mpv, which resets locale
-    #text = locale.format_string( '%d', num, grouping = True )
-    
-    text = '{:,}'.format( num )
-    
-    return text
-    
 
 class HydrusYAMLBase( yaml.YAMLObject ):
     

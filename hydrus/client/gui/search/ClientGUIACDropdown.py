@@ -11,6 +11,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -2857,7 +2858,7 @@ class ListBoxTagsActiveSearchPredicates( ClientGUIListBoxes.ListBoxTagsPredicate
                 
             else:
                 
-                desc = '{} search terms'.format( HydrusData.ToHumanInt( len( editable_and_invertible_predicates ) ) )
+                desc = '{} search terms'.format( HydrusNumbers.ToHumanInt( len( editable_and_invertible_predicates ) ) )
                 
             
             label = 'edit {}'.format( desc )

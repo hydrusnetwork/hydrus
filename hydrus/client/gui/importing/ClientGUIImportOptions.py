@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
@@ -175,7 +176,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         destination_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'import destinations' )
         
-        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file service, you can send these imports to other/multiple locations. This will still apply if the file is \'already in db\' by ensuring the file is added to any and all of the services if it is not already.' )
+        self._destination_location_context_st = ClientGUICommon.BetterStaticText( destination_panel, 'If you have more than one local file service, you can send these imports to other/multiple locations.' )
         
         destination_location_context = file_import_options.GetDestinationLocationContext()
         
@@ -190,8 +191,12 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         post_import_panel = ClientGUICommon.StaticBox( self._specific_options_panel, 'post-import actions' )
         
         self._auto_archive = QW.QCheckBox( post_import_panel )
-        tt = 'Instead of adding imports to the inbox for further processing, this will archive them immediately. You can do this on an import you absolutely know is all good. This will still apply to \'already in db\' results.'
+        tt = 'Instead of adding imports to the inbox for further processing, this will archive them immediately. You can do this on an import you absolutely know is all good.'
         self._auto_archive.setToolTip( tt )
+        
+        self._do_content_updates_on_already_in_db_files = QW.QCheckBox( post_import_panel )
+        tt = 'Normally, the "import destinations" and "archive all imports" options apply both to "successful" new files and those "already in db", so a file you already have may be retroactively archived and added to any missing destinations. If you need to only do this on new files, uncheck this.'
+        self._do_content_updates_on_already_in_db_files.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
         self._associate_primary_urls = QW.QCheckBox( post_import_panel )
         tt = 'Any URL in the \'chain\' to the file will be linked to it as a \'known url\' unless that URL has a matching URL Class that is set otherwise. Normally, since Gallery URL Classes are by default set not to associate, this means the file will get a visible Post URL and a less prominent direct File URL.'
@@ -272,6 +277,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         rows = []
         
         rows.append( ( 'archive all imports: ', self._auto_archive ) )
+        rows.append( ( 'archive and set import destinations to \'already in db\' files: ', self._do_content_updates_on_already_in_db_files ) )
         
         if show_downloader_options and CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
             
@@ -386,6 +392,7 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         associate_source_urls = file_import_options.ShouldAssociateSourceURLs()
         
         self._auto_archive.setChecked( automatic_archive )
+        self._do_content_updates_on_already_in_db_files.setChecked( file_import_options.GetDoContentUpdatesOnAlreadyInDBFiles() )
         self._associate_primary_urls.setChecked( associate_primary_urls )
         self._associate_source_urls.setChecked( associate_source_urls )
         
@@ -533,6 +540,7 @@ If you have a very large (10k+ files) file import page, consider hiding some or 
             file_import_options.SetAllowedSpecificFiletypes( self._mimes.GetValue() )
             file_import_options.SetDestinationLocationContext( destination_location_context )
             file_import_options.SetPostImportOptions( automatic_archive, associate_primary_urls, associate_source_urls )
+            file_import_options.SetDoContentUpdatesOnAlreadyInDBFiles( self._do_content_updates_on_already_in_db_files.isChecked() )
             file_import_options.SetPresentationImportOptions( presentation_import_options )
             
         
@@ -1202,7 +1210,7 @@ class EditServiceTagImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateAdditionalTagsButtonLabel( self ):
         
-        button_label = HydrusData.ToHumanInt( len( self._additional_tags ) ) + ' additional tags'
+        button_label = HydrusNumbers.ToHumanInt( len( self._additional_tags ) ) + ' additional tags'
         
         self._additional_button.setText( button_label )
         
@@ -1569,7 +1577,7 @@ Please note that once you know what tags you like, you can (and should) set up t
             
         else:
             
-            label = 'whitelist of {} tags'.format( HydrusData.ToHumanInt( len( self._tag_whitelist ) ) )
+            label = 'whitelist of {} tags'.format( HydrusNumbers.ToHumanInt( len( self._tag_whitelist ) ) )
             
         
         self._tag_whitelist_button.setText( label )

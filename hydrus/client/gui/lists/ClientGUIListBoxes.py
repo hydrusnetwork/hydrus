@@ -13,13 +13,16 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientSerialisable
+from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogsMessage
@@ -423,7 +426,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusData.ToHumanInt( num_selected ) ) )
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusNumbers.ToHumanInt( num_selected ) ) )
         
         if result != QW.QDialog.Accepted:
             
@@ -698,7 +701,7 @@ class AddEditDeleteListBox( QW.QWidget ):
             
             if num_added > 0:
                 
-                message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
+                message = '{} objects added!'.format( HydrusNumbers.ToHumanInt( num_added ) )
                 
                 ClientGUIDialogsMessage.ShowInformation( self, message )
                 
@@ -948,7 +951,7 @@ class QueueListBox( QW.QWidget ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusData.ToHumanInt( num_selected ) ) )
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove {} selected?'.format( HydrusNumbers.ToHumanInt( num_selected ) ) )
         
         if result == QW.QDialog.Accepted:
             
@@ -2647,7 +2650,7 @@ class ListBoxTags( ListBox ):
             
             if command == 'hide':
                 
-                message = f'Hide{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}from here?'
+                message = f'Hide{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( tags )}from here?'
                 
                 from hydrus.client.gui import ClientGUIDialogsQuick
                 
@@ -2665,7 +2668,7 @@ class ListBoxTags( ListBox ):
                 namespaces = { namespace for ( namespace, subtag ) in ( HydrusTags.SplitTag( tag ) for tag in tags ) }
                 nice_namespaces = [ ClientTags.RenderNamespaceForUser( namespace ) for namespace in namespaces ]
                 
-                message = f'Hide{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( nice_namespaces )}tags from here?'
+                message = f'Hide{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( nice_namespaces )}tags from here?'
                 
                 from hydrus.client.gui import ClientGUIDialogsQuick
                 
@@ -2886,7 +2889,7 @@ class ListBoxTags( ListBox ):
                 
             else:
                 
-                selection_string = '{} selected'.format( HydrusData.ToHumanInt( len( selected_copyable_tag_strings ) ) )
+                selection_string = '{} selected'.format( HydrusNumbers.ToHumanInt( len( selected_copyable_tag_strings ) ) )
                 
             
             ClientGUIMenus.AppendMenuItem( copy_menu, selection_string, 'Copy the selected tags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_TAGS )
@@ -2907,7 +2910,7 @@ class ListBoxTags( ListBox ):
                     
                 else:
                     
-                    sub_selection_string = '{} selected subtags'.format( HydrusData.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
+                    sub_selection_string = '{} selected subtags'.format( HydrusNumbers.ToHumanInt( len( selected_copyable_subtag_strings ) ) )
                     
                     ClientGUIMenus.AppendMenuItem( copy_menu, sub_selection_string, 'Copy the selected subtags to your clipboard.', self._ProcessMenuCopyEvent, COPY_SELECTED_SUBTAGS )
                     
@@ -3115,7 +3118,7 @@ class ListBoxTags( ListBox ):
                         
                     else:
                         
-                        siblings_menu.setTitle( '{} siblings'.format( HydrusData.ToHumanInt( num_siblings ) ) )
+                        siblings_menu.setTitle( '{} siblings'.format( HydrusNumbers.ToHumanInt( num_siblings ) ) )
                         
                         #
                         
@@ -3158,7 +3161,7 @@ class ListBoxTags( ListBox ):
                         
                     else:
                         
-                        parents_menu.setTitle( '{} parents, {} children'.format( HydrusData.ToHumanInt( num_parents ), HydrusData.ToHumanInt( num_children ) ) )
+                        parents_menu.setTitle( '{} parents, {} children'.format( HydrusNumbers.ToHumanInt( num_parents ), HydrusNumbers.ToHumanInt( num_children ) ) )
                         
                         ClientGUIMenus.AppendSeparator( parents_menu )
                         
@@ -3374,7 +3377,7 @@ class ListBoxTags( ListBox ):
                     
                 else:
                     
-                    namespace_label = f'{HydrusData.ToHumanInt( len( namespaces ) )} selected namespaces from here'
+                    namespace_label = f'{HydrusNumbers.ToHumanInt( len( namespaces ) )} selected namespaces from here'
                     
                 
                 if len( selected_actual_tags ) == 1:
@@ -3385,7 +3388,7 @@ class ListBoxTags( ListBox ):
                     
                 else:
                     
-                    actual_tag_label = f'{HydrusData.ToHumanInt( len( selected_actual_tags ) )} selected tags from here'
+                    actual_tag_label = f'{HydrusNumbers.ToHumanInt( len( selected_actual_tags ) )} selected tags from here'
                     
                 
                 hide_menu = ClientGUIMenus.GenerateMenu( menu )
@@ -3403,7 +3406,7 @@ class ListBoxTags( ListBox ):
             
             if len( tags ) > 5:
                 
-                message = f'Add{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}to the favourites list?'
+                message = f'Add{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( tags )}to the favourites list?'
                 
                 from hydrus.client.gui import ClientGUIDialogsQuick
                 
@@ -3426,7 +3429,7 @@ class ListBoxTags( ListBox ):
         
         def remove_favourite_tags( tags ):
             
-            message = f'Remove{HydrusData.ConvertManyStringsToNiceInsertableHumanSummary( tags )}from the favourites list?'
+            message = f'Remove{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( tags )}from the favourites list?'
             
             from hydrus.client.gui import ClientGUIDialogsQuick
             
@@ -3465,7 +3468,7 @@ class ListBoxTags( ListBox ):
                     
                 else:
                     
-                    label = f'Add {HydrusData.ToHumanInt( len( to_add ) )} selected tags to favourites'
+                    label = f'Add {HydrusNumbers.ToHumanInt( len( to_add ) )} selected tags to favourites'
                     
                 
                 description = 'Add these tags to the favourites list.'
@@ -3483,7 +3486,7 @@ class ListBoxTags( ListBox ):
                     
                 else:
                     
-                    label = f'Remove {HydrusData.ToHumanInt( len( to_remove ) )} selected tags from favourites'
+                    label = f'Remove {HydrusNumbers.ToHumanInt( len( to_remove ) )} selected tags from favourites'
                     
                 
                 description = 'Add these tags to the favourites list.'
@@ -3523,6 +3526,66 @@ class ListBoxTags( ListBox ):
             ClientGUIMenus.AppendMenuItem( submenu, 'regenerate tag display', 'Delete and regenerate the cached mappings for just these tags.', regen_tags )
             
             ClientGUIMenus.AppendMenu( menu, submenu, 'maintenance' )
+            
+            tag_repos: typing.Collection[ ClientServices.ServiceRepository ] = CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+            
+            we_are_admin = True in ( tag_repo.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_MODERATE ) for tag_repo in tag_repos )
+            
+            noun = 'tags'
+            
+            from hydrus.client.gui.services import ClientGUIModalClientsideServiceActions
+            from hydrus.client.gui.services import ClientGUIModalServersideServiceActions
+            
+            if we_are_admin:
+                
+                ClientGUIMenus.AppendSeparator( menu )
+                
+                for tag_repo in tag_repos:
+                    
+                    if not tag_repo.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_MODERATE ):
+                        
+                        continue
+                        
+                    
+                    service_key = tag_repo.GetServiceKey()
+                    service_submenu = ClientGUIMenus.GenerateMenu( menu )
+                    
+                    if tag_repo.HasPermission( HC.CONTENT_TYPE_OPTIONS, HC.PERMISSION_ACTION_MODERATE ):
+                        
+                        try:
+                            
+                            tag_filter = tag_repo.GetTagFilter()
+                            
+                            tags_currently_ok = { tag for tag in selected_actual_tags if tag_filter.TagOK( tag ) }
+                            tags_currently_not_ok = { tag for tag in selected_actual_tags if tag not in tags_currently_ok }
+                            
+                            if len( tags_currently_ok ) > 0:
+                                
+                                label = f'block {HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine(tags_currently_ok,noun)}{HC.UNICODE_ELLIPSIS}'
+                                
+                                ClientGUIMenus.AppendMenuItem( service_submenu, label, 'Change the tag filter for this service.', ClientGUIModalServersideServiceActions.ManageServiceOptionsTagFilter, self, service_key, new_tags_to_block = tags_currently_ok )
+                                
+                            
+                            if len( tags_currently_not_ok ) > 0:
+                                
+                                label = f're-allow {HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine(tags_currently_not_ok,noun)}{HC.UNICODE_ELLIPSIS}'
+                                
+                                ClientGUIMenus.AppendMenuItem( service_submenu, label, 'Change the tag filter for this service.', ClientGUIModalServersideServiceActions.ManageServiceOptionsTagFilter, self, service_key, new_tags_to_allow = tags_currently_not_ok )
+                                
+                            
+                        except:
+                            
+                            ClientGUIMenus.AppendMenuLabel( service_submenu, 'could not fetch service tag filter! maybe your account is unsynced?' )
+                            
+                        
+                    
+                    ClientGUIMenus.AppendSeparator( service_submenu )
+                    
+                    ClientGUIMenus.AppendMenuItem( service_submenu, f'delete all {HydrusText.ConvertManyStringsToNiceInsertableHumanSummarySingleLine(selected_actual_tags,noun)}{HC.UNICODE_ELLIPSIS}', 'Delete every instance of this tag from the repository.', ClientGUIModalClientsideServiceActions.OpenPurgeTagsWindow, self, service_key, selected_actual_tags )
+                    
+                    ClientGUIMenus.AppendMenu( menu, service_submenu, 'admin: ' + tag_repo.GetName() )
+                    
+                
             
         
         CGC.core().PopupMenu( self, menu )

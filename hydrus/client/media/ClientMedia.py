@@ -5,7 +5,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusPSDHandling
@@ -134,7 +134,7 @@ def GetMediasFiletypeSummaryString( medias: typing.Collection[ "Media" ] ):
                     
                     collections_suffix = 's' if num_collections > 1 else ''
                     
-                    return 'file{} in {} collection{}'.format( suffix, HydrusData.ToHumanInt( num_collections ), collections_suffix )
+                    return 'file{} in {} collection{}'.format( suffix, HydrusNumbers.ToHumanInt( num_collections ), collections_suffix )
                     
                 else:
                     
@@ -188,7 +188,7 @@ def GetMediasFiletypeSummaryString( medias: typing.Collection[ "Media" ] ):
             filetype_summary = GetDescriptor( plural, mimes, num_collections )
             
         
-        return f'{HydrusData.ToHumanInt( num_files )} {filetype_summary}'
+        return f'{HydrusNumbers.ToHumanInt( num_files )} {filetype_summary}'
         
 
 def GetMediasTagCount( pool, tag_service_key, tag_display_type ):
@@ -1697,7 +1697,7 @@ class MediaCollection( MediaList, Media ):
         
         info_string = size + ' ' + mime
         
-        info_string += ' (' + HydrusData.ToHumanInt( self.GetNumFiles() ) + ' files)'
+        info_string += ' (' + HydrusNumbers.ToHumanInt( self.GetNumFiles() ) + ' files)'
         
         return [ info_string ]
         
@@ -1954,7 +1954,7 @@ class MediaSingleton( Media ):
                 framerate_insert = f', {round( num_frames / ( duration / 1000 ) )}fps'
                 
             
-            info_string += f' ({HydrusData.ToHumanInt( num_frames )} frames{framerate_insert})'
+            info_string += f' ({HydrusNumbers.ToHumanInt( num_frames )} frames{framerate_insert})'
             
         
         if has_audio:
@@ -1966,7 +1966,7 @@ class MediaSingleton( Media ):
         
         if num_words is not None:
             
-            info_string += f' ({HydrusData.ToHumanInt( num_words )} words)'
+            info_string += f' ({HydrusNumbers.ToHumanInt( num_words )} words)'
             
         
         lines = [ ( True, info_string ) ]

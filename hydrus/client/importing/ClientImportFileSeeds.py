@@ -12,6 +12,7 @@ import urllib.parse
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -1553,7 +1554,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                         num_urls_added = file_seed_cache.InsertFileSeeds( insertion_index, file_seeds )
                         
                         status = CC.STATUS_SUCCESSFUL_AND_CHILD_FILES
-                        note = 'Found {} new URLs.'.format( HydrusData.ToHumanInt( num_urls_added ) )
+                        note = 'Found {} new URLs.'.format( HydrusNumbers.ToHumanInt( num_urls_added ) )
                         
                         self.SetStatus( status, note = note )
                         
@@ -1655,7 +1656,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                             num_urls_added = file_seed_cache.InsertFileSeeds( insertion_index, child_file_seeds )
                             
                             status = CC.STATUS_SUCCESSFUL_AND_CHILD_FILES
-                            note = 'Found {} new URLs.'.format( HydrusData.ToHumanInt( num_urls_added ) )
+                            note = 'Found {} new URLs.'.format( HydrusNumbers.ToHumanInt( num_urls_added ) )
                             
                             self.SetStatus( status, note = note )
                             
@@ -1974,38 +1975,38 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    status_text += HydrusData.ToHumanInt( total_processed )
+                    status_text += HydrusNumbers.ToHumanInt( total_processed )
                     
                 
                 show_new_on_file_seed_short_summary = CG.client_controller.new_options.GetBoolean( 'show_new_on_file_seed_short_summary' )
                 
                 if show_new_on_file_seed_short_summary and num_successful_and_new:
                     
-                    status_text += ' - {}N'.format( HydrusData.ToHumanInt( num_successful_and_new ) )
+                    status_text += ' - {}N'.format( HydrusNumbers.ToHumanInt( num_successful_and_new ) )
                     
                 
                 simple_status_strings = []
                 
                 if num_ignored > 0:
                     
-                    simple_status_strings.append( '{}Ig'.format( HydrusData.ToHumanInt( num_ignored ) ) )
+                    simple_status_strings.append( '{}Ig'.format( HydrusNumbers.ToHumanInt( num_ignored ) ) )
                     
                 
                 show_deleted_on_file_seed_short_summary = CG.client_controller.new_options.GetBoolean( 'show_deleted_on_file_seed_short_summary' )
                 
                 if show_deleted_on_file_seed_short_summary and num_deleted > 0:
                     
-                    simple_status_strings.append( '{}D'.format( HydrusData.ToHumanInt( num_deleted ) ) )
+                    simple_status_strings.append( '{}D'.format( HydrusNumbers.ToHumanInt( num_deleted ) ) )
                     
                 
                 if num_failed > 0:
                     
-                    simple_status_strings.append( '{}F'.format( HydrusData.ToHumanInt( num_failed ) ) )
+                    simple_status_strings.append( '{}F'.format( HydrusNumbers.ToHumanInt( num_failed ) ) )
                     
                 
                 if num_skipped > 0:
                     
-                    simple_status_strings.append( '{}S'.format( HydrusData.ToHumanInt( num_skipped ) ) )
+                    simple_status_strings.append( '{}S'.format( HydrusNumbers.ToHumanInt( num_skipped ) ) )
                     
                 
                 if len( simple_status_strings ) > 0:
@@ -2022,13 +2023,13 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
             
             if num_successful > 0:
                 
-                s = '{} successful'.format( HydrusData.ToHumanInt( num_successful ) )
+                s = '{} successful'.format( HydrusNumbers.ToHumanInt( num_successful ) )
                 
                 if num_successful_and_new > 0:
                     
                     if num_successful_but_redundant > 0:
                         
-                        s += ' ({} already in db)'.format( HydrusData.ToHumanInt( num_successful_but_redundant ) )
+                        s += ' ({} already in db)'.format( HydrusNumbers.ToHumanInt( num_successful_but_redundant ) )
                         
                     
                 else:
@@ -2041,22 +2042,22 @@ class FileSeedCacheStatus( HydrusSerialisable.SerialisableBase ):
             
             if num_ignored > 0:
                 
-                status_strings.append( '{} ignored'.format( HydrusData.ToHumanInt( num_ignored ) ) )
+                status_strings.append( '{} ignored'.format( HydrusNumbers.ToHumanInt( num_ignored ) ) )
                 
             
             if num_deleted > 0:
                 
-                status_strings.append( '{} previously deleted'.format( HydrusData.ToHumanInt( num_deleted ) ) )
+                status_strings.append( '{} previously deleted'.format( HydrusNumbers.ToHumanInt( num_deleted ) ) )
                 
             
             if num_failed > 0:
                 
-                status_strings.append( '{} failed'.format( HydrusData.ToHumanInt( num_failed ) ) )
+                status_strings.append( '{} failed'.format( HydrusNumbers.ToHumanInt( num_failed ) ) )
                 
             
             if num_skipped > 0:
                 
-                status_strings.append( '{} skipped'.format( HydrusData.ToHumanInt( num_skipped ) ) )
+                status_strings.append( '{} skipped'.format( HydrusNumbers.ToHumanInt( num_skipped ) ) )
                 
             
             status_text = ', '.join( status_strings )

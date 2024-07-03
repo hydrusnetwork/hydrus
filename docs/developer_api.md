@@ -539,7 +539,7 @@ Required Headers:
 Arguments (in JSON):
 :   
 *   [files](#parameters_files)
-*   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+*   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
 *   `reason`: (optional, string, the reason attached to the delete action)
 
 ```json title="Example request body"
@@ -551,7 +551,7 @@ Arguments (in JSON):
 Response:
 :   200 and no content.
 
-If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet). It defaults to 'all my files', which will delete from all local services (i.e. force sending to trash). Sending 'all local files' on a file already in the trash will trigger a physical file delete. 
+If you specify a file service, the file will only be deleted from that location. Only local file domains are allowed (so you can't delete from a file repository or unpin from ipfs yet). It defaults to _all my files_, which will delete from all local services (i.e. force sending to trash). Sending 'all local files' on a file already in the trash will trigger a physical file delete. 
 
 ### **POST `/add_files/undelete_files`** { id="add_files_undelete_files" }
 
@@ -567,7 +567,7 @@ Required Headers:
 Arguments (in JSON):
 :   
 *   [files](#parameters_files)
-*   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+*   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
 
 ```json title="Example request body"
 {
@@ -1064,9 +1064,9 @@ Required Headers: n/a
 Arguments:
 :   
     * `search`: (the tag text to search for, enter exactly what you would in the client UI)
-    * [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
-    * `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to 'all known tags')
-    * `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags, defaults to 'storage')
+    * [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    * `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _all known tags_)
+    * `tag_display_type`: (optional, string, to select whether to search raw or sibling-processed tags, defaults to `storage`)
 
 The `file domain` and `tag_service_key` perform the function of the file and tag domain buttons in the client UI.
 
@@ -1183,9 +1183,11 @@ This last example is far more complicated than you will usually see. Pend rescin
 
 Note that the enumerated status keys in the service\_keys\_to\_actions\_to_tags structure are strings, not ints (JSON does not support int keys for Objects).
 
-The `override_previously_deleted_mappings` parameter adjusts your Add/Pend actions. In the client, if a human, in the _manage tags dialog_, tries to add a tag mapping that has been previously deleted, that deleted record will be overwritten. An automatic system like a gallery parser will filter/skip any Add/Pend actions in this case (so that repeat downloads do not overwrite a human user delete, etc..). The Client API acts like a human, by default, overwriting previously deleted mappings. If you want to spam a lot of new mappings but do not want to overwrite previously deletion decisions, then set this to `false`.
+The `override_previously_deleted_mappings` parameter adjusts your Add/Pend actions. In the client, if a human, in the _manage tags dialog_, tries to add a tag mapping that has been previously deleted, that deleted record will be overwritten. An automatic system like a gallery parser will filter/skip any Add/Pend actions in this case (so that repeat downloads do not overwrite a human user delete, etc..). The Client API acts like a human, by default, overwriting previously deleted mappings. If you want to spam a lot of new mappings but do not want to overwrite previously deletion decisions, acting like a downloader, then set this to `false`.
 
-The `create_new_deleted_mappings` parameter adjusts your Delete/Petition actions. Particularly, whether a delete record should be made _even if the tag does not exist on the file_. There are not many ways to spontaneously create a delete record in the normal hydrus UI, but you as the Client API should think whether this is what you want. Are you saying 'migrate these deleted tag records from A to B'? Then you want this `true`. Are you saying 'I accidentally spammed this tag to the wrong places, so remove all instances of it on any of these files so I can try again'? Then set it `false`.
+The `create_new_deleted_mappings` parameter adjusts your Delete/Petition actions, particularly whether a delete record should be made _even if the tag does not exist on the file_. There are not many ways to spontaneously create a delete record in the normal hydrus UI, but you as the Client API should think whether this is what you want. By default, the Client API will write a delete record whether the tag already exists for the file or not. If you only want to create a delete record (which prohibits the tag being added back again by something like a downloader, as with `override_previously_deleted_mappings`) when the tag already exists on the file, then set this to `false`. Are you saying 'migrate all these deleted tag records from A to B so that none of them are re-added'? Then you want this `true`. Are you saying 'This tag was applied incorrectly to some but perhaps not all of of these files; where it exists, delete it.'? Then set it `false`.
+
+There is currently no way to delete a tag mapping without leaving a delete record (as you can with files). This will probably happen, though, and it'll be a new parameter here.
 
 Response description:
 :  200 and no content.
@@ -1421,12 +1423,12 @@ Required Headers: n/a
 Arguments (in percent-encoded JSON):
 :   
     *   `tags`: (a list of tags you wish to search for)
-    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
-    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to 'all my files')
-    *   `file_sort_type`: (optional, integer, the results sort method, defaults to 'all known tags')
-    *   `file_sort_asc`: true or false (optional, the results sort order)
-    *   `return_file_ids`: true or false (optional, default true, returns file id results)
-    *   `return_hashes`: true or false (optional, default false, returns hex hash results)
+    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _all my files_)
+    *   `file_sort_type`: (optional, integer, the results sort method, defaults to `2` for `import time`)
+    *   `file_sort_asc`: true or false (optional, default `true`, the results sort order)
+    *   `return_file_ids`: true or false (optional, default `true`, returns file id results)
+    *   `return_hashes`: true or false (optional, default `false`, returns hex hash results)
 
 ``` title='Example request for 16 files (system:limit=16) in the inbox with tags "blue eyes", "blonde hair", and "кино"'
 /get_files/search_files?tags=%5B%22blue%20eyes%22%2C%20%22blonde%20hair%22%2C%20%22%5Cu043a%5Cu0438%5Cu043d%5Cu043e%22%2C%20%22system%3Ainbox%22%2C%20%22system%3Alimit%3D16%22%5D
@@ -2105,7 +2107,7 @@ Required Headers: n/a
 Arguments (in percent-encoded JSON):
 :   
     *   [files](#parameters_files)
-    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
 
 ``` title="Example request"
 /manage_file_relationships/get_file_relationships?hash=ac940bb9026c430ea9530b4f4f6980a12d9432c2af8d9d39dfc67b05d91df11d
@@ -2166,7 +2168,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -2216,7 +2218,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -2261,7 +2263,7 @@ Required Headers: n/a
     
 Arguments (in percent-encoded JSON):
 :   
-    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
+    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
     *   `tag_service_key_1`: (optional, default 'all known tags', a hex tag service key)
     *   `tags_1`: (optional, default system:everything, a list of tags you wish to search for)
     *   `tag_service_key_2`: (optional, default 'all known tags', a hex tag service key)
@@ -3350,8 +3352,8 @@ Restricted access:
 Arguments (in percent-encoded JSON):
 :   
     *   `tags`: (optional, a list of tags you wish to search for)
-    *   [file domain](#parameters_file_domain) (optional, defaults to 'all my files')
-    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to 'all my files')
+    *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
+    *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _all my files_)
     
     ``` title="Example requests"
     /manage_database/mr_bones

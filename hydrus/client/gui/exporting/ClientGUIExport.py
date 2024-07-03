@@ -2,6 +2,7 @@ import collections
 import os
 import time
 import traceback
+import typing
 
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
@@ -10,6 +11,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -52,7 +54,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._export_folders_panel.SetListCtrl( self._export_folders )
         
         self._export_folders_panel.AddButton( 'add', self._AddFolder )
-        self._export_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._export_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._export_folders_panel.AddDeleteButton()
         
         #
@@ -134,7 +136,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 export_folder.SetNonDupeName( self._GetExistingNames() )
                 
-                self._export_folders.AddDatas( ( export_folder, ) )
+                self._export_folders.AddDatas( ( export_folder, ), select_sort_and_scroll = True )
                 
             
         
@@ -184,38 +186,35 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        export_folders = self._export_folders.GetData( only_selected = True )
+        export_folder: typing.Optional[ ClientExportingFiles.ExportFolder ] = self._export_folders.GetTopSelectedData()
         
-        edited_datas = []
-        
-        for export_folder in export_folders:
+        if export_folder is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
-                
-                panel = EditExportFolderPanel( dlg, export_folder )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_export_folder = panel.GetValue()
-                    
-                    self._export_folders.DeleteDatas( ( export_folder, ) )
-                    
-                    edited_export_folder.SetNonDupeName( self._GetExistingNames() )
-                    
-                    self._export_folders.AddDatas( ( edited_export_folder, ) )
-                    
-                    edited_datas.append( edited_export_folder )
-                    
-                else:
-                    
-                    return
-                    
-                
+            return
             
         
-        self._export_folders.SelectDatas( edited_datas )
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit export folder' ) as dlg:
+            
+            panel = EditExportFolderPanel( dlg, export_folder )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_export_folder = panel.GetValue()
+                
+                if edited_export_folder.GetName() != export_folder.GetName():
+                    
+                    existing_names = self._GetExistingNames()
+                    
+                    existing_names.discard( export_folder.GetName() )
+                    
+                    edited_export_folder.SetNonDupeName( existing_names )
+                    
+                
+                self._export_folders.ReplaceData( export_folder, edited_export_folder, sort_and_scroll = True )
+                
+            
         
     
     def _GetExistingNames( self ):
@@ -662,7 +661,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             path = str( e )
             
         
-        pretty_number = HydrusData.ToHumanInt( number )
+        pretty_number = HydrusNumbers.ToHumanInt( number )
         pretty_mime = HC.mime_string_lookup[ mime ]
         
         pretty_path = path
@@ -890,7 +889,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         win = CG.client_controller.gui
                         
                     
-                    ClientGUIDialogsMessage.ShowCritical( win, 'Problem during file export!', f'Encountered a problem while attempting to export file #{HydrusData.ToHumanInt( number )}:\n\n{traceback.format_exc()}' )
+                    ClientGUIDialogsMessage.ShowCritical( win, 'Problem during file export!', f'Encountered a problem while attempting to export file #{HydrusNumbers.ToHumanInt( number )}:\n\n{traceback.format_exc()}' )
                     
                     break
                     

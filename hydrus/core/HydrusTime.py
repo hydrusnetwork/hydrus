@@ -3,8 +3,9 @@ import datetime
 import time
 import typing
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusConstants as HC
+from hydrus.core import HydrusData
+from hydrus.core import HydrusNumbers
 
 def DateTimeToPrettyTime( dt: datetime.datetime, include_24h_time = True, include_milliseconds = False ):
     
@@ -297,7 +298,7 @@ def TimeDeltaToPrettyTimeDelta( seconds: float, show_seconds = True, no_bigger_t
             
             if time_quantity > 0:
                 
-                s = HydrusData.ToHumanInt( time_quantity ) + ' ' + time_string
+                s = HydrusNumbers.ToHumanInt( time_quantity ) + ' ' + time_string
                 
                 if time_quantity > 1:
                     
@@ -326,7 +327,7 @@ def TimeDeltaToPrettyTimeDelta( seconds: float, show_seconds = True, no_bigger_t
         
         if int( seconds ) == seconds:
             
-            result = HydrusData.ToHumanInt( seconds ) + ' seconds'
+            result = HydrusNumbers.ToHumanInt( seconds ) + ' seconds'
             
         else:
             
@@ -513,7 +514,7 @@ def MillisecondsDurationToPrettyTime( duration_ms: typing.Optional[ int ] ) -> s
         
         if int( detailed_seconds ) == detailed_seconds:
             
-            detailed_seconds_result = f'{HydrusData.ToHumanInt( detailed_seconds )} seconds'
+            detailed_seconds_result = f'{HydrusNumbers.ToHumanInt( detailed_seconds )} seconds'
             
         else:
             

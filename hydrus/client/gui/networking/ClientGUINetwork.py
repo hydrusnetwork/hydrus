@@ -8,7 +8,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
@@ -21,6 +21,7 @@ from hydrus.client.gui import ClientGUICharts
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
+from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
@@ -30,8 +31,9 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUIBandwidth
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.networking import ClientNetworking
-from hydrus.client.networking import ClientNetworkingDomain
 from hydrus.client.networking import ClientNetworkingContexts
+from hydrus.client.networking import ClientNetworkingDomain
+from hydrus.client.networking import ClientNetworkingJobs
 
 class EditBandwidthRulesPanel( ClientGUIScrolledPanels.EditPanel ):
     
@@ -319,7 +321,7 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
         self._list_ctrl_panel.AddButton( 'add', self._Add )
-        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        self._list_ctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         
@@ -660,7 +662,7 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             search_usage = ( search_usage_data, search_usage_requests )
             
-            pretty_search_usage = HydrusData.ToHumanBytes( search_usage_data ) + ' in ' + HydrusData.ToHumanInt( search_usage_requests ) + ' requests'
+            pretty_search_usage = HydrusData.ToHumanBytes( search_usage_data ) + ' in ' + HydrusNumbers.ToHumanInt( search_usage_requests ) + ' requests'
             
         
         pretty_network_context = network_context.ToString()
@@ -675,8 +677,8 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_current_usage = HydrusData.ToHumanBytes( current_usage ) + '/s'
             
         
-        pretty_day_usage = HydrusData.ToHumanBytes( day_usage_data ) + ' in ' + HydrusData.ToHumanInt( day_usage_requests ) + ' requests'
-        pretty_month_usage = HydrusData.ToHumanBytes( month_usage_data ) + ' in ' + HydrusData.ToHumanInt( month_usage_requests ) + ' requests'
+        pretty_day_usage = HydrusData.ToHumanBytes( day_usage_data ) + ' in ' + HydrusNumbers.ToHumanInt( day_usage_requests ) + ' requests'
+        pretty_month_usage = HydrusData.ToHumanBytes( month_usage_data ) + ' in ' + HydrusNumbers.ToHumanInt( month_usage_requests ) + ' requests'
         
         if network_context == ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT:
             
@@ -1006,7 +1008,7 @@ class ReviewNetworkContextBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
             
-            converter = HydrusData.ToHumanInt
+            converter = HydrusNumbers.ToHumanInt
             
         
         pretty_time_delta_usage = ': ' + converter( time_delta_usage )
@@ -1108,6 +1110,8 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
+        self._list_ctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
+        
         # button to stop jobs en-masse
         
         self._list_ctrl_panel.AddButton( 'refresh snapshot', self._RefreshSnapshot )
@@ -1122,6 +1126,10 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         vbox = QP.VBoxLayout()
         
+        st = ClientGUICommon.BetterStaticText( self, label = 'right-click a job for more debug info!' )
+        st.setWordWrap( True )
+        
+        QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
@@ -1129,7 +1137,8 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
     
     def _ConvertDataToListCtrlTuples( self, job_row ):
         
-        ( network_engine_status, job ) = job_row
+        network_engine_status: int = job_row[0]
+        job: ClientNetworkingJobs.NetworkJob = job_row[1]
         
         position = network_engine_status
         url = job.GetURL()
@@ -1153,6 +1162,54 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         job_rows = self._controller.network_engine.GetJobsSnapshot()
         
         self._list_ctrl.SetData( job_rows )
+        
+    
+    def _GetListCtrlMenu( self ):
+        
+        data = self._list_ctrl.GetData( only_selected = True )
+        
+        if len( data ) != 1:
+            
+            raise HydrusExceptions.DataMissing()
+            
+        
+        network_job: ClientNetworkingJobs.NetworkJob = data[0][1]
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        submenu = ClientGUIMenus.GenerateMenu( menu )
+        
+        network_contexts = network_job.GetNetworkContexts()
+        
+        bandwidth_manager = self._controller.network_engine.bandwidth_manager
+        
+        for network_context in network_contexts:
+            
+            label = network_context.ToString()
+            
+            ( waiting_estimate, gumpf ) = bandwidth_manager.GetWaitingEstimateAndContext( [ network_context ] )
+            
+            if waiting_estimate > 0:
+                
+                label = f'{label} ({HydrusTime.TimeDeltaToPrettyTimeDelta( waiting_estimate )})'
+                
+            else:
+                
+                label = f'{label} (bandwidth ok)'
+                
+            
+            ClientGUIMenus.AppendMenuLabel( submenu, label )
+            
+        
+        ClientGUIMenus.AppendMenu( menu, submenu, 'network contexts' )
+        
+        ClientGUIMenus.AppendMenuLabel( menu, f'domain ok: {network_job.DomainOK()}' )
+        ClientGUIMenus.AppendMenuLabel( menu, f'waiting on connection error: {network_job.CurrentlyWaitingOnConnectionError()}' )
+        ClientGUIMenus.AppendMenuLabel( menu, f'waiting on serverside bandwidth: {network_job.CurrentlyWaitingOnServersideBandwidth()}' )
+        ClientGUIMenus.AppendMenuLabel( menu, f'obeys bandwidth: {network_job.ObeysBandwidth()}' )
+        ClientGUIMenus.AppendMenuLabel( menu, f'tokens ok: {network_job.TokensOK()}' )
+        
+        return menu
         
     
 class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
@@ -1252,7 +1309,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         pretty_network_context = network_context.ToString()
         
         number_of_cookies = len( session.cookies )
-        pretty_number_of_cookies = HydrusData.ToHumanInt( number_of_cookies )
+        pretty_number_of_cookies = HydrusNumbers.ToHumanInt( number_of_cookies )
         
         expires_numbers = [ c.expires for c in session.cookies if c.expires is not None ]
         
@@ -1334,7 +1391,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusData.ToHumanInt(num_added)} cookies!' )
+        ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusNumbers.ToHumanInt(num_added)} cookies!' )
         
         self._Update()
         
@@ -1377,6 +1434,7 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._listctrl.SetData( network_contexts )
         
     
+
 class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, session_manager, network_context ):
@@ -1400,7 +1458,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel.AddButton( 'add', self._Add )
         listctrl_panel.AddButton( 'import cookies.txt (drag and drop also works!)', self._ImportCookiesTXT )
-        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        listctrl_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         listctrl_panel.AddDeleteButton()
         listctrl_panel.AddSeparator()
         listctrl_panel.AddButton( 'refresh', self._Update )
@@ -1588,7 +1646,7 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             
         
-        ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusData.ToHumanInt(num_added)} cookies!' )
+        ClientGUIDialogsMessage.ShowInformation( self, f'Added {HydrusNumbers.ToHumanInt(num_added)} cookies!' )
         
         self._Update()
         

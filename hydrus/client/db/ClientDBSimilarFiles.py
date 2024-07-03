@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientGlobals as CG
@@ -452,7 +453,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         # removal of old branch, maintenance schedule, and orphan perceptual_hashes
         
-        job_status.SetStatusText( HydrusData.ToHumanInt( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch', 2 )
+        job_status.SetStatusText( HydrusNumbers.ToHumanInt( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch', 2 )
         
         unbalanced_perceptual_hash_ids = { p_id for ( p_id, p_h ) in unbalanced_nodes }
         
@@ -791,7 +792,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
             all_nodes = self._Execute( 'SELECT phash_id, phash FROM shape_perceptual_hashes;' ).fetchall()
             
-            job_status.SetStatusText( HydrusData.ToHumanInt( len( all_nodes ) ) + ' leaves found, now regenerating' )
+            job_status.SetStatusText( HydrusNumbers.ToHumanInt( len( all_nodes ) ) + ' leaves found, now regenerating' )
             
             ( root_id, root_perceptual_hash ) = self._PopBestRootNode( all_nodes ) #HydrusData.RandomPop( all_nodes )
             
@@ -1001,7 +1002,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             
             if HG.db_report_mode:
                 
-                HydrusData.ShowText( 'Similar file search touched {} nodes over {} cycles.'.format( HydrusData.ToHumanInt( total_nodes_searched ), HydrusData.ToHumanInt( num_cycles ) ) )
+                HydrusData.ShowText( 'Similar file search touched {} nodes over {} cycles.'.format( HydrusNumbers.ToHumanInt( total_nodes_searched ), HydrusNumbers.ToHumanInt( num_cycles ) ) )
                 
             
             # so, now we have perceptual_hash_ids and distances. let's map that to actual files.

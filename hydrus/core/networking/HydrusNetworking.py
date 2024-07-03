@@ -12,6 +12,7 @@ urllib3.disable_warnings( InsecureRequestWarning ) # stopping log-moaning when r
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -33,7 +34,7 @@ def ConvertBandwidthRuleToString( rule ):
         
     elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
         
-        s = HydrusData.ToHumanInt( max_allowed ) + ' rqs'
+        s = HydrusNumbers.ToHumanInt( max_allowed ) + ' rqs'
         
     
     if time_delta is None:
@@ -599,7 +600,7 @@ class BandwidthTracker( HydrusSerialisable.SerialisableBase ):
             num_bytes = self._GetUsage( HC.BANDWIDTH_TYPE_DATA, None, True )
             num_requests = self._GetUsage( HC.BANDWIDTH_TYPE_REQUESTS, None, True )
             
-            return 'used ' + HydrusData.ToHumanBytes( num_bytes ) + ' in ' + HydrusData.ToHumanInt( num_requests ) + ' requests this month'
+            return 'used ' + HydrusData.ToHumanBytes( num_bytes ) + ' in ' + HydrusNumbers.ToHumanInt( num_requests ) + ' requests this month'
             
         
     

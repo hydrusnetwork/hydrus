@@ -11,6 +11,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -69,29 +70,29 @@ def GenerateGallerySeedLogStatus( statuses_to_counts ):
     
     if num_successful > 0:
         
-        s = HydrusData.ToHumanInt( num_successful ) + ' successful'
+        s = HydrusNumbers.ToHumanInt( num_successful ) + ' successful'
         
         status_strings.append( s )
         
     
     if num_ignored > 0:
         
-        status_strings.append( HydrusData.ToHumanInt( num_ignored ) + ' ignored' )
+        status_strings.append( HydrusNumbers.ToHumanInt( num_ignored ) + ' ignored' )
         
     
     if num_failed > 0:
         
-        status_strings.append( HydrusData.ToHumanInt( num_failed ) + ' failed' )
+        status_strings.append( HydrusNumbers.ToHumanInt( num_failed ) + ' failed' )
         
     
     if num_skipped > 0:
         
-        status_strings.append( HydrusData.ToHumanInt( num_skipped ) + ' skipped' )
+        status_strings.append( HydrusNumbers.ToHumanInt( num_skipped ) + ' skipped' )
         
     
     if num_unknown > 0:
         
-        status_strings.append( HydrusData.ToHumanInt( num_unknown ) + ' pending' )
+        status_strings.append( HydrusNumbers.ToHumanInt( num_unknown ) + ' pending' )
         
     
     status = ', '.join( status_strings )
@@ -532,11 +533,11 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
                 status = CC.STATUS_SUCCESSFUL_AND_NEW
                 
-                note = HydrusData.ToHumanInt( num_urls_added ) + ' new urls found'
+                note = HydrusNumbers.ToHumanInt( num_urls_added ) + ' new urls found'
                 
                 if num_urls_already_in_file_seed_cache > 0:
                     
-                    note += ' (' + HydrusData.ToHumanInt( num_urls_already_in_file_seed_cache ) + ' of page already in)'
+                    note += ' (' + HydrusNumbers.ToHumanInt( num_urls_already_in_file_seed_cache ) + ' of page already in)'
                     
                 
                 if not can_search_for_more_files:
@@ -580,7 +581,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                     
                     added_new_gallery_pages = True
                     
-                    note += ' - {} sub-gallery urls found'.format( HydrusData.ToHumanInt( len( new_sub_gallery_seeds ) ) )
+                    note += ' - {} sub-gallery urls found'.format( HydrusNumbers.ToHumanInt( len( new_sub_gallery_seeds ) ) )
                     
                 
                 if self._can_generate_more_pages and can_add_more_gallery_urls:
@@ -657,16 +658,16 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                             
                             if num_dupe_next_page_urls == 0:
                                 
-                                note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase
+                                note += ' - ' + HydrusNumbers.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase
                                 
                             else:
                                 
-                                note += ' - ' + HydrusData.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase + ', but ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
+                                note += ' - ' + HydrusNumbers.ToHumanInt( num_new_next_page_urls ) + next_page_generation_phrase + ', but ' + HydrusNumbers.ToHumanInt( num_dupe_next_page_urls ) + ' had already been visited this run and were not added'
                                 
                             
                         else:
                             
-                            note += ' - ' + HydrusData.ToHumanInt( num_dupe_next_page_urls ) + next_page_generation_phrase + ', but they had already been visited this run and were not added'
+                            note += ' - ' + HydrusNumbers.ToHumanInt( num_dupe_next_page_urls ) + next_page_generation_phrase + ', but they had already been visited this run and were not added'
                             
                         
                     

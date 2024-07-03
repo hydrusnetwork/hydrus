@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -341,13 +342,13 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
                     ClientImporting.WakeRepeatingJob( self._files_repeating_job )
                     
                 
-                parser_status = 'page checked OK with formula "' + simple_downloader_formula.GetName() + '" - ' + HydrusData.ToHumanInt( num_new ) + ' new urls'
+                parser_status = 'page checked OK with formula "' + simple_downloader_formula.GetName() + '" - ' + HydrusNumbers.ToHumanInt( num_new ) + ' new urls'
                 
                 num_already_in_file_seed_cache = len( file_seeds ) - num_new
                 
                 if num_already_in_file_seed_cache > 0:
                     
-                    parser_status += ' (' + HydrusData.ToHumanInt( num_already_in_file_seed_cache ) + ' already in queue)'
+                    parser_status += ' (' + HydrusNumbers.ToHumanInt( num_already_in_file_seed_cache ) + ' already in queue)'
                     
                 
                 gallery_seed_status = CC.STATUS_SUCCESSFUL_AND_NEW

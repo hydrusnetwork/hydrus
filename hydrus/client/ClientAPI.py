@@ -3,7 +3,7 @@ import typing
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
@@ -360,7 +360,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             
             if num_files_allowed_to_see != num_files_asked_for:
                 
-                error_text = f'You do not seem to have access to all those files! You asked to see {HydrusData.ToHumanInt( num_files_asked_for )} files, but you were only authorised to see {HydrusData.ToHumanInt( num_files_allowed_to_see )} of them!'
+                error_text = f'You do not seem to have access to all those files! You asked to see {HydrusNumbers.ToHumanInt( num_files_asked_for )} files, but you were only authorised to see {HydrusNumbers.ToHumanInt( num_files_allowed_to_see )} of them!'
                 
                 raise HydrusExceptions.InsufficientCredentialsException( error_text )
                 

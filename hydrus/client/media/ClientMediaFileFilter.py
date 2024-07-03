@@ -5,6 +5,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusText
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
@@ -423,7 +424,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
         
         my_count = filter_counts[ self ]
         
-        s += ' ({})'.format( HydrusData.ToHumanInt( my_count ) )
+        s += ' ({})'.format( HydrusNumbers.ToHumanInt( my_count ) )
         
         if self.filter_type == FILE_FILTER_ALL:
             

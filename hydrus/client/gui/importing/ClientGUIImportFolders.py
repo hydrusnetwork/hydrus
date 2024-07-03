@@ -1,4 +1,5 @@
 import os
+import typing
 
 from qtpy import QtWidgets as QW
 
@@ -41,7 +42,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         import_folders_panel.SetListCtrl( self._import_folders )
         
         import_folders_panel.AddButton( 'add', self._Add )
-        import_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        import_folders_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         import_folders_panel.AddDeleteButton()
         
         #
@@ -85,9 +86,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 import_folder.SetNonDupeName( self._GetExistingNames() )
                 
-                self._import_folders.AddDatas( ( import_folder, ) )
-                
-                self._import_folders.Sort()
+                self._import_folders.AddDatas( ( import_folder, ), select_sort_and_scroll = True )
                 
             
         
@@ -122,40 +121,35 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _Edit( self ):
         
-        edited_datas = []
+        import_folder: typing.Optional[ ClientImportLocal.ImportFolder ] = self._import_folders.GetTopSelectedData()
         
-        import_folders = self._import_folders.GetData( only_selected = True )
-        
-        for import_folder in import_folders:
+        if import_folder is None:
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import folder' ) as dlg:
-                
-                panel = EditImportFolderPanel( dlg, import_folder )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_import_folder = panel.GetValue()
-                    
-                    self._import_folders.DeleteDatas( ( import_folder, ) )
-                    
-                    edited_import_folder.SetNonDupeName( self._GetExistingNames() )
-                    
-                    self._import_folders.AddDatas( ( edited_import_folder, ) )
-                    
-                    edited_datas.append( edited_import_folder )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._import_folders.SelectDatas( edited_datas )
-        
-        self._import_folders.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit import folder' ) as dlg:
+            
+            panel = EditImportFolderPanel( dlg, import_folder )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_import_folder = panel.GetValue()
+                
+                if edited_import_folder.GetName() != import_folder.GetName():
+                    
+                    existing_names = self._GetExistingNames()
+                    
+                    existing_names.discard( import_folder.GetName() )
+                    
+                    edited_import_folder.SetNonDupeName( existing_names )
+                    
+                
+                self._import_folders.ReplaceData( import_folder, edited_import_folder, sort_and_scroll = True )
+                
+            
         
     
     def _GetExistingNames( self ):
@@ -167,7 +161,7 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         return names
         
     
-    def GetValue( self ):
+    def GetValue( self ) -> typing.Collection[ ClientImportLocal.ImportFolder ]:
         
         import_folders = self._import_folders.GetData()
         
@@ -259,7 +253,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
         
         filename_tagging_options_panel.AddButton( 'add', self._AddFilenameTaggingOptions )
-        filename_tagging_options_panel.AddButton( 'edit', self._EditFilenameTaggingOptions, enabled_only_on_selection = True )
+        filename_tagging_options_panel.AddButton( 'edit', self._EditFilenameTaggingOptions, enabled_only_on_single_selection = True )
         filename_tagging_options_panel.AddDeleteButton()
         
         metadata_routers = self._import_folder.GetMetadataRouters()

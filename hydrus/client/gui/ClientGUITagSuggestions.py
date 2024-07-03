@@ -6,8 +6,9 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -412,12 +413,12 @@ class RelatedTagsPanel( QW.QWidget ):
                     
                 else:
                     
-                    tags_s = 'tags ({} skipped)'.format( HydrusData.ToHumanInt( num_skipped ) )
+                    tags_s = 'tags ({} skipped)'.format( HydrusNumbers.ToHumanInt( num_skipped ) )
                     
                 
                 if num_done == num_to_do:
                     
-                    num_done_s = 'Searched {} {} in '.format( HydrusData.ToHumanInt( num_done ), tags_s )
+                    num_done_s = 'Searched {} {} in '.format( HydrusNumbers.ToHumanInt( num_done ), tags_s )
                     
                 else:
                     
@@ -445,12 +446,9 @@ class RelatedTagsPanel( QW.QWidget ):
             
             for ( tag_slice, weight_percent ) in related_tags_search_tag_slices_weight_percent:
                 
-                if tag_slice not in ( ':', '' ):
+                if HydrusTags.IsNamespaceTagSlice( tag_slice ):
                     
-                    if tag_slice.endswith( ':' ):
-                        
-                        tag_slice = tag_slice[ : -1 ]
-                        
+                    tag_slice = tag_slice[ : -1 ]
                     
                 
                 search_tag_slices_weight_dict[ tag_slice ] = weight_percent / 100
@@ -458,12 +456,9 @@ class RelatedTagsPanel( QW.QWidget ):
             
             for ( tag_slice, weight_percent ) in related_tags_result_tag_slices_weight_percent:
                 
-                if tag_slice not in ( ':', '' ):
+                if HydrusTags.IsNamespaceTagSlice( tag_slice ):
                     
-                    if tag_slice.endswith( ':' ):
-                        
-                        tag_slice = tag_slice[ : -1 ]
-                        
+                    tag_slice = tag_slice[ : -1 ]
                     
                 
                 result_tag_slices_weight_dict[ tag_slice ] = weight_percent / 100

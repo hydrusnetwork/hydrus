@@ -9,7 +9,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientConstants as CC
@@ -253,7 +253,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         if len( export_object ) > 20:
             
             message += '\n'
-            message += '(and ' + HydrusData.ToHumanInt( len( export_object ) - 20 ) + ' others)'
+            message += '(and ' + HydrusNumbers.ToHumanInt( len( export_object ) - 20 ) + ' others)'
             
         
         message += '\n' * 2
@@ -290,7 +290,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
             else:
                 
-                title += ' - ' + HydrusData.ToHumanInt( num_gugs ) + ' downloaders'
+                title += ' - ' + HydrusNumbers.ToHumanInt( num_gugs ) + ' downloaders'
                 
                 description = ', '.join( gug_names )
                 
@@ -1037,7 +1037,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         content_parsers_panel.SetListCtrl( self._content_parsers )
         
         content_parsers_panel.AddButton( 'add', self._Add )
-        content_parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        content_parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         content_parsers_panel.AddDeleteButton()
         content_parsers_panel.AddSeparator()
         content_parsers_panel.AddImportExportButtons( ( ClientParsing.ContentParser, ), self._AddContentParser )
@@ -1262,7 +1262,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         sub_page_parsers_panel.SetListCtrl( self._sub_page_parsers )
         
         sub_page_parsers_panel.AddButton( 'add', self._AddSubPageParser )
-        sub_page_parsers_panel.AddButton( 'edit', self._EditSubPageParser, enabled_only_on_selection = True )
+        sub_page_parsers_panel.AddButton( 'edit', self._EditSubPageParser, enabled_only_on_single_selection = True )
         sub_page_parsers_panel.AddDeleteButton()
         
         #
@@ -1659,7 +1659,7 @@ class EditParsersPanel( ClientGUIScrolledPanels.EditPanel ):
         parsers_panel.SetListCtrl( self._parsers )
         
         parsers_panel.AddButton( 'add', self._Add )
-        parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        parsers_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         parsers_panel.AddDeleteButton()
         parsers_panel.AddSeparator()
         parsers_panel.AddImportExportButtons( ( ClientParsing.PageParser, ), self._AddParser )

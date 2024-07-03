@@ -15,6 +15,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
@@ -739,7 +740,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
         self._redundant_st = ClientGUICommon.BetterStaticText( self, '', ellipsize_end = True )
         self._redundant_st.setVisible( False )
         
-        self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'currently keeping: ', ellipsize_end = True )
+        self._current_filter_st = ClientGUICommon.BetterStaticText( self, 'current filter: ', ellipsize_end = True )
         
         self._test_result_st = ClientGUICommon.BetterStaticText( self, self.TEST_RESULT_DEFAULT )
         self._test_result_st.setAlignment( QC.Qt.AlignVCenter | QC.Qt.AlignRight )
@@ -1004,7 +1005,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             test_slices = { tag_slice }
             
-        elif tag_slice.count( ':' ) == 1 and tag_slice.endswith( ':' ):
+        elif HydrusTags.IsNamespaceTagSlice( tag_slice ):
             
             test_slices = { ':', tag_slice }
             
@@ -1718,7 +1719,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
             
         else:
             
-            pretty_tag_filter = 'currently keeping: {}'.format( tag_filter.ToPermittedString() )
+            pretty_tag_filter = 'current filter: {}'.format( tag_filter.ToPermittedString() )
             
         
         self._current_filter_st.setText( pretty_tag_filter )
@@ -1825,7 +1826,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                         c.update( results )
                         
-                        test_result_text = '{} pass, {} blocked!'.format( HydrusData.ToHumanInt( c[ True ] ), HydrusData.ToHumanInt( c[ False ] ) )
+                        test_result_text = '{} pass, {} blocked!'.format( HydrusNumbers.ToHumanInt( c[ True ] ), HydrusNumbers.ToHumanInt( c[ False ] ) )
                         
                         self._test_result_st.setObjectName( 'HydrusInvalid' )
                         
@@ -2160,7 +2161,7 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _UpdateSummary( self ):
         
-        file_summary = f'{HydrusData.ToHumanInt(len(self._medias))} files'
+        file_summary = f'{HydrusNumbers.ToHumanInt(len(self._medias))} files'
         
         medias_and_tags = self._GetMediaAndTagPairs()
         
@@ -2217,16 +2218,16 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             else:
                 
-                conflict_summary = f'{HydrusData.ToHumanInt( already_count )} files already have these tags.'
+                conflict_summary = f'{HydrusNumbers.ToHumanInt( already_count )} files already have these tags.'
                 
             
         elif already_count == 0:
             
-            conflict_summary = f'{HydrusData.ToHumanInt( disagree_count )} files already have different tags for this namespace. Are you sure you are lined up correct?'
+            conflict_summary = f'{HydrusNumbers.ToHumanInt( disagree_count )} files already have different tags for this namespace. Are you sure you are lined up correct?'
             
         else:
             
-            conflict_summary = f'{HydrusData.ToHumanInt( already_count )} files already have these tags, and {HydrusData.ToHumanInt( disagree_count )} files already have different tags for this namespace. Are you sure you are lined up correct?'
+            conflict_summary = f'{HydrusNumbers.ToHumanInt( already_count )} files already have these tags, and {HydrusNumbers.ToHumanInt( disagree_count )} files already have different tags for this namespace. Are you sure you are lined up correct?'
             
         
         label = f'For the {file_summary}, you are setting {tag_summary}.'
@@ -2863,11 +2864,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         
                         [ ( tag, count ) ] = tag_counts
                         
-                        text = '{} "{}" for {} files'.format( choice_text_prefix, HydrusText.ElideText( tag, 64 ), HydrusData.ToHumanInt( count ) )
+                        text = '{} "{}" for {} files'.format( choice_text_prefix, HydrusText.ElideText( tag, 64 ), HydrusNumbers.ToHumanInt( count ) )
                         
                     else:
                         
-                        text = '{} {} tags'.format( choice_text_prefix, HydrusData.ToHumanInt( len( choice_tags ) ) )
+                        text = '{} {} tags'.format( choice_text_prefix, HydrusNumbers.ToHumanInt( len( choice_tags ) ) )
                         
                     
                     data = ( choice_action, choice_tags )
@@ -2883,11 +2884,11 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         t_c = tag_counts
                         
                     
-                    t_c_lines.extend( ( '{} - {} files'.format( tag, HydrusData.ToHumanInt( count ) ) for ( tag, count ) in t_c ) )
+                    t_c_lines.extend( ( '{} - {} files'.format( tag, HydrusNumbers.ToHumanInt( count ) ) for ( tag, count ) in t_c ) )
                     
                     if len( tag_counts ) > 25:
                         
-                        t_c_lines.append( 'and {} others'.format( HydrusData.ToHumanInt( len( tag_counts ) - 25 ) ) )
+                        t_c_lines.append( 'and {} others'.format( HydrusNumbers.ToHumanInt( len( tag_counts ) - 25 ) ) )
                         
                     
                     tooltip = '\n'.join( t_c_lines )
@@ -2903,7 +2904,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         
                     else:
                         
-                        message = 'Of the {} files being managed, some have that tag, but not all of them do, so there are different things you can do.'.format( HydrusData.ToHumanInt( len( self._media ) ) )
+                        message = 'Of the {} files being managed, some have that tag, but not all of them do, so there are different things you can do.'.format( HydrusNumbers.ToHumanInt( len( self._media ) ) )
                         
                     
                     ( choice_action, tags ) = ClientGUIDialogsQuick.SelectFromListButtons( self, 'What would you like to do?', bdc_choices, message = message )
@@ -2930,7 +2931,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         
                     else:
                         
-                        tag_text = 'the ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags'
+                        tag_text = 'the ' + HydrusNumbers.ToHumanInt( len( tags ) ) + ' tags'
                         
                     
                     message = 'Enter a reason for ' + tag_text + ' to be removed. A janitor will review your petition.'
@@ -3358,7 +3359,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                         
                     else:
                         
-                        message = 'Are you sure you want to remove these ' + HydrusData.ToHumanInt( len( tags ) ) + ' tags?'
+                        message = 'Are you sure you want to remove these ' + HydrusNumbers.ToHumanInt( len( tags ) ) + ' tags?'
                         
                     
                     result = ClientGUIDialogsQuick.GetYesNo( self, message )
@@ -4500,7 +4501,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._sync_status_st.style().polish( self._sync_status_st )
                 
-                self._count_st.setText( 'Starting with '+HydrusData.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
+                self._count_st.setText( 'Starting with '+HydrusNumbers.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
                 
                 self._listctrl_panel.setEnabled( True )
                 self._child_input.setEnabled( True )
@@ -5887,7 +5888,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._sync_status_st.style().polish( self._sync_status_st )
                 
-                self._count_st.setText( 'Starting with '+HydrusData.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
+                self._count_st.setText( 'Starting with '+HydrusNumbers.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
                 
                 self._listctrl_panel.setEnabled( True )
                 
@@ -6100,15 +6101,15 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                 elif num_parents_to_sync == 0:
                     
-                    message = '{} siblings to sync.'.format( HydrusData.ToHumanInt( num_siblings_to_sync ) )
+                    message = '{} siblings to sync.'.format( HydrusNumbers.ToHumanInt( num_siblings_to_sync ) )
                     
                 elif num_siblings_to_sync == 0:
                     
-                    message = '{} parents to sync.'.format( HydrusData.ToHumanInt( num_parents_to_sync ) )
+                    message = '{} parents to sync.'.format( HydrusNumbers.ToHumanInt( num_parents_to_sync ) )
                     
                 else:
                     
-                    message = '{} siblings and {} parents to sync.'.format( HydrusData.ToHumanInt( num_siblings_to_sync ), HydrusData.ToHumanInt( num_parents_to_sync ) )
+                    message = '{} siblings and {} parents to sync.'.format( HydrusNumbers.ToHumanInt( num_siblings_to_sync ), HydrusNumbers.ToHumanInt( num_parents_to_sync ) )
                     
                 
                 if len( status[ 'waiting_on_tag_repos' ] ) > 0:
@@ -6134,7 +6135,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                         
                     else:
                         
-                        message = '{} rules, all synced!'.format( HydrusData.ToHumanInt( num_ideal_rows ) )
+                        message = '{} rules, all synced!'.format( HydrusNumbers.ToHumanInt( num_ideal_rows ) )
                         
                     
                     value = 1
@@ -6149,11 +6150,11 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     if num_ideal_rows == 0:
                         
-                        message = 'Removing all siblings/parents, {} rules remaining.'.format( HydrusData.ToHumanInt( num_actual_rows ) )
+                        message = 'Removing all siblings/parents, {} rules remaining.'.format( HydrusNumbers.ToHumanInt( num_actual_rows ) )
                         
                     else:
                         
-                        message = '{} rules applied now, moving to {}.'.format( HydrusData.ToHumanInt( num_actual_rows ), HydrusData.ToHumanInt( num_ideal_rows ) )
+                        message = '{} rules applied now, moving to {}.'.format( HydrusNumbers.ToHumanInt( num_actual_rows ), HydrusNumbers.ToHumanInt( num_ideal_rows ) )
                         
                         if num_actual_rows <= num_ideal_rows:
                             

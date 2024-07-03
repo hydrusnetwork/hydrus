@@ -4,6 +4,7 @@ import threading
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTemp
 from hydrus.core import HydrusThreading
@@ -396,7 +397,7 @@ class QuickDownloadManager( object ):
                     
                     if total_successful_hashes_in_this_run > 0:
                         
-                        job_status.SetStatusText( HydrusData.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
+                        job_status.SetStatusText( HydrusNumbers.ToHumanInt( total_successful_hashes_in_this_run ) + ' files downloaded' )
                         
                     
                     job_status_pub_job.Cancel()

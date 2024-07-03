@@ -261,6 +261,13 @@ class MigrationDestinationTagService( MigrationDestination ):
     
 class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
     
+    def __init__( self, controller, tag_service_key, content_action ):
+        
+        MigrationDestinationTagService.__init__( self, controller, tag_service_key, content_action )
+        
+        self._reason = 'Mass Migration Job'
+        
+    
     def DoSomeWork( self, source ):
         
         time_started_precise = HydrusTime.GetNowPrecise()
@@ -282,7 +289,7 @@ class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
         
         if self._content_action == HC.CONTENT_UPDATE_PETITION:
             
-            reason = 'Mass Migration Job'
+            reason = self._reason
             
         else:
             
@@ -301,6 +308,12 @@ class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
         return GetBasicSpeedStatement( num_done, time_started_precise )
         
     
+    def SetReason( self, reason: str ):
+        
+        self._reason = reason
+        
+    
+
 class MigrationDestinationTagServicePairs( MigrationDestinationTagService ):
     
     def __init__( self, controller, tag_service_key, content_action, content_type ):
@@ -721,7 +734,7 @@ class MigrationSourceTagServiceMappings( MigrationSource ):
         
         # later can spread this out into bunch of small jobs, a start and a continue, based on tag filter subsets
         
-        self._controller.WriteSynchronous( 'migration_start_mappings_job', self._database_temp_job_name, self._location_context, self._tag_service_key, self._hashes, self._content_statuses )
+        self._controller.WriteSynchronous( 'migration_start_mappings_job', self._database_temp_job_name, self._location_context, self._tag_service_key, self._tag_filter, self._hashes, self._content_statuses )
         
     
 class MigrationSourceTagServicePairs( MigrationSource ):

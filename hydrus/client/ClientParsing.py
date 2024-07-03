@@ -12,6 +12,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusText
@@ -712,7 +713,7 @@ def RenderJSONParseRule( rule ):
         
         index = parse_rule
         
-        s = 'get the ' + HydrusData.ConvertIndexToPrettyOrdinalString( index ) + ' item (for Objects, keys sorted)'
+        s = 'get the ' + HydrusNumbers.ConvertIndexToPrettyOrdinalString( index ) + ' item (for Objects, keys sorted)'
         
     elif parse_rule_type == JSON_PARSE_RULE_TYPE_DICT_KEY:
         
@@ -804,7 +805,7 @@ class ParseFormula( HydrusSerialisable.SerialisableBase ):
         
         pretty_texts = [ MakeParsedTextPretty( text ) for text in texts ]
         
-        pretty_texts = [ '*** ' + HydrusData.ToHumanInt( len( pretty_texts ) ) + ' RESULTS BEGIN ***' ] + pretty_texts + [ '*** RESULTS END ***' ]
+        pretty_texts = [ '*** ' + HydrusNumbers.ToHumanInt( len( pretty_texts ) ) + ' RESULTS BEGIN ***' ] + pretty_texts + [ '*** RESULTS END ***' ]
         
         separator = self._GetParsePrettySeparator()
         
@@ -968,7 +969,7 @@ class ParseFormulaCompound( ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'COMPOUND with ' + HydrusData.ToHumanInt( len( self._formulae ) ) + ' formulae.'
+        return 'COMPOUND with ' + HydrusNumbers.ToHumanInt( len( self._formulae ) ) + ' formulae.'
         
     
     def ToPrettyMultilineString( self ):
@@ -1406,7 +1407,7 @@ class ParseFormulaHTML( ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'HTML with ' + HydrusData.ToHumanInt( len( self._tag_rules ) ) + ' tag rules.'
+        return 'HTML with ' + HydrusNumbers.ToHumanInt( len( self._tag_rules ) ) + ' tag rules.'
         
     
     def ToPrettyMultilineString( self ):
@@ -1656,7 +1657,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                s += ' the ' + HydrusData.ConvertIndexToPrettyOrdinalString( self._tag_index )
+                s += ' the ' + HydrusNumbers.ConvertIndexToPrettyOrdinalString( self._tag_index )
                 
             
             if self._tag_name is not None:
@@ -1677,11 +1678,11 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
             
             if self._tag_name is None:
                 
-                s += ' ' + HydrusData.ToHumanInt( self._tag_depth ) + ' tag levels'
+                s += ' ' + HydrusNumbers.ToHumanInt( self._tag_depth ) + ' tag levels'
                 
             else:
                 
-                s += ' to the ' + HydrusData.ConvertIntToPrettyOrdinalString( self._tag_depth ) + ' <' + self._tag_name + '> tag'
+                s += ' to the ' + HydrusNumbers.ConvertIntToPrettyOrdinalString( self._tag_depth ) + ' <' + self._tag_name + '> tag'
                 
             
         
@@ -1996,7 +1997,7 @@ class ParseFormulaJSON( ParseFormula ):
     
     def ToPrettyString( self ):
         
-        return 'JSON with ' + HydrusData.ToHumanInt( len( self._parse_rules ) ) + ' parse rules.'
+        return 'JSON with ' + HydrusNumbers.ToHumanInt( len( self._parse_rules ) ) + ' parse rules.'
         
     
     def ToPrettyMultilineString( self ):
@@ -2446,7 +2447,7 @@ class ContentParser( HydrusSerialisable.SerialisableBase ):
             raise e
             
         
-        result_lines = [ '*** ' + HydrusData.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
+        result_lines = [ '*** ' + HydrusNumbers.ToHumanInt( len( results ) ) + ' RESULTS BEGIN ***' ]
         
         result_lines.extend( results )
         
@@ -2808,7 +2809,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         
         result_lines = []
         
-        result_lines.append( '*** ' + HydrusData.ToHumanInt( len( all_parse_results ) ) + ' RESULTS BEGIN ***' + '\n' )
+        result_lines.append( '*** ' + HydrusNumbers.ToHumanInt( len( all_parse_results ) ) + ' RESULTS BEGIN ***' + '\n' )
         
         result_lines.append( pretty_parse_result_text )
         
@@ -3315,7 +3316,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
             
         else:
             
-            job_status.SetVariable( 'script_status', 'Found ' + HydrusData.ToHumanInt( len( parse_results ) ) + ' rows.' )
+            job_status.SetVariable( 'script_status', 'Found ' + HydrusNumbers.ToHumanInt( len( parse_results ) ) + ' rows.' )
             
         
         return parse_results

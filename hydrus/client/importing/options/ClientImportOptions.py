@@ -2,6 +2,7 @@ import os
 import typing
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -206,7 +207,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
             ( current_files_found, current_time_delta ) = self._GetCurrentFilesVelocity( file_seed_cache, last_check_time )
             
-            pretty_current_velocity += HydrusData.ToHumanInt( current_files_found ) + ' files in previous ' + HydrusTime.TimeDeltaToPrettyTimeDelta( current_time_delta )
+            pretty_current_velocity += HydrusNumbers.ToHumanInt( current_files_found ) + ' files in previous ' + HydrusTime.TimeDeltaToPrettyTimeDelta( current_time_delta )
             
         
         return pretty_current_velocity
@@ -225,7 +226,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            timing_statement = 'Trying to get ' + HydrusData.ToHumanInt( self._intended_files_per_check ) + ' files per check, never faster than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + ' and never slower than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_slower_than ) + '.'
+            timing_statement = 'Trying to get ' + HydrusNumbers.ToHumanInt( self._intended_files_per_check ) + ' files per check, never faster than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_faster_than ) + ' and never slower than ' + HydrusTime.TimeDeltaToPrettyTimeDelta( self._never_slower_than ) + '.'
             
         
         ( death_files_found, death_time_delta ) = self._death_file_velocity
@@ -236,7 +237,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            death_statement = 'Stopping if file velocity falls below ' + HydrusData.ToHumanInt( death_files_found ) + ' files per ' + HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta ) + '.'
+            death_statement = 'Stopping if file velocity falls below ' + HydrusNumbers.ToHumanInt( death_files_found ) + ' files per ' + HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta ) + '.'
             
         
         return timing_statement + '\n' * 2 + death_statement

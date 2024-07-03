@@ -10,6 +10,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -741,7 +742,7 @@ class Page( QW.QWidget ):
         
         if num_files > 0:
             
-            name_for_menu = '{} - {} files'.format( name_for_menu, HydrusData.ToHumanInt( num_files ) )
+            name_for_menu = '{} - {} files'.format( name_for_menu, HydrusNumbers.ToHumanInt( num_files ) )
             
         
         if num_value != num_range:
@@ -1632,7 +1633,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ALL or ( page_file_count_display == CC.PAGE_FILE_COUNT_DISPLAY_ONLY_IMPORTERS and page.IsImporter() ):
             
-            num_string += HydrusData.ToHumanInt( num_files )
+            num_string += HydrusNumbers.ToHumanInt( num_files )
             
         
         if import_page_progress_display:
@@ -1795,7 +1796,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
             if CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
                 
-                label = 'page weight: {}'.format( HydrusData.ToHumanInt( page.GetTotalWeight() ) )
+                label = 'page weight: {}'.format( HydrusNumbers.ToHumanInt( page.GetTotalWeight() ) )
                 
                 ClientGUIMenus.AppendMenuLabel( menu, label, label )
                 
@@ -2382,7 +2383,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if num_files > 0:
             
-            name_for_menu = '{} - {} files'.format( name_for_menu, HydrusData.ToHumanInt( num_files ) )
+            name_for_menu = '{} - {} files'.format( name_for_menu, HydrusNumbers.ToHumanInt( num_files ) )
             
         
         if num_value != num_range:
@@ -2601,14 +2602,14 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         ( num_files, ( num_value, num_range ) ) = self.GetNumFileSummary()
         
-        num_string = HydrusData.ToHumanInt( num_files )
+        num_string = HydrusNumbers.ToHumanInt( num_files )
         
         if num_range > 0 and num_value != num_range:
             
             num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
             
         
-        return HydrusData.ToHumanInt( self.count() ) + ' pages, ' + num_string + ' files'
+        return HydrusNumbers.ToHumanInt( self.count() ) + ' pages, ' + num_string + ' files'
         
     
     def GetSerialisablePage( self, only_changed_page_data, about_to_save ):
@@ -2691,7 +2692,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     
                 else:
                     
-                    message = HydrusData.ToHumanInt( c ) + ' pages say:' + reason
+                    message = HydrusNumbers.ToHumanInt( c ) + ' pages say:' + reason
                     
                 
                 message += '\n'

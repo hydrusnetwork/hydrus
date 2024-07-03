@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -224,6 +225,8 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         
         num_not_added = 0
         
+        add_rows = []
+        
         for ( shortcut, command ) in shortcut_set.GetShortcutsAndCommands():
             
             addee_shortcut = shortcut.Duplicate()
@@ -245,13 +248,13 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if addee_shortcut not in all_existing_shortcuts:
                 
-                self._shortcuts.AddDatas( [ ( addee_shortcut, command ) ] )
+                add_rows.append( [ ( addee_shortcut, command ) ] )
                 
                 all_existing_shortcuts.add( addee_shortcut )
                 
             
         
-        self._shortcuts.Sort()
+        self._shortcuts.AddDatas( add_rows, select_sort_and_scroll = True )
         
         if num_not_added > 0:
             
@@ -576,7 +579,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         size = len( shortcuts )
         
-        display_tuple = ( pretty_name, HydrusData.ToHumanInt( size ) )
+        display_tuple = ( pretty_name, HydrusNumbers.ToHumanInt( size ) )
         sort_tuple = ( sort_name, size )
         
         return ( display_tuple, sort_tuple )

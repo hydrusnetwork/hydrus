@@ -7,6 +7,7 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 
 from hydrus.client import ClientGlobals as CG
@@ -329,7 +330,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
             HydrusData.Print( f'Deleted excess desynced local hash_ids: {bad_hash_ids_text}' )
             
-            status_text_info.append( f'{HydrusData.ToHumanInt( len( all_excess_hash_ids ) ) } excess hash records' )
+            status_text_info.append( f'{HydrusNumbers.ToHumanInt( len( all_excess_hash_ids ) ) } excess hash records' )
             
         
         if len( all_missing_hash_ids ) > 0:
@@ -338,7 +339,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
             HydrusData.Print( f'Added missing desynced local hash_ids: {bad_hash_ids_text}' )
             
-            status_text_info.append( f'{HydrusData.ToHumanInt( len( all_missing_hash_ids ) ) } missing hash records' )
+            status_text_info.append( f'{HydrusNumbers.ToHumanInt( len( all_missing_hash_ids ) ) } missing hash records' )
             
         
         if len( all_incorrect_hash_ids ) > 0:
@@ -347,7 +348,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
             HydrusData.Print( f'Fixed incorrect desynced local hash_ids: {bad_hash_ids_text}' )
             
-            status_text_info.append( f'{HydrusData.ToHumanInt( len( all_incorrect_hash_ids ) ) } incorrect hash records' )
+            status_text_info.append( f'{HydrusNumbers.ToHumanInt( len( all_incorrect_hash_ids ) ) } incorrect hash records' )
             
         
         if len( status_text_info ) > 0:

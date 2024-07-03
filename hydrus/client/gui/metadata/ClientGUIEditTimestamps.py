@@ -64,7 +64,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         self._domain_modified_list_ctrl_panel.SetListCtrl( self._domain_modified_list_ctrl )
         
         self._domain_modified_list_ctrl_panel.AddButton( 'add', self._AddDomainModifiedTimestamp )
-        self._domain_modified_list_ctrl_panel.AddButton( 'edit', self._EditDomainModifiedTimestamp, enabled_only_on_selection = True )
+        self._domain_modified_list_ctrl_panel.AddButton( 'edit', self._EditDomainModifiedTimestamp, enabled_only_on_single_selection = True )
         self._domain_modified_list_ctrl_panel.AddDeleteButton()
         
         self._domain_modified_list_ctrl_data_dict = {}
@@ -77,7 +77,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._file_services_list_ctrl_panel.SetListCtrl( self._file_services_list_ctrl )
         
-        self._file_services_list_ctrl_panel.AddButton( 'edit', self._EditFileServiceTimestamp, enabled_only_on_selection = True )
+        self._file_services_list_ctrl_panel.AddButton( 'edit', self._EditFileServiceTimestamp, enabled_only_on_single_selection = True )
         # TODO: An extension here is to add an 'add' button for files that have a _missing_ delete time
         # and/or wangle the controls and stuff so a None result is piped along and displays and is settable here
         

@@ -3,6 +3,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -1012,7 +1013,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
                         
                     elif rearrange_type == REARRANGE_THUMBNAILS_TYPE_FIXED:
                         
-                        s = f'{s} (to index {HydrusData.ToHumanInt(rearrange_data)})'
+                        s = f'{s} (to index {HydrusNumbers.ToHumanInt(rearrange_data)})'
                         
                     
                 

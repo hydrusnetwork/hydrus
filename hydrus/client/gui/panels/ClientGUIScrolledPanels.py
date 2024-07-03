@@ -52,6 +52,7 @@ class ResizingEventFilter( QC.QObject ):
         
         return False
         
+    
 
 class ResizingScrolledPanel( QW.QScrollArea ):
     

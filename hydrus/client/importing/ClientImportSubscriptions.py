@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusText
@@ -596,7 +597,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                             # this gallery page has caught up to before, so it should not spawn any more gallery pages
                             
                             can_search_for_more_files = False
-                            stop_reason = 'saw {} contiguous previously seen urls at end of page, so assuming we caught up'.format( HydrusData.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) )
+                            stop_reason = 'saw {} contiguous previously seen urls at end of page, so assuming we caught up'.format( HydrusNumbers.ToHumanInt( current_contiguous_num_urls_already_in_file_seed_cache ) )
                             
                         
                         if num_urls_added == 0:
@@ -609,7 +610,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     return ( num_urls_added, num_urls_already_in_file_seed_cache, can_search_for_more_files, stop_reason )
                     
                 
-                job_status.SetStatusText( status_prefix + ': found ' + HydrusData.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
+                job_status.SetStatusText( status_prefix + ': found ' + HydrusNumbers.ToHumanInt( total_new_urls_for_this_sync ) + ' new urls, checking next page' )
                 
                 try:
                     
@@ -696,7 +697,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 ( death_files_found, death_time_delta ) = death_file_velocity
                 
-                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusData.ToHumanInt( death_files_found ), HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta, no_bigger_than_days = True ) ) )
+                HydrusData.ShowText( 'The query "{}" for subscription "{}" found fewer than {} files in the last {}, so it appears to be dead!'.format( query_name, self._name, HydrusNumbers.ToHumanInt( death_files_found ), HydrusTime.TimeDeltaToPrettyTimeDelta( death_time_delta, no_bigger_than_days = True ) ) )
                 
             
         else:
@@ -2090,13 +2091,13 @@ class SubscriptionsManager( object ):
             
             next_times = sorted( self._names_to_next_work_time.items(), key = lambda n_nwt_tuple: n_nwt_tuple[1] )
             
-            message = '{} subs: {}'.format( HydrusData.ToHumanInt( len( self._names_to_subscriptions ) ), ', '.join( sub_names ) )
+            message = '{} subs: {}'.format( HydrusNumbers.ToHumanInt( len( self._names_to_subscriptions ) ), ', '.join( sub_names ) )
             message += '\n' * 2
-            message += '{} running: {}'.format( HydrusData.ToHumanInt( len( self._names_to_running_subscription_info ) ), ', '.join( running ) )
+            message += '{} running: {}'.format( HydrusNumbers.ToHumanInt( len( self._names_to_running_subscription_info ) ), ', '.join( running ) )
             message += '\n' * 2
-            message += '{} not runnable: {}'.format( HydrusData.ToHumanInt( len( self._names_that_cannot_run ) ), ', '.join( cannot_run ) )
+            message += '{} not runnable: {}'.format( HydrusNumbers.ToHumanInt( len( self._names_that_cannot_run ) ), ', '.join( cannot_run ) )
             message += '\n' * 2
-            message += '{} next times: {}'.format( HydrusData.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, ClientTime.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
+            message += '{} next times: {}'.format( HydrusNumbers.ToHumanInt( len( self._names_to_next_work_time ) ), ', '.join( ( '{}: {}'.format( name, ClientTime.TimestampToPrettyTimeDelta( next_work_time ) ) for ( name, next_work_time ) in next_times ) ) )
             
             HydrusData.ShowText( message )
             

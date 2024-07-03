@@ -11,6 +11,7 @@ from hydrus.core import HydrusController
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusThreading
@@ -245,7 +246,7 @@ class Controller( HydrusController.HydrusController ):
         
         if num_files_deleted > 0 or num_thumbnails_deleted > 0:
             
-            HydrusData.Print( 'Physically deleted {} files and {} thumbnails from file storage.'.format( HydrusData.ToHumanInt( num_files_deleted ), HydrusData.ToHumanInt( num_files_deleted ) ) )
+            HydrusData.Print( 'Physically deleted {} files and {} thumbnails from file storage.'.format( HydrusNumbers.ToHumanInt( num_files_deleted ), HydrusNumbers.ToHumanInt( num_files_deleted ) ) )
             
         
     

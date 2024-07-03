@@ -9,6 +9,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
@@ -207,7 +208,7 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
                     
                     if num_files > 0:
                         
-                        message = 'The service {} needs to be empty before it can be deleted, but it seems to have {} files in it! Please delete or migrate all the files from it and then try again.'.format( service.GetName(), HydrusData.ToHumanInt( num_files ) )
+                        message = 'The service {} needs to be empty before it can be deleted, but it seems to have {} files in it! Please delete or migrate all the files from it and then try again.'.format( service.GetName(), HydrusNumbers.ToHumanInt( num_files ) )
                         
                         ClientGUIDialogsMessage.ShowInformation( self, message )
                         
@@ -1799,7 +1800,7 @@ class ReviewServicePanel( QW.QWidget ):
                 
                 rows_s = int( weight / it_took )
                 
-                update_speed_string = ' at ' + HydrusData.ToHumanInt( rows_s ) + ' rows/s'
+                update_speed_string = ' at ' + HydrusNumbers.ToHumanInt( rows_s ) + ' rows/s'
                 
                 c_u_p_total_weight_processed += weight
                 
@@ -1808,7 +1809,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             self._service.SyncThumbnails( job_status )
             
-            job_status.SetStatusText( 'done! ' + HydrusData.ToHumanInt( c_u_p_num_rows ) + ' rows added.' )
+            job_status.SetStatusText( 'done! ' + HydrusNumbers.ToHumanInt( c_u_p_num_rows ) + ' rows added.' )
             
             job_status.Finish()
             
@@ -1893,7 +1894,7 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         menu_items.append( ( 'normal', 'from api request', 'Listen for an access permission request from an external program via the API.', self._AddFromAPI ) )
         
         permissions_list_panel.AddMenuButton( 'add', menu_items )
-        permissions_list_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        permissions_list_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         permissions_list_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         permissions_list_panel.AddButton( 'delete', self._Delete, enabled_only_on_selection = True )
         permissions_list_panel.AddSeparator()
@@ -2247,7 +2248,7 @@ class ReviewServiceCombinedLocalFilesSubPanel( ClientGUICommon.StaticBox ):
             
         else:
             
-            text = '{} files and {} thumbnails are awaiting physical deletion from file storage.'.format( HydrusData.ToHumanInt( num_files ), HydrusData.ToHumanInt( num_thumbnails ) )
+            text = '{} files and {} thumbnails are awaiting physical deletion from file storage.'.format( HydrusNumbers.ToHumanInt( num_files ), HydrusNumbers.ToHumanInt( num_thumbnails ) )
             
         
         QP.CallAfter( qt_code, text )
@@ -2313,13 +2314,13 @@ class ReviewServiceFileSubPanel( ClientGUICommon.StaticBox ):
         num_files = service_info[ HC.SERVICE_INFO_NUM_FILES ]
         total_size = service_info[ HC.SERVICE_INFO_TOTAL_SIZE ]
         
-        text = HydrusData.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ToHumanBytes( total_size )
+        text = HydrusNumbers.ToHumanInt( num_files ) + ' files, totalling ' + HydrusData.ToHumanBytes( total_size )
         
         if service.GetServiceType() in ( HC.LOCAL_FILE_DOMAIN, HC.COMBINED_LOCAL_MEDIA, HC.COMBINED_LOCAL_FILE, HC.FILE_REPOSITORY ):
             
             num_deleted_files = service_info[ HC.SERVICE_INFO_NUM_DELETED_FILES ]
             
-            text += ' - ' + HydrusData.ToHumanInt( num_deleted_files ) + ' deleted files'
+            text += ' - ' + HydrusNumbers.ToHumanInt( num_deleted_files ) + ' deleted files'
             
         
         QP.CallAfter( qt_code, text )
@@ -3000,7 +3001,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
             message = 'Note that num file hashes and tags here include deleted content so will likely not line up with your review services value, which is only for current content.'
             message += '\n' * 2
             
-            tuples = [ ( HC.service_info_enum_str_lookup[ info_type ], HydrusData.ToHumanInt( service_info_dict[ info_type ] ) ) for info_type in service_info_types if info_type in service_info_dict ]
+            tuples = [ ( HC.service_info_enum_str_lookup[ info_type ], HydrusNumbers.ToHumanInt( service_info_dict[ info_type ] ) ) for info_type in service_info_types if info_type in service_info_dict ]
             string_rows = [ '{}: {}'.format( info_type, info ) for ( info_type, info ) in tuples ]
             
             message += '\n'.join( string_rows )
@@ -3481,7 +3482,7 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         ( multihash, num_files, total_size, note ) = data
         
         pretty_multihash = multihash
-        pretty_num_files = HydrusData.ToHumanInt( num_files )
+        pretty_num_files = HydrusNumbers.ToHumanInt( num_files )
         pretty_total_size = HydrusData.ToHumanBytes( total_size )
         pretty_note = note
         
@@ -3751,7 +3752,7 @@ class ReviewServiceRatingSubPanel( ClientGUICommon.StaticBox ):
         
         num_files = service_info[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
         
-        text = HydrusData.ToHumanInt( num_files ) + ' files are rated'
+        text = HydrusNumbers.ToHumanInt( num_files ) + ' files are rated'
         
         QP.CallAfter( qt_code, text )
         
@@ -3827,13 +3828,13 @@ class ReviewServiceTagSubPanel( ClientGUICommon.StaticBox ):
         num_tags = service_info[ HC.SERVICE_INFO_NUM_TAGS ]
         num_mappings = service_info[ HC.SERVICE_INFO_NUM_MAPPINGS ]
         
-        text = HydrusData.ToHumanInt( num_mappings ) + ' total mappings involving ' + HydrusData.ToHumanInt( num_tags ) + ' different tags on ' + HydrusData.ToHumanInt( num_files ) + ' different files'
+        text = HydrusNumbers.ToHumanInt( num_mappings ) + ' total mappings involving ' + HydrusNumbers.ToHumanInt( num_tags ) + ' different tags on ' + HydrusNumbers.ToHumanInt( num_files ) + ' different files'
         
         if service.GetServiceType() == HC.TAG_REPOSITORY:
             
             num_deleted_mappings = service_info[ HC.SERVICE_INFO_NUM_DELETED_MAPPINGS ]
             
-            text += ' - ' + HydrusData.ToHumanInt( num_deleted_mappings ) + ' deleted mappings'
+            text += ' - ' + HydrusNumbers.ToHumanInt( num_deleted_mappings ) + ' deleted mappings'
             
         
         QP.CallAfter( qt_code, text )

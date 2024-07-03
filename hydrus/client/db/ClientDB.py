@@ -18,6 +18,7 @@ from hydrus.core import HydrusDB
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -176,7 +177,7 @@ def report_content_speed_to_job_status( job_status, rows_done, total_rows, preci
     
     it_took = HydrusTime.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
+    rows_s = HydrusNumbers.ToHumanInt( int( num_rows / it_took ) )
     
     popup_message = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
@@ -187,7 +188,7 @@ def report_speed_to_job_status( job_status, precise_timestamp, num_rows, row_nam
     
     it_took = HydrusTime.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
+    rows_s = HydrusNumbers.ToHumanInt( int( num_rows / it_took ) )
     
     popup_message = 'processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
@@ -203,9 +204,9 @@ def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     
     it_took = HydrusTime.GetNowPrecise() - precise_timestamp
     
-    rows_s = HydrusData.ToHumanInt( int( num_rows / it_took ) )
+    rows_s = HydrusNumbers.ToHumanInt( int( num_rows / it_took ) )
     
-    summary = 'processed ' + HydrusData.ToHumanInt( num_rows ) + ' ' + row_name + ' at ' + rows_s + ' rows/s'
+    summary = 'processed ' + HydrusNumbers.ToHumanInt( num_rows ) + ' ' + row_name + ' at ' + rows_s + ' rows/s'
     
     HydrusData.Print( summary )
     
@@ -1163,7 +1164,7 @@ class DB( HydrusDB.HydrusDB ):
                             # with fingers crossed this magically corrects all sorts of stuff
                             self._AddFiles( umbrella_master_service_id, import_rows )
                             
-                            HydrusData.ShowText( 'Found and recovered {} records for files that were safely in specific component services components but not the master "{}". I have opened a new page with these files--they may have been faulty imports or faulty deletes, so you probably need to give them a look.'.format( HydrusData.ToHumanInt( len( in_components_not_in_master ) ), description ) )
+                            HydrusData.ShowText( 'Found and recovered {} records for files that were safely in specific component services components but not the master "{}". I have opened a new page with these files--they may have been faulty imports or faulty deletes, so you probably need to give them a look.'.format( HydrusNumbers.ToHumanInt( len( in_components_not_in_master ) ), description ) )
                             
                             service_key = self.modules_services.GetServiceKey( umbrella_master_service_id )
                             
@@ -1200,7 +1201,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         self.modules_hashes_local_cache.DropHashIdsFromCache( in_components_not_in_master )
                         
-                        HydrusData.ShowText( 'Found and deleted {} records for files that were in specific service components but not the master "{}".'.format( HydrusData.ToHumanInt( len( in_components_not_in_master ) ), description ) )
+                        HydrusData.ShowText( 'Found and deleted {} records for files that were in specific service components but not the master "{}".'.format( HydrusNumbers.ToHumanInt( len( in_components_not_in_master ) ), description ) )
                         
                     
                 
@@ -1219,7 +1220,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     self._DeleteFiles( umbrella_master_service_id, in_master_not_in_components )
                     
-                    HydrusData.ShowText( 'Found and deleted {} records for files that were in the master "{}" but not it its specific service components.'.format( HydrusData.ToHumanInt( len( in_master_not_in_components ) ), description ) )
+                    HydrusData.ShowText( 'Found and deleted {} records for files that were in the master "{}" but not it its specific service components.'.format( HydrusNumbers.ToHumanInt( len( in_master_not_in_components ) ), description ) )
                     
                 
             
@@ -2414,7 +2415,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 self._controller.pub( 'notify_new_pending' )
                 
-                HydrusData.ShowText( 'Found {} bad mappings! They _should_ be deleted, and your pending counts should be updated.'.format( HydrusData.ToHumanInt( total_fixed ) ) )
+                HydrusData.ShowText( 'Found {} bad mappings! They _should_ be deleted, and your pending counts should be updated.'.format( HydrusNumbers.ToHumanInt( total_fixed ) ) )
                 
             
             job_status.DeleteStatusText( 2 )
@@ -3635,7 +3636,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if len( names_to_analyze ) > 0:
             
-            jobs_to_do.append( 'analyze ' + HydrusData.ToHumanInt( len( names_to_analyze ) ) + ' table_names' )
+            jobs_to_do.append( 'analyze ' + HydrusNumbers.ToHumanInt( len( names_to_analyze ) ) + ' table_names' )
             
         
         similar_files_due = self.modules_similar_files.MaintenanceDue()
@@ -4820,7 +4821,7 @@ class DB( HydrusDB.HydrusDB ):
                 
             else:
                 
-                message += 'at most ' + HydrusData.ToHumanInt( limit )
+                message += 'at most ' + HydrusNumbers.ToHumanInt( limit )
                 
             
             message += ' trash files,'
@@ -4830,7 +4831,7 @@ class DB( HydrusDB.HydrusDB ):
                 message += ' with minimum age ' + ClientTime.TimestampToPrettyTimeDelta( timestamp_cutoff, just_now_threshold = 0 ) + ','
                 
             
-            message += ' I found ' + HydrusData.ToHumanInt( len( hash_ids ) ) + '.'
+            message += ' I found ' + HydrusNumbers.ToHumanInt( len( hash_ids ) ) + '.'
             
             HydrusData.ShowText( message )
             
@@ -5454,67 +5455,159 @@ class DB( HydrusDB.HydrusDB ):
         return data
         
     
-    def _MigrationStartMappingsJob( self, database_temp_job_name, location_context: ClientLocation.LocationContext, tag_service_key, hashes, content_statuses ):
+    def _MigrationStartMappingsJob(
+        self,
+        database_temp_job_name,
+        location_context: ClientLocation.LocationContext,
+        tag_service_key,
+        tag_filter: HydrusTags.TagFilter,
+        hashes: typing.Collection[ bytes ],
+        content_statuses: typing.Collection[ int ]
+    ):
         
-        self._Execute( 'CREATE TABLE IF NOT EXISTS durable_temp.{} ( hash_id INTEGER PRIMARY KEY );'.format( database_temp_job_name ) )
+        # the overall migration loop loads files and checks if they have the tags. thus:
+        # this guy can deliver files that are in the file domain but which do not have the tags
+        # it must not deliver files outside of the domain that do have the tags!
+        
+        tag_service_id = self.modules_services.GetServiceId( tag_service_key )
+        
+        self._Execute( f'CREATE TABLE IF NOT EXISTS durable_temp.{database_temp_job_name} ( hash_id INTEGER PRIMARY KEY );' )
         
         if hashes is not None:
             
+            # hashes
+            
             hash_ids = self.modules_hashes_local_cache.GetHashIds( hashes )
             
-            self._ExecuteMany( 'INSERT INTO {} ( hash_id ) VALUES ( ? );'.format( database_temp_job_name ), ( ( hash_id, ) for hash_id in hash_ids ) )
+            self._ExecuteMany( f'INSERT INTO {database_temp_job_name} ( hash_id ) VALUES ( ? );', ( ( hash_id, ) for hash_id in hash_ids ) )
+            
+        elif not tag_filter.AllowsEverything():
+            
+            # no hashes but a tag filter
+            
+            with self._MakeTemporaryIntegerTable( [], 'tag_id' ) as temp_tag_ids_table_name:
+                
+                select_subqueries = []
+                
+                my_search_includes_deleted_tags = HC.CONTENT_STATUS_DELETED in content_statuses
+                
+                statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNamesFromLocationContext( location_context, tag_service_id )
+                
+                if location_context.IsAllKnownFiles():
+                    
+                    self.modules_tag_search.PopulateTableFromTagFilter( self.modules_services.combined_file_service_id, tag_service_id, tag_filter, temp_tag_ids_table_name, my_search_includes_deleted_tags )
+                    
+                    for content_status in content_statuses:
+                        
+                        mappings_table_name = statuses_to_table_names[ content_status ]
+                        
+                        select_subquery = f'SELECT DISTINCT hash_id FROM {temp_tag_ids_table_name} CROSS JOIN {mappings_table_name} USING ( tag_id )'
+                        
+                        select_subqueries.append( select_subquery )
+                        
+                    
+                else:
+                    
+                    # we need to be cross-referenced here
+                    
+                    if len( location_context.deleted_service_keys ) > 0:
+                        
+                        self.modules_tag_search.PopulateTableFromTagFilter( self.modules_services.combined_deleted_file_service_id, tag_service_id, tag_filter, temp_tag_ids_table_name, my_search_includes_deleted_tags )
+                        
+                    
+                    for file_service_key in location_context.current_service_keys:
+                        
+                        self.modules_tag_search.PopulateTableFromTagFilter( self.modules_services.GetServiceId( file_service_key ), tag_service_id, tag_filter, temp_tag_ids_table_name, my_search_includes_deleted_tags )
+                        
+                    
+                    # we need to return a properly cross-referenced result, but what we have done above may include tags for extra files because of umbrella domains
+                    
+                    db_location_context = self.modules_files_storage.GetDBLocationContext( location_context )
+                    
+                    statuses_to_table_names = self.modules_mappings_storage.GetFastestStorageMappingTableNamesFromLocationContext( location_context, tag_service_id )
+                    
+                    for content_status in content_statuses:
+                        
+                        mappings_table_name = statuses_to_table_names[ content_status ]
+                        
+                        if db_location_context.SingleTableIsFast():
+                            
+                            files_table_names = ( db_location_context.GetSingleFilesTableName(), )
+                            
+                        else:
+                            
+                            files_table_names = db_location_context.GetMultipleFilesTableNames()
+                            
+                        
+                        for files_table_name in files_table_names:
+                            
+                            select_subquery = f'SELECT DISTINCT hash_id FROM {temp_tag_ids_table_name} CROSS JOIN {mappings_table_name} USING ( tag_id ) CROSS JOIN {files_table_name} USING ( hash_id )'
+                            
+                            select_subqueries.append( select_subquery )
+                            
+                        
+                    
+                
+                for select_subquery in select_subqueries:
+                    
+                    self._Execute( f'INSERT OR IGNORE INTO {database_temp_job_name} ( hash_id ) {select_subquery};' )
+                    
+                
             
         else:
             
-            tag_service_id = self.modules_services.GetServiceId( tag_service_key )
+            # no hashes, no tag filter, big job
             
             use_hashes_table = False
             
             if location_context.IsAllKnownFiles():
                 
-                # if our tag service is the biggest, and if it basically accounts for all the hashes we know about, it is much faster to just use the hashes table
-                
-                our_results = self._GetServiceInfo( tag_service_key )
-                
-                our_num_files = our_results[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
-                
-                other_services = [ service for service in self.modules_services.GetServices( HC.REAL_TAG_SERVICES ) if service.GetServiceKey() != tag_service_key ]
-                
-                other_num_files = []
-                
-                for other_service in other_services:
+                if tag_filter.AllowsEverything():
                     
-                    other_results = self._GetServiceInfo( other_service.GetServiceKey() )
+                    # if our tag service is the biggest, and if it basically accounts for all the hashes we know about, it is much faster to just use the hashes table
                     
-                    other_num_files.append( other_results[ HC.SERVICE_INFO_NUM_FILE_HASHES ] )
+                    our_results = self._GetServiceInfo( tag_service_key )
                     
-                
-                if len( other_num_files ) == 0:
+                    our_num_files = our_results[ HC.SERVICE_INFO_NUM_FILE_HASHES ]
                     
-                    we_are_big = True
+                    other_services = [ service for service in self.modules_services.GetServices( HC.REAL_TAG_SERVICES ) if service.GetServiceKey() != tag_service_key ]
                     
-                else:
+                    other_num_files = []
                     
-                    we_are_big = our_num_files >= 0.75 * max( other_num_files )
-                    
-                
-                if we_are_big:
-                    
-                    local_files_results = self._GetServiceInfo( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
-                    
-                    local_files_num_files = local_files_results[ HC.SERVICE_INFO_NUM_FILES ]
-                    
-                    if local_files_num_files > our_num_files:
+                    for other_service in other_services:
                         
-                        # probably a small local tags service, ok to pull from current_mappings
+                        other_results = self._GetServiceInfo( other_service.GetServiceKey() )
                         
-                        we_are_big = False
+                        other_num_files.append( other_results[ HC.SERVICE_INFO_NUM_FILE_HASHES ] )
                         
                     
-                
-                if we_are_big:
+                    if len( other_num_files ) == 0:
+                        
+                        we_are_big = True
+                        
+                    else:
+                        
+                        we_are_big = our_num_files >= 0.75 * max( other_num_files )
+                        
                     
-                    use_hashes_table = True
+                    if we_are_big:
+                        
+                        local_files_results = self._GetServiceInfo( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
+                        
+                        local_files_num_files = local_files_results[ HC.SERVICE_INFO_NUM_FILES ]
+                        
+                        if local_files_num_files > our_num_files:
+                            
+                            # probably a small local tags service, ok to pull from current_mappings
+                            
+                            we_are_big = False
+                            
+                        
+                    
+                    if we_are_big:
+                        
+                        use_hashes_table = True
+                        
                     
                 
             
@@ -5560,7 +5653,7 @@ class DB( HydrusDB.HydrusDB ):
             
             for select_subquery in select_subqueries:
                 
-                self._Execute( 'INSERT OR IGNORE INTO {} ( hash_id ) {};'.format( database_temp_job_name, select_subquery ) )
+                self._Execute( f'INSERT OR IGNORE INTO {database_temp_job_name} ( hash_id ) {select_subquery};' )
                 
             
         
@@ -5608,7 +5701,7 @@ class DB( HydrusDB.HydrusDB ):
         
         while len( group_of_hash_ids ) > 0:
         
-            text = 'searching potential duplicates: {}'.format( HydrusData.ToHumanInt( num_done ) )
+            text = 'searching potential duplicates: {}'.format( HydrusNumbers.ToHumanInt( num_done ) )
             
             CG.client_controller.frame_splash_status.SetSubtext( text )
             
@@ -7829,7 +7922,7 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ), HydrusData.ToHumanInt( bad_tag_count ) )
+                message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ), HydrusNumbers.ToHumanInt( bad_tag_count ) )
                 
                 job_status.SetStatusText( message )
                 
@@ -7929,7 +8022,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                 else:
                     
-                    message = 'Invalid tag scanning: {} bad tags found and fixed! They have been written to the log.'.format( HydrusData.ToHumanInt( bad_tag_count ) )
+                    message = 'Invalid tag scanning: {} bad tags found and fixed! They have been written to the log.'.format( HydrusNumbers.ToHumanInt( bad_tag_count ) )
                     
                     self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
                     
@@ -7978,7 +8071,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     message = 'Doing "{}": {}'.format( name, HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
                     message += '\n' * 2
-                    message += 'Total rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) )
+                    message += 'Total rows recovered: {}'.format( HydrusNumbers.ToHumanInt( num_rows_recovered ) )
                     
                     job_status.SetStatusText( message )
                     
@@ -8010,7 +8103,7 @@ class DB( HydrusDB.HydrusDB ):
         
         if job_status is not None:
             
-            job_status.SetStatusText( 'Done! Rows recovered: {}'.format( HydrusData.ToHumanInt( num_rows_recovered ) ) )
+            job_status.SetStatusText( 'Done! Rows recovered: {}'.format( HydrusNumbers.ToHumanInt( num_rows_recovered ) ) )
             
             job_status.Finish()
             
@@ -8149,14 +8242,14 @@ class DB( HydrusDB.HydrusDB ):
     
     def _ReportOverupdatedDB( self, version ):
         
-        message = 'This client\'s database is version {}, but the software is version {}! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusData.ToHumanInt( version ), HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) )
+        message = 'This client\'s database is version {}, but the software is version {}! This situation only sometimes works, and when it does not, it can break things! If you are not sure what is going on, or if you accidentally installed an older version of the software to a newer database, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusNumbers.ToHumanInt( version ), HydrusNumbers.ToHumanInt( HC.SOFTWARE_VERSION ) )
         
         self._controller.BlockingSafeShowMessage( message )
         
     
     def _ReportUnderupdatedDB( self, version ):
         
-        message = 'This client\'s database is version {}, but the software is significantly later, {}! Trying to update many versions in one go can be dangerous due to bitrot. I suggest you try at most to only do 10 versions at once. If you want to try a big jump anyway, you should make sure you have a backup beforehand so you can roll back to it in case the update makes your db unbootable. If you would rather try smaller updates, or you do not have a backup, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusData.ToHumanInt( version ), HydrusData.ToHumanInt( HC.SOFTWARE_VERSION ) )
+        message = 'This client\'s database is version {}, but the software is significantly later, {}! Trying to update many versions in one go can be dangerous due to bitrot. I suggest you try at most to only do 10 versions at once. If you want to try a big jump anyway, you should make sure you have a backup beforehand so you can roll back to it in case the update makes your db unbootable. If you would rather try smaller updates, or you do not have a backup, force-kill this client in Task Manager right now. Otherwise, ok this dialog box to continue.'.format( HydrusNumbers.ToHumanInt( version ), HydrusNumbers.ToHumanInt( HC.SOFTWARE_VERSION ) )
         
         self._controller.BlockingSafeShowMessage( message )
         
@@ -8386,7 +8479,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         problems_found = True
                         
-                        HydrusData.ShowText( '{} surplus files in {}_{}!'.format( HydrusData.ToHumanInt( len( hash_ids_in_this_cache_but_not_in_file_service ) ), file_service_id, tag_service_id ) )
+                        HydrusData.ShowText( '{} surplus files in {}_{}!'.format( HydrusNumbers.ToHumanInt( len( hash_ids_in_this_cache_but_not_in_file_service ) ), file_service_id, tag_service_id ) )
                         
                         with self._MakeTemporaryIntegerTable( hash_ids_in_this_cache_but_not_in_file_service, 'hash_id' ) as temp_hash_id_table_name:
                             
@@ -8412,7 +8505,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         problems_found = True
                         
-                        HydrusData.ShowText( '{} missing files in {}_{}!'.format( HydrusData.ToHumanInt( len( hash_ids_in_file_service_and_not_in_cache_that_have_tags ) ), file_service_id, tag_service_id ) )
+                        HydrusData.ShowText( '{} missing files in {}_{}!'.format( HydrusNumbers.ToHumanInt( len( hash_ids_in_file_service_and_not_in_cache_that_have_tags ) ), file_service_id, tag_service_id ) )
                         
                         with self._MakeTemporaryIntegerTable( hash_ids_in_file_service_and_not_in_cache_that_have_tags, 'hash_id' ) as temp_hash_id_table_name:
                             
@@ -9801,7 +9894,7 @@ class DB( HydrusDB.HydrusDB ):
                         
                         num_string = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
                         
-                        self._controller.frame_splash_status.SetSubtext( f'bad url scan - {num_string} - bad urls: {HydrusData.ToHumanInt(len( bad_url_ids))}' )
+                        self._controller.frame_splash_status.SetSubtext( f'bad url scan - {num_string} - bad urls: {HydrusNumbers.ToHumanInt(len( bad_url_ids))}' )
                         
                         for url_id in chunk_of_url_ids:
                             
@@ -9814,13 +9907,13 @@ class DB( HydrusDB.HydrusDB ):
                             
                         
                     
-                    self._controller.frame_splash_status.SetSubtext( f'bad url scan - done! - bad urls: {HydrusData.ToHumanInt(len( bad_url_ids))}' )
+                    self._controller.frame_splash_status.SetSubtext( f'bad url scan - done! - bad urls: {HydrusNumbers.ToHumanInt(len( bad_url_ids))}' )
                     
                     if len( bad_url_ids ) > 0:
                         
                         def ask_what_to_do_delete_urls():
                             
-                            message = f'I found {HydrusData.ToHumanInt(len(bad_url_ids))} bad URLs. I am going to delete them now, ok?'
+                            message = f'I found {HydrusNumbers.ToHumanInt(len(bad_url_ids))} bad URLs. I am going to delete them now, ok?'
                             
                             from hydrus.client.gui import ClientGUIDialogsQuick
                             
@@ -9836,7 +9929,7 @@ class DB( HydrusDB.HydrusDB ):
                             self._ExecuteMany( 'DELETE FROM urls WHERE url_id = ?;', ( ( url_id, ) for url_id in bad_url_ids ) )
                             self._ExecuteMany( 'DELETE FROM url_map WHERE url_id = ?;', ( ( url_id, ) for url_id in bad_url_ids ) )
                             
-                            self.pub_initial_message( f'Deleted {HydrusData.ToHumanInt(len(bad_url_ids))} bad URLs on update!' )
+                            self.pub_initial_message( f'Deleted {HydrusNumbers.ToHumanInt(len(bad_url_ids))} bad URLs on update!' )
                             
                         
                     else:
@@ -10288,7 +10381,43 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
-        self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusData.ToHumanInt( version + 1 ) ) )
+        if version == 580:
+            
+            try:
+                
+                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                domain_manager.DeleteParsers( [
+                    'rule34.paheal gallery page parser',
+                    'rule34hentai gallery page parser'
+                ] )
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'shimmie file page parser',
+                    'shimmie gallery page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
         

@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -523,7 +524,7 @@ class ClientFilesManager( object ):
         
         if len( correct_rows ) > 0:
             
-            summaries = sorted( ( '{} folders seem to have moved from {} to {}'.format( HydrusData.ToHumanInt( count ), missing_base_location, correct_base_location ) for ( ( missing_base_location, correct_base_location ), count ) in fixes_counter.items() ) )
+            summaries = sorted( ( '{} folders seem to have moved from {} to {}'.format( HydrusNumbers.ToHumanInt( count ), missing_base_location, correct_base_location ) for ( ( missing_base_location, correct_base_location ), count ) in fixes_counter.items() ) )
             
             summary_message = 'Some client file folders were missing, but they appear to be in other known locations! The folders are:'
             summary_message += '\n' * 2
@@ -1316,7 +1317,7 @@ class ClientFilesManager( object ):
                                 
                                 if num_files_reviewed % 100 == 0:
                                     
-                                    status = 'reviewed ' + HydrusData.ToHumanInt( num_files_reviewed ) + ' files, found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphans'
+                                    status = 'reviewed ' + HydrusNumbers.ToHumanInt( num_files_reviewed ) + ' files, found ' + HydrusNumbers.ToHumanInt( len( orphan_paths ) ) + ' orphans'
                                     
                                     job_status.SetStatusText( status, level = 2 )
                                     
@@ -1325,7 +1326,7 @@ class ClientFilesManager( object ):
                                 
                                 if num_thumbnails_reviewed % 100 == 0:
                                     
-                                    status = 'reviewed ' + HydrusData.ToHumanInt( num_thumbnails_reviewed ) + ' thumbnails, found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphans'
+                                    status = 'reviewed ' + HydrusNumbers.ToHumanInt( num_thumbnails_reviewed ) + ' thumbnails, found ' + HydrusNumbers.ToHumanInt( len( orphan_thumbnails ) ) + ' orphans'
                                     
                                     job_status.SetStatusText( status, level = 2 )
                                     
@@ -1415,7 +1416,7 @@ class ClientFilesManager( object ):
                 
                 if len( orphan_paths ) > 0:
                     
-                    status = 'found ' + HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphan files, now deleting'
+                    status = 'found ' + HydrusNumbers.ToHumanInt( len( orphan_paths ) ) + ' orphan files, now deleting'
                     
                     job_status.SetStatusText( status )
                     
@@ -1442,7 +1443,7 @@ class ClientFilesManager( object ):
                 
                 if len( orphan_thumbnails ) > 0:
                     
-                    status = 'found ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
+                    status = 'found ' + HydrusNumbers.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails, now deleting'
                     
                     job_status.SetStatusText( status )
                     
@@ -1474,7 +1475,7 @@ class ClientFilesManager( object ):
                 
             else:
                 
-                final_text = HydrusData.ToHumanInt( len( orphan_paths ) ) + ' orphan files and ' + HydrusData.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
+                final_text = HydrusNumbers.ToHumanInt( len( orphan_paths ) ) + ' orphan files and ' + HydrusNumbers.ToHumanInt( len( orphan_thumbnails ) ) + ' orphan thumbnails cleared!'
                 
             
             job_status.SetStatusText( final_text )
@@ -1606,7 +1607,7 @@ class ClientFilesManager( object ):
             
             self._controller.pub( 'notify_new_physical_file_delete_numbers' )
             
-            HydrusData.Print( 'Physically deleted {} files and {} thumbnails from file storage.'.format( HydrusData.ToHumanInt( num_files_deleted ), HydrusData.ToHumanInt( num_files_deleted ) ) )
+            HydrusData.Print( 'Physically deleted {} files and {} thumbnails from file storage.'.format( HydrusNumbers.ToHumanInt( num_files_deleted ), HydrusNumbers.ToHumanInt( num_files_deleted ) ) )
             
         
     
@@ -2022,12 +2023,12 @@ def add_extra_comments_to_job_status( job_status: ClientThreading.JobStatus ):
     
     if num_thumb_refits is not None:
         
-        extra_comments.append( 'thumbs needing regen: {}'.format( HydrusData.ToHumanInt( num_thumb_refits ) ) )
+        extra_comments.append( 'thumbs needing regen: {}'.format( HydrusNumbers.ToHumanInt( num_thumb_refits ) ) )
         
     
     if num_bad_files is not None:
         
-        extra_comments.append( 'missing or invalid files: {}'.format( HydrusData.ToHumanInt( num_bad_files ) ) )
+        extra_comments.append( 'missing or invalid files: {}'.format( HydrusNumbers.ToHumanInt( num_bad_files ) ) )
         
     
     sub_status_message = '\n'.join( extra_comments )

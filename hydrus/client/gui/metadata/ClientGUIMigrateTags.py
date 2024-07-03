@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusText
@@ -97,7 +98,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         if self._hashes is not None:
             
-            self._migration_source_file_filtering_type.addItem( '{} files'.format( HydrusData.ToHumanInt( len( self._hashes ) ) ), self.HASHES_LOCATION )
+            self._migration_source_file_filtering_type.addItem( '{} files'.format( HydrusNumbers.ToHumanInt( len( self._hashes ) ) ), self.HASHES_LOCATION )
             
             self._migration_source_file_filtering_type.SetValue( self.HASHES_LOCATION )
             
@@ -302,7 +303,7 @@ class MigrateTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_FILE_SERVICE_KEY )
                 hashes = self._hashes
                 
-                extra_info = ' for {} files'.format( HydrusData.ToHumanInt( len( hashes ) ) )
+                extra_info = ' for {} files'.format( HydrusNumbers.ToHumanInt( len( hashes ) ) )
                 
             else:
                 

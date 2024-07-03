@@ -22,6 +22,7 @@ from hydrus.core import HydrusEncryption
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusMemory
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusSerialisable
@@ -92,6 +93,8 @@ from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.parsing import ClientGUIParsing
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
 from hydrus.client.gui.services import ClientGUIClientsideServices
+from hydrus.client.gui.services import ClientGUIModalClientsideServiceActions
+from hydrus.client.gui.services import ClientGUIModalServersideServiceActions
 from hydrus.client.gui.services import ClientGUIServersideServices
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.interfaces import ClientControllerInterface
@@ -1288,7 +1291,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                 else:
                     
-                    message = '{} orphans cleared!'.format( HydrusData.ToHumanInt( num_done ) )
+                    message = '{} orphans cleared!'.format( HydrusNumbers.ToHumanInt( num_done ) )
                     
                 
                 HydrusData.ShowText( message )
@@ -1430,7 +1433,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     
     def _DebugIsolateMPVWindows( self ):
         
-        HydrusData.ShowText( f'Isolated {HydrusData.ToHumanInt( len( self._persistent_mpv_widgets ) )} MPV widgets.' )
+        HydrusData.ShowText( f'Isolated {HydrusNumbers.ToHumanInt( len( self._persistent_mpv_widgets ) )} MPV widgets.' )
         
         self._isolated_mpv_widgets.extend( self._persistent_mpv_widgets )
         
@@ -2165,7 +2168,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                 else:
                     
-                    job_status.SetStatusText( 'Done with ' + HydrusData.ToHumanInt( num_errors ) + ' errors (written to the log).' )
+                    job_status.SetStatusText( 'Done with ' + HydrusNumbers.ToHumanInt( num_errors ) + ' errors (written to the log).' )
                     
                 
             finally:
@@ -2874,7 +2877,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                         if service_key in self._currently_uploading_pending:
                             
-                            title = '{}: currently uploading {}'.format( name, HydrusData.ToHumanInt( num_pending + num_petitioned ) )
+                            title = '{}: currently uploading {}'.format( name, HydrusNumbers.ToHumanInt( num_pending + num_petitioned ) )
                             
                         else:
                             
@@ -2882,12 +2885,12 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                             
                             if num_pending > 0:
                                 
-                                submessages.append( '{} {}'.format( HydrusData.ToHumanInt( num_pending ), pending_phrase ) )
+                                submessages.append( '{} {}'.format( HydrusNumbers.ToHumanInt( num_pending ), pending_phrase ) )
                                 
                             
                             if num_petitioned > 0:
                                 
-                                submessages.append( '{} {}'.format( HydrusData.ToHumanInt( num_petitioned ), petitioned_phrase ) )
+                                submessages.append( '{} {}'.format( HydrusNumbers.ToHumanInt( num_petitioned ), petitioned_phrase ) )
                                 
                             
                             title = '{}: {}'.format( name, ', '.join( submessages ) )
@@ -2904,7 +2907,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 total_num_pending += num_pending + num_petitioned
                 
             
-            ClientGUIMenus.SetMenuTitle( self._menubar_pending_submenu, 'pending ({})'.format( HydrusData.ToHumanInt( total_num_pending ) ) )
+            ClientGUIMenus.SetMenuTitle( self._menubar_pending_submenu, 'pending ({})'.format( HydrusNumbers.ToHumanInt( total_num_pending ) ) )
             
             self._menubar_pending_submenu.menuAction().setEnabled( total_num_pending > 0 )
             
@@ -2995,7 +2998,11 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                         if service_type == HC.TAG_REPOSITORY:
                             
-                            ClientGUIMenus.AppendMenuItem( submenu, 'edit tag filter' + HC.UNICODE_ELLIPSIS, 'Change the tag filter for this service.', self._ManageServiceOptionsTagFilter, service_key )
+                            ClientGUIMenus.AppendSeparator( submenu )
+                            
+                            ClientGUIMenus.AppendMenuItem( submenu, 'edit tag filter' + HC.UNICODE_ELLIPSIS, 'Change the tag filter for this service.', ClientGUIModalServersideServiceActions.ManageServiceOptionsTagFilter, self, service_key )
+                            ClientGUIMenus.AppendMenuItem( submenu, 'purge tags' + HC.UNICODE_ELLIPSIS, 'Delete tags completely from the service.', ClientGUIModalClientsideServiceActions.OpenPurgeTagsWindow, self, service_key, [] )
+                            ClientGUIMenus.AppendMenuItem( submenu, 'purge tag filter', 'Sync the tag filter to the service, deleting anything that does not pass.', ClientGUIModalClientsideServiceActions.StartPurgeTagFilter, self, service_key )
                             
                         
                         ClientGUIMenus.AppendSeparator( submenu )
@@ -3514,6 +3521,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         network_actions = ClientGUIMenus.GenerateMenu( debug_menu )
         
+        ClientGUIMenus.AppendMenuItem( network_actions, 'review current network jobs', 'Review the jobs currently running in the network engine.', self._ReviewNetworkJobs )
         ClientGUIMenus.AppendMenuItem( network_actions, 'fetch a url', 'Fetch a URL using the network engine as per normal.', self._DebugFetchAURL )
         
         ClientGUIMenus.AppendMenu( debug_menu, network_actions, 'network actions' )
@@ -4729,7 +4737,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if len( missing_query_log_container_names ) > 0:
                 
-                text = '{} subscription queries had missing database data! This is a serious error!'.format( HydrusData.ToHumanInt( len( missing_query_log_container_names ) ) )
+                text = '{} subscription queries had missing database data! This is a serious error!'.format( HydrusNumbers.ToHumanInt( len( missing_query_log_container_names ) ) )
                 text += '\n' * 2
                 text += 'If you continue, the client will now create and save empty file/search logs for those queries, essentially resetting them, but if you know you need to exit and fix your database in a different way, cancel out now.'
                 text += '\n' * 2
@@ -4769,7 +4777,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
             if len( surplus_query_log_container_names ) > 0:
                 
-                text = 'When loading subscription data, the client discovered surplus orphaned subscription data for {} queries! This data is harmless and no longer used. The situation is however unusual, and probably due to an unusual deletion routine or a bug.'.format( HydrusData.ToHumanInt( len( surplus_query_log_container_names ) ) )
+                text = 'When loading subscription data, the client discovered surplus orphaned subscription data for {} queries! This data is harmless and no longer used. The situation is however unusual, and probably due to an unusual deletion routine or a bug.'.format( HydrusNumbers.ToHumanInt( len( surplus_query_log_container_names ) ) )
                 text += '\n' * 2
                 text += 'If you continue, this surplus data will backed up to your database directory and then safely deleted from the database itself, but if you recently did manual database editing and know you need to exit and fix your database in a different way, cancel out now.'
                 text += '\n' * 2
@@ -6680,15 +6688,15 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         message += '\n' * 2
         message += 'Try to keep the total below 10 million! It is also generally better to spread it around--have five download pages each of 500k weight rather than one page with 2.5M.'
         message += '\n' * 2
-        message += 'Your {} open pages\' total is: {}'.format( total_active_page_count, HydrusData.ToHumanInt( total_active_num_hashes_weight + total_active_num_seeds_weight ) )
+        message += 'Your {} open pages\' total is: {}'.format( total_active_page_count, HydrusNumbers.ToHumanInt( total_active_num_hashes_weight + total_active_num_seeds_weight ) )
         message += '\n' * 2
-        message += 'Specifically, your file weight is {} and URL weight is {}.'.format( HydrusData.ToHumanInt( total_active_num_hashes_weight ), HydrusData.ToHumanInt( total_active_num_seeds_weight ) )
+        message += 'Specifically, your file weight is {} and URL weight is {}.'.format( HydrusNumbers.ToHumanInt( total_active_num_hashes_weight ), HydrusNumbers.ToHumanInt( total_active_num_seeds_weight ) )
         message += '\n' * 2
         message += 'For extra info, your {} closed pages (in the undo list) have total weight {}, being file weight {} and URL weight {}.'.format(
             total_closed_page_count,
-            HydrusData.ToHumanInt( total_closed_num_hashes_weight + total_closed_num_seeds_weight ),
-            HydrusData.ToHumanInt( total_closed_num_hashes_weight ),
-            HydrusData.ToHumanInt( total_closed_num_seeds_weight )
+            HydrusNumbers.ToHumanInt( total_closed_num_hashes_weight + total_closed_num_seeds_weight ),
+            HydrusNumbers.ToHumanInt( total_closed_num_hashes_weight ),
+            HydrusNumbers.ToHumanInt( total_closed_num_seeds_weight )
         )
         
         ClientGUIDialogsMessage.ShowInformation( self, message )
@@ -6941,12 +6949,12 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             self._have_shown_session_size_warning = True
             
-            HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free, please try to close some pages or clear some finished downloaders!'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
+            HydrusData.ShowText( 'Your session weight is {}, which is pretty big! To keep your UI lag-free, please try to close some pages or clear some finished downloaders!'.format( HydrusNumbers.ToHumanInt( total_active_weight ) ) )
             
         
-        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_page_count, '{} pages open'.format( HydrusData.ToHumanInt( total_active_page_count ) ) )
+        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_page_count, '{} pages open'.format( HydrusNumbers.ToHumanInt( total_active_page_count ) ) )
         
-        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_session_weight, 'total session weight: {}'.format( HydrusData.ToHumanInt( total_active_weight ) ) )
+        ClientGUIMenus.SetMenuItemLabel( self._menubar_pages_session_weight, 'total session weight: {}'.format( HydrusNumbers.ToHumanInt( total_active_weight ) ) )
         
     
     def _UpdateSystemTrayIcon( self, currently_booting = False ):
@@ -7118,7 +7126,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     
     def AskToDeleteAllClosedPages( self ):
         
-        message = 'Clear the {} closed pages?'.format( HydrusData.ToHumanInt( len( self._closed_pages ) ) )
+        message = 'Clear the {} closed pages?'.format( HydrusNumbers.ToHumanInt( len( self._closed_pages ) ) )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         
@@ -8573,7 +8581,7 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
                         
                         if len( work_to_do ) > 0:
                             
-                            text = 'Is now a good time for the client to do up to ' + HydrusData.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
+                            text = 'Is now a good time for the client to do up to ' + HydrusNumbers.ToHumanInt( idle_shutdown_max_minutes ) + ' minutes\' maintenance work? (Will auto-no in 15 seconds)'
                             text += '\n' * 2
                             
                             if CG.client_controller.IsFirstStart():

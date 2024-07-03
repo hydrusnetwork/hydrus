@@ -8,6 +8,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -648,7 +649,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         if num_actually_copied > 0:
             
-            HydrusData.Print( 'Export folder ' + self._name + ' exported ' + HydrusData.ToHumanInt( num_actually_copied ) + ' files.' )
+            HydrusData.Print( 'Export folder ' + self._name + ' exported ' + HydrusNumbers.ToHumanInt( num_actually_copied ) + ' files.' )
             
         
         if self._export_type == HC.EXPORT_FOLDER_TYPE_SYNCHRONISE:
@@ -703,7 +704,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             if len( deletee_paths ) > 0:
                 
-                HydrusData.Print( 'Export folder {} deleted {} files and {} folders.'.format( self._name, HydrusData.ToHumanInt( len( deletee_paths ) ), HydrusData.ToHumanInt( len( deletee_dirs ) ) ) )
+                HydrusData.Print( 'Export folder {} deleted {} files and {} folders.'.format( self._name, HydrusNumbers.ToHumanInt( len( deletee_paths ) ), HydrusNumbers.ToHumanInt( len( deletee_dirs ) ) ) )
                 
             
         

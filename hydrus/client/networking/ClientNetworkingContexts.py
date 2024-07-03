@@ -193,7 +193,14 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
                 
             else:
                 
-                name = str( self.context_data )
+                if isinstance( self.context_data, bytes ):
+                    
+                    name = self.context_data.hex()
+                    
+                else:
+                    
+                    name = str( self.context_data )
+                    
                 
             
             return CC.network_context_type_string_lookup[ self.context_type ] + ': ' + name

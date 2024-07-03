@@ -4,6 +4,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -305,22 +306,22 @@ def THREADDownloadURLs( job_status: ClientThreading.JobStatus, urls, title ):
     
     if num_successful > 0:
         
-        text_components.append( HydrusData.ToHumanInt( num_successful ) + ' successful' )
+        text_components.append( HydrusNumbers.ToHumanInt( num_successful ) + ' successful' )
         
     
     if num_redundant > 0:
         
-        text_components.append( HydrusData.ToHumanInt( num_redundant ) + ' already in db' )
+        text_components.append( HydrusNumbers.ToHumanInt( num_redundant ) + ' already in db' )
         
     
     if num_deleted > 0:
         
-        text_components.append( HydrusData.ToHumanInt( num_deleted ) + ' deleted' )
+        text_components.append( HydrusNumbers.ToHumanInt( num_deleted ) + ' deleted' )
         
     
     if num_failed > 0:
         
-        text_components.append( HydrusData.ToHumanInt( num_failed ) + ' failed (errors written to log)' )
+        text_components.append( HydrusNumbers.ToHumanInt( num_failed ) + ' failed (errors written to log)' )
         
     
     job_status.SetStatusText( ', '.join( text_components ) )

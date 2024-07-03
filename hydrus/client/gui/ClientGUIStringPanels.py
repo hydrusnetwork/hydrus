@@ -7,6 +7,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -235,7 +236,7 @@ class SingleStringConversionTestPanel( QW.QWidget ):
                     
                 
             
-            tab_label = '{} ({})'.format( processing_steps[i].ToString( simple = True ), HydrusData.ToHumanInt( len( results ) ) )
+            tab_label = '{} ({})'.format( processing_steps[i].ToString( simple = True ), HydrusNumbers.ToHumanInt( len( results ) ) )
             
             self._example_results.addTab( results_list, tab_label )
             
@@ -316,7 +317,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         conversions_panel.SetListCtrl( self._conversions )
         
         conversions_panel.AddButton( 'add', self._AddConversion )
-        conversions_panel.AddButton( 'edit', self._EditConversion, enabled_only_on_selection = True )
+        conversions_panel.AddButton( 'edit', self._EditConversion, enabled_only_on_single_selection = True )
         conversions_panel.AddDeleteButton()
         
         conversions_panel.AddSeparator()
@@ -411,13 +412,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 enumerated_conversion = ( number, conversion_type, data )
                 
-                self._conversions.AddDatas( ( enumerated_conversion, ) )
+                self._conversions.AddDatas( ( enumerated_conversion, ), select_sort_and_scroll = True )
                 
             
         
         self._conversions.UpdateDatas() # need to refresh string after the insertion, so the new row can be included in the parsing calcs
-        
-        self._conversions.Sort()
         
     
     def _CanMoveDown( self ):
@@ -458,7 +457,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( number, conversion_type, data ) = conversion
         
-        pretty_number = HydrusData.ToHumanInt( number )
+        pretty_number = HydrusNumbers.ToHumanInt( number )
         pretty_conversion = ClientStrings.StringConverter.ConversionToString( ( conversion_type, data ) )
         
         string_converter = self._GetValue()
@@ -532,59 +531,47 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditConversion( self ):
         
-        edited_datas = []
+        data_row = self._conversions.GetTopSelectedData()
         
-        selected_data = self._conversions.GetData( only_selected = True )
-        
-        for enumerated_conversion in selected_data:
+        if data_row is None:
             
-            ( number, conversion_type, data ) = enumerated_conversion
-            
-            try:
-                
-                string_converter = self._GetValue()
-                
-                example_string_at_this_point = string_converter.Convert( self._example_string.text(), number - 1 )
-                
-            except:
-                
-                example_string_at_this_point = self._example_string.text()
-                
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit conversion', frame_key = 'deeply_nested_dialog' ) as dlg:
-                
-                panel = self._ConversionPanel( dlg, conversion_type, data, example_string_at_this_point )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    self._conversions.DeleteDatas( ( enumerated_conversion, ) )
-                    
-                    ( conversion_type, data ) = panel.GetValue()
-                    
-                    new_default_string_converter = ClientStrings.StringConverter( conversions = [ ( conversion_type, data ) ] )
-                    
-                    CG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
-                    
-                    enumerated_conversion = ( number, conversion_type, data )
-                    
-                    self._conversions.AddDatas( ( enumerated_conversion, ) )
-                    
-                    edited_datas.append( enumerated_conversion )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._conversions.SelectDatas( edited_datas )
+        ( number, conversion_type, data ) = data_row
+        
+        try:
+            
+            string_converter = self._GetValue()
+            
+            example_string_at_this_point = string_converter.Convert( self._example_string.text(), number - 1 )
+            
+        except:
+            
+            example_string_at_this_point = self._example_string.text()
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit conversion', frame_key = 'deeply_nested_dialog' ) as dlg:
+            
+            panel = self._ConversionPanel( dlg, conversion_type, data, example_string_at_this_point )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                ( conversion_type, data ) = panel.GetValue()
+                
+                new_default_string_converter = ClientStrings.StringConverter( conversions = [ ( conversion_type, data ) ] )
+                
+                CG.client_controller.new_options.SetRawSerialisable( 'last_used_string_conversion_step', new_default_string_converter )
+                
+                new_data_row = ( number, conversion_type, data )
+                
+                self._conversions.ReplaceData( data_row, new_data_row, sort_and_scroll = True )
+                
+            
         
         self._conversions.UpdateDatas()
-        
-        self._conversions.Sort()
         
     
     def _GetConversion( self, desired_number ):
@@ -647,30 +634,18 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _SwapConversions( self, one, two ):
         
-        selected_data = self._conversions.GetData( only_selected = True )
-        
-        one_selected = one in selected_data
-        two_selected = two in selected_data
-        
-        self._conversions.DeleteDatas( ( one, two ) )
-        
         ( number_1, conversion_type_1, data_1 ) = one
         ( number_2, conversion_type_2, data_2 ) = two
         
-        one = ( number_2, conversion_type_1, data_1 )
-        two = ( number_1, conversion_type_2, data_2 )
+        new_one = ( number_2, conversion_type_1, data_1 )
+        new_two = ( number_1, conversion_type_2, data_2 )
         
-        self._conversions.AddDatas( ( one, two ) )
+        replacement_tuples = [
+            ( one, new_one ),
+            ( two, new_two )
+        ]
         
-        if one_selected:
-            
-            self._conversions.SelectDatas( ( one, ) )
-            
-        
-        if two_selected:
-            
-            self._conversions.SelectDatas( ( two, ) )
-            
+        self._conversions.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
         
     
     def EventUpdate( self, text ):

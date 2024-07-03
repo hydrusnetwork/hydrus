@@ -1306,7 +1306,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         credential_definitions_panel.SetListCtrl( self._credential_definitions )
         
         credential_definitions_panel.AddButton( 'add', self._AddCredentialDefinition )
-        credential_definitions_panel.AddButton( 'edit', self._EditCredentialDefinitions, enabled_only_on_selection = True )
+        credential_definitions_panel.AddButton( 'edit', self._EditCredentialDefinitions, enabled_only_on_single_selection = True )
         credential_definitions_panel.AddDeleteButton()
         
         #
@@ -1332,7 +1332,7 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         example_domains_info_panel.SetListCtrl( self._example_domains_info )
         
         example_domains_info_panel.AddButton( 'add', self._AddExampleDomainsInfo )
-        example_domains_info_panel.AddButton( 'edit', self._EditExampleDomainsInfo, enabled_only_on_selection = True )
+        example_domains_info_panel.AddButton( 'edit', self._EditExampleDomainsInfo, enabled_only_on_single_selection = True )
         example_domains_info_panel.AddDeleteButton()
         
         #
@@ -1897,7 +1897,7 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         login_scripts_panel.SetListCtrl( self._login_scripts )
         
         login_scripts_panel.AddButton( 'add', self._Add )
-        login_scripts_panel.AddButton( 'edit', self._Edit, enabled_only_on_selection = True )
+        login_scripts_panel.AddButton( 'edit', self._Edit, enabled_only_on_single_selection = True )
         login_scripts_panel.AddDeleteButton()
         login_scripts_panel.AddSeparator()
         login_scripts_panel.AddImportExportButtons( ( ClientNetworkingLogin.LoginScriptDomain, ), self._AddLoginScript )

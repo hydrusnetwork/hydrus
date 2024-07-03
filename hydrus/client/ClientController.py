@@ -18,6 +18,7 @@ from hydrus.core import HydrusController
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -858,7 +859,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             HG.queries_planned = set()
             
-            HydrusData.ShowText( 'Query Planning done: {} queries analyzed'.format( HydrusData.ToHumanInt( HG.query_planner_query_count ) ) )
+            HydrusData.ShowText( 'Query Planning done: {} queries analyzed'.format( HydrusNumbers.ToHumanInt( HG.query_planner_query_count ) ) )
             
         
     
@@ -889,7 +890,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
                 ( slow, fast ) = ( HG.profile_slow_count, HG.profile_fast_count )
                 
             
-            HydrusData.ShowText( 'Profiling done: {} slow jobs, {} fast jobs'.format( HydrusData.ToHumanInt( slow ), HydrusData.ToHumanInt( fast ) ) )
+            HydrusData.ShowText( 'Profiling done: {} slow jobs, {} fast jobs'.format( HydrusNumbers.ToHumanInt( slow ), HydrusNumbers.ToHumanInt( fast ) ) )
             
         
     
@@ -2167,6 +2168,18 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
         
         HydrusController.HydrusController.ShutdownView( self )
+        
+    
+    def SleepCheck( self ) -> None:
+        
+        if not self.new_options.GetBoolean( 'do_sleep_check' ):
+            
+            self._just_woke_from_sleep = False
+            
+            return
+            
+        
+        HydrusController.HydrusController.SleepCheck( self )
         
     
     def SynchroniseAccounts( self ):

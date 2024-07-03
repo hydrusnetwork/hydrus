@@ -496,6 +496,81 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         return result_hash_ids
         
     
+    def GetHashIdsFromTagIdsTables( self, tag_display_type: int, file_service_key: bytes, tag_context: ClientSearch.TagContext, tag_ids: typing.Collection[ int ], hash_ids = None, hash_ids_table_name = None, job_status = None ):
+        
+        do_hash_table_join = False
+        
+        if hash_ids_table_name is not None and hash_ids is not None:
+            
+            tag_service_id = self.modules_services.GetServiceId( tag_context.service_key )
+            file_service_id = self.modules_services.GetServiceId( file_service_key )
+            
+            estimated_count = self.modules_mappings_counts.GetAutocompleteCountEstimate( tag_display_type, tag_service_id, file_service_id, tag_ids, tag_context.include_current_tags, tag_context.include_pending_tags )
+            
+            if ClientDBMappingsStorage.DoingAFileJoinTagSearchIsFaster( len( hash_ids ), estimated_count ):
+                
+                do_hash_table_join = True
+                
+            
+        
+        result_hash_ids = set()
+        
+        table_names = self.modules_tag_search.GetMappingTables( tag_display_type, file_service_key, tag_context )
+        
+        cancelled_hook = None
+        
+        if job_status is not None:
+            
+            cancelled_hook = job_status.IsCancelled
+            
+        
+        if len( tag_ids ) == 1:
+            
+            ( tag_id, ) = tag_ids
+            
+            if do_hash_table_join:
+                
+                # temp hashes to mappings
+                queries = [ 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?'.format( hash_ids_table_name, table_name ) for table_name in table_names ]
+                
+            else:
+                
+                queries = [ 'SELECT hash_id FROM {} WHERE tag_id = ?;'.format( table_name ) for table_name in table_names ]
+                
+            
+            for query in queries:
+                
+                result_hash_ids.update( self._STI( self._ExecuteCancellable( query, ( tag_id, ), cancelled_hook ) ) )
+                
+            
+        else:
+            
+            with self._MakeTemporaryIntegerTable( tag_ids, 'tag_id' ) as temp_tag_ids_table_name:
+                
+                if do_hash_table_join:
+                    
+                    # temp hashes to mappings to temp tags
+                    # old method, does not do EXISTS efficiently, it makes a list instead and checks that
+                    # queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} CROSS JOIN {} USING ( tag_id ) WHERE {}.hash_id = {}.hash_id );'.format( hash_ids_table_name, table_name, temp_tag_ids_table_name, table_name, hash_ids_table_name ) for table_name in table_names ]
+                    # new method, this seems to actually do the correlated scalar subquery, although it does seem to be sqlite voodoo
+                    queries = [ 'SELECT hash_id FROM {} WHERE EXISTS ( SELECT 1 FROM {} WHERE {}.hash_id = {}.hash_id AND EXISTS ( SELECT 1 FROM {} WHERE {}.tag_id = {}.tag_id ) );'.format( hash_ids_table_name, table_name, table_name, hash_ids_table_name, temp_tag_ids_table_name, table_name, temp_tag_ids_table_name ) for table_name in table_names ]
+                    
+                else:
+                    
+                    # temp tags to mappings
+                    queries = [ 'SELECT hash_id FROM {} CROSS JOIN {} USING ( tag_id );'.format( temp_tag_ids_table_name, table_name ) for table_name in table_names ]
+                    
+                
+                for query in queries:
+                    
+                    result_hash_ids.update( self._STI( self._ExecuteCancellable( query, (), cancelled_hook ) ) )
+                    
+                
+            
+        
+        return result_hash_ids
+        
+    
     def GetHashIdsFromWildcardComplexLocation( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, wildcard, hash_ids = None, hash_ids_table_name = None, job_status = None ):
         
         ( namespace_wildcard, subtag_wildcard ) = HydrusTags.SplitTag( wildcard )

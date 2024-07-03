@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetworking
@@ -255,7 +256,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
                     
                 else:
                     
-                    message = 'Could not find an API/Redirect URL Class for ' + url + ' as it and its API url classes linked in a loop of size ' + HydrusData.ToHumanInt( loop_size ) + '!'
+                    message = 'Could not find an API/Redirect URL Class for ' + url + ' as it and its API url classes linked in a loop of size ' + HydrusNumbers.ToHumanInt( loop_size ) + '!'
                     
                 
                 raise HydrusExceptions.URLClassException( message )

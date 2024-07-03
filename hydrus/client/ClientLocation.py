@@ -3,6 +3,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -323,7 +324,7 @@ class LocationContext( HydrusSerialisable.SerialisableBase ):
             
         else:
             
-            service_string = '{} services'.format( HydrusData.ToHumanInt( len( service_keys_to_consider ) ) )
+            service_string = '{} services'.format( HydrusNumbers.ToHumanInt( len( service_keys_to_consider ) ) )
             
         
         return prefix + service_string

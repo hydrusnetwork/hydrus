@@ -6,7 +6,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
@@ -561,6 +561,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         
         if select_sort_and_scroll:
             
+            self.clearSelection()
+            
             self.SelectDatas( datas )
             
             self.Sort()
@@ -894,13 +896,13 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             self.scrollToItem( item, hint = QW.QAbstractItemView.ScrollHint.PositionAtCenter )
             
+            self.setFocus( QC.Qt.OtherFocusReason )
+            
         
     
     def SelectDatas( self, datas: typing.Iterable[ object ], deselect_others = False ):
         
         datas = [ QP.ListsToTuples( data ) for data in datas ]
-        
-        self.clearFocus()
         
         selectee_indices = { self._data_to_indices[ data ] for data in datas if data in self._data_to_indices }
         
@@ -1611,7 +1613,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         if can_present_messages and num_added > 0:
             
-            message = '{} objects added!'.format( HydrusData.ToHumanInt( num_added ) )
+            message = '{} objects added!'.format( HydrusNumbers.ToHumanInt( num_added ) )
             
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
@@ -1896,7 +1898,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         from hydrus.client.gui import ClientGUIDialogsQuick
         
-        message = 'Try to import the {} dropped files to this list? I am expecting json or png files.'.format( HydrusData.ToHumanInt( len( paths ) ) )
+        message = 'Try to import the {} dropped files to this list? I am expecting json or png files.'.format( HydrusNumbers.ToHumanInt( len( paths ) ) )
         
         result = ClientGUIDialogsQuick.GetYesNo( self, message )
         

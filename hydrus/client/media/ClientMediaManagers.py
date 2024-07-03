@@ -7,7 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -625,7 +625,7 @@ class FileViewingStatsManager( object ):
             last_viewed_string = 'last {}'.format( HydrusTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( max( last_viewed_times_ms ) ) ) )
             
         
-        return 'viewed {} times{}, totalling {}, {}'.format( HydrusData.ToHumanInt( views_total ), info_string, HydrusTime.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
+        return 'viewed {} times{}, totalling {}, {}'.format( HydrusNumbers.ToHumanInt( views_total ), info_string, HydrusTime.TimeDeltaToPrettyTimeDelta( viewtime_total ), last_viewed_string )
         
     
     def GetTimesManager( self ) -> TimesManager:

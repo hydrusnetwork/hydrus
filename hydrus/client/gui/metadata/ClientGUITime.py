@@ -8,6 +8,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -539,7 +540,7 @@ class DateTimeWidgetValueRange( object ):
             
         elif self._set_count > 1:
             
-            s += f'{HydrusData.ToHumanInt( self._set_count )} files set'
+            s += f'{HydrusNumbers.ToHumanInt( self._set_count )} files set'
             
             if self._min_value == self._max_value:
                 
@@ -559,7 +560,7 @@ class DateTimeWidgetValueRange( object ):
                 
             else:
                 
-                none_prefix = f'{HydrusData.ToHumanInt(self._null_count)} files'
+                none_prefix = f'{HydrusNumbers.ToHumanInt(self._null_count)} files'
                 
             
             if s != '':
@@ -1100,6 +1101,7 @@ class TimeDeltaCtrl( QW.QWidget ):
             
             self._days = ClientGUICommon.BetterSpinBox( self, min=0, max=3653, width = 50 )
             self._days.valueChanged.connect( self.EventChange )
+            self._days.installEventFilter( self )
             
             if negative_allowed:
                 
@@ -1114,6 +1116,7 @@ class TimeDeltaCtrl( QW.QWidget ):
             
             self._hours = ClientGUICommon.BetterSpinBox( self, min=0, max=23, width = 45 )
             self._hours.valueChanged.connect( self.EventChange )
+            self._hours.installEventFilter( self )
             
             if negative_allowed:
                 
@@ -1128,6 +1131,7 @@ class TimeDeltaCtrl( QW.QWidget ):
             
             self._minutes = ClientGUICommon.BetterSpinBox( self, min=0, max=59, width = 45 )
             self._minutes.valueChanged.connect( self.EventChange )
+            self._minutes.installEventFilter( self )
             
             if negative_allowed:
                 
@@ -1142,6 +1146,7 @@ class TimeDeltaCtrl( QW.QWidget ):
             
             self._seconds = ClientGUICommon.BetterSpinBox( self, min=0, max=59, width = 45 )
             self._seconds.valueChanged.connect( self.EventChange )
+            self._seconds.installEventFilter( self )
             
             if negative_allowed:
                 
@@ -1156,6 +1161,7 @@ class TimeDeltaCtrl( QW.QWidget ):
             
             self._milliseconds = ClientGUICommon.BetterSpinBox( self, min=0, max=999, width = 65 )
             self._milliseconds.valueChanged.connect( self.EventChange )
+            self._milliseconds.installEventFilter( self )
             
             if negative_allowed:
                 
@@ -1174,6 +1180,12 @@ class TimeDeltaCtrl( QW.QWidget ):
             QP.AddToLayout( hbox, self._monthly, CC.FLAGS_CENTER_PERPENDICULAR )
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText(self,monthly_label), CC.FLAGS_CENTER_PERPENDICULAR )
             
+        
+        self.blockSignals( True )
+        
+        self.SetValue( self._min )
+        
+        self.blockSignals( False )
         
         self.setLayout( hbox )
         
@@ -1208,14 +1220,36 @@ class TimeDeltaCtrl( QW.QWidget ):
             
         
     
+    def eventFilter( self, watched, event ):
+        
+        try:
+            
+            if event.type() == QC.QEvent.FocusOut:
+                
+                if not ClientGUIFunctions.WidgetOrAnyTLWChildHasFocus( self ):
+                    
+                    value = self.GetValue()
+                    
+                    if value is not None and value < self._min:
+                        
+                        self.SetValue( self._min )
+                        
+                    
+                
+            
+        except Exception as e:
+            
+            HydrusData.ShowException( e )
+            
+            return True
+            
+        
+        return False
+        
+    
     def EventChange( self ):
         
         value = self.GetValue()
-        
-        if value is not None and value < self._min:
-            
-            self.SetValue( self._min )
-            
         
         self._UpdateEnables()
         

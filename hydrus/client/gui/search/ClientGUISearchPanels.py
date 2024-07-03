@@ -182,7 +182,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._favourite_searches_panel.SetListCtrl( self._favourite_searches )
         
         self._favourite_searches_panel.AddButton( 'add', self._AddNewFavouriteSearch )
-        self._favourite_searches_panel.AddButton( 'edit', self._EditFavouriteSearch, enabled_only_on_selection = True )
+        self._favourite_searches_panel.AddButton( 'edit', self._EditFavouriteSearch, enabled_only_on_single_selection = True )
         self._favourite_searches_panel.AddDeleteButton()
         
         #
