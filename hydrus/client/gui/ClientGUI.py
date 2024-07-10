@@ -3233,10 +3233,14 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         check_submenu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( check_submenu, 'database integrity' + HC.UNICODE_ELLIPSIS, 'Examine the database for file corruption.', self._CheckDBIntegrity )
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables' + HC.UNICODE_ELLIPSIS, 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'resync tag mappings cache files' + HC.UNICODE_ELLIPSIS, 'Check the tag mappings cache for surplus or missing files.', self._ResyncTagMappingsCacheFiles )
-        ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings' + HC.UNICODE_ELLIPSIS, 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
+        ClientGUIMenus.AppendSeparator( check_submenu )
         ClientGUIMenus.AppendMenuItem( check_submenu, 'fix invalid tags' + HC.UNICODE_ELLIPSIS, 'Scan the database for invalid tags.', self._RepairInvalidTags )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'fix logically inconsistent mappings' + HC.UNICODE_ELLIPSIS, 'Remove tags that are occupying two mutually exclusive states.', self._FixLogicallyInconsistentMappings )
+        ClientGUIMenus.AppendSeparator( check_submenu )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'repopulate truncated mappings tables' + HC.UNICODE_ELLIPSIS, 'Use the mappings cache to try to repair a previously damaged mappings file.', self._RepopulateMappingsTables )
+        ClientGUIMenus.AppendSeparator( check_submenu )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'resync combined deleted files' + HC.UNICODE_ELLIPSIS, 'Resynchronise the store of all known deleted files.', self._ResyncCombinedDeletedFiles )
+        ClientGUIMenus.AppendMenuItem( check_submenu, 'resync tag mappings cache files' + HC.UNICODE_ELLIPSIS, 'Check the tag mappings cache for surplus or missing files.', self._ResyncTagMappingsCacheFiles )
         
         ClientGUIMenus.AppendMenu( menu, check_submenu, 'check and repair' )
         
@@ -3256,7 +3260,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         ClientGUIMenus.AppendSeparator( regen_submenu )
         
-        ClientGUIMenus.AppendMenuItem( regen_submenu, 'all deleted files' + HC.UNICODE_ELLIPSIS, 'Resynchronise the store of all known deleted files.', self._RegenerateCombinedDeletedFiles )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'local hashes cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast hash lookup for local files.', self._RegenerateLocalHashCache )
         ClientGUIMenus.AppendMenuItem( regen_submenu, 'local tags cache' + HC.UNICODE_ELLIPSIS, 'Repopulate the cache hydrus uses for fast tag lookup for local files.', self._RegenerateLocalTagCache )
         
@@ -5221,22 +5224,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._statusbar.SetStatusText( db_status, 5, tooltip = db_tooltip )
         
     
-    def _RegenerateCombinedDeletedFiles( self ):
-        
-        message = 'This will resynchronise the "all deleted files" cache to the actual records in the database, ensuring that various tag searches over the deleted files domain give correct counts and file results. It isn\'t super important, but this routine fixes it if it is desynchronised.'
-        message += '\n' * 2
-        message += 'It should not take all that long, but if you have a lot of deleted files, it can take a little while, during which the gui may hang.'
-        message += '\n' * 2
-        message += 'If you do not have a specific reason to run this, it is pointless.'
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
-        
-        if result == QW.QDialog.Accepted:
-            
-            self._controller.Write( 'regenerate_combined_deleted_files', do_full_rebuild = True )
-            
-        
-    
     def _RegenerateTagCache( self ):
         
         message = 'This will delete and then recreate the fast search cache for one or all tag services.'
@@ -5668,6 +5655,22 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
     def _RestoreSplitterPositions( self ):
         
         self._controller.pub( 'set_splitter_positions', HC.options[ 'hpos' ], HC.options[ 'vpos' ] )
+        
+    
+    def _ResyncCombinedDeletedFiles( self ):
+        
+        message = 'This will resynchronise the "deleted from anywhere" cache to the actual records in the database, ensuring that various tag searches over the deleted files domain give correct counts and file results. It isn\'t super important, but this routine fixes it if it is desynchronised.'
+        message += '\n' * 2
+        message += 'It should not take all that long, but if you have a lot of deleted files, it can take a little while, during which the gui may hang.'
+        message += '\n' * 2
+        message += 'If you do not have a specific reason to run this, it is pointless.'
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message, yes_label = 'do it', no_label = 'forget it' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'resync_combined_deleted_files', do_full_rebuild = True )
+            
         
     
     def _ResyncTagMappingsCacheFiles( self ):
@@ -7392,6 +7395,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         
     
     def FlipDarkmode( self ):
+        
+        if not self._new_options.GetBoolean( 'override_stylesheet_colours' ):
+            
+            ClientGUIDialogsMessage.ShowWarning( self, 'Hey, this command comes from an old colour system. If you want to change to darkmode, try _options->style_ instead. Or, if you know what you are doing, make sure you flip the "override" checkbox in _options->colours_ and then try this again.' )
+            
         
         current_colourset = self._new_options.GetString( 'current_colourset' )
         

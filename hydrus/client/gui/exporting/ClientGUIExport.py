@@ -21,6 +21,7 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientThreading
 from hydrus.client.exporting import ClientExportingFiles
+from hydrus.client.gui import ClientGUIAsync
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
@@ -30,10 +31,12 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUIMetadataMigration
+from hydrus.client.gui.metadata import ClientGUIMetadataMigrationTest
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientMetadataMigrationExporters
@@ -301,8 +304,11 @@ class EditExportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         metadata_routers = export_folder.GetMetadataRouters()
         allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
+        self._test_context_factory = ClientGUIMetadataMigrationTest.MigrationTestContextFactoryMedia( [] )
         
-        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self._metadata_routers_box, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
+        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self._metadata_routers_box, metadata_routers, allowed_importer_classes, allowed_exporter_classes, self._test_context_factory )
+        
+        self._update_test_context_factory_button = ClientGUICommon.BetterButton( self._metadata_routers_box, 'update test example files', self._UpdateTestExampleFiles )
         
         #
         
@@ -381,6 +387,7 @@ If you select synchronise, be careful!'''
         self._phrase_box.Add( phrase_hbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self._metadata_routers_box.Add( self._metadata_routers_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._metadata_routers_box.Add( self._update_test_context_factory_button, CC.FLAGS_ON_RIGHT )
         
         vbox = QP.VBoxLayout()
         
@@ -400,6 +407,17 @@ If you select synchronise, be careful!'''
         self._delete_from_client_after_export.clicked.connect( self.EventDeleteFilesAfterExport )
         self._run_regularly.clicked.connect( self._UpdateRunRegularly )
         
+        self._tag_autocomplete.searchChanged.connect( self._SearchUpdated )
+        
+        self._SearchUpdated()
+        
+    
+    def _SearchUpdated( self ):
+        
+        self._update_test_context_factory_button.setText( 'update test example files' )
+        
+        self._update_test_context_factory_button.setEnabled( True )
+        
     
     def _UpdateRunRegularly( self ):
         
@@ -407,6 +425,39 @@ If you select synchronise, be careful!'''
         
         self._period.setEnabled( run_regularly )
         self._show_working_popup.setEnabled( run_regularly )
+        
+    
+    def _UpdateTestExampleFiles( self ):
+        
+        file_search_context = self._tag_autocomplete.GetFileSearchContext()
+        
+        def work_callable():
+            
+            sort_by = ClientMedia.MediaSort( ( 'system', CC.SORT_FILES_BY_FILESIZE ), CC.SORT_ASC )
+            
+            query_hash_ids = CG.client_controller.Read( 'file_query_ids', file_search_context, limit_sort_by = sort_by )
+            
+            query_hash_ids = list( query_hash_ids )[:ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE]
+            
+            media_results = CG.client_controller.Read( 'media_results_from_ids', query_hash_ids )
+            
+            return media_results
+            
+        
+        def publish_callable( media_results ):
+            
+            self._test_context_factory.SetExampleMediaResults( media_results )
+            
+            self._update_test_context_factory_button.setText( f'got {HydrusNumbers.ToHumanInt(len( media_results))} files!' )
+            
+        
+        self._update_test_context_factory_button.setEnabled( False )
+        
+        self._update_test_context_factory_button.setText( 'loading' + HC.UNICODE_ELLIPSIS )
+        
+        async_job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
+        
+        async_job.start()
         
     
     def _UpdateTypeDeleteUI( self ):
@@ -531,8 +582,6 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box = ClientGUIListBoxes.StaticBoxSorterForListBoxTags( self, 'files\' tags', tag_presentation_location )
         
-        services_manager = CG.client_controller.services_manager
-        
         t = ClientGUIListBoxes.ListBoxTagsMedia( self._tags_box, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_presentation_location, include_counts = True )
         
         self._tags_box.SetTagsBox( t )
@@ -575,7 +624,11 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTags, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaNotes, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaURLs, ClientMetadataMigrationImporters.SingleFileMetadataImporterMediaTimestamps ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT, ClientMetadataMigrationExporters.SingleFileMetadataExporterJSON ]
         
-        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
+        example_media_results = [ m.GetMediaResult() for m in list( flat_media )[:ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE] ]
+        
+        test_context_factory = ClientGUIMetadataMigrationTest.MigrationTestContextFactoryMedia( example_media_results )
+        
+        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes, test_context_factory )
         
         self._export = QW.QPushButton( 'export', self )
         self._export.clicked.connect( self._DoExport )

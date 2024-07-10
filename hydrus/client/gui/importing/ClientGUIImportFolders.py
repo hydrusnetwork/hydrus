@@ -20,6 +20,7 @@ from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUIMetadataMigration
+from hydrus.client.gui.metadata import ClientGUIMetadataMigrationTest
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -260,9 +261,9 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
         allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]
         
-        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
+        self._sidecar_test_context_factory = ClientGUIMetadataMigrationTest.MigrationTestContextFactorySidecar( [] )
         
-        services_manager = CG.client_controller.services_manager
+        self._metadata_routers_button = ClientGUIMetadataMigration.SingleFileMetadataRoutersButton( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes, self._sidecar_test_context_factory )
         
         #
         
@@ -378,6 +379,10 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         self._check_regularly.clicked.connect( self._UpdateCheckRegularly )
         
         self._UpdateCheckRegularly()
+        
+        self._path.dirPickerChanged.connect( self._PathChanged )
+        
+        self._PathChanged()
         
     
     def _AddFilenameTaggingOptions( self ):
@@ -599,6 +604,27 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
         self._filename_tagging_options.SelectDatas( edited_datas )
+        
+    
+    def _PathChanged( self ):
+        
+        path = self._path.GetPath()
+        
+        try:
+            
+            if os.path.exists( path ) and os.path.isdir( path ):
+                
+                filenames = list( os.listdir( path ) )[:ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE]
+                
+                example_paths = [ os.path.join( path, filename ) for filename in filenames ]
+                
+                self._sidecar_test_context_factory.SetExampleFilePaths( example_paths )
+                
+            
+        except:
+            
+            return
+            
         
     
     def _UpdateCheckRegularly( self ):

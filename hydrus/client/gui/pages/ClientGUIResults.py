@@ -1,6 +1,5 @@
 import collections
 import itertools
-import os
 import random
 import time
 import typing
@@ -170,6 +169,20 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController, media_results ):
         
         QW.QScrollArea.__init__( self, parent )
+        
+        self._qss_colours = {
+            CC.COLOUR_THUMBGRID_BACKGROUND : QG.QColor( 255, 255, 255 ),
+            CC.COLOUR_THUMB_BACKGROUND : QG.QColor( 255, 255, 255 ),
+            CC.COLOUR_THUMB_BACKGROUND_SELECTED : QG.QColor( 217, 242, 255 ),
+            CC.COLOUR_THUMB_BACKGROUND_REMOTE : QG.QColor( 32, 32, 36 ),
+            CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED : QG.QColor( 64, 64, 72 ),
+            CC.COLOUR_THUMB_BORDER : QG.QColor( 223, 227, 230 ),
+            CC.COLOUR_THUMB_BORDER_SELECTED : QG.QColor( 1, 17, 26 ),
+            CC.COLOUR_THUMB_BORDER_REMOTE : QG.QColor( 248, 208, 204 ),
+            CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED : QG.QColor( 227, 66, 52 )
+        }
+        
+        self.setObjectName( 'HydrusMediaList' )
         
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
         self.setLineWidth( 2 )
@@ -1916,6 +1929,20 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         self.Sort()
         
     
+    def GetColour( self, colour_type ):
+        
+        if CG.client_controller.new_options.GetBoolean( 'override_stylesheet_colours' ):
+            
+            bg_colour = CG.client_controller.new_options.GetColour( colour_type )
+            
+        else:
+            
+            bg_colour = self._qss_colours.get( colour_type, QG.QColor( 127, 127, 127 ) )
+            
+        
+        return bg_colour
+        
+    
     def GetTotalFileSize( self ):
         
         return 0
@@ -2522,6 +2549,106 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         pass
         
     
+    def get_hmrp_background( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMBGRID_BACKGROUND ]
+        
+    
+    def get_hmrp_thumbnail_local_background_normal( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND ]
+        
+    
+    def get_hmrp_thumbnail_local_background_selected( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND_SELECTED ]
+        
+    
+    def get_hmrp_thumbnail_local_border_normal( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BORDER ]
+        
+    
+    def get_hmrp_thumbnail_local_border_selected( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BORDER_SELECTED ]
+        
+    
+    def get_hmrp_thumbnail_not_local_background_normal( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND_REMOTE ]
+        
+    
+    def get_hmrp_thumbnail_not_local_background_selected( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ]
+        
+    
+    def get_hmrp_thumbnail_not_local_border_normal( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BORDER_REMOTE ]
+        
+    
+    def get_hmrp_thumbnail_not_local_border_selected( self ):
+        
+        return self._qss_colours[ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ]
+        
+    
+    def set_hmrp_background( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMBGRID_BACKGROUND ] = colour
+        
+    
+    def set_hmrp_thumbnail_local_background_normal( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND ] = colour
+        
+    
+    def set_hmrp_thumbnail_local_background_selected( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND_SELECTED ] = colour
+        
+    
+    def set_hmrp_thumbnail_local_border_normal( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BORDER ] = colour
+        
+    
+    def set_hmrp_thumbnail_local_border_selected( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BORDER_SELECTED ] = colour
+        
+    
+    def set_hmrp_thumbnail_not_local_background_normal( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND_REMOTE ] = colour
+        
+    
+    def set_hmrp_thumbnail_not_local_background_selected( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BACKGROUND_REMOTE_SELECTED ] = colour
+        
+    
+    def set_hmrp_thumbnail_not_local_border_normal( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BORDER_REMOTE ] = colour
+        
+    
+    def set_hmrp_thumbnail_not_local_border_selected( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED ] = colour
+        
+    
+    hmrp_background = QC.Property( QG.QColor, get_hmrp_background, set_hmrp_background )
+    hmrp_thumbnail_local_background_normal = QC.Property( QG.QColor, get_hmrp_thumbnail_local_background_normal, set_hmrp_thumbnail_local_background_normal )
+    hmrp_thumbnail_local_background_selected = QC.Property( QG.QColor, get_hmrp_thumbnail_local_background_selected, set_hmrp_thumbnail_local_background_selected )
+    hmrp_thumbnail_local_border_normal = QC.Property( QG.QColor, get_hmrp_thumbnail_local_border_normal, set_hmrp_thumbnail_local_border_normal )
+    hmrp_thumbnail_local_border_selected = QC.Property( QG.QColor, get_hmrp_thumbnail_local_border_selected, set_hmrp_thumbnail_local_border_selected )
+    hmrp_thumbnail_not_local_background_normal = QC.Property( QG.QColor, get_hmrp_thumbnail_not_local_background_normal, set_hmrp_thumbnail_not_local_background_normal )
+    hmrp_thumbnail_not_local_background_selected = QC.Property( QG.QColor, get_hmrp_thumbnail_not_local_background_selected, set_hmrp_thumbnail_not_local_background_selected )
+    hmrp_thumbnail_not_local_border_normal = QC.Property( QG.QColor, get_hmrp_thumbnail_not_local_border_normal, set_hmrp_thumbnail_not_local_border_normal )
+    hmrp_thumbnail_not_local_border_selected = QC.Property( QG.QColor, get_hmrp_thumbnail_not_local_border_selected, set_hmrp_thumbnail_not_local_border_selected )
+    
     class _InnerWidget( QW.QWidget ):
         
         def __init__( self, parent ):
@@ -2535,7 +2662,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
             painter = QG.QPainter( self )
             
-            bg_colour = CG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+            bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
             
             painter.setBackground( QG.QBrush( bg_colour ) )
             
@@ -2724,7 +2851,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         new_options = CG.client_controller.new_options
         
-        bg_colour = CG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+        bg_colour = self.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
         
         if HG.thumbnail_debug_mode and page_index % 2 == 0:
             
@@ -2785,7 +2912,7 @@ class MediaPanelThumbnails( MediaPanel ):
                 
                 y = ( thumbnail_row - ( page_index * self._num_rows_per_canvas_page ) ) * thumbnail_span_height + thumbnail_margin
                 
-                painter.drawImage( x, y, thumbnail.GetQtImage( self.devicePixelRatio() ) )
+                painter.drawImage( x, y, thumbnail.GetQtImage( self, self.devicePixelRatio() ) )
                 
             else:
                 
@@ -2846,7 +2973,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             self._StopFading( hash )
             
-            bitmap = thumbnail.GetQtImage( self.devicePixelRatio() )
+            bitmap = thumbnail.GetQtImage( self, self.devicePixelRatio() )
             
             fade_thumbnails = CG.client_controller.new_options.GetBoolean( 'fade_thumbnails' )
             
@@ -4475,7 +4602,7 @@ class MediaPanelThumbnails( MediaPanel ):
             
             y_start = self._parent._GetYStart()
             
-            bg_colour = CG.client_controller.new_options.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
+            bg_colour = self._parent.GetColour( CC.COLOUR_THUMBGRID_BACKGROUND )
             
             painter.setBackground( QG.QBrush( bg_colour ) )
             
@@ -4801,7 +4928,7 @@ class Thumbnail( Selectable ):
         self._last_lower_summary = None
         
     
-    def GetQtImage( self, device_pixel_ratio ) -> QG.QImage:
+    def GetQtImage( self, media_panel: MediaPanel, device_pixel_ratio ) -> QG.QImage:
         
         # we probably don't really want to say DPR as a param here, but instead ask for a qt_image in a certain resolution?
         # or just give the qt_image to be drawn to?
@@ -4901,7 +5028,9 @@ class Thumbnail( Selectable ):
         
         painter.setFont( f )
         
-        painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), new_options.GetColour( background_colour_type ) )
+        bg_color = media_panel.GetColour( background_colour_type )
+        
+        painter.fillRect( thumbnail_border, thumbnail_border, width - ( thumbnail_border * 2 ), height - ( thumbnail_border * 2 ), bg_color )
         
         raw_thumbnail_qt_image = thumbnail_hydrus_bmp.GetQtImage()
         
@@ -5043,7 +5172,9 @@ class Thumbnail( Selectable ):
             # _  .___//_/  /_/|_| \___//_/  /____/     _\__, / \____/      \__/ \____/      /_/ /_/\___//_/  /_/  (_)   
             # /_/                                      /____/                                                            
             
-            painter.setBrush( QG.QBrush( new_options.GetColour( border_colour_type ) ) )
+            bd_colour = media_panel.GetColour( border_colour_type )
+            
+            painter.setBrush( QG.QBrush( bd_colour ) )
             painter.setPen( QG.QPen( QC.Qt.NoPen ) )
             
             rectangles = []

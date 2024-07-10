@@ -520,7 +520,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 'samus*', 'samus*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:samus*' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'samus*' ) ] ] )
         
         #
         
@@ -545,7 +545,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s' ) ] ] )
         
         #
         
@@ -553,7 +553,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, False ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s', 's*s*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s*', inclusive = False ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s', inclusive = False ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s', inclusive = False ) ] ] )
         
         #
         
@@ -575,7 +575,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 's*s a*n', 's*s a*n*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s a*n*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, '*:s*s a*n' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 's*s a*n' ) ] ] )
         
         #
         
@@ -615,7 +615,7 @@ class TestTagObjects( unittest.TestCase ):
         
         bool_tests( parsed_autocomplete_text, [ True, True, False, True, False, False, True ] )
         search_text_tests( parsed_autocomplete_text, [ 'n*n g*s e*n:as*ka', 'n*n g*s e*n:as*ka*' ] )
-        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka*' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka*' ), ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka' ) ] ] )
+        read_predicate_tests( parsed_autocomplete_text, [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka' ), [ ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_WILDCARD, 'n*n g*s e*n:as*ka' ) ] ] )
         
         #
         

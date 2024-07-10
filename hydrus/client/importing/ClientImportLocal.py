@@ -1346,7 +1346,10 @@ class ImportFoldersManager( object ):
                 
                 with self._lock:
                     
-                    del self._import_folder_names_to_next_work_time_cache[ name ]
+                    if name in self._import_folder_names_to_next_work_time_cache:
+                        
+                        del self._import_folder_names_to_next_work_time_cache[ name ]
+                        
                     
                     return
                     
@@ -1365,7 +1368,10 @@ class ImportFoldersManager( object ):
             
             if next_work_time is None:
                 
-                del self._import_folder_names_to_next_work_time_cache[ name ]
+                if name in self._import_folder_names_to_next_work_time_cache:
+                    
+                    del self._import_folder_names_to_next_work_time_cache[ name ]
+                    
                 
             else:
                 

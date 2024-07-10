@@ -1070,8 +1070,6 @@ class ListBox( QW.QScrollArea ):
         self.setWidget( ListBox._InnerWidget( self ) )
         self.setWidgetResizable( True )
         
-        self._background_colour = QG.QColor( 255, 255, 255 )
-        
         self._ordered_terms = []
         self._terms_to_logical_indices = {}
         self._terms_to_positional_indices = {}
@@ -1293,6 +1291,11 @@ class ListBox( QW.QScrollArea ):
     def _DeselectAll( self ):
         
         self._selected_terms = set()
+        
+    
+    def _GetBackgroundColour( self ):
+        
+        return QG.QColor( 255, 255, 255 )
         
     
     def _GetLogicalIndexFromTerm( self, term ):
@@ -1775,7 +1778,9 @@ class ListBox( QW.QScrollArea ):
     
     def _Redraw( self, painter ):
         
-        painter.setBackground( QG.QBrush( self._background_colour ) )
+        bg_colour = self._GetBackgroundColour()
+        
+        painter.setBackground( QG.QBrush( bg_colour ) )
         
         painter.eraseRect( painter.viewport() )
         
@@ -1889,7 +1894,9 @@ class ListBox( QW.QScrollArea ):
                             painter.fillRect( background_colour_x, y_top, rect_width, text_height, namespace_colour )
                             
                         
-                        text_pen = QG.QPen( self._background_colour )
+                        pen_colour = self._GetBackgroundColour()
+                        
+                        text_pen = QG.QPen( pen_colour )
                         
                     else:
                         
@@ -2444,9 +2451,15 @@ class ListBoxTags( ListBox ):
         
         self._tag_display_type = tag_display_type
         
+        self._qss_colours = {
+            CC.COLOUR_TAGS_BOX : QG.QColor( 255, 255, 255 ),
+        }
+        
         terms_may_have_sibling_or_parent_info = self._tag_display_type == ClientTags.TAG_DISPLAY_STORAGE
         
         ListBox.__init__( self, parent, terms_may_have_sibling_or_parent_info, *args, **kwargs )
+        
+        self.setObjectName( 'HydrusTagList' )
         
         if terms_may_have_sibling_or_parent_info:
             
@@ -2537,6 +2550,20 @@ class ListBoxTags( ListBox ):
     def _CanProvideCurrentPagePredicates( self ):
         
         return False
+        
+    
+    def _GetBackgroundColour( self ):
+        
+        new_options = CG.client_controller.new_options
+        
+        if new_options.GetBoolean( 'override_stylesheet_colours' ):
+            
+            return new_options.GetColour( CC.COLOUR_TAGS_BOX )
+            
+        else:
+            
+            return self._qss_colours.get( CC.COLOUR_TAGS_BOX, QG.QColor( 127, 127, 127 ) )
+            
         
     
     def _GetRowsOfTextsAndColours( self, term: ClientGUIListBoxesData.ListBoxItem ):
@@ -2732,10 +2759,6 @@ class ListBoxTags( ListBox ):
         
     
     def _UpdateBackgroundColour( self ):
-        
-        new_options = CG.client_controller.new_options
-        
-        self._background_colour = new_options.GetColour( CC.COLOUR_TAGS_BOX )
         
         self.widget().update()
         
@@ -3596,6 +3619,19 @@ class ListBoxTags( ListBox ):
         pass
         
     
+    def get_htl_background( self ):
+        
+        return self._qss_colours[ CC.COLOUR_TAGS_BOX ]
+        
+    
+    def set_htl_background( self, colour ):
+        
+        self._qss_colours[ CC.COLOUR_TAGS_BOX ] = colour
+        
+    
+    htl_background = QC.Property( QG.QColor, get_htl_background, set_htl_background )
+    
+
 class ListBoxTagsPredicates( ListBoxTags ):
     
     def __init__( self, *args, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, **kwargs ):

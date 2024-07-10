@@ -1324,14 +1324,14 @@ class MediaList( object ):
     
     def Sort( self, media_sort = None ):
         
-        for media in self._collected_media:
-            
-            media.Sort( media_sort )
-            
-        
         if media_sort is None:
             
             media_sort = self._media_sort
+            
+        
+        for media in self._collected_media:
+            
+            media.Sort( media_sort )
             
         
         self._media_sort = media_sort

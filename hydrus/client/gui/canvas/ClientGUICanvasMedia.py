@@ -879,7 +879,7 @@ class AnimationBar( QW.QWidget ):
         
         QW.QWidget.__init__( self, parent )
         
-        self._colours = {
+        self._qss_colours = {
             'hab_border' : QG.QColor( 0, 0, 0 ),
             'hab_background' : QG.QColor( 240, 240, 240 ),
             'hab_nub' : QG.QColor( 96, 96, 96 )
@@ -907,7 +907,7 @@ class AnimationBar( QW.QWidget ):
         
         self.setProperty( 'playing', False )
         
-        background_colour = self._colours[ 'hab_background' ]
+        background_colour = self._qss_colours[ 'hab_background' ]
         
         painter.setBackground( background_colour )
         
@@ -963,7 +963,7 @@ class AnimationBar( QW.QWidget ):
         my_width = self.size().width()
         my_height = self.size().height()
         
-        background_colour = self._colours[ 'hab_background' ]
+        background_colour = self._qss_colours[ 'hab_background' ]
         
         if paused:
             
@@ -1039,7 +1039,7 @@ class AnimationBar( QW.QWidget ):
         
         if nub_x is not None:
             
-            painter.fillRect( nub_x, 0, animated_scanbar_nub_width, my_height, self._colours[ 'hab_nub' ] )
+            painter.fillRect( nub_x, 0, animated_scanbar_nub_width, my_height, self._qss_colours[ 'hab_nub' ] )
             
         
         #
@@ -1075,7 +1075,7 @@ class AnimationBar( QW.QWidget ):
         
         painter.setBrush( QC.Qt.NoBrush )
         
-        painter.setPen( QG.QPen( self._colours[ 'hab_border' ] ) )
+        painter.setPen( QG.QPen( self._qss_colours[ 'hab_border' ] ) )
         
         painter.drawRect( 0, 0, my_width - 1, my_height - 1 )
         
@@ -1260,32 +1260,32 @@ class AnimationBar( QW.QWidget ):
     
     def get_hab_background( self ):
         
-        return self._colours[ 'hab_background' ]
+        return self._qss_colours[ 'hab_background' ]
         
     
     def get_hab_border( self ):
         
-        return self._colours[ 'hab_border' ]
+        return self._qss_colours[ 'hab_border' ]
         
     
     def get_hab_nub( self ):
         
-        return self._colours[ 'hab_nub' ]
+        return self._qss_colours[ 'hab_nub' ]
         
     
     def set_hab_background( self, colour ):
         
-        self._colours[ 'hab_background' ] = colour
+        self._qss_colours[ 'hab_background' ] = colour
         
     
     def set_hab_border( self, colour ):
         
-        self._colours[ 'hab_border' ] = colour
+        self._qss_colours[ 'hab_border' ] = colour
         
     
     def set_hab_nub( self, colour ):
         
-        self._colours[ 'hab_nub' ] = colour
+        self._qss_colours[ 'hab_nub' ] = colour
         
     
     hab_border = QC.Property( QG.QColor, get_hab_border, set_hab_border )

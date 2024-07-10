@@ -399,7 +399,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
                 
             else:
                 
-                # for instance this is a search for 'my files' deleted files, but we are searching on 'all deleted files' domain
+                # for instance this is a search for 'my files' deleted files, but we are searching on 'deleted from anywhere' domain
                 
                 current_min = 0
                 pending_min = 0

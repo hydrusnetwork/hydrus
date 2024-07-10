@@ -1,0 +1,340 @@
+/* 
+A Purple theme for Hydrus Network by B1N4RYJ4N
+Version..: 1.0
+
+To achieve the intended results you must:
+
+1. Activate dark mode
+2. adjust the Qt style to Fusion
+3. adjust the Qt stylesheet to Purple
+4. adjust the current colourset under files > options > colors > current colourset to darkmode
+5. adjust your color values under files > options > colors > darkmode like so:
+   
+   thumbnail background normal..: #2D1F2D
+   thumbnail background selected: #8E4585
+   thumbnail border normal......: #8E4585
+   thumbnail border selected....: #6B3A65
+   thumbnail grid background....: #2D1F2D
+   autocomplete background......: #6B3A65
+   media viewer background......: #2D1F2D
+   media viewer text............: #E6D0E6
+   tag box background...........: #2D1F2D
+
+6. adjust your tag presentation color values under files > options > tag presentation > (On thumbnail top, On thumbnail bottom-right, On media viewer top) like so:
+   
+   background colour............: #8E4585
+   text colour..................: #E6D0E6
+*/
+
+
+/* General settings */
+QAbstractItemView {
+    background-color: #2D1F2D;
+}
+
+QWidget {
+    color: #E6D0E6;
+    background-color: #2D1F2D;
+    alternate-background-color: #2D1F2D;
+}
+
+QWidget::disabled {
+    background-color: #2D1F2D;
+}
+
+QWidget::item::selected {
+    color: #FFF;
+    background-color: #8E4585;
+}
+
+QWidget::item:hover {
+    color: #FFF;
+    background-color: #8E4585;
+}
+
+QWidget#HydrusAnimationBar
+{
+    qproperty-hab_border: #6B3A65;
+    qproperty-hab_background: #8E4585;
+    qproperty-hab_nub: #D070C0;
+}
+
+/* Tooltips */
+QToolTip {
+    color: #FFD0FF;
+    border: 1px solid black;
+    background-color: #2D1F2D;
+    padding: 1px;
+}
+
+/* Menüs */
+QMenu {
+    color: #E6D0E6;
+    background: #2D1F2D;
+}
+
+QMenu::item:selected {
+    color: #FFF;
+    background: #8E4585;
+}
+
+/* Menüleiste */
+QMenuBar::item:selected {
+    color: #FFF;
+    background: #8E4585;
+}
+
+/* Buttons */
+QPushButton {
+    color: #E6D0E6;
+    background-color: #2D1F2D;
+}
+
+QPushButton::hover {
+    color: #FFF;
+    background-color: #2D1F2D;
+}
+
+QPushButton#HydrusAccept {
+    color: #A0FFA0;
+}
+
+QPushButton#HydrusCancel {
+    color: #FFA0A0;
+}
+
+/* Tabs */
+QTabBar::tab {
+    color: #FFD0FF;
+    background-color: #231823;
+    padding: 3px 10px 2px 10px;
+}
+
+QTabBar::tab:selected {
+    color: #FFF;
+    background-color: #8E4585;
+}
+
+QTabBar::tab:hover:!selected {
+    color: #FFF;
+    background-color: #8E4585;
+}
+
+/* Eingabefelder */
+QLineEdit { 
+    border: 1px solid #8E4585; 
+    border-radius: 1px;
+    background-color: #433043;
+    padding: 1px;
+} 
+
+QLineEdit:focus {
+    color: #FFF;
+    border: 1px solid #E6D0E6;
+}
+
+/* Fortschrittsbalken */
+QProgressBar {
+    color: #E6D0E6;
+    border: 1px solid #8E4585;
+    text-align: center;
+    padding: 1px;
+    border-radius: 0px;
+    background-color: #433043;
+    width: 15px;
+    qproperty-textVisible: true;
+}
+
+QProgressBar::chunk {
+    background: QLinearGradient(x1: 0, y1: 0, x2: 1, y2: 0,
+    stop: 0 #B058A7,
+    stop: 0.4999 #8E4585,
+    stop: 0.5 #7D3A74,
+    stop: 1 #6B3A65);
+    border-radius: 0px;
+    border: 0px;
+}
+
+/* Header lines */
+QHeaderView::section {
+    background-color: #6B3A65;
+    color: #E6D0E6;
+    padding-left: 4px;
+    border: 1px solid #8E4585;
+}
+
+/* Scrollbar */
+QScrollBar {
+    background: #2D1F2D;
+    margin: 0;
+}
+
+QScrollBar:vertical {
+    width: 14px;
+}
+
+QScrollBar:horizontal {
+    height: 14px;
+}
+
+QScrollBar::handle {
+    background: #6B3A65;
+    border: 2px solid #8E4585;
+    border-radius: 7px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical {
+    margin: 2px 2px 2px 2px;
+}
+
+QScrollBar::handle:horizontal {
+    margin: 2px 2px 2px 2px;
+}
+
+QScrollBar::handle:hover {
+    background: #8E4585;
+    border-color: #B058A7;
+}
+
+QScrollBar::handle:pressed {
+    background: #B058A7;
+    border-color: #D070C0;
+}
+
+QScrollBar::add-line, QScrollBar::sub-line {
+    background: #433043;
+    height: 14px;
+    width: 14px;
+    subcontrol-origin: margin;
+}
+
+QScrollBar::add-line:vertical {
+    subcontrol-position: bottom;
+}
+
+QScrollBar::sub-line:vertical {
+    subcontrol-position: top;
+}
+
+QScrollBar::add-line:horizontal {
+    subcontrol-position: right;
+}
+
+QScrollBar::sub-line:horizontal {
+    subcontrol-position: left;
+}
+
+QScrollBar::up-arrow, QScrollBar::down-arrow, 
+QScrollBar::left-arrow, QScrollBar::right-arrow {
+    background: #8E4585;
+    height: 6px;
+    width: 6px;
+}
+
+QScrollBar::add-page, QScrollBar::sub-page {
+    background: #3D2A3D;
+}
+
+/* Text fields */
+QTextEdit {
+    color: #D0B0D0;
+    background-color: #433043;
+}
+
+QPlainTextEdit {
+    background-color: #433043;
+    color: #E6D0E6;
+}
+
+/* Special text fields */
+QTextEdit#HydrusValid, QLineEdit#HydrusValid {
+    color: #2D1F2D;
+    background-color: #A0E6A0;
+}
+
+QTextEdit#HydrusIndeterminate, QLineEdit#HydrusIndeterminateValid {
+    color: #2D1F2D;
+    background-color: #D0B0FF;
+}
+
+QTextEdit#HydrusInvalid, QLineEdit#HydrusInvalid {
+    color: #2D1F2D;
+    background-color: #E6A0A0;
+}
+
+/* Labels */
+QLabel#HydrusValid {
+    color: #A0FFA0;
+}
+
+QLabel#HydrusIndeterminate {
+    color: #D0B0FF;
+}
+
+QLabel#HydrusInvalid {
+    color: #FFA0A0;
+}
+
+QLabel#HydrusWarning {
+    color: #FFA0A0;
+}
+
+/* Checkboxes */
+QCheckBox#HydrusWarning {
+    color: #FFA0A0;
+}
+
+/* Hyperlinks */
+QLabel#HydrusHyperlink
+{
+    qproperty-link_color: #D070C0;
+}
+
+
+/*
+
+Here is more hydev added--now we have this tech, I am copying the default 'darkmode' colours in the options to all of the darkmode stylesheets so the default choice for new users isn't the dark/light jank-mix. Stylesheet authors are welcome to fix this up with better colours for their particular style and send them in.
+
+*/
+
+
+/* The main thumbnail grid. */
+
+QWidget#HydrusMediaList
+{
+    qproperty-hmrp_background: #343434;
+    qproperty-hmrp_thumbnail_local_background_normal: #404048;
+    qproperty-hmrp_thumbnail_local_border_normal: #91a3b0;
+    qproperty-hmrp_thumbnail_local_background_selected: #708090;
+    qproperty-hmrp_thumbnail_local_border_selected: #dfe3e6;
+    qproperty-hmrp_thumbnail_not_local_background_normal: #400d02;
+    qproperty-hmrp_thumbnail_not_local_border_normal: #f8d0cc;
+    qproperty-hmrp_thumbnail_not_local_background_selected: #ab274f;
+    qproperty-hmrp_thumbnail_not_local_border_selected: #e34234;
+}
+
+
+/* The media viewer. */
+
+QWidget#HydrusMediaViewer
+{
+    qproperty-hmv_background: #343434;
+    qproperty-hmv_text: #708090;
+}
+
+
+/* The tag autocomplete text input. */
+
+QWidget#HydrusTagAutocomplete
+{
+    qproperty-hta_background: #536267;
+}
+
+
+/* Tag lists across the program. */
+
+QWidget#HydrusTagList
+{
+    qproperty-htl_background: #232629;
+}

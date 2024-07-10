@@ -29,6 +29,7 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUIMetadataMigration
+from hydrus.client.gui.metadata import ClientGUIMetadataMigrationTest
 from hydrus.client.gui.metadata import ClientGUITime
 from hydrus.client.gui.networking import ClientGUINetworkJobControl
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
@@ -1070,8 +1071,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
             allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]
+            test_context_factory = ClientGUIMetadataMigrationTest.MigrationTestContextFactorySidecar( self._paths[ : ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE ] )
             
-            self._metadata_routers_panel = ClientGUIMetadataMigration.SingleFileMetadataRoutersControl( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes )
+            self._metadata_routers_panel = ClientGUIMetadataMigration.SingleFileMetadataRoutersControl( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes, test_context_factory )
             
             #
             

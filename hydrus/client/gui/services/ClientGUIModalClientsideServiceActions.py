@@ -73,6 +73,8 @@ class ReviewPurgeTagsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self.widget().setLayout( vbox )
         
+        self._autocomplete.tagsPasted.connect( self._tags_to_remove.AddTags )
+        
     
     def Go( self ):
         

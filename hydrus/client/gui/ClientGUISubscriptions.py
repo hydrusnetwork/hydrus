@@ -926,8 +926,10 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if len( DEAD_query_headers ) > 0:
                 
+                DEAD_query_header_texts = [ query_header.GetQueryText() for query_header in DEAD_query_headers ]
+                
                 message += '\n' * 2
-                message += f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_headers)}were revived.'
+                message += f'The DEAD queries{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary(DEAD_query_header_texts)}were revived.'
                 
             
         

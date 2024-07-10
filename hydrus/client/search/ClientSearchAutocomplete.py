@@ -167,8 +167,7 @@ class ParsedAutocompleteText( object ):
                 
                 search_texts = []
                 
-                allow_unnamespaced_search_gives_any_namespace_wildcards_values = [ True ]
-                always_autocompleting_values = [ True, False ]
+                allow_unnamespaced_search_gives_any_namespace_wildcards_values = []
                 
                 if '*' in self.raw_content:
                     
@@ -176,20 +175,11 @@ class ParsedAutocompleteText( object ):
                     allow_unnamespaced_search_gives_any_namespace_wildcards_values.append( False )
                     
                 
+                allow_unnamespaced_search_gives_any_namespace_wildcards_values.append( True )
+                
                 for allow_unnamespaced_search_gives_any_namespace_wildcards in allow_unnamespaced_search_gives_any_namespace_wildcards_values:
                     
-                    for always_autocompleting in always_autocompleting_values:
-                        
-                        search_texts.append( self._GetSearchText( always_autocompleting, allow_auto_wildcard_conversion = allow_unnamespaced_search_gives_any_namespace_wildcards, force_do_not_collapse = True ) )
-                        
-                    
-                
-                for s in list( search_texts ):
-                    
-                    if ':' not in s:
-                        
-                        search_texts.append( '*:{}'.format( s ) )
-                        
+                    search_texts.append( self._GetSearchText( False, allow_auto_wildcard_conversion = allow_unnamespaced_search_gives_any_namespace_wildcards, force_do_not_collapse = True ) )
                     
                 
                 search_texts = HydrusData.DedupeList( search_texts )

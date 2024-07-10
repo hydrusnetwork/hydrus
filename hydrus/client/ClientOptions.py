@@ -256,7 +256,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'enable_truncated_images_pil' : True,
             'do_icc_profile_normalisation' : True,
             'mpv_available_at_start' : ClientGUIMPV.MPV_IS_AVAILABLE,
-            'do_sleep_check' : True
+            'do_sleep_check' : True,
+            'override_stylesheet_colours' : False
         }
         
         #

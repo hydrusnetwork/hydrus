@@ -16,8 +16,11 @@ from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.lists import ClientGUIListBoxes
+from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
+from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUIMetadataMigrationExporters
 from hydrus.client.gui.metadata import ClientGUIMetadataMigrationImporters
+from hydrus.client.gui.metadata import ClientGUIMetadataMigrationTest
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
 from hydrus.client.metadata import ClientMetadataMigration
@@ -25,13 +28,14 @@ from hydrus.client.metadata import ClientMetadataMigrationExporters
 
 class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
     
-    def __init__( self, parent: QW.QWidget, router: ClientMetadataMigration.SingleFileMetadataRouter, allowed_importer_classes: list, allowed_exporter_classes: list ):
+    def __init__( self, parent: QW.QWidget, router: ClientMetadataMigration.SingleFileMetadataRouter, allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
         ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
         
         self._original_router = router
         self._allowed_importer_classes = allowed_importer_classes
         self._allowed_exporter_classes = allowed_exporter_classes
+        self._test_context_factory = test_context_factory
         
         importers = self._original_router.GetImporters()
         string_processor = self._original_router.GetStringProcessor()
@@ -66,13 +70,60 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
+        self._test_panel = ClientGUICommon.StaticBox( self, 'testing' )
+        
+        self._test_panel_help_st = ClientGUICommon.BetterStaticText( self._test_panel, 'Add a source and this will show test data.' )
+        self._test_notebook = ClientGUICommon.BetterNotebook( self._test_panel )
+        
+        #
+        
+        self._test_panel.Add( self._test_notebook, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._test_panel.Add( self._test_panel_help_st, CC.FLAGS_CENTER_PERPENDICULAR )
+        
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, self._importers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._exporter_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
-        self.widget().setLayout( vbox )
+        hbox = QP.HBoxLayout()
+        
+        QP.AddToLayout( hbox, vbox, CC.FLAGS_EXPAND_BOTH_WAYS_POLITE )
+        QP.AddToLayout( hbox, self._test_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        self.widget().setLayout( hbox )
+        
+        self._importers_list.listBoxChanged.connect( self._UpdateTestPanel )
+        self._string_processor_button.valueChanged.connect( self._UpdateTestPanel )
+        
+        self._UpdateTestPanel()
+        
+    
+    def _ConvertTestRowToListCtrlTuples( self, test_row ):
+        
+        ( importer, test_object ) = test_row
+        
+        string_processor = self._string_processor_button.GetValue()
+        
+        test_object_pretty = self._test_context_factory.GetTestObjectString( test_object )
+        importer_strings_output = sorted( self._test_context_factory.GetExampleTestStrings( importer, test_object ) )
+        
+        if string_processor.MakesChanges():
+            
+            processed_strings_output = string_processor.ProcessStrings( importer_strings_output )
+            
+        else:
+            
+            processed_strings_output = [ 'no changes' ]
+            
+        
+        pretty_importer_strings_output = ', '.join( importer_strings_output )
+        pretty_processed_strings_output = ', '.join( processed_strings_output )
+        
+        display_tuple = ( test_object_pretty, pretty_importer_strings_output, pretty_processed_strings_output )
+        sort_tuple = ( test_object_pretty, len( importer_strings_output ), len( processed_strings_output ) )
+        
+        return ( display_tuple, sort_tuple )
         
     
     def _GetExampleStringProcessorTestData( self ):
@@ -110,6 +161,50 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         return router
         
     
+    def _UpdateTestPanel( self ):
+        
+        importers = self._importers_list.GetData()
+        
+        while self._test_notebook.count() > len( importers ):
+            
+            last_page_index = self._test_notebook.count() - 1
+            
+            page = self._test_notebook.widget( last_page_index )
+            
+            self._test_notebook.removeTab( last_page_index )
+            
+            page.deleteLater()
+            
+        
+        we_got_importers = len( self._importers_list.GetData() ) > 0
+        
+        self._test_notebook.setVisible( we_got_importers )
+        self._test_panel_help_st.setVisible( not we_got_importers )
+        
+        for ( i, importer ) in enumerate( self._importers_list.GetData() ):
+            
+            if self._test_notebook.count() < i + 1:
+                
+                # make this our new listctrl
+                list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._test_notebook, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, 11, self._ConvertTestRowToListCtrlTuples )
+                
+                self._test_notebook.addTab( list_ctrl, 'init' )
+                
+            
+            page_name = HydrusText.ElideText( importer.ToString(), 14 )
+            
+            self._test_notebook.setTabText( i, page_name )
+            
+            list_ctrl = self._test_notebook.widget( i )
+            
+            test_objects = self._test_context_factory.GetTestObjects()
+            
+            list_ctrl.SetData( [ ( importer, test_object ) for test_object in test_objects ] )
+            
+            list_ctrl.UpdateDatas()
+            
+        
+    
     def GetValue( self ) -> ClientMetadataMigration.SingleFileMetadataRouter:
         
         router = self._GetValue()
@@ -125,12 +220,13 @@ def convert_router_to_pretty_string( router: ClientMetadataMigration.SingleFileM
 
 class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox ):
     
-    def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list ):
+    def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
         ClientGUIListBoxes.AddEditDeleteListBox.__init__( self, parent, 5, convert_router_to_pretty_string, self._AddRouter, self._EditRouter )
         
         self._allowed_importer_classes = allowed_importer_classes
         self._allowed_exporter_classes = allowed_exporter_classes
+        self._test_context_factory = test_context_factory
         
         self.AddDatas( routers )
         
@@ -197,7 +293,7 @@ class SingleFileMetadataRoutersControl( ClientGUIListBoxes.AddEditDeleteListBox 
         
         with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit metadata migration router' ) as dlg:
             
-            panel = EditSingleFileMetadataRouterPanel( self, router, self._allowed_importer_classes, self._allowed_exporter_classes )
+            panel = EditSingleFileMetadataRouterPanel( self, router, self._allowed_importer_classes, self._allowed_exporter_classes, self._test_context_factory )
             
             dlg.SetPanel( panel )
             
@@ -217,13 +313,14 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list ):
+    def __init__( self, parent: QW.QWidget, routers: typing.Collection[ ClientMetadataMigration.SingleFileMetadataRouter ], allowed_importer_classes: list, allowed_exporter_classes: list, test_context_factory: ClientGUIMetadataMigrationTest.MigrationTestContextFactory ):
         
         QW.QPushButton.__init__( self, parent )
         
         self._routers = routers
         self._allowed_importer_classes = allowed_importer_classes
         self._allowed_exporter_classes = allowed_exporter_classes
+        self._test_context_factory = test_context_factory
         
         self._RefreshLabel()
         
@@ -236,7 +333,7 @@ class SingleFileMetadataRoutersButton( QW.QPushButton ):
             
             panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
             
-            control = SingleFileMetadataRoutersControl( panel, self._routers, self._allowed_importer_classes, self._allowed_exporter_classes )
+            control = SingleFileMetadataRoutersControl( panel, self._routers, self._allowed_importer_classes, self._allowed_exporter_classes, self._test_context_factory )
             
             panel.SetControl( control )
             

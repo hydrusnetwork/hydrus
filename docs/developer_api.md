@@ -286,7 +286,7 @@ You won't see all of these, but the service `type` enum is:
 * 15 - all local files -- all files on hard disk ('all my files' + updates + trash) 
 * 17 - file notes
 * 18 - Client API
-* 19 - all deleted files -- you can ignore this
+* 19 - deleted from anywhere -- you can ignore this
 * 20 - local updates -- a file domain to store repository update files in
 * 21 - all my files -- union of all local file domains
 * 22 - a 'inc/dec' rating service with positive integer rating
@@ -2142,7 +2142,7 @@ Response:
 
 **It is possible for the king to not be available.** Every group has a king, but if that file has been deleted, or if the file domain here is limited and the king is on a different file service, then it may not be available. A similar issue occurs when you search for filtering pairs--while it is ideal to compare kings with kings, if you set 'files must be pixel dupes', then the user will expect to see those pixel duplicates, not their champions--you may be forced to compare non-kings. `king_is_on_file_domain` lets you know if the king is on the file domain you set, and `king_is_local` lets you know if it is on the hard disk--if `king_is_local=true`, you can do a `/get_files/file` request on it. It is generally rare, but you have to deal with the king being unavailable--in this situation, your best bet is to just use the file itself as its own representative.
 
-All the relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files' is usually most useful.
+All the relationships you get are filtered by the file domain. If you set the file domain to 'all known files', you will get every relationship a file has, including all deleted files, which is often less useful than you would think. The default, 'all my files', is usually most useful.
 
 A file that has no duplicates is considered to be in a duplicate group of size 1 and thus is always its own king.
 

@@ -248,7 +248,7 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if addee_shortcut not in all_existing_shortcuts:
                 
-                add_rows.append( [ ( addee_shortcut, command ) ] )
+                add_rows.append( ( addee_shortcut, command ) )
                 
                 all_existing_shortcuts.add( addee_shortcut )
                 

@@ -7,6 +7,43 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 582](https://github.com/hydrusnetwork/hydrus/releases/tag/v582)
+
+### fixes
+
+* fixed an issue where setting a file 'collect' was not automatically sorting the collected objects internally properly. normally when you collect, each collected object is supposed to be sorted internally by filesize or namespace or whatever--this is working again
+* fixed a weird internal error state in the import folders manager where it could get confused about and throw an error regarding the import folders' next work times if an internal update notification occured during an import folder working
+* fixed a typo error with the shortcut set 'special duplicate' button
+* fixed pasting new query texts into the manage subscriptions dialog when one of the pasted texts resurrects a DEAD query. my new summary generation text was handling the DEAD report wrong!
+
+### misc
+
+* the advanced 'all deleted files' service, which is mostly just used for behind the scenes caching calculations, is renamed to 'deleted from anywhere'. the related 'regen-&gt;all deleted files' database command is also moved to 'check and repair-&gt;sync combined deleted files'
+* the edit tag filter panel's 'load' button now shows all the current tag repositories' tag filters
+* when you hit ctrl-enter on some tags (or otherwise trigger a linked remove+add action) in an active search list (e.g. top-left on a search page), which causes those tags to invert and thus sometimes sorted to a different position, the current selection now propagates through the inversion, with the keyboard focus moved to the post-topmost item. so, you can now basically hit ctrl+enter twice for a no-op
+* fixed the paste button in the new 'purge tags' dialog
+* thanks to a user, we have a new 'Purple' stylesheet
+* I tweaked the some default stylesheet colours and think I fixed the display of the 'valid/invalid' controls you sometimes see (for instance in the new regex input, which goes green/red) for dark mode stylesheets that don't define colours for these. previously, the dark mode text, usually a light grey, was being washed out by the default green
+
+### custom colours in QSS
+
+* you can now set the _options-&gt;colours_ colours in a QSS stylesheet! if you are a stylesheet maker, check the default_hydrus.qss file to see how it works--it is the same deal as the animation scanbar previously
+* the options in _options-&gt;colours_ remain, but they are now wrapped in a 'overwrite your stylesheet with these colours' checkbox _for now_. existing users are going to be set to 'yes overwrite', so nothing will suddenly change, but new users are going to default to using whatever the current QSS says. in future, I may collapse the light/darkmode distinction into one option set; I may morph it into a "colour highly rated files' thumbnail borders gold" dynamic options system; I may simply delete the whole thing and replace it with in-client QSS editing or something. not sure, so let's see how it goes and how Qt 7's darkmode stuff turns out.
+* I have pasted the hydrus default darkmode colours into all the other stylesheets that come with the program, so new users selecting a darkmode style are going to get something reasonable out of the box rather than the previous ugly clash. the users who made the original stylesheets are welcome to figure out better colours and send them in
+* if you are not set to override with the custom colours in _options-&gt;colours_, then hitting _help-&gt;darkmode_ now gives you a popup telling you what is going on
+
+### sidecar UI
+
+* the four 'edit sidecars' panels (under manual imports, import folders, manual exports, and export folders), which use paths and media as sources respectively, now have test panels to review the current sidecar route you have set up. they use up to 25 rows of example file paths/media from the actual thing you are working on. it provides a live update of what the sources you set up will load, so you know you have the json parse or .txt separator set up correct
+* for the export folders case, there is a button in the panel 'edit export folders' panel to populate the text context, under your control, since this involves a potentially slow file search
+* there is more to do here. I would like better test panels in the sub-dialogs and I'd like to collapse the related 'eight-nested-dialogs-deep' problem, and in the string processing and parsing UI more generally, but I'm happy with this step forward. let me know where it goes wrong!
+
+### advanced autocomplete logic fixes
+
+* when you enter a wildcard into a Read tag autocomplete, it no longer always delivers the 'always autocompleting' version. so, if you enter `sa*s`, it will suggest `sa*s (wildcard search)` and perhaps `sa*s (any namespace)`, but it will no longer suggest the `sa*s*` variants until you, obviously, actually type that trailing asterisk yourself. I intermittently had no idea what the hell I was doing when I originally developed this stuff
+* the 'unnamespaced input gives `(any namespace)` wildcard results' tag display option is now correctly negatively enforced when entering unnamespaced wildcards. previously it was always adding them, and sometimes inserting them at the top of the list. the `(any namespace)` variant is now always below the unnamespaced when both are present
+* fixed up a bunch of jank unit tests that were testing this badly
+
 ## [Version 581](https://github.com/hydrusnetwork/hydrus/releases/tag/v581)
 
 ### misc
@@ -333,40 +370,3 @@ title: Changelog
 * the local booru review services panel no longer shows nor allows management of its shares
 * deleted the local booru unit tests
 * deleted the local booru help and ancient screenshots
-
-## [Version 572](https://github.com/hydrusnetwork/hydrus/releases/tag/v572)
-
-### misc
-
-* added a new checkbox to _options-&gt;files and trash_ to say 'include skipped files when you remove files after archive/delete'
-* thanks to a user, we now have an 'e621' stylsheet in _options-&gt;style_. this is the first default stylesheet that uses assets (some checkbox etc.. svgs), which means some users--I think just those who run from source--will need to be careful that their CWD is the hydrus install dir when they boot, or this won't load properly! if you try it and get errors in your log as it tries to load the svgs, let me know!
-
-### share menu
-
-* like the 'open' menu a couple weeks ago, the 'share' menu off of thumbnails or the media viewer is rewritten to nicer code. no major differences, but it has a clearer, universal layout, provides more options for 'the currently focused file' vs 'all selected files', is more careful about only providing commands it can deliver on (e.g. no file copy for remote files), and now everything it does is mappable in the shortcut system under the 'media' shortcut set
-* you can now copy a file's thumbnail as a bitmap from this menu!
-* the canvas now supports 'export files'. the 'export files' window just pops on top of it with the one file
-* 'copy file id' is no longer hidden by advanced mode--go nuts!
-* the share menu no longer has 'share on local booru'. the local booru service was an interesting experiment, but I could never find time to properly dev it and there are better answers with the Client API or simple third-party image hosting services that you can drag and drop to. thus, I am finally sunsetting it. I'll strip away its features over the coming weeks until it is completely removed
-
-### shortcut updates
-
-* the 'copy file hash' shortcut actions, which used to be four separate things, have been collapsed to one action that has a 'hash type' dropdown (and a 'target' dropdown to select either all selected files or just the currently focused file, which will default to 'all selected' on update, which was the previous behaviour). you can also now set 'pixel_hash' or 'blurhash' as the hash type
-* the 'copy file bitmap' shortcuts have similarly been collapsed down to one action with a dropdown, also with the new 'copy thumbnail' command
-* the 'copy files', 'copy file paths', and 'copy file id' shortcuts now have a dropdown for whether you want all selected files or just the currently focused file. updated commands will default to 'all selected', which was the previous behaviour
-* added a 'copy ipfs multihash' shortcut action, which has this new 'focused vs all selected' parameter and the ipfs service to copy from as its options
-
-### boring code cleanup
-
-* wrote a new command for copying arbitrary file hashes, with a new 'file command target'
-* simplified the media hash copying code
-* wrote a new command for copying arbitrary bitmap types
-* combined the bitmap copying code into one shared function call and simplified the surrounding code
-* combined the file and path copying code into shared functions, simplified the code, and added tech for focused vs all selected targeting
-* and the same thing for copying ipfs multihashes
-* wrote a routine to copy a file's thumbnail in the normal clipboard copying pubsub
-* with the recent rounds of simplication, the core thumbnail menu call is now but a mere 600 lines of spaghetti code
-* misc renaming of some enums here so they are more in agreement ('xxx files' instead of 'xxx file', etc...)
-* renamed the various simple commands I have replaced in the past few weeks as 'legacy', so we don't accidentally refer to them again in real code
-* the unit test for 'dateparser decode' is no longer run if dateparser is not in the environment
-* fixed the file metadata parsing unit tests to account for newer ffmpeg, which sees a -10ms different duration on one of the test files, and made the various tests +/-20% lenient to handle this stuff if it comes up again in future

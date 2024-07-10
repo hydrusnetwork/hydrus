@@ -137,6 +137,8 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
     
 class StringProcessorButton( ClientGUICommon.BetterButton ):
     
+    valueChanged = QC.Signal()
+    
     def __init__( self, parent, string_processor: ClientStrings.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
         
         ClientGUICommon.BetterButton.__init__( self, parent, 'edit string processor', self._Edit )
@@ -162,6 +164,8 @@ class StringProcessorButton( ClientGUICommon.BetterButton ):
                 self._string_processor = panel.GetValue()
                 
                 self._UpdateLabel()
+                
+                self.valueChanged.emit()
                 
             
         

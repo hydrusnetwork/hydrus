@@ -1431,6 +1431,20 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
+        tag_repositories = CG.client_controller.services_manager.GetServices( ( HC.TAG_REPOSITORY, ) )
+        
+        if len( tag_repositories ) > 0:
+            
+            ClientGUIMenus.AppendSeparator( menu )
+            
+            for service in sorted( tag_repositories, key = lambda s: s.GetName() ):
+                
+                tag_filter = service.GetTagFilter()
+                
+                ClientGUIMenus.AppendMenuItem( menu, f'tag filter for "{service.GetName()}"', 'load the serverside tag filter for this service', self.SetValue, tag_filter )
+                
+            
+        
         CGC.core().PopupMenu( self, menu )
         
     

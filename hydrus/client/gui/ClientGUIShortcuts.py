@@ -1343,7 +1343,7 @@ class ShortcutSet( HydrusSerialisable.SerialisableBaseNamed ):
     
     def GetShortcutsAndCommands( self ):
         
-        return list( self )
+        return list( self._shortcuts_to_commands.items() )
         
     
     def HasCommand( self, shortcut: Shortcut ):
