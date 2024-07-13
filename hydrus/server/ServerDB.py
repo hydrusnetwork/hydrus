@@ -3014,7 +3014,7 @@ class DB( HydrusDB.HydrusDB ):
         
         reason = self._GetReason( reason_id )
         
-        tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._Execute( f'SELECT service_tag_id, service_hash_id FROM {petitioned_mappings_table_name} WHERE account_id = ? AND reason_id = ? LIMIT;', ( petitioner_account_id, reason_id, MAX_MAPPINGS_PER_PETITION ) ) )
+        tag_ids_to_hash_ids = HydrusData.BuildKeyToListDict( self._Execute( f'SELECT service_tag_id, service_hash_id FROM {petitioned_mappings_table_name} WHERE account_id = ? AND reason_id = ? LIMIT ?;', ( petitioner_account_id, reason_id, MAX_MAPPINGS_PER_PETITION ) ) )
         
         if len( tag_ids_to_hash_ids ) == 0:
             
