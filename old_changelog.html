@@ -35,6 +35,28 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_583"><a href="#version_583">version 583</a></h2>
+                    <ul>
+                        <li><h3>new</h3></li>
+                        <li>added a 'command palette' options page. the ability to show menubar and media actions is now set here with a couple of checkboxes (previously these were hidden behind advanced mode)</li>
+                        <li>you can also now search for 'page of pages' with the command palette. this is turned on in the same new options page</li>
+                        <li>the new sidecar test panel now only shows its notebook tabs if there is more than one source. the tab labels, when shown, are now '1st' ... '2nd' ordinal strings respective to the source list on the left</li>
+                        <li>added some explanation text, a button to the help docs, and a bit of better layout to the sidecars UI</li>
+                        <li>the file import report mode now writes the 'nice human description' for the file import to the log. this will expose the source URL or local file path for better context than just the random temp path</li>
+                        <li>in the 'manage times' dialog, you can now set the same timestamp (including cascading timestamps) to multiple domains or file services at once. the logic is a little delicate where some files are in one domain in your selection and others are only in another, but I think I got it working ok. if you have a complicated setup, let me know how you get on!</li>
+                        <li>the 'Dark Blue' stylesheets and the new 'Purple' stylesheet have updated custom colours</li>
+                        <li><h3>fixes</h3></li>
+                        <li>fixed a typo in the 'fetch a mappings petition' server code</li>
+                        <li>when the client is called to render an image that was just this moment removed from the file store, the image renderer should now give you a nicer error image with an appropriate messare rather than throwing an error popup</li>
+                        <li>hydrus no longer applies EXIF Orientation (rotation) to PNG files, which it recently started doing automatically when we started scanning PNGs for EXIF. EXIF is not well-defined and supported for PNG, and if an Orientation row exists, it is likely a false positive mistake of some encoder. hydrus will show this data but it will not apply it, and the metadata review UI now also notes this</li>
+                        <li>fixed the 'has exif?' file maintenance job, which I think was false-negativing!</li>
+                        <li><h3>code and help</h3></li>
+                        <li>the `psutil` library is now technically optional. it is still needed for a bunch of normal operations like 'is the client currently running?' and 'how much free space is there on this drive?', but if it is missing the client will now boot and try to muddle through anyway</li>
+                        <li>did more multi-column list 'select, sort, and scroll' tech for: the url class parameters list; the url class links list; the external launch paths list; the tag suggestion related tags namespace lists; import folder filename tagging options; manage custom network context headers; the string to string match widget list; the string match to string match widget list; the edit subscription queries list; and more of the edit subscriptions subscription list, including the merge and separate actions</li>
+                        <li>updated the QuickSync help a little, clarifying it is only useful for _new, empty_ clients</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_582"><a href="#version_582">version 582</a></h2>
                     <ul>
                         <li><h3>fixes</h3></li>
