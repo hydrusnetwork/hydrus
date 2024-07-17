@@ -1173,7 +1173,7 @@ def ShowFileEmbeddedMetadata( win: QW.QWidget, media: ClientMedia.MediaSingleton
     
     frame = ClientGUITopLevelWindowsPanels.FrameThatTakesScrollablePanel( win, 'Embedded Metadata' )
     
-    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, exif_dict, file_text, extra_rows )
+    panel = ClientGUIScrolledPanelsReview.ReviewFileEmbeddedMetadata( frame, mime, exif_dict, file_text, extra_rows )
     
     frame.SetPanel( panel )
     

@@ -257,7 +257,10 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'do_icc_profile_normalisation' : True,
             'mpv_available_at_start' : ClientGUIMPV.MPV_IS_AVAILABLE,
             'do_sleep_check' : True,
-            'override_stylesheet_colours' : False
+            'override_stylesheet_colours' : False,
+            'command_palette_show_page_of_pages' : False,
+            'command_palette_show_main_menu' : False,
+            'command_palette_show_media_menu' : False
         }
         
         #

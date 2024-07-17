@@ -742,7 +742,7 @@ Response:
 
 The `url_file_statuses` is a list of zero-to-n JSON Objects, each representing a file match the client found in its database for the URL. Typically, it will be of length 0 (for as-yet-unvisited URLs or Gallery/Watchable URLs that are not attached to files) or 1, but sometimes multiple files are given the same URL (sometimes by mistaken misattribution, sometimes by design, such as pixiv manga pages). Handling n files per URL is a pain but an unavoidable issue you should account for.
 
-`status` is the same as for `/add_files/add_file`:
+`status` mas the same mapping as for `/add_files/add_file`, but the possible results are different:
 
   *   0 - File not in database, ready for import (you will only see this very rarely--usually in this case you will just get no matches)
   *   2 - File already in database

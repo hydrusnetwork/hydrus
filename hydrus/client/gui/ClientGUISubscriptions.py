@@ -402,7 +402,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
                     return
                     
                 
-                self._query_headers.AddDatas( ( query_header, ) )
+                self._query_headers.AddDatas( ( query_header, ), select_sort_and_scroll = True )
                 
                 self._names_to_edited_query_log_containers[ query_log_container.GetName() ] = query_log_container
                 
@@ -625,71 +625,62 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditQuery( self ):
         
-        edited_datas = []
+        data = self._query_headers.GetTopSelectedData()
         
-        selected_query_headers = self._query_headers.GetData( only_selected = True )
+        if data is None:
+            
+            return
+            
         
-        for old_query_header in selected_query_headers:
+        old_query_header = data
+        
+        query_log_container_name = old_query_header.GetQueryLogContainerName()
+        
+        if query_log_container_name not in self._names_to_edited_query_log_containers:
             
-            query_log_container_name = old_query_header.GetQueryLogContainerName()
-            
-            if query_log_container_name not in self._names_to_edited_query_log_containers:
+            try:
                 
-                try:
+                old_query_log_container = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_log_container_name )
+                
+            except HydrusExceptions.DataMissing:
+                
+                ClientGUIDialogsMessage.ShowCritical( self, 'Important Error!', f'Some data for this query, "{old_query_header.GetQueryText()}" was missing! This should have been dealt with when the dialog launched, so something is very wrong! Please exit the manage subscriptions dialog immediately, pause your subs, and contact hydrus dev!' )
+                
+                return
+                
+            
+            self._names_to_edited_query_log_containers[ query_log_container_name ] = old_query_log_container
+            
+        
+        old_query_log_container = self._names_to_edited_query_log_containers[ query_log_container_name ]
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription query' ) as dlg:
+            
+            panel = EditSubscriptionQueryPanel( dlg, old_query_header, old_query_log_container )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                ( edited_query_header, edited_query_log_container ) = panel.GetValue()
+                
+                edited_query_header.SyncToQueryLogContainer( self._checker_options.GetValue(), edited_query_log_container )
+                
+                edited_query_text = edited_query_header.GetQueryText()
+                
+                if edited_query_text != old_query_header.GetQueryText() and edited_query_text in self._GetCurrentQueryTexts():
                     
-                    old_query_log_container = CG.client_controller.Read( 'serialisable_named', HydrusSerialisable.SERIALISABLE_TYPE_SUBSCRIPTION_QUERY_LOG_CONTAINER, query_log_container_name )
-                    
-                except HydrusExceptions.DataMissing:
-                    
-                    ClientGUIDialogsMessage.ShowCritical( self, 'Important Error!', f'Some data for this query, "{old_query_header.GetQueryText()}" was missing! This should have been dealt with when the dialog launched, so something is very wrong! Please exit the manage subscriptions dialog immediately, pause your subs, and contact hydrus dev!' )
+                    ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{edited_query_text}"! The edit you just made will not be saved.' )
                     
                     return
                     
                 
-                self._names_to_edited_query_log_containers[ query_log_container_name ] = old_query_log_container
+                self._query_headers.ReplaceData( old_query_header, edited_query_header, sort_and_scroll = True )
                 
-            
-            old_query_log_container = self._names_to_edited_query_log_containers[ query_log_container_name ]
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription query' ) as dlg:
-                
-                panel = EditSubscriptionQueryPanel( dlg, old_query_header, old_query_log_container )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    ( edited_query_header, edited_query_log_container ) = panel.GetValue()
-                    
-                    edited_query_header.SyncToQueryLogContainer( self._checker_options.GetValue(), edited_query_log_container )
-                    
-                    edited_query_text = edited_query_header.GetQueryText()
-                    
-                    if edited_query_text != old_query_header.GetQueryText() and edited_query_text in self._GetCurrentQueryTexts():
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, f'You already have a query for "{edited_query_text}"! The edit you just made will not be saved.' )
-                        
-                        break
-                        
-                    
-                    self._query_headers.DeleteDatas( ( old_query_header, ) )
-                    
-                    self._query_headers.AddDatas( ( edited_query_header, ) )
-                    
-                    edited_datas.append( edited_query_header )
-                    
-                    self._names_to_edited_query_log_containers[ query_log_container_name ] = edited_query_log_container
-                    
-                else:
-                    
-                    break
-                    
+                self._names_to_edited_query_log_containers[ query_log_container_name ] = edited_query_log_container
                 
             
         
-        self._query_headers.SelectDatas( edited_datas )
-        
-        self._query_headers.Sort()
         
     
     def _GetCurrentQueryTexts( self ):
@@ -948,7 +939,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             ClientGUIDialogsMessage.ShowInformation( self, message )
             
         
-        query_headers = []
+        new_query_headers = []
         
         for query_text in new_query_texts:
             
@@ -956,7 +947,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             query_header.SetQueryText( query_text )
             
-            query_headers.append( query_header )
+            new_query_headers.append( query_header )
             
             query_log_container_name = query_header.GetQueryLogContainerName()
             
@@ -970,7 +961,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             query_header.CheckNow()
             
         
-        self._query_headers.AddDatas( query_headers )
+        self._query_headers.AddDatas( new_query_headers, select_sort_and_scroll = True )
         
         self._query_headers.UpdateDatas( DEAD_query_headers )
         
@@ -2045,8 +2036,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 self._AddSubscription( new_subscription )
                 
-                self._subscriptions.Sort()
-                
             
         
     
@@ -2404,6 +2393,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         finally:
             
             self._subscriptions.UpdateDatas()
+            
             self._subscriptions.Sort()
             
             self._RegenDupeData()
@@ -2412,48 +2402,40 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def Edit( self ):
         
-        subs_to_edit = self._subscriptions.GetData( only_selected = True )
-        edited_datas = []
+        subscription = self._subscriptions.GetTopSelectedData()
         
-        for subscription in subs_to_edit:
+        if subscription is None:
             
-            frame_key = 'edit_subscription_dialog'
+            return
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription', frame_key ) as dlg:
+        
+        frame_key = 'edit_subscription_dialog'
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit subscription', frame_key ) as dlg:
+            
+            panel = EditSubscriptionPanel( dlg, subscription, self._names_to_edited_query_log_containers )
+            
+            dlg.SetPanel( panel )
+            
+            result = dlg.exec()
+            
+            if result == QW.QDialog.Accepted:
                 
-                panel = EditSubscriptionPanel( dlg, subscription, self._names_to_edited_query_log_containers )
+                ( edited_subscription, self._names_to_edited_query_log_containers ) = panel.GetValue()
                 
-                dlg.SetPanel( panel )
-                
-                result = dlg.exec()
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    self._subscriptions.DeleteDatas( ( subscription, ) )
-                    
-                    ( edited_subscription, self._names_to_edited_query_log_containers ) = panel.GetValue()
+                if edited_subscription.GetName() != subscription.GetName():
                     
                     edited_subscription.SetNonDupeName( self._GetExistingNames() )
                     
-                    self._subscriptions.AddDatas( ( edited_subscription, ) )
-                    
-                    edited_datas.append( edited_subscription )
-                    
-                    self._RegenDupeData()
-                    
-                elif dlg.WasCancelled():
-                    
-                    break
-                    
+                
+                self._subscriptions.ReplaceData( subscription, edited_subscription, sort_and_scroll = True )
+                
+                self._RegenDupeData()
                 
             
         
-        self._subscriptions.SelectDatas( edited_datas )
-        
-        self._subscriptions.Sort()
-        
     
-    def GetValue( self ) -> typing.List[ ClientImportSubscriptions.Subscription ]:
+    def GetValue( self ):
         
         if not self.isEnabled():
             
@@ -2513,11 +2495,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             original_subs = self._subscriptions.GetData( only_selected = True )
             
-            potential_mergees = [ sub.Duplicate() for sub in original_subs ]
+            potential_mergees = original_subs
             
             mergeable_groups = []
-            merged_subs = []
-            unmergeable_subs = []
             
             while len( potential_mergees ) > 0:
                 
@@ -2534,10 +2514,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                     
                     mergeable_groups.append( mergeable_group )
                     
-                else:
-                    
-                    unmergeable_subs.append( potential_primary )
-                    
                 
                 potential_mergees = not_mergeable_with_our_primary
                 
@@ -2549,6 +2525,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 return
                 
             
+            primary_and_merged_replacement_tuples = []
+            merged_and_discardable_subs = []
+            
             for mergeable_group in mergeable_groups:
                 
                 mergeable_group.sort( key = lambda sub: sub.GetName() )
@@ -2557,22 +2536,31 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 try:
                     
-                    primary_sub = ClientGUIDialogsQuick.SelectFromList( self, 'select the primary subscription--into which to merge the others', choice_tuples )
+                    original_primary_sub = ClientGUIDialogsQuick.SelectFromList( self, 'select the primary subscription--into which to merge the others', choice_tuples )
                     
                 except HydrusExceptions.CancelledException:
                     
                     return
                     
                 
-                mergeable_group.remove( primary_sub )
+                merged_sub = original_primary_sub.Duplicate()
                 
-                unmerged = primary_sub.Merge( mergeable_group )
+                primary_sub_name = merged_sub.GetName()
                 
-                unmergeable_subs.extend( unmerged )
+                mergeable_group.remove( original_primary_sub )
                 
-                primary_sub_name = primary_sub.GetName()
+                ( eaten_subs, unmerged ) = merged_sub.Merge( mergeable_group )
                 
-                message = primary_sub_name + ' was able to merge ' + HydrusNumbers.ToHumanInt( len( mergeable_group ) ) + ' other subscriptions. If you wish to change its name, do so here.'
+                if len( eaten_subs ) == 0:
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, f'{primary_sub_name} was unable to merge any queries! The sources probably do not quite line up--if you think they should, try re-setting the source on the subs and then close/re-open this dialog.' )
+                    
+                    continue
+                    
+                
+                merged_and_discardable_subs.extend( eaten_subs )
+                
+                message = f'{primary_sub_name} was able to merge {HydrusNumbers.ToHumanInt( len( eaten_subs ) )} other subscriptions. If you wish to change its name, do so here.'
                 
                 with ClientGUIDialogs.DialogTextEntry( self, message, default = primary_sub_name ) as dlg:
                     
@@ -2580,37 +2568,34 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                         name = dlg.GetValue()
                         
-                        primary_sub.SetName( name )
+                        merged_sub.SetName( name )
                         
                     
                     # don't care about a cancel here--we'll take that as 'I didn't want to change its name', not 'abort'
                     
                 
-                merged_subs.append( primary_sub )
+                primary_and_merged_replacement_tuples.append( ( original_primary_sub, merged_sub ) )
                 
             
             # we are ready to do it
             
-            self._subscriptions.DeleteDatas( original_subs )
+            self._subscriptions.DeleteDatas( merged_and_discardable_subs )
             
-            self._subscriptions.AddDatas( unmergeable_subs )
+            existing_names = set( self._GetExistingNames() )
             
-            edited_datas.extend( unmergeable_subs )
+            for ( primary, merged_sub ) in primary_and_merged_replacement_tuples:
+                
+                if merged_sub.GetName() != primary.GetName():
+                    
+                    merged_sub.SetNonDupeName( existing_names )
+                    
+                
+                existing_names.add( merged_sub.GetName() )
+                
             
-            for merged_sub in merged_subs:
-                
-                merged_sub.SetNonDupeName( self._GetExistingNames() )
-                
-                self._subscriptions.AddDatas( ( merged_sub, ) )
-                
-                edited_datas.append( merged_sub )
-                
+            self._subscriptions.ReplaceDatas( primary_and_merged_replacement_tuples, sort_and_scroll = True )
             
             self._RegenDupeData()
-            
-            self._subscriptions.SelectDatas( edited_datas )
-            
-            self._subscriptions.Sort()
             
         
     
@@ -2667,18 +2652,14 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def Separate( self ):
         
-        edited_datas = []
+        subscription = self._subscriptions.GetTopSelectedData()
         
-        subscriptions = self._subscriptions.GetData( only_selected = True )
-        
-        if len( subscriptions ) != 1:
+        if subscription is None:
             
             ClientGUIDialogsMessage.ShowWarning( self, 'Separate only works if one subscription is selected!' )
             
             return
             
-        
-        subscription = subscriptions[0]
         
         num_queries = len( subscription.GetQueryHeaders() )
         
@@ -2790,7 +2771,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 primary_sub = extracted_subscriptions.pop()
                 
-                unmerged = primary_sub.Merge( extracted_subscriptions )
+                ( merged, unmerged ) = primary_sub.Merge( extracted_subscriptions )
                 
                 final_subscriptions.extend( unmerged )
                 
@@ -2817,7 +2798,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             primary_sub = extracted_subscriptions.pop()
             
-            unmerged = primary_sub.Merge( extracted_subscriptions )
+            ( merged, unmerged ) = primary_sub.Merge( extracted_subscriptions )
             
             final_subscriptions.extend( unmerged )
             
@@ -2828,20 +2809,18 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             final_subscriptions.append( subscription )
             
         
+        existing_names = set( self._GetExistingNames() )
+        
         for final_subscription in final_subscriptions:
             
-            final_subscription.SetNonDupeName( self._GetExistingNames() )
+            final_subscription.SetNonDupeName( existing_names )
             
-            self._subscriptions.AddDatas( ( final_subscription, ) )
+            existing_names.add( final_subscription.GetName() )
             
-            edited_datas.append( final_subscription )
-            
+        
+        self._subscriptions.AddDatas( final_subscriptions, select_sort_and_scroll = True )
         
         self._RegenDupeData()
-        
-        self._subscriptions.SelectDatas( edited_datas )
-        
-        self._subscriptions.Sort()
         
     
     def SetCheckerOptions( self ):

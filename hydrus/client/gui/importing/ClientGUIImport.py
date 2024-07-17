@@ -1073,7 +1073,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]
             test_context_factory = ClientGUIMetadataMigrationTest.MigrationTestContextFactorySidecar( self._paths[ : ClientGUIMetadataMigrationTest.HOW_MANY_EXAMPLE_OBJECTS_TO_USE ] )
             
-            self._metadata_routers_panel = ClientGUIMetadataMigration.SingleFileMetadataRoutersControl( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes, test_context_factory )
+            self._metadata_routers_panel = ClientGUICommon.StaticBox( self, 'sidecar import routes' )
+            
+            self._metadata_routers_control = ClientGUIMetadataMigration.SingleFileMetadataRoutersControl( self, metadata_routers, allowed_importer_classes, allowed_exporter_classes, test_context_factory )
             
             #
             
@@ -1086,14 +1088,22 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             #
             
+            self._metadata_routers_panel.Add( self._metadata_routers_control, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
             vbox = QP.VBoxLayout()
             
+            label = 'You can import tags, URLs, and other metadata via "sidecars", which are little text files accompanying each import file. For instance, where importing "cool_image.jpg", you can tell hydrus to check "cool_image.jpg.txt" for a list of tags to add.'
+            
+            st = ClientGUICommon.BetterStaticText( self, label )
+            st.setWordWrap( True )
+            
+            QP.AddToLayout( vbox, st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._paths_list, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( vbox, self._metadata_routers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
             
             self.setLayout( vbox )
             
-            self._metadata_routers_panel.listBoxChanged.connect( self.ScheduleRefreshFileList )
+            self._metadata_routers_control.listBoxChanged.connect( self.ScheduleRefreshFileList )
             
         
         def _ConvertDataToListCtrlTuples( self, data ):
@@ -1117,7 +1127,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             strings = []
             
-            metadata_routers = self._metadata_routers_panel.GetValue()
+            metadata_routers = self._metadata_routers_control.GetValue()
             
             for router in metadata_routers:
                 
@@ -1157,7 +1167,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def GetValue( self ):
             
-            return self._metadata_routers_panel.GetValue()
+            return self._metadata_routers_control.GetValue()
             
         
         def RefreshFileList( self ):

@@ -693,12 +693,22 @@ class ClientFilesManager( object ):
                 
                 free_space = HydrusPaths.GetFreeSpace( base_location.path )
                 
+                if free_space is None:
+                    
+                    free_space = 0
+                    
+                
                 self._locations_to_free_space[ base_location ] = ( free_space, HydrusTime.GetNow() )
                 
             
         else:
             
             free_space = HydrusPaths.GetFreeSpace( base_location.path )
+            
+            if free_space is None:
+                
+                free_space = 0
+                
             
             self._locations_to_free_space[ base_location ] = ( free_space, HydrusTime.GetNow() )
             
@@ -2420,7 +2430,7 @@ class FilesMaintenanceManager( object ):
                 
                 raw_pil_image = HydrusImageOpening.RawOpenPILImage( path )
                 
-                has_exif = HydrusImageMetadata.HasEXIF( path )
+                has_exif = HydrusImageMetadata.HasEXIF( raw_pil_image )
                 
             except:
                 

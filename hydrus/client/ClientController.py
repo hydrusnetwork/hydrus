@@ -1,8 +1,6 @@
 import hashlib
 import os
-import typing
 
-import psutil
 import signal
 import sys
 import threading
@@ -19,6 +17,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -2250,15 +2249,18 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             if HydrusTime.TimeHasPassedMS( self.GetTimestampMS( 'last_cpu_check' ) + 60000 ):
                 
-                cpu_times = psutil.cpu_percent( percpu = True )
-                
-                if len( [ 1 for cpu_time in cpu_times if cpu_time > system_busy_cpu_percent ] ) >= system_busy_cpu_count:
+                if HydrusPSUtil.PSUTIL_OK:
                     
-                    self._system_busy = True
+                    cpu_times = HydrusPSUtil.psutil.cpu_percent( percpu = True )
                     
-                else:
-                    
-                    self._system_busy = False
+                    if len( [ 1 for cpu_time in cpu_times if cpu_time > system_busy_cpu_percent ] ) >= system_busy_cpu_count:
+                        
+                        self._system_busy = True
+                        
+                    else:
+                        
+                        self._system_busy = False
+                        
                     
                 
                 self.TouchTime( 'last_cpu_check' )

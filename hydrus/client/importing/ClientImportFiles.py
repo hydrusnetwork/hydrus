@@ -110,7 +110,7 @@ class FileImportJob( object ):
         
         if HG.file_import_report_mode:
             
-            HydrusData.ShowText( 'File import job created for path {}.'.format( temp_path ) )
+            HydrusData.ShowText( f'File import job created:\nSource: {human_file_description}\nRaw import path: {temp_path}.' )
             
         
         if file_import_options.IsDefault():

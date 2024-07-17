@@ -1,7 +1,6 @@
 import calendar
 import collections
 import datetime
-import psutil
 import socket
 import threading
 import urllib3
@@ -13,6 +12,7 @@ urllib3.disable_warnings( InsecureRequestWarning ) # stopping log-moaning when r
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 
@@ -52,7 +52,12 @@ def LocalPortInUse( port ):
     
     if HC.PLATFORM_WINDOWS:
         
-        for sconn in psutil.net_connections():
+        if not HydrusPSUtil.PSUTIL_OK:
+            
+            return False
+            
+        
+        for sconn in HydrusPSUtil.psutil.net_connections():
             
             if port == sconn.laddr[1] and sconn.status in ( 'ESTABLISHED', 'LISTEN' ): # local address: ( ip, port )
                 

@@ -1,9 +1,7 @@
-import collections
 import functools
 import os
 import typing
 
-import psutil
 import re
 import send2trash
 import shlex
@@ -16,6 +14,7 @@ import traceback
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
@@ -380,13 +379,18 @@ def GetDefaultLaunchPath():
 @functools.lru_cache( maxsize = 128 )
 def GetPartitionInfo( path ) -> typing.Optional[ typing.NamedTuple ]:
     
+    if not HydrusPSUtil.PSUTIL_OK:
+        
+        return None
+        
+    
     path = path.lower()
     
     try:
         
         for scan_network in ( False, True ):
             
-            partition_infos = psutil.disk_partitions( all = scan_network )
+            partition_infos = HydrusPSUtil.psutil.disk_partitions( all = scan_network )
             
             def sort_descending_mountpoint( partition_info ): # i.e. put '/home' before '/'
                 
@@ -440,16 +444,26 @@ def GetFileSystemType( path: str ) -> typing.Optional[ str ]:
         
     
 
-def GetFreeSpace( path ):
+def GetFreeSpace( path ) -> typing.Optional[ int ]:
     
-    disk_usage = psutil.disk_usage( path )
+    if not HydrusPSUtil.PSUTIL_OK:
+        
+        return None
+        
+    
+    disk_usage = HydrusPSUtil.psutil.disk_usage( path )
     
     return disk_usage.free
     
 
-def GetTotalSpace( path ):
+def GetTotalSpace( path ) -> typing.Optional[ int ]:
     
-    disk_usage = psutil.disk_usage( path )
+    if not HydrusPSUtil.PSUTIL_OK:
+        
+        return None
+        
+    
+    disk_usage = HydrusPSUtil.psutil.disk_usage( path )
     
     return disk_usage.total
     

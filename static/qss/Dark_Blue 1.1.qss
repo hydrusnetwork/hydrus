@@ -1,11 +1,6 @@
 /* 
-Dark Blue: A Dark Blue theme for Hydrus Network by B1N4RYJ4N
-Version..: 1.1
-
-Changelog for 1.1:
-- Added New Style Block for HydrusAnimationBar
-- QScrollBar increased width and a new handle color
-- Added some color properties for QTextEdit, QTextEdit#HydrusValid and QTextEdit#HydrusIndeterminate
+A Dark Blue theme for Hydrus Network
+Version..: 1.2
 
 To achieve the intended results you must:
 
@@ -412,6 +407,10 @@ QLabel#HydrusWarning {
     color: #ff5555;
 }
 
+QLabel#HydrusHyperlink {
+    qproperty-link_color: #8be9fd;
+}
+
 /*
    ____  __ _              __   _ _ _   
   /___ \/ /(_)_ __   ___  /__\_| (_) |_ 
@@ -450,33 +449,17 @@ QCheckBox#HydrusWarning {
 }
 
 /*
-
-Extra, hydev added this
-
-*/
-
-QLabel#HydrusHyperlink
-{
-    qproperty-link_color: #8be9fd;
-}
-
-
-/*
-
 Here is more hydev added--now we have this tech, I am copying the default 'darkmode' colours in the options to all of the darkmode stylesheets so the default choice for new users isn't the dark/light jank-mix. Stylesheet authors are welcome to fix this up with better colours for their particular style and send them in.
-
 */
 
 
 /* The main thumbnail grid. */
-
-QWidget#HydrusMediaList
-{
-    qproperty-hmrp_background: #343434;
-    qproperty-hmrp_thumbnail_local_background_normal: #404048;
-    qproperty-hmrp_thumbnail_local_border_normal: #91a3b0;
-    qproperty-hmrp_thumbnail_local_background_selected: #708090;
-    qproperty-hmrp_thumbnail_local_border_selected: #dfe3e6;
+QWidget#HydrusMediaList {
+    qproperty-hmrp_background: #1e1e1e;
+    qproperty-hmrp_thumbnail_local_background_normal: #1e1e1e;
+    qproperty-hmrp_thumbnail_local_border_normal: #569cd6;
+    qproperty-hmrp_thumbnail_local_background_selected: #007acc;
+    qproperty-hmrp_thumbnail_local_border_selected: #cccccc;
     qproperty-hmrp_thumbnail_not_local_background_normal: #400d02;
     qproperty-hmrp_thumbnail_not_local_border_normal: #f8d0cc;
     qproperty-hmrp_thumbnail_not_local_background_selected: #ab274f;
@@ -485,25 +468,18 @@ QWidget#HydrusMediaList
 
 
 /* The media viewer. */
-
-QWidget#HydrusMediaViewer
-{
-    qproperty-hmv_background: #343434;
+QWidget#HydrusMediaViewer {
+    qproperty-hmv_background: #1e1e1e;
     qproperty-hmv_text: #708090;
 }
 
 
 /* The tag autocomplete text input. */
-
-QWidget#HydrusTagAutocomplete
-{
-    qproperty-hta_background: #536267;
+QWidget#HydrusTagAutocomplete {
+    qproperty-hta_background: #1e1e1e;
 }
 
-
 /* Tag lists across the program. */
-
-QWidget#HydrusTagList
-{
-    qproperty-htl_background: #232629;
+QWidget#HydrusTagList {
+    qproperty-htl_background: #1e1e1e;
 }

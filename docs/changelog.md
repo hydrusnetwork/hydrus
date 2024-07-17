@@ -7,6 +7,31 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 583](https://github.com/hydrusnetwork/hydrus/releases/tag/v583)
+
+### new
+
+* added a 'command palette' options page. the ability to show menubar and media actions is now set here with a couple of checkboxes (previously these were hidden behind advanced mode)
+* you can also now search for 'page of pages' with the command palette. this is turned on in the same new options page
+* the new sidecar test panel now only shows its notebook tabs if there is more than one source. the tab labels, when shown, are now '1st' ... '2nd' ordinal strings respective to the source list on the left
+* added some explanation text, a button to the help docs, and a bit of better layout to the sidecars UI
+* the file import report mode now writes the 'nice human description' for the file import to the log. this will expose the source URL or local file path for better context than just the random temp path
+* in the 'manage times' dialog, you can now set the same timestamp (including cascading timestamps) to multiple domains or file services at once. the logic is a little delicate where some files are in one domain in your selection and others are only in another, but I think I got it working ok. if you have a complicated setup, let me know how you get on!
+* the 'Dark Blue' stylesheets and the new 'Purple' stylesheet have updated custom colours
+
+### fixes
+
+* fixed a typo in the 'fetch a mappings petition' server code
+* when the client is called to render an image that was just this moment removed from the file store, the image renderer should now give you a nicer error image with an appropriate messare rather than throwing an error popup
+* hydrus no longer applies EXIF Orientation (rotation) to PNG files, which it recently started doing automatically when we started scanning PNGs for EXIF. EXIF is not well-defined and supported for PNG, and if an Orientation row exists, it is likely a false positive mistake of some encoder. hydrus will show this data but it will not apply it, and the metadata review UI now also notes this
+* fixed the 'has exif?' file maintenance job, which I think was false-negativing!
+
+### code and help
+
+* the `psutil` library is now technically optional. it is still needed for a bunch of normal operations like 'is the client currently running?' and 'how much free space is there on this drive?', but if it is missing the client will now boot and try to muddle through anyway
+* did more multi-column list 'select, sort, and scroll' tech for: the url class parameters list; the url class links list; the external launch paths list; the tag suggestion related tags namespace lists; import folder filename tagging options; manage custom network context headers; the string to string match widget list; the string match to string match widget list; the edit subscription queries list; and more of the edit subscriptions subscription list, including the merge and separate actions
+* updated the QuickSync help a little, clarifying it is only useful for _new, empty_ clients
+
 ## [Version 582](https://github.com/hydrusnetwork/hydrus/releases/tag/v582)
 
 ### fixes
@@ -328,45 +353,3 @@ title: Changelog
 * deleted the local booru service db/init code
 * deleted the local booru service network code
 * on update, the local booru service will be deleted from the database
-
-## [Version 573](https://github.com/hydrusnetwork/hydrus/releases/tag/v573)
-
-### new autocomplete tab, children
-
-* **this is an experiment. it is jank in form and workflow and may be buggy**
-* the search/edit tag autocomplete dropdowns now have a third tab, 'children', which shows the tag children of the current tag context, whether that is the current search tags or what you are editing
-* the idea is you type 'series:evangelion' but can't remember the character names; now you have a nice list of a bunch of stuff related to what was already entered
-* note you can select this tab real quick just by hitting 'left arrow' on an empty text input
-* this is a first draft, and I would like feedback and ideas, mostly around workflow improvement ideas. it seems to work ok if you have one or two tags with interesting children, but against a big list of stuff, it just becomes another multi-hundred list of spam blah that is difficult to navigate. maybe I could filter it to (and sort by?) the top n most count-heavy results?
-* I wonder if it could also show children on the same level, so if you have 'shinji', it'll also show 'rei' and 'asuka'. I would call this relationship 'siblings', but then we'd be in an even bigger semantic mess
-* also obviously please let me know if this fails anywhere. I think I have it hooked up correct, but some of the code around here is a bit old/messy so some scenario may not update properly
-* don't worry about background lag if you regularly manage lots of tags--it only actually fetches the list of children when you switch to the tab, so you're only spending CPU if you actively engage with it
-
-### misc
-
-* a user and I figured out a new twitter tweet downloader using the excellent fxtwitter mirror service. it doesn't do search, but dropping a tweet URL on the client should work again. should handle quoted media and works for multi/mixed-image/video posts, too. note it will nest-pursue quoted tweets, so if there's like fifty in the nested chain, it'll get them all--let me know if this is a big pain and I'll figure out a different solution. I learned that there is another twitter downloader made by a different user on the discord; I have made the update code check for this and not replace it with this if you have it already, and I expect I'll integrate what that can do into these defaults next week
-* the archive/delete and duplicate filters now yes/no confirm when you say to 'forget' at the end of a filtering run
-* the duplicate filter page now only allows you to set the search location to local file domains--so it'll only ever try to search and show pairs for files you actually have
-* fixed the system predicate parsing of `system:duration: has duration` and `system:duration: no duration` when entered by hand, and added a unit test to catch it in future
-* the manage siblings/parents dialogs now have a little shorter minimum height
-* updated some text around the PTR processing in the help--it is only the database proper, the .db files normally in `install_dir/db`, that needs to be on an SSD, and temporary processing slowdowns to 1 row/s are normal
-* touched up some of the 'installing' and 'running from source' help, particularly for some Linux vagaries
-
-### some build stuff
-
-* all the builds and the setup_venv scripts are moved from 'python-mpv' to 'mpv', the new name for this library, and the version is updated to 1.0.6, which supports libmpv version &gt;=0.38.x. if you are a windows user and want to live on the edge, feel free to try out this very new libmpv2.dll here, which I have been testing and seems to work well: https://sourceforge.net/projects/mpv-player-windows/files/libmpv/mpv-dev-x86_64-20240421-git-b364e4a.7z/download
-* updated the setup_venv scripts' Qt step to better talk about which Qt version to use for which Python version. it turns out Python 3.12 cannot run something I was recommending for &gt;=3.11, so the whole thing is a lot clearer now
-
-### boring stuff
-
-* refactored some question/button dialog stuff
-* fixed up some file domain filtering code in the autocomplete filter and variable names to better specify what is being filtered where
-
-### local booru deconstruction
-
-* _reminder: I am removing the local booru, an ancient, mostly undocumented experiment._ if you used it, please check out https://github.com/floogulinc/hyshare for a replacement!
-* the local booru service no longer boots as a server
-* deleted the local booru share cache
-* the local booru review services panel no longer shows nor allows management of its shares
-* deleted the local booru unit tests
-* deleted the local booru help and ancient screenshots

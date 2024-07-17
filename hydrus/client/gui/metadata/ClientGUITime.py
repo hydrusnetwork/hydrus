@@ -488,6 +488,11 @@ class DateTimeWidgetValueRange( object ):
         return self._min_value
         
     
+    def GetNullCount( self ) -> int:
+        
+        return self._null_count
+        
+    
     def GetSetCount( self ) -> int:
         
         return self._set_count

@@ -622,7 +622,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ClientGUIDialogsMessage.ShowInformation( self, 'It looks like your client was missing the "{}" shortcut set! It will now be restored.'.format( name ) )
             
-            self._reserved_shortcuts.AddDatas( ( new_data, ) )
+            self._reserved_shortcuts.AddDatas( ( new_data, ), select_sort_and_scroll = True )
             
         else:
             

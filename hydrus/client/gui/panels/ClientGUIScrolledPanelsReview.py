@@ -446,6 +446,12 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 pretty_free_space = 'problem finding free space'
                 
             
+            if free_space is None:
+                
+                free_space = 0
+                pretty_free_space = 'unknown'
+                
+            
         else:
             
             pretty_location = 'DOES NOT EXIST: {}'.format( path )
@@ -1471,7 +1477,7 @@ class ReviewDownloaderImport( ClientGUIScrolledPanels.ReviewPanel ):
 
 class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
     
-    def __init__( self, parent, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
+    def __init__( self, parent, mime: int, exif_dict: typing.Optional[ dict ], file_text: typing.Optional[ str ], extra_rows: typing.List[ typing.Tuple[ str, str ] ] ):
         
         ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
         
@@ -1479,14 +1485,20 @@ class ReviewFileEmbeddedMetadata( ClientGUIScrolledPanels.ReviewPanel ):
         
         exif_panel = ClientGUICommon.StaticBox( self, 'EXIF' )
         
+        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrl( exif_panel, CGLC.COLUMN_LIST_EXIF_DATA.ID, 16, self._ConvertEXIFToListCtrlTuples, activation_callback = self._CopyRow )
+        
         label = 'Double-click a row to copy its value to clipboard.'
+        
+        if mime == HC.IMAGE_PNG:
+            
+            label += '\n'
+            label += 'Note that while PNGs can store EXIF data, it is not a well-defined standard. Hydrus does not apply EXIF Orientation (rotation) metadata to PNGs.'
+            
         
         st = ClientGUICommon.BetterStaticText( exif_panel, label = label )
         
         st.setWordWrap( True )
         st.setAlignment( QC.Qt.AlignCenter )
-        
-        self._exif_listctrl = ClientGUIListCtrl.BetterListCtrl( exif_panel, CGLC.COLUMN_LIST_EXIF_DATA.ID, 16, self._ConvertEXIFToListCtrlTuples, activation_callback = self._CopyRow )
         
         exif_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         exif_panel.Add( self._exif_listctrl, CC.FLAGS_EXPAND_BOTH_WAYS )

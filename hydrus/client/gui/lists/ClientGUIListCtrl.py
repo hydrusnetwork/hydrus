@@ -1169,7 +1169,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self.columnListContentsChanged.emit()
         
         return sort_data_has_changed
-    
+        
 
     def SetNonDupeName( self, obj: object ):
         
@@ -1184,6 +1184,11 @@ class BetterListCtrl( QW.QTreeWidget ):
         
     
     def ReplaceDatas( self, replacement_tuples, sort_and_scroll = False ):
+        
+        if len( replacement_tuples ) == 0:
+            
+            return
+            
         
         first_new_data = None
         

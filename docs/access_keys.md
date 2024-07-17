@@ -66,6 +66,6 @@ Then you can check your PTR at any time under _services->review services_, under
 
 ## jump-starting an install { id="quicksync" }
 
-A user kindly manages a store of update files and pre-processed empty client databases to get your synced quicker. This is generally recommended for advanced users or those following a guide, but if you are otherwise interested, please check it out:
+A user kindly manages a store of update files and pre-processed empty client databases. If you want to start a new client that syncs with the PTR (i.e. you have not started this new client and not imported any files yet), this will get you going quicker. This is generally recommended for advanced users or those following a guide, but if you are otherwise interested, please check it out:
 
 [https://cuddlebear92.github.io/Quicksync/](https://cuddlebear92.github.io/Quicksync/)

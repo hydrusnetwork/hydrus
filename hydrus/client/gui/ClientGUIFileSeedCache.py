@@ -811,7 +811,10 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
                 
             
         
-        self._list_ctrl.DeleteDatas( file_seeds_to_delete )
+        if len( file_seeds_to_delete ) > 0:
+            
+            self._list_ctrl.DeleteDatas( file_seeds_to_delete )
+            
         
         if len( file_seeds_to_add ) > 0:
             

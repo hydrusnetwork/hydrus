@@ -223,6 +223,14 @@ def NormalisePILImageToRGB( pil_image: PILImage.Image ) -> PILImage.Image:
 
 def RotateEXIFPILImage( pil_image: PILImage.Image )-> PILImage.Image:
     
+    if pil_image.format == 'PNG':
+        
+        # although pngs can store EXIF, it is in a weird custom frame and isn't fully supported
+        # We have an example of a png with an Orientation=8, 112693c435e08e95751993f9c8bc6b2c49636354334f30eaa91a74429418433e, that shouldn't be rotated
+        
+        return pil_image
+        
+    
     exif_dict = HydrusImageMetadata.GetEXIFDict( pil_image )
     
     if exif_dict is not None:

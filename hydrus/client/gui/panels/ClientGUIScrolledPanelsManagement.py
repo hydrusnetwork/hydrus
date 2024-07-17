@@ -13,6 +13,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core.files.images import HydrusImageHandling
@@ -66,6 +67,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._listbook.AddPage( 'gui', 'gui', self._GUIPanel( self._listbook ) ) # leave this at the top, to make it default page
         self._listbook.AddPage( 'gui pages', 'gui pages', self._GUIPagesPanel( self._listbook, self._new_options ) )
+        self._listbook.AddPage( 'command palette', 'command palette', self._CommandPalettePanel( self._listbook, self._new_options ) )
         self._listbook.AddPage( 'connection', 'connection', self._ConnectionPanel( self._listbook ) )
         self._listbook.AddPage( 'external programs', 'external programs', self._ExternalProgramsPanel( self._listbook ) )
         self._listbook.AddPage( 'files and trash', 'files and trash', self._FilesAndTrashPanel( self._listbook ) )
@@ -992,69 +994,61 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EditMimeLaunch( self ):
             
-            edited_datas = []
+            row = self._mime_launch_listctrl.GetTopSelectedData()
             
-            for ( mime, launch_path ) in self._mime_launch_listctrl.GetData( only_selected = True ):
+            if row is None:
                 
-                message = 'Enter the new launch path for {}'.format( HC.mime_string_lookup[ mime ] )
-                message += '\n' * 2
-                message += 'Hydrus will insert the file\'s full path wherever you put %path%, even multiple times!'
-                message += '\n' * 2
-                message += 'Set as blank to reset to default.'
-                
-                if launch_path is None:
-                    
-                    default = 'program "%path%"'
-                    
-                else:
-                    
-                    default = launch_path
-                    
-                
-                with ClientGUIDialogs.DialogTextEntry( self, message, default = default, allow_blank = True ) as dlg:
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        new_launch_path = dlg.GetValue()
-                        
-                        if new_launch_path == '':
-                            
-                            new_launch_path = None
-                            
-                        
-                        if new_launch_path not in ( launch_path, default ):
-                            
-                            if new_launch_path is not None and '%path%' not in new_launch_path:
-                                
-                                message = f'Hey, your command "{new_launch_path}" did not include %path%--it probably is not going to work! Are you sure this is ok?'
-                                
-                                result = ClientGUIDialogsQuick.GetYesNo( self, message )
-                                
-                                if result != QW.QDialog.Accepted:
-                                    
-                                    break
-                                    
-                                
-                            
-                            self._mime_launch_listctrl.DeleteDatas( [ ( mime, launch_path ) ] )
-                            
-                            edited_data = ( mime, new_launch_path )
-                            
-                            self._mime_launch_listctrl.AddDatas( [ edited_data ] )
-                            
-                            edited_datas.append( edited_data )
-                            
-                        
-                    else:
-                        
-                        break
-                        
-                    
+                return
                 
             
-            self._mime_launch_listctrl.SelectDatas( edited_datas )
+            ( mime, launch_path ) = row
             
-            self._mime_launch_listctrl.Sort()
+            message = 'Enter the new launch path for {}'.format( HC.mime_string_lookup[ mime ] )
+            message += '\n' * 2
+            message += 'Hydrus will insert the file\'s full path wherever you put %path%, even multiple times!'
+            message += '\n' * 2
+            message += 'Set as blank to reset to default.'
+            
+            if launch_path is None:
+                
+                default = 'program "%path%"'
+                
+            else:
+                
+                default = launch_path
+                
+            
+            with ClientGUIDialogs.DialogTextEntry( self, message, default = default, allow_blank = True ) as dlg:
+                
+                if dlg.exec() == QW.QDialog.Accepted:
+                    
+                    new_launch_path = dlg.GetValue()
+                    
+                    if new_launch_path == '':
+                        
+                        new_launch_path = None
+                        
+                    
+                    if new_launch_path not in ( launch_path, default ):
+                        
+                        if new_launch_path is not None and '%path%' not in new_launch_path:
+                            
+                            message = f'Hey, your command "{new_launch_path}" did not include %path%--it probably is not going to work! Are you sure this is ok?'
+                            
+                            result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                            
+                            if result != QW.QDialog.Accepted:
+                                
+                                return
+                                
+                            
+                        
+                        edited_row = ( mime, new_launch_path )
+                        
+                        self._mime_launch_listctrl.ReplaceData( row, edited_row, sort_and_scroll = True )
+                        
+                    
+                
             
         
         def UpdateOptions( self ):
@@ -1963,6 +1957,66 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
         
     
+    class _CommandPalettePanel( QW.QWidget ):
+        
+        def __init__( self, parent, new_options ):
+            
+            self._new_options = new_options
+            
+            QW.QWidget.__init__( self, parent )
+            
+            self._command_palette_panel = ClientGUICommon.StaticBox( self, 'command palette' )
+            
+            self._command_palette_show_page_of_pages = QW.QCheckBox( self._command_palette_panel )
+            self._command_palette_show_page_of_pages.setToolTip( 'Show "page of pages" as selectable page results. This will focus the page, and whatever sub-page it previously focused (including none, if it has no child pages).' )
+            
+            self._command_palette_show_main_menu = QW.QCheckBox( self._command_palette_panel )
+            self._command_palette_show_main_menu.setToolTip( 'Show the main gui window\'s menubar actions.' )
+            
+            self._command_palette_show_media_menu = QW.QCheckBox( self._command_palette_panel )
+            self._command_palette_show_media_menu.setToolTip( 'Show the menu actions for the current media view. Be careful with this, it basically just shows everything with slightly ugly labels..' )
+            
+            #
+            
+            self._command_palette_show_page_of_pages.setChecked( self._new_options.GetBoolean( 'command_palette_show_page_of_pages' ) )
+            self._command_palette_show_main_menu.setChecked( self._new_options.GetBoolean( 'command_palette_show_main_menu' ) )
+            self._command_palette_show_media_menu.setChecked( self._new_options.GetBoolean( 'command_palette_show_media_menu' ) )
+            
+            #
+            
+            rows = []
+            
+            rows.append( ( 'Show "page of pages" results: ', self._command_palette_show_page_of_pages ) )
+            rows.append( ( 'ADVANCED: Show main menubar results (after typing): ', self._command_palette_show_main_menu ) )
+            rows.append( ( 'ADVANCED: Show media menu results (after typing): ', self._command_palette_show_media_menu ) )
+            
+            gridbox = ClientGUICommon.WrapInGrid( self, rows )
+            
+            text = 'By default, you can hit Ctrl+P to bring up a Command Palette. It initially shows your pages for quick navigation, but it can search for more.'
+            
+            st = ClientGUICommon.BetterStaticText( self._command_palette_panel, text )
+            st.setWordWrap( True )
+            
+            self._command_palette_panel.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
+            self._command_palette_panel.Add( gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+            
+            vbox = QP.VBoxLayout()
+            
+            QP.AddToLayout( vbox, self._command_palette_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
+            
+            vbox.addStretch( 1 )
+            
+            self.setLayout( vbox )
+            
+        
+        def UpdateOptions( self ):
+            
+            self._new_options.SetBoolean( 'command_palette_show_page_of_pages', self._command_palette_show_page_of_pages.isChecked() )
+            self._new_options.SetBoolean( 'command_palette_show_main_menu', self._command_palette_show_main_menu.isChecked() )
+            self._new_options.SetBoolean( 'command_palette_show_media_menu', self._command_palette_show_media_menu.isChecked() )
+            
+        
+    
     class _MaintenanceAndProcessingPanel( QW.QWidget ):
         
         def __init__( self, parent ):
@@ -2208,11 +2262,18 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._idle_panel, label = '% on ' ), CC.FLAGS_CENTER )
             QP.AddToLayout( hbox, self._system_busy_cpu_count, CC.FLAGS_CENTER )
             
-            import psutil
+            if HydrusPSUtil.PSUTIL_OK:
+                
+                num_cores = HydrusPSUtil.psutil.cpu_count()
+                
+                label = f'(you appear to have {num_cores} cores)'
+                
+            else:
+                
+                label = 'You do not have the psutil library, so I do not believe any of these CPU checks will work!'
+                
             
-            num_cores = psutil.cpu_count()
-            
-            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._idle_panel, label = '(you appear to have {} cores)'.format( num_cores ) ), CC.FLAGS_CENTER )
+            QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self._idle_panel, label = label ), CC.FLAGS_CENTER )
             
             rows.append( ( 'Consider the system busy if CPU usage is above: ', hbox ) )
             
@@ -4973,9 +5034,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                             
                             new_data = ( tag_slice, weight )
                             
-                            list_ctrl.AddDatas( [ new_data ] )
-                            
-                            list_ctrl.Sort()
+                            list_ctrl.AddDatas( [ new_data ], select_sort_and_scroll = True )
                             
                         
                     
@@ -5034,36 +5093,32 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         def _EditTagSliceWeight( self, list_ctrl ):
             
-            selected_tag_slices_and_weights = list_ctrl.GetData( only_selected = True )
+            original_data = list_ctrl.GetTopSelectedData()
             
-            if len( selected_tag_slices_and_weights ) > 0:
+            if original_data is None:
                 
-                original_data = selected_tag_slices_and_weights[0]
+                return
                 
-                ( tag_slice, weight ) = original_data
+            
+            ( tag_slice, weight ) = original_data
+            
+            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit weight' ) as dlg:
                 
-                with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit weight' ) as dlg:
+                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                
+                control = ClientGUICommon.BetterSpinBox( panel, initial = weight, min = 0, max = 10000 )
+                
+                panel.SetControl( control, perpendicular = True )
+                
+                dlg.SetPanel( panel )
+                
+                if dlg.exec() == QW.QDialog.Accepted:
                     
-                    panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                    edited_weight = control.value()
                     
-                    control = ClientGUICommon.BetterSpinBox( panel, initial = weight, min = 0, max = 10000 )
+                    edited_data = ( tag_slice, edited_weight )
                     
-                    panel.SetControl( control, perpendicular = True )
-                    
-                    dlg.SetPanel( panel )
-                    
-                    if dlg.exec() == QW.QDialog.Accepted:
-                        
-                        edited_weight = control.value()
-                        
-                        list_ctrl.DeleteDatas( [ original_data ] )
-                        
-                        edited_data = ( tag_slice, edited_weight )
-                        
-                        list_ctrl.AddDatas( [ edited_data ] )
-                        
-                        list_ctrl.Sort()
-                        
+                    list_ctrl.ReplaceData( original_data, edited_data, sort_and_scroll = True )
                     
                 
             

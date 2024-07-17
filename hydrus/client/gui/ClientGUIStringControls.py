@@ -222,7 +222,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         
         #
         
-        self._listctrl.AddDatas( list(initial_dict.items()) )
+        self._listctrl.AddDatas( list( initial_dict.items() ) )
         
         self._listctrl.Sort()
         
@@ -282,63 +282,57 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
                 
                 data = ( key_string_match, value_string_match )
                 
-                self._listctrl.AddDatas( ( data, ) )
+                self._listctrl.AddDatas( ( data, ), select_sort_and_scroll = True )
                 
             
         
     
     def _Edit( self ):
         
-        edited_datas = []
+        data = self._listctrl.GetTopSelectedData()
         
-        for data in self._listctrl.GetData( only_selected = True ):
+        if data is None:
             
-            ( key_string_match, value_string_match ) = data
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
-                
-                panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, key_string_match )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    key_string_match = panel.GetValue()
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
-                
-                panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, value_string_match )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    value_string_match = panel.GetValue()
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            self._listctrl.DeleteDatas( ( data, ) )
-            
-            edited_data = ( key_string_match, value_string_match )
-            
-            self._listctrl.AddDatas( ( edited_data, ) )
-            
-            edited_datas.append( edited_data )
+            return
             
         
-        self._listctrl.SelectDatas( edited_datas )
+        ( key_string_match, value_string_match ) = data
         
-        self._listctrl.Sort()
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit ' + self._key_name ) as dlg:
+            
+            panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, key_string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                key_string_match = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
+            
+            panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, value_string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                value_string_match = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        edited_data = ( key_string_match, value_string_match )
+        
+        self._listctrl.ReplaceData( data, edited_data, sort_and_scroll = True )
         
     
     def GetValue( self ) -> typing.Dict[ str, ClientStrings.StringMatch ]:
@@ -634,7 +628,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
                         
                         data = ( key, string_match )
                         
-                        self._listctrl.AddDatas( ( data, ) )
+                        self._listctrl.AddDatas( ( data, ), select_sort_and_scroll = True )
                         
                     
                 
@@ -643,61 +637,55 @@ class StringToStringMatchDictControl( QW.QWidget ):
     
     def _Edit( self ):
         
-        edited_datas = []
+        data = self._listctrl.GetTopSelectedData()
         
-        for data in self._listctrl.GetData( only_selected = True ):
+        if data is None:
             
-            ( key, string_match ) = data
-            
-            with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_key = dlg.GetValue()
-                    
-                    if edited_key != key and edited_key in self._GetExistingKeys():
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
-                        
-                        break
-                        
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
-                
-                string_match = ClientStrings.StringMatch()
-                
-                panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, string_match )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_string_match = panel.GetValue()
-                    
-                else:
-                    
-                    break
-                    
-                
-            
-            self._listctrl.DeleteDatas( ( data, ) )
-            
-            edited_data = ( edited_key, edited_string_match )
-            
-            self._listctrl.AddDatas( ( edited_data, ) )
-            
-            edited_datas.append( edited_data )
+            return
             
         
-        self._listctrl.SelectDatas( edited_datas )
+        ( key, string_match ) = data
         
-        self._listctrl.Sort()
+        with ClientGUIDialogs.DialogTextEntry( self, 'edit the ' + self._key_name, default = key, allow_blank = False ) as dlg:
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_key = dlg.GetValue()
+                
+                if edited_key != key and edited_key in self._GetExistingKeys():
+                    
+                    ClientGUIDialogsMessage.ShowWarning( self, 'That {} already exists!'.format( self._key_name ) )
+                    
+                    return
+                    
+                
+            else:
+                
+                return
+                
+            
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit match' ) as dlg:
+            
+            string_match = ClientStrings.StringMatch()
+            
+            panel = ClientGUIStringPanels.EditStringMatchPanel( dlg, string_match )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_string_match = panel.GetValue()
+                
+            else:
+                
+                return
+                
+            
+        
+        edited_data = ( edited_key, edited_string_match )
+        
+        self._listctrl.ReplaceData( data, edited_data, sort_and_scroll = True )
         
     
     def _GetExistingKeys( self ):

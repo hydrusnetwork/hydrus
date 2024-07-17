@@ -25,6 +25,7 @@ from hydrus.core import HydrusMemory
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusProfiling
+from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTemp
@@ -891,6 +892,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         availability_lines.append( 'lxml present: {}'.format( ClientParsing.LXML_IS_OK ) )
         availability_lines.append( 'lz4 present: {}'.format( HydrusCompression.LZ4_OK ) )
         availability_lines.append( 'olefile present: {}'.format( HydrusOLEHandling.OLEFILE_OK ) )
+        availability_lines.append( 'psutil present: {}'.format( HydrusPSUtil.PSUTIL_OK ) )
         availability_lines.append( 'pympler present: {}'.format( HydrusMemory.PYMPLER_OK ) )
         availability_lines.append( 'pyopenssl present: {}'.format( HydrusEncryption.OPENSSL_OK ) )
         availability_lines.append( 'psd_tools present: {}'.format( HydrusPSDHandling.PSD_TOOLS_OK ) )

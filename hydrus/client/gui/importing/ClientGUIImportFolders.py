@@ -308,7 +308,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         good_tag_service_keys_to_filename_tagging_options = { service_key : filename_tagging_options for ( service_key, filename_tagging_options ) in list(tag_service_keys_to_filename_tagging_options.items()) if CG.client_controller.services_manager.ServiceExists( service_key ) }
         
-        self._filename_tagging_options.AddDatas( list(good_tag_service_keys_to_filename_tagging_options.items()) )
+        self._filename_tagging_options.AddDatas( list( good_tag_service_keys_to_filename_tagging_options.items() ) )
         
         self._filename_tagging_options.Sort()
         
@@ -415,9 +415,7 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 filename_tagging_options = panel.GetValue()
                 
-                self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ] )
-                
-                self._filename_tagging_options.Sort()
+                self._filename_tagging_options.AddDatas( [ ( service_key, filename_tagging_options ) ], select_sort_and_scroll = True )
                 
             
         
@@ -570,40 +568,31 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditFilenameTaggingOptions( self ):
         
-        edited_datas = []
+        data = self._filename_tagging_options.GetTopSelectedData()
         
-        selected_data = self._filename_tagging_options.GetData( only_selected = True )
+        if data is None:
+            
+            return
+            
         
-        for data in selected_data:
+        ( service_key, filename_tagging_options ) = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
             
-            ( service_key, filename_tagging_options ) = data
+            panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit filename tagging options' ) as dlg:
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
                 
-                panel = ClientGUIImport.EditFilenameTaggingOptionPanel( dlg, service_key, filename_tagging_options )
+                filename_tagging_options = panel.GetValue()
                 
-                dlg.SetPanel( panel )
+                new_data = ( service_key, filename_tagging_options )
                 
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    self._filename_tagging_options.DeleteDatas( ( data, ) )
-                    
-                    filename_tagging_options = panel.GetValue()
-                    
-                    new_data = ( service_key, filename_tagging_options )
-                    
-                    self._filename_tagging_options.AddDatas( [ new_data ] )
-                    
-                    edited_datas.append( new_data )
-                    
-                else:
-                    
-                    break
-                    
+                self._filename_tagging_options.ReplaceData( data, new_data, sort_and_scroll = True )
                 
             
         
-        self._filename_tagging_options.SelectDatas( edited_datas )
         
     
     def _PathChanged( self ):

@@ -3,6 +3,7 @@ import typing
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
@@ -11,6 +12,7 @@ from hydrus.core import HydrusText
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientParsing
+from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIStringControls
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
@@ -23,6 +25,7 @@ from hydrus.client.gui.metadata import ClientGUIMetadataMigrationImporters
 from hydrus.client.gui.metadata import ClientGUIMetadataMigrationTest
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.widgets import ClientGUICommon
+from hydrus.client.gui.widgets import ClientGUIMenuButton
 from hydrus.client.metadata import ClientMetadataMigration
 from hydrus.client.metadata import ClientMetadataMigrationExporters
 
@@ -42,6 +45,19 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         exporter = self._original_router.GetExporter()
         
         #
+        
+        
+        menu_items = []
+        
+        page_func = HydrusData.Call( ClientGUIDialogsQuick.OpenDocumentation, self, HC.DOCUMENTATION_SIDECARS )
+        
+        menu_items.append( ( 'normal', 'open the html sidecars help', 'Open the help page for sidecars in your web browser.', page_func ) )
+        
+        help_button = ClientGUIMenuButton.MenuBitmapButton( self, CC.global_pixmaps().help, menu_items )
+        
+        help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding sidecars.' ) )
+        
+        help_hbox = ClientGUICommon.WrapInText( help_button, self, 'help for this panel -->', object_name = 'HydrusIndeterminate' )
         
         self._importers_panel = ClientGUICommon.StaticBox( self, 'sources' )
         
@@ -82,6 +98,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         vbox = QP.VBoxLayout()
         
+        QP.AddToLayout( vbox, help_hbox, CC.FLAGS_ON_RIGHT )
         QP.AddToLayout( vbox, self._importers_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._processing_panel, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._exporter_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
@@ -191,7 +208,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._test_notebook.addTab( list_ctrl, 'init' )
                 
             
-            page_name = HydrusText.ElideText( importer.ToString(), 14 )
+            page_name = HydrusText.ElideText( HydrusNumbers.ConvertIndexToPrettyOrdinalString( i ), 14 )
             
             self._test_notebook.setTabText( i, page_name )
             
@@ -201,8 +218,8 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             list_ctrl.SetData( [ ( importer, test_object ) for test_object in test_objects ] )
             
-            list_ctrl.UpdateDatas()
-            
+        
+        self._test_notebook.tabBar().setVisible( self._test_notebook.count() > 1 )
         
     
     def GetValue( self ) -> ClientMetadataMigration.SingleFileMetadataRouter:

@@ -221,7 +221,9 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         size_check = max( size_check, 64 * 1048576 )
         
-        if HydrusPaths.GetFreeSpace( db_dir ) < size_check:
+        free_space = HydrusPaths.GetFreeSpace( db_dir )
+        
+        if free_space is not None and free_space < size_check:
             
             raise HydrusExceptions.DBAccessException( 'Sorry, it looks like the database drive partition has less than {} free space. It needs this for database transactions, so please free up some space.'.format( HydrusData.ToHumanBytes( size_check ) ) )
             

@@ -1420,6 +1420,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
     def Merge( self, mergees: typing.Iterable[ "Subscription" ] ):
         
         unmerged = []
+        merged = []
         
         for subscription in mergees:
             
@@ -1427,7 +1428,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._query_headers.extend( subscription.GetQueryHeaders() )
                 
-                subscription.SetQueryHeaders( [] )
+                merged.append( subscription )
                 
             else:
                 
@@ -1435,7 +1436,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
             
         
-        return unmerged
+        return ( merged, unmerged )
         
     
     def PauseResume( self ):

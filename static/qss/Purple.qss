@@ -1,6 +1,6 @@
 /* 
-A Purple theme for Hydrus Network by B1N4RYJ4N
-Version..: 1.0
+A Purple theme for Hydrus Network
+Version..: 1.1
 
 To achieve the intended results you must:
 
@@ -78,7 +78,7 @@ QMenu::item:selected {
     background: #8E4585;
 }
 
-/* Menüleiste */
+/* MenuBar */
 QMenuBar::item:selected {
     color: #FFF;
     background: #8E4585;
@@ -103,6 +103,15 @@ QPushButton#HydrusCancel {
     color: #FFA0A0;
 }
 
+/* This is the green/red button that switches 'include current tags' and similar states on/off */
+QPushButton#HydrusOnOffButton[hydrus_on=true] {
+	color: #A0FFA0;
+}
+
+QPushButton#HydrusOnOffButton[hydrus_on=false] {
+	color: #FFA0A0;
+}
+
 /* Tabs */
 QTabBar::tab {
     color: #FFD0FF;
@@ -120,7 +129,7 @@ QTabBar::tab:hover:!selected {
     background-color: #8E4585;
 }
 
-/* Eingabefelder */
+/* Line Edit */
 QLineEdit { 
     border: 1px solid #8E4585; 
     border-radius: 1px;
@@ -133,7 +142,7 @@ QLineEdit:focus {
     border: 1px solid #E6D0E6;
 }
 
-/* Fortschrittsbalken */
+/* Progress Bar */
 QProgressBar {
     color: #E6D0E6;
     border: 1px solid #8E4585;
@@ -291,50 +300,35 @@ QLabel#HydrusHyperlink
     qproperty-link_color: #D070C0;
 }
 
-
 /*
-
 Here is more hydev added--now we have this tech, I am copying the default 'darkmode' colours in the options to all of the darkmode stylesheets so the default choice for new users isn't the dark/light jank-mix. Stylesheet authors are welcome to fix this up with better colours for their particular style and send them in.
-
 */
 
-
 /* The main thumbnail grid. */
-
-QWidget#HydrusMediaList
-{
-    qproperty-hmrp_background: #343434;
-    qproperty-hmrp_thumbnail_local_background_normal: #404048;
-    qproperty-hmrp_thumbnail_local_border_normal: #91a3b0;
-    qproperty-hmrp_thumbnail_local_background_selected: #708090;
-    qproperty-hmrp_thumbnail_local_border_selected: #dfe3e6;
+QWidget#HydrusMediaList {
+    qproperty-hmrp_background: #2D1F2D;
+    qproperty-hmrp_thumbnail_local_background_normal: #2D1F2D;
+    qproperty-hmrp_thumbnail_local_border_normal: #8E4585;
+    qproperty-hmrp_thumbnail_local_background_selected: #8E4585;
+    qproperty-hmrp_thumbnail_local_border_selected: #6B3A65;
     qproperty-hmrp_thumbnail_not_local_background_normal: #400d02;
     qproperty-hmrp_thumbnail_not_local_border_normal: #f8d0cc;
     qproperty-hmrp_thumbnail_not_local_background_selected: #ab274f;
     qproperty-hmrp_thumbnail_not_local_border_selected: #e34234;
 }
 
-
 /* The media viewer. */
-
-QWidget#HydrusMediaViewer
-{
-    qproperty-hmv_background: #343434;
-    qproperty-hmv_text: #708090;
+QWidget#HydrusMediaViewer {
+    qproperty-hmv_background: #2D1F2D;
+    qproperty-hmv_text: #E6D0E6;
 }
-
 
 /* The tag autocomplete text input. */
-
-QWidget#HydrusTagAutocomplete
-{
-    qproperty-hta_background: #536267;
+QWidget#HydrusTagAutocomplete {
+    qproperty-hta_background: #2D1F2D;
 }
 
-
 /* Tag lists across the program. */
-
-QWidget#HydrusTagList
-{
-    qproperty-htl_background: #232629;
+QWidget#HydrusTagList {
+    qproperty-htl_background: #2D1F2D;
 }

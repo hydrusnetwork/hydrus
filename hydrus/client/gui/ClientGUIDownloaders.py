@@ -1729,9 +1729,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
                 
                 parameter = panel.GetValue()
                 
-                self._parameters.AddDatas( ( parameter, ) )
-                
-                self._parameters.Sort()
+                self._parameters.AddDatas( ( parameter, ), select_sort_and_scroll = True )
                 
                 self._UpdateControls()
                 
@@ -1800,38 +1798,30 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _EditParameters( self ):
         
-        edited_datas = []
+        selected_parameter = self._parameters.GetTopSelectedData()
         
-        selected_params = self._parameters.GetData( only_selected = True )
-        
-        for parameter in selected_params:
+        if selected_parameter is None:
             
-            existing_names = set( self._GetExistingParameterNames() )
-            
-            existing_names.discard( parameter.GetName() )
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
-                
-                panel = EditURLClassParameterFixedNamePanel( self, parameter, existing_names )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    edited_parameter = panel.GetValue()
-                    
-                    self._parameters.DeleteDatas( ( parameter, ) )
-                    
-                    self._parameters.AddDatas( ( edited_parameter, ) )
-                    
-                    edited_datas.append( edited_parameter )
-                    
-                
+            return
             
         
-        self._parameters.SelectDatas( edited_datas )
+        existing_names = set( self._GetExistingParameterNames() )
         
-        self._parameters.Sort()
+        existing_names.discard( selected_parameter.GetName() )
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit value' ) as dlg:
+            
+            panel = EditURLClassParameterFixedNamePanel( self, selected_parameter, existing_names )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                edited_parameter = panel.GetValue()
+                
+                self._parameters.ReplaceData( selected_parameter, edited_parameter, sort_and_scroll = True )
+                
+            
         
         self._UpdateControls()
         
@@ -2608,24 +2598,18 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if result == QW.QDialog.Accepted:
             
-            edited_datas = []
+            replace_tuples = []
             
             for data in self._parser_list_ctrl.GetData( only_selected = True ):
-                
-                self._parser_list_ctrl.DeleteDatas( ( data, ) )
                 
                 ( url_class_key, parser_key ) = data
                 
                 new_data = ( url_class_key, None )
                 
-                self._parser_list_ctrl.AddDatas( ( new_data, ) )
-                
-                edited_datas.append( new_data )
+                replace_tuples.append( ( data, new_data ) )
                 
             
-            self._parser_list_ctrl.SelectDatas( edited_datas )
-            
-            self._parser_list_ctrl.Sort()
+            self._parser_list_ctrl.ReplaceDatas( replace_tuples, sort_and_scroll = True )
             
         
     
@@ -2687,50 +2671,44 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             return
             
         
-        edited_datas = []
+        data = self._parser_list_ctrl.GetTopSelectedData()
         
-        for data in self._parser_list_ctrl.GetData( only_selected = True ):
+        if data is None:
             
-            ( url_class_key, parser_key ) = data
-            
-            url_class = self._url_class_keys_to_url_classes[ url_class_key ]
-            
-            matching_parsers = [ parser for parser in self._parsers if True in ( url_class.Matches( url ) for url in parser.GetExampleURLs() ) ]
-            unmatching_parsers = [ parser for parser in self._parsers if parser not in matching_parsers ]
-            
-            matching_parsers.sort( key = lambda p: p.GetName() )
-            unmatching_parsers.sort( key = lambda p: p.GetName() )
-            
-            choice_tuples = [ ( parser.GetName(), parser ) for parser in matching_parsers ]
-            choice_tuples.append( ( '------', None ) )
-            choice_tuples.extend( [ ( parser.GetName(), parser ) for parser in unmatching_parsers ] )
-            
-            try:
-                
-                parser = ClientGUIDialogsQuick.SelectFromList( self, 'select parser for ' + url_class.GetName(), choice_tuples, sort_tuples = False )
-                
-            except HydrusExceptions.CancelledException:
-                
-                break
-                
-            
-            if parser is None:
-                
-                break
-                
-            
-            self._parser_list_ctrl.DeleteDatas( ( data, ) )
-            
-            new_data = ( url_class_key, parser.GetParserKey() )
-            
-            self._parser_list_ctrl.AddDatas( ( new_data, ) )
-            
-            edited_datas.append( new_data )
+            return
             
         
-        self._parser_list_ctrl.SelectDatas( edited_datas )
+        ( url_class_key, parser_key ) = data
         
-        self._parser_list_ctrl.Sort()
+        url_class = self._url_class_keys_to_url_classes[ url_class_key ]
+        
+        matching_parsers = [ parser for parser in self._parsers if True in ( url_class.Matches( url ) for url in parser.GetExampleURLs() ) ]
+        unmatching_parsers = [ parser for parser in self._parsers if parser not in matching_parsers ]
+        
+        matching_parsers.sort( key = lambda p: p.GetName() )
+        unmatching_parsers.sort( key = lambda p: p.GetName() )
+        
+        choice_tuples = [ ( parser.GetName(), parser ) for parser in matching_parsers ]
+        choice_tuples.append( ( '------', None ) )
+        choice_tuples.extend( [ ( parser.GetName(), parser ) for parser in unmatching_parsers ] )
+        
+        try:
+            
+            parser = ClientGUIDialogsQuick.SelectFromList( self, 'select parser for ' + url_class.GetName(), choice_tuples, sort_tuples = False )
+            
+        except HydrusExceptions.CancelledException:
+            
+            return
+            
+        
+        if parser is None:
+            
+            return
+            
+        
+        new_data = ( url_class_key, parser.GetParserKey() )
+        
+        self._parser_list_ctrl.ReplaceData( data, new_data, sort_and_scroll = True )
         
     
     def _GapsExist( self ):
@@ -2753,27 +2731,19 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if len( new_url_class_keys_to_parser_keys ) > 0:
             
-            removees = []
+            replacement_tuples = []
             
-            for row in self._parser_list_ctrl.GetData():
+            for row in existing_url_class_keys_to_parser_keys.items():
                 
                 ( url_class_key, parser_key ) = row
                 
                 if url_class_key in new_url_class_keys_to_parser_keys:
                     
-                    removees.append( row )
+                    replacement_tuples.append( ( row, ( url_class_key, new_url_class_keys_to_parser_keys[ url_class_key ] ) ) )
                     
                 
             
-            self._parser_list_ctrl.DeleteDatas( removees )
-            
-            new_datas = list( new_url_class_keys_to_parser_keys.items() )
-            
-            self._parser_list_ctrl.AddDatas( new_datas )
-            
-            self._parser_list_ctrl.SelectDatas( new_datas )
-            
-            self._parser_list_ctrl.Sort()
+            self._parser_list_ctrl.ReplaceDatas( replacement_tuples, sort_and_scroll = True )
             
         
     

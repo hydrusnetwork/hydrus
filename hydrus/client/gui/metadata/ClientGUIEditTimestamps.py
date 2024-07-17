@@ -64,7 +64,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         self._domain_modified_list_ctrl_panel.SetListCtrl( self._domain_modified_list_ctrl )
         
         self._domain_modified_list_ctrl_panel.AddButton( 'add', self._AddDomainModifiedTimestamp )
-        self._domain_modified_list_ctrl_panel.AddButton( 'edit', self._EditDomainModifiedTimestamp, enabled_only_on_single_selection = True )
+        self._domain_modified_list_ctrl_panel.AddButton( 'edit', self._EditDomainModifiedTimestamp, enabled_only_on_selection = True )
         self._domain_modified_list_ctrl_panel.AddDeleteButton()
         
         self._domain_modified_list_ctrl_data_dict = {}
@@ -77,7 +77,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         self._file_services_list_ctrl_panel.SetListCtrl( self._file_services_list_ctrl )
         
-        self._file_services_list_ctrl_panel.AddButton( 'edit', self._EditFileServiceTimestamp, enabled_only_on_single_selection = True )
+        self._file_services_list_ctrl_panel.AddButton( 'edit', self._EditFileServiceTimestamp, enabled_only_on_selection = True )
         # TODO: An extension here is to add an 'add' button for files that have a _missing_ delete time
         # and/or wangle the controls and stuff so a None result is piped along and displays and is settable here
         
@@ -267,7 +267,16 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
         
+        st = ClientGUICommon.BetterStaticText( file_services_box, 'Select multiple domains to set the same time to all simultaneously.' )
+        st.setWordWrap( True )
+        
+        domain_box.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         domain_box.Add( self._domain_modified_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
+        
+        st = ClientGUICommon.BetterStaticText( file_services_box, 'Select multiple services to set the same time to all simultaneously.' )
+        st.setWordWrap( True )
+        
+        file_services_box.Add( st, CC.FLAGS_EXPAND_PERPENDICULAR )
         file_services_box.Add( self._file_services_list_ctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         button_hbox = QP.HBoxLayout()
@@ -421,46 +430,74 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         selected_domains = self._domain_modified_list_ctrl.GetData( only_selected = True )
         
-        for domain in selected_domains:
+        if len( selected_domains ) == 0:
             
-            ( hashes, datetime_value_range, user_has_edited ) = self._domain_modified_list_ctrl_data_dict[ domain ]
+            return
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg:
+        
+        first_domain = selected_domains[0]
+        
+        ( hashes, datetime_value_range, user_has_edited ) = self._domain_modified_list_ctrl_data_dict[ first_domain ]
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            control = ClientGUITime.DateTimesCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
+            
+            control.SetValue( datetime_value_range )
+            
+            panel.SetControl( control )
+            
+            dlg.SetPanel( panel )
+            
+            override_with_all_hashes = False
+            
+            if dlg.exec() == QW.QDialog.Accepted and control.HasChanges():
                 
-                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                edited_datetime_value_range = control.GetValue()
                 
-                control = ClientGUITime.DateTimesCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
-                
-                control.SetValue( datetime_value_range )
-                
-                panel.SetControl( control )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted and control.HasChanges():
+                if len( hashes ) < len( self._ordered_medias ):
                     
-                    new_datetime_value_range = control.GetValue()
+                    result = ClientGUIDialogsQuick.GetYesNo( self, 'Not every file this dialog was launched on has a time for this domain. Do you want to apply what you just set to everything, or just the files that started with this domain?', yes_label = 'all files', no_label = 'only edit existing values' )
                     
-                    if len( hashes ) < len( self._ordered_medias ):
+                    if result == QW.QDialog.Accepted:
                         
-                        result = ClientGUIDialogsQuick.GetYesNo( self, 'Not every file this dialog was launched on has a time for this domain. Do you want to apply what you just set to everything, or just the files that started with this domain?', yes_label = 'all files', no_label = 'only edit existing values' )
-                        
-                        if result == QW.QDialog.Accepted:
-                            
-                            hashes = [ m.GetHash() for m in self._ordered_medias ]
-                            
-                            new_datetime_value_range = new_datetime_value_range.DuplicateWithOverwrittenNulls()
-                            
+                        override_with_all_hashes = True
                         
                     
-                    user_has_edited = True
+                
+                new_user_has_edited = True
+                
+                for domain in selected_domains:
                     
-                    self._domain_modified_list_ctrl_data_dict[ domain ] = ( hashes, new_datetime_value_range, user_has_edited )
+                    ( hashes, old_datetime_value_range, old_user_has_edited ) = self._domain_modified_list_ctrl_data_dict[ domain ]
                     
-                    self._domain_modified_list_ctrl.UpdateDatas( ( domain, ) )
+                    if edited_datetime_value_range.HasFixedValue():
+                        
+                        new_datetime_value_range = old_datetime_value_range.DuplicateWithNewQtDateTime( edited_datetime_value_range.GetFixedValue() )
+                        
+                    else:
+                        
+                        # don't think this will happen outside of crazy edge-cases
+                        new_datetime_value_range = old_datetime_value_range.DuplicateWithNewQtDateTime( None )
+                        
                     
-                    self._domain_modified_list_ctrl.Sort()
+                    new_datetime_value_range.SetStepMS( edited_datetime_value_range.GetStepMS() )
                     
+                    if override_with_all_hashes:
+                        
+                        hashes = [ m.GetHash() for m in self._ordered_medias ]
+                        
+                        new_datetime_value_range = new_datetime_value_range.DuplicateWithOverwrittenNulls()
+                        
+                    
+                    self._domain_modified_list_ctrl_data_dict[ domain ] = ( hashes, new_datetime_value_range, new_user_has_edited )
+                    
+                
+                self._domain_modified_list_ctrl.UpdateDatas( selected_domains )
+                
+                self._domain_modified_list_ctrl.Sort()
                 
             
         
@@ -469,34 +506,54 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
         
         selected_file_service_keys_and_timestamp_types = self._file_services_list_ctrl.GetData( only_selected = True )
         
-        for row in selected_file_service_keys_and_timestamp_types:
+        if len( selected_file_service_keys_and_timestamp_types ) == 0:
             
-            ( hashes, datetime_value_range, user_has_edited ) = self._file_services_list_ctrl_data_dict[ row ]
+            return
             
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg:
+        
+        first_row = selected_file_service_keys_and_timestamp_types[0]
+        
+        ( hashes, example_datetime_value_range, user_has_edited ) = self._file_services_list_ctrl_data_dict[ first_row ]
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit datetime' ) as dlg:
+            
+            panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+            
+            control = ClientGUITime.DateTimesCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
+            
+            control.SetValue( example_datetime_value_range )
+            
+            panel.SetControl( control )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted and control.HasChanges():
                 
-                panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
+                edited_datetime_value_range = control.GetValue()
+                new_user_has_edited = True
                 
-                control = ClientGUITime.DateTimesCtrl( self, seconds_allowed = True, milliseconds_allowed = True, none_allowed = False, only_past_dates = True )
+                for row in selected_file_service_keys_and_timestamp_types:
+                    
+                    ( hashes, old_datetime_value_range, old_user_has_edited ) = self._file_services_list_ctrl_data_dict[ row ]
+                    
+                    if edited_datetime_value_range.HasFixedValue():
+                        
+                        new_datetime_value_range = old_datetime_value_range.DuplicateWithNewQtDateTime( edited_datetime_value_range.GetFixedValue() )
+                        
+                    else:
+                        
+                        # don't think this will happen outside of crazy edge-cases
+                        new_datetime_value_range = old_datetime_value_range.DuplicateWithNewQtDateTime( None )
+                        
+                    
+                    new_datetime_value_range.SetStepMS( edited_datetime_value_range.GetStepMS() )
+                    
+                    self._file_services_list_ctrl_data_dict[ row ] = ( hashes, new_datetime_value_range, new_user_has_edited )
+                    
                 
-                control.SetValue( datetime_value_range )
+                self._file_services_list_ctrl.UpdateDatas( selected_file_service_keys_and_timestamp_types )
                 
-                panel.SetControl( control )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted and control.HasChanges():
-                    
-                    new_datetime_value_range = control.GetValue()
-                    
-                    user_has_edited = True
-                    
-                    self._file_services_list_ctrl_data_dict[ row ] = ( hashes, new_datetime_value_range, user_has_edited )
-                    
-                    self._file_services_list_ctrl.UpdateDatas( ( row, ) )
-                    
-                    self._file_services_list_ctrl.Sort()
-                    
+                self._file_services_list_ctrl.Sort()
                 
             
         

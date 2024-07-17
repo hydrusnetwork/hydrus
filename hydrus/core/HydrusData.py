@@ -4,7 +4,6 @@ import fractions
 import itertools
 import os
 import numpy
-import psutil
 import random
 import re
 import struct
@@ -21,6 +20,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusText
 
 def default_dict_list(): return collections.defaultdict( list )
@@ -378,20 +378,24 @@ def GetSiblingProcessPorts( db_path, instance ):
                 ( pid, create_time ) = HydrusText.DeserialiseNewlinedTexts( file_text )
                 
                 pid = int( pid )
-                create_time = float( create_time )
                 
             except ValueError:
                 
                 return None
                 
             
+            if not HydrusPSUtil.PSUTIL_OK:
+                
+                raise HydrusExceptions.CancelledException( 'psutil is not available--cannot determine sibling process ports!' )
+                
+            
             try:
                 
-                if psutil.pid_exists( pid ):
+                if HydrusPSUtil.psutil.pid_exists( pid ):
                     
                     ports = []
                     
-                    p = psutil.Process( pid )
+                    p = HydrusPSUtil.psutil.Process( pid )
                     
                     for conn in p.connections():
                         
@@ -404,7 +408,7 @@ def GetSiblingProcessPorts( db_path, instance ):
                     return ports
                     
                 
-            except psutil.Error:
+            except HydrusPSUtil.psutil.Error:
                 
                 return None
                 
@@ -413,6 +417,7 @@ def GetSiblingProcessPorts( db_path, instance ):
     
     return None
     
+
 def GetSubprocessEnv():
     
     if HG.subprocess_report_mode:
@@ -651,6 +656,13 @@ def IsAListLikeCollection( obj ):
 
 def IsAlreadyRunning( db_path, instance ):
     
+    if not HydrusPSUtil.PSUTIL_OK:
+        
+        Print( 'psutil is not available, so cannot do the "already running?" check!' )
+        
+        return False
+        
+    
     path = os.path.join( db_path, instance + '_running' )
     
     if os.path.exists( path ):
@@ -675,7 +687,7 @@ def IsAlreadyRunning( db_path, instance ):
                 
                 try:
                     
-                    me = psutil.Process()
+                    me = HydrusPSUtil.psutil.Process()
                     
                     if me.pid == pid and me.create_time() == create_time:
                         
@@ -685,9 +697,9 @@ def IsAlreadyRunning( db_path, instance ):
                         return False
                         
                     
-                    if psutil.pid_exists( pid ):
+                    if HydrusPSUtil.psutil.pid_exists( pid ):
                         
-                        p = psutil.Process( pid )
+                        p = HydrusPSUtil.psutil.Process( pid )
                         
                         if p.create_time() == create_time and p.is_running():
                             
@@ -695,7 +707,7 @@ def IsAlreadyRunning( db_path, instance ):
                             
                         
                     
-                except psutil.Error:
+                except HydrusPSUtil.psutil.Error:
                     
                     return False
                     
@@ -921,19 +933,24 @@ def RandomPop( population ):
 
 def RecordRunningStart( db_path, instance ):
     
+    if not HydrusPSUtil.PSUTIL_OK:
+        
+        return
+        
+    
     path = os.path.join( db_path, instance + '_running' )
     
     record_string = ''
     
     try:
         
-        me = psutil.Process()
+        me = HydrusPSUtil.psutil.Process()
         
         record_string += str( me.pid )
         record_string += '\n'
         record_string += str( me.create_time() )
         
-    except psutil.Error:
+    except HydrusPSUtil.psutil.Error:
         
         return
         

@@ -85,7 +85,16 @@ def ShutdownSiblingInstance( db_dir ):
     
     port_found = False
     
-    ports = HydrusData.GetSiblingProcessPorts( db_dir, 'server' )
+    try:
+        
+        ports = HydrusData.GetSiblingProcessPorts( db_dir, 'server' )
+        
+    except HydrusExceptions.CancelledException as e:
+        
+        HydrusData.Print( e )
+        
+        ports = None
+        
     
     if ports is None:
         

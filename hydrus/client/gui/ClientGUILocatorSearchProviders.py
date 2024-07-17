@@ -92,41 +92,55 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
             result = []
             
             for i in range( tab_widget.count() ):
-            
+                
                 widget = tab_widget.widget(i)
                 
-                if isinstance( widget, QW.QTabWidget ): # page of pages
-            
-                    result.extend( get_child_tabs( widget, widget.GetName() ) )
-                    
-                else:
+                is_page_of_pages = isinstance( widget, QW.QTabWidget )
+                
+                if not is_page_of_pages or CG.client_controller.new_options.GetBoolean( 'command_palette_show_page_of_pages' ):
                     
                     selectable_media_page = widget
                     
                     label = selectable_media_page.GetNameForMenu()
                     
-                    if query not in label:
+                    if query in label:
                         
-                        continue
+                        primary_text = highlight_result_text( label, query )
+                        secondary_text = 'top level page' if not parent_name else  "child of '" + escape( parent_name ) + "'"
+                        
+                        if is_page_of_pages:
+                            
+                            icon_filename = 'page_of_pages.png'
+                            
+                        else:
+                            
+                            icon_filename = 'thumbnails.png'
+                            
+                        
+                        result.append( QLocatorSearchResult( self.result_id_counter, icon_filename, icon_filename, True, [ primary_text, secondary_text ] ) )
+                        
+                        self.result_ids_to_pages[ self.result_id_counter ] = selectable_media_page
+                        
+                        self.result_id_counter += 1
                         
                     
-                    primary_text = highlight_result_text( label, query )
-                    secondary_text = 'top level page' if not parent_name else  "child of '" + escape( parent_name ) + "'"
+                
+                if is_page_of_pages:
                     
-                    result.append( QLocatorSearchResult( self.result_id_counter, 'thumbnails.png', 'thumbnails.png', True, [ primary_text, secondary_text ] ) )
+                    result.extend( get_child_tabs( widget, widget.GetName() ) )
                     
-                    self.result_ids_to_pages[ self.result_id_counter ] = selectable_media_page
-                    
-                    self.result_id_counter += 1
+                
 
             return result
+            
         
         tab_data = get_child_tabs( tab_widget, '' )
         
         if tab_data:
-        
+            
             self.resultsAvailable.emit( jobID, tab_data )
-
+            
+        
 
     # When this is called, it means that the Locator/LocatorWidget is done with these jobs and no results will be activated either
     # So if any still-in-progress search can be stopped and any resources associated with these jobs can be freed
@@ -179,7 +193,7 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
 
     def processQuery( self, query: str, context, jobID: int ):
         
-        if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if not CG.client_controller.new_options.GetBoolean( 'command_palette_show_main_menu' ):
             
             return
             
@@ -300,7 +314,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
 
     def processQuery( self, query: str, context, jobID: int ):
         
-        if not CG.client_controller.new_options.GetBoolean( 'advanced_mode' ):
+        if not CG.client_controller.new_options.GetBoolean( 'command_palette_show_media_menu' ):
             
             return
             
@@ -316,6 +330,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
             
             return
             
+        
         media_page = CG.client_controller.gui._notebook.GetCurrentMediaPage()
         
         if not media_page or not media_page._media_panel:

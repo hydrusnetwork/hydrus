@@ -325,8 +325,6 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list_ctrl_panel.AddDeleteButton()
         self._list_ctrl_panel.AddButton( 'duplicate', self._Duplicate, enabled_only_on_selection = True )
         
-        self._list_ctrl.Sort()
-        
         #
         
         for ( network_context, custom_header_dict ) in list(network_contexts_to_custom_header_dicts.items()):
@@ -338,6 +336,8 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._list_ctrl.AddDatas( ( data, ) )
                 
             
+        
+        self._list_ctrl.Sort()
         
         #
         
@@ -398,50 +398,46 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         datas = self._list_ctrl.GetData( only_selected = True )
         
+        rows_to_add = []
+        
         for ( network_context, ( key, value ), approved, reason ) in datas:
             
             key = HydrusData.GetNonDupeName( key, existing_keys )
             
             existing_keys.add( key )
             
-            self._list_ctrl.AddDatas( [ ( network_context, ( key, value ), approved, reason ) ] )
+            rows_to_add.append( ( network_context, ( key, value ), approved, reason ) )
             
+        
+        self._list_ctrl.AddDatas( rows_to_add, select_sort_and_scroll = True )
         
     
     def _Edit( self ):
         
-        edited_datas = []
+        data = self._list_ctrl.GetTopSelectedData()
         
-        for data in self._list_ctrl.GetData( only_selected = True ):
+        if data is None:
             
-            ( network_context, ( key, value ), approved, reason ) = data
-            
-            with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit header' ) as dlg:
-                
-                panel = self._EditPanel( dlg, network_context, key, value, approved, reason )
-                
-                dlg.SetPanel( panel )
-                
-                if dlg.exec() == QW.QDialog.Accepted:
-                    
-                    self._list_ctrl.DeleteDatas( ( data, ) )
-                    
-                    ( network_context, key, value, approved, reason ) = panel.GetValue()
-                    
-                    new_data = ( network_context, ( key, value ), approved, reason )
-                    
-                    self._list_ctrl.AddDatas( ( new_data, ) )
-                    
-                    edited_datas.append( new_data )
-                    
-                else:
-                    
-                    break
-                    
-                
+            return
             
         
-        self._list_ctrl.SelectDatas( edited_datas )
+        ( network_context, ( key, value ), approved, reason ) = data
+        
+        with ClientGUITopLevelWindowsPanels.DialogEdit( self, 'edit header' ) as dlg:
+            
+            panel = self._EditPanel( dlg, network_context, key, value, approved, reason )
+            
+            dlg.SetPanel( panel )
+            
+            if dlg.exec() == QW.QDialog.Accepted:
+                
+                ( network_context, key, value, approved, reason ) = panel.GetValue()
+                
+                new_data = ( network_context, ( key, value ), approved, reason )
+                
+                self._list_ctrl.ReplaceData( data, new_data, sort_and_scroll = True )
+                
+            
         
     
     def GetValue( self ):

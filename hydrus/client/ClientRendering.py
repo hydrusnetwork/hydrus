@@ -245,9 +245,9 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
         # do this here so we are off the main thread and can wait
         client_files_manager = CG.client_controller.client_files_manager
         
-        self._path = client_files_manager.GetFilePath( self._hash, self._mime )
-        
         try:
+            
+            self._path = client_files_manager.GetFilePath( self._hash, self._mime )
             
             self._numpy_image = HydrusImageHandling.GenerateNumPyImage( self._path, self._mime )
             
