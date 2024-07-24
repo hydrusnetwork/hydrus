@@ -35,6 +35,37 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_584"><a href="#version_584">version 584</a></h2>
+                    <ul>
+                        <li><h3>misc</h3></li>
+                        <li>fixed a logical hole in the recent 'is this URL that is saying (deleted/already in db) trustworthy, or does it have weird mappings to other files?' pre-download check that was causing Pixiv, Kemono, and Twitter and any other multiple-URL Post URL Class to, on re-encountering the URL in a downloader, classify the underlying file URL as untrustworthy and re-download the files(l!!)</li>
+                        <li>the 'copy all' and paste buttons in the manage known urls dialog are replaced with icon buttons, and the copy button now copies the current selection if there is one</li>
+                        <li>the newish Regex input widget (the one that goes green/red based on current text validity) now propagates an Enter key into a dialog ok event when appropriate</li>
+                        <li>when you ctrl+double-click a taglist, the program now ensures the item under the mouse is selected before firing off the double-click nega-activation event. this is slightly awkward, but I hope it smoothes out the awkward moment where you want to invert a selection of tags but doing a normal ctrl+double-click on them causes the one of them to be deselected and then messes up the selection</li>
+                        <li>regex URL searches are now always the last job to run in a file query. if you mix in any other predicate like filesize or just some tag, your regex URL searches should run massively massively faster</li>
+                        <li>improved some boot error handling when Qt fails to import</li>
+                        <li>fixed the whack alignment of the 'filename'/'first directory'/etc.. checkbox-and-text-edit widgets in the filename tagging panel, and set 'namespace' placeholder text</li>
+                        <li>force-selecting a null value in a 'select one from this list of things' dialog should no longer raise errors</li>
+                        <li>thanks to a user, the new shimmie parser gets tags in a simpler, more reliable way</li>
+                        <li><h3>client api</h3></li>
+                        <li>added a new permission, `Commit Pending` (12), which allows you to see and commit pending content for each service</li>
+                        <li>added `/manage_services/get_pending_counts`, which basically returns the content of the client's 'pending' menu</li>
+                        <li>added `/manage_services/commit_pending`, which fires those commands off</li>
+                        <li>added `/manage_services/forget_pending`, which does the same 'forget' command on that menu</li>
+                        <li>added `/manage_file_relationships/remove_potentials`, which clears any known potential pairs off the given files</li>
+                        <li>the `/manage_pages/get_pages` and `/manage_pages/get_page_info` commands now return `is_media_page` boolean, which is a simple shorthand for 'not a page of pages'</li>
+                        <li>added the above to the Client API help</li>
+                        <li>wrote unit tests covering the above</li>
+                        <li>the client api version is now 66</li>
+                        <li><h3>boring cleanup</h3></li>
+                        <li>fixed up how some lists deliver their underlying data to various methods</li>
+                        <li>`CallBlockingToQt` no longer spams encountered errors to the log--proper error handling should (and does now) occur elsewhere</li>
+                        <li>the way the initial focus is set on system predicate flesh-out panels (when you double-click on like 'system:dimensions' and get a bunch of sub-panels) is more sane. should be, fairly reliably, on the first editable panel's ok button. I want it to be on an editable widget in the panel in future, I think, but I need to do some behind the scenes stuff to make this work in a nicer way</li>
+                        <li>pulled some stuff out of `HydrusData`, mostly to `HydrusNumbers`, `HydrusLists`, and the new `HydrusProcess`, mostly for decoupling purposes</li>
+                        <li>renamed some `ConvertXToY` stuff to just `XToY`</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_583"><a href="#version_583">version 583</a></h2>
                     <ul>
                         <li><h3>new</h3></li>
