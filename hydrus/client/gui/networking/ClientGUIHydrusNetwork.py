@@ -6,6 +6,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
@@ -380,7 +381,7 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
             keys = set( self._deletee_account_type_keys_to_new_account_type_keys.keys() )
             values = set( self._deletee_account_type_keys_to_new_account_type_keys.values() )
             
-            return HydrusData.SetsIntersect( keys, values )
+            return HydrusLists.SetsIntersect( keys, values )
             
         
         while key_transfer_not_collapsed():

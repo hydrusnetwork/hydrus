@@ -1974,7 +1974,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._command_palette_show_main_menu.setToolTip( 'Show the main gui window\'s menubar actions.' )
             
             self._command_palette_show_media_menu = QW.QCheckBox( self._command_palette_panel )
-            self._command_palette_show_media_menu.setToolTip( 'Show the menu actions for the current media view. Be careful with this, it basically just shows everything with slightly ugly labels..' )
+            self._command_palette_show_media_menu.setToolTip( 'Show the actions for the thumbnail menu on the current media page. Be careful with this, it basically just shows everything with slightly ugly labels..' )
             
             #
             
@@ -3920,7 +3920,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
             
-            self._image_cache_storage_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            self._image_cache_storage_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), HydrusNumbers.ResolutionToPrettyString( resolution ) ) )
             
             num_pixels = cache_size * ( self._image_cache_prefetch_limit_percentage.value() / 100 ) / 3
             
@@ -3930,7 +3930,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             resolution = ( int( 16 * unit_length ), int( 9 * unit_length ) )
             
-            self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), HydrusData.ConvertResolutionToPrettyString( resolution ) ) )
+            self._image_cache_prefetch_limit_percentage_st.setText( '% - {} pixels, or about a {} image'.format( HydrusNumbers.ToHumanInt( num_pixels ), HydrusNumbers.ResolutionToPrettyString( resolution ) ) )
             
             #
             
@@ -3976,7 +3976,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             ( thumbnail_width, thumbnail_height ) = HC.options[ 'thumbnail_dimensions' ]
             
-            res_string = HydrusData.ConvertResolutionToPrettyString( ( thumbnail_width, thumbnail_height ) )
+            res_string = HydrusNumbers.ResolutionToPrettyString( ( thumbnail_width, thumbnail_height ) )
             
             estimated_bytes_per_thumb = 3 * thumbnail_width * thumbnail_height
             
@@ -5220,7 +5220,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._thumbnail_dpr_percentage = ClientGUICommon.BetterSpinBox( self, min = 100, max = 800 )
             tt = 'If your OS runs at an UI scale greater than 100%, mirror it here and your thumbnails will look crisp. If you have multiple monitors at different UI scales, or you change UI scale regularly, set it to the largest one you use.'
             tt += '\n' * 2
-            tt += 'I believe the UI scale on the monitor this dialog opened on was {}'.format( HydrusData.ConvertFloatToPercentage( self.devicePixelRatio() ) )
+            tt += 'I believe the UI scale on the monitor this dialog opened on was {}'.format( HydrusNumbers.FloatToPercentage( self.devicePixelRatio() ) )
             self._thumbnail_dpr_percentage.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
             self._video_thumbnail_percentage_in = ClientGUICommon.BetterSpinBox( self, min=0, max=100 )

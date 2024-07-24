@@ -5,7 +5,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
-from hydrus.core import HydrusTime
+from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientLocation
@@ -1062,10 +1062,10 @@ class TestClientDBDuplicates( unittest.TestCase ):
         self._false_positive_king_hash = self._similar_looking_false_positive_hashes[0]
         self._alternate_king_hash = self._similar_looking_alternate_hashes[0]
         
-        self._our_main_dupe_group_hashes = set( [ self._king_hash ] )
-        self._our_second_dupe_group_hashes = set( [ self._second_group_king_hash ] )
-        self._our_alt_dupe_group_hashes = set( [ self._alternate_king_hash ] )
-        self._our_fp_dupe_group_hashes = set( [ self._false_positive_king_hash ] )
+        self._our_main_dupe_group_hashes = { self._king_hash }
+        self._our_second_dupe_group_hashes = { self._second_group_king_hash }
+        self._our_alt_dupe_group_hashes = { self._alternate_king_hash }
+        self._our_fp_dupe_group_hashes = { self._false_positive_king_hash }
         
         n = len( self._all_hashes )
         
@@ -1074,7 +1074,7 @@ class TestClientDBDuplicates( unittest.TestCase ):
         # initial number pair combinations is (n(n-1))/2
         self._expected_num_potentials = int( n * ( n - 1 ) / 2 )
         
-        size_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusData.ConvertUnitToInt( 'B' ) ) )
+        size_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 65535, HydrusNumbers.UnitToInt( 'B' ) ) )
         png_pred = ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_MIME, ( HC.IMAGE_PNG, ) )
         
         location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY )

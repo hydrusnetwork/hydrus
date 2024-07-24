@@ -1443,7 +1443,7 @@ class ClientFilesManager( object ):
                         
                         HydrusData.Print( 'Deleting the orphan ' + path )
                         
-                        status = 'deleting orphan files: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_paths ) )
+                        status = 'deleting orphan files: ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( orphan_paths ) )
                         
                         job_status.SetStatusText( status )
                         
@@ -1470,7 +1470,7 @@ class ClientFilesManager( object ):
                         
                         HydrusData.Print( 'Deleting the orphan ' + path )
                         
-                        status = 'deleting orphan thumbnails: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
+                        status = 'deleting orphan thumbnails: ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( orphan_thumbnails ) )
                         
                         job_status.SetStatusText( status )
                         
@@ -3065,7 +3065,7 @@ class FilesMaintenanceManager( object ):
             
             num_jobs_done = vr_status[ 'num_jobs_done' ]
             
-            status_text = '{}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ) )
+            status_text = '{}'.format( HydrusNumbers.ValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ) )
             
             job_status.SetStatusText( status_text )
             
@@ -3303,7 +3303,7 @@ class FilesMaintenanceManager( object ):
             
             num_jobs_done = vr_status[ 'num_jobs_done' ]
             
-            status_text = '{} - {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ), regen_file_enum_to_str_lookup[ job_type ] )
+            status_text = '{} - {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_jobs_done, total_num_jobs_to_do ), regen_file_enum_to_str_lookup[ job_type ] )
             
             job_status.SetStatusText( status_text )
             

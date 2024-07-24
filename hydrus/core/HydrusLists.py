@@ -1,4 +1,72 @@
+import itertools
+import typing
+
 from hydrus.core import HydrusTime
+
+def IntelligentMassIntersect( sets_to_reduce: typing.Collection[ set ] ):
+    
+    answer = None
+    
+    for set_to_reduce in sets_to_reduce:
+        
+        if len( set_to_reduce ) == 0:
+            
+            return set()
+            
+        
+        if answer is None:
+            
+            answer = set( set_to_reduce )
+            
+        else:
+            
+            if len( answer ) == 0:
+                
+                return set()
+                
+            else:
+                
+                answer.intersection_update( set_to_reduce )
+                
+            
+        
+    
+    if answer is None:
+        
+        return set()
+        
+    else:
+        
+        return answer
+        
+    
+
+def IsAListLikeCollection( obj ):
+    
+    # protip: don't do isinstance( possible_list, collections.abc.Collection ) for a 'list' detection--strings pass it (and sometimes with infinite recursion) lol!
+    return isinstance( obj, ( tuple, list, set, frozenset ) )
+    
+
+def MassExtend( iterables ):
+    
+    return [ item for item in itertools.chain.from_iterable( iterables ) ]
+    
+
+def MassUnion( iterables ):
+    
+    return { item for item in itertools.chain.from_iterable( iterables ) }
+    
+
+def MedianPop( population ):
+    
+    # assume it has at least one and comes sorted
+    
+    median_index = len( population ) // 2
+    
+    row = population.pop( median_index )
+    
+    return row
+    
 
 def PullNFromIterator( iterator, n ):
     
@@ -15,6 +83,16 @@ def PullNFromIterator( iterator, n ):
         
     
     return chunk
+    
+
+def SetsIntersect( a, b ):
+    
+    if not isinstance( a, set ):
+        
+        a = set( a )
+        
+    
+    return not a.isdisjoint( b )
     
 
 def SplitIteratorIntoAutothrottledChunks( iterator, starting_n, precise_time_to_stop ):

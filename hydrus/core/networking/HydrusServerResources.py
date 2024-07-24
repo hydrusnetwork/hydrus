@@ -858,6 +858,10 @@ class HydrusResource( Resource ):
                 
                 status_code = 419
                 
+            elif isinstance( e, HydrusExceptions.UnprocessableEntity ):
+                
+                status_code = 422
+                
             elif isinstance( e, HydrusExceptions.NetworkVersionException ):
                 
                 status_code = 426

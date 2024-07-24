@@ -14,6 +14,7 @@ import traceback
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -493,7 +494,7 @@ def LaunchDirectory( path ):
             
             # setsid call un-childs this new process
             
-            sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+            sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
             
             preexec_fn = getattr( os, 'setsid', None )
             
@@ -552,7 +553,7 @@ def LaunchFile( path, launch_path = None ):
             
             try:
                 
-                sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = hide_terminal, text = True )
+                sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( hide_terminal = hide_terminal, text = True )
                 
                 HydrusData.CheckProgramIsNotShuttingDown()
                 
@@ -975,7 +976,7 @@ def OpenFileLocation( path ):
             raise NotImplementedError( 'Haiku cannot open file locations!' )
             
         
-        sbp_kwargs = HydrusData.GetSubprocessKWArgs( hide_terminal = False )
+        sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( hide_terminal = False )
         
         HydrusData.CheckProgramIsNotShuttingDown()
         

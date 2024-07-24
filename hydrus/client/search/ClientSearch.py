@@ -567,7 +567,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
         
         if self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT:
             
-            result += f' {HC.UNICODE_PLUS_OR_MINUS}{HydrusData.ConvertFloatToPercentage(self.extra_value)}'
+            result += f' {HC.UNICODE_PLUS_OR_MINUS}{HydrusNumbers.FloatToPercentage(self.extra_value)}'
             
         elif self.operator == NUMBER_TEST_OPERATOR_APPROXIMATE_ABSOLUTE:
             
@@ -2747,7 +2747,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, size, unit ) = self._value
                     
-                    base += ' ' + operator + ' ' + str( size ) + HydrusData.ConvertIntToUnit( unit )
+                    base += ' ' + operator + ' ' + str( size ) + HydrusNumbers.IntToUnit( unit )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_LIMIT:
@@ -2873,7 +2873,7 @@ class Predicate( HydrusSerialisable.SerialisableBase ):
                     
                     ( operator, num_pixels, unit ) = self._value
                     
-                    base += ' ' + operator + ' ' + str( num_pixels ) + ' ' + HydrusData.ConvertIntToPixels( unit )
+                    base += ' ' + operator + ' ' + str( num_pixels ) + ' ' + HydrusNumbers.IntToPixels( unit )
                     
                 
             elif self._predicate_type == PREDICATE_TYPE_SYSTEM_KNOWN_URLS:

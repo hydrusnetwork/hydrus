@@ -978,7 +978,7 @@ class StringSlicer( StringProcessingStep ):
             
         elif self.SelectsOne():
             
-            result = 'selecting the {} string'.format( HydrusNumbers.ConvertIndexToPrettyOrdinalString( self._index_start ) )
+            result = 'selecting the {} string'.format( HydrusNumbers.IndexToPrettyOrdinalString( self._index_start ) )
             
         elif self._index_start is None and self._index_end is None:
             
@@ -986,15 +986,15 @@ class StringSlicer( StringProcessingStep ):
             
         elif self._index_start is not None and self._index_end is None:
             
-            result = 'selecting the {} string and onwards'.format( HydrusNumbers.ConvertIndexToPrettyOrdinalString( self._index_start ) )
+            result = 'selecting the {} string and onwards'.format( HydrusNumbers.IndexToPrettyOrdinalString( self._index_start ) )
             
         elif self._index_start is None and self._index_end is not None:
             
-            result = 'selecting up to and including the {} string'.format( HydrusNumbers.ConvertIndexToPrettyOrdinalString( self._index_end - 1 ) )
+            result = 'selecting up to and including the {} string'.format( HydrusNumbers.IndexToPrettyOrdinalString( self._index_end - 1 ) )
             
         else:
             
-            result = 'selecting the {} string up to and including the {} string'.format( HydrusNumbers.ConvertIndexToPrettyOrdinalString( self._index_start ), HydrusNumbers.ConvertIndexToPrettyOrdinalString( self._index_end - 1 ) )
+            result = 'selecting the {} string up to and including the {} string'.format( HydrusNumbers.IndexToPrettyOrdinalString( self._index_start ), HydrusNumbers.IndexToPrettyOrdinalString( self._index_end - 1 ) )
             
         
         if with_type:

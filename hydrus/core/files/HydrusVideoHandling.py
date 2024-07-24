@@ -8,6 +8,7 @@ import subprocess
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusProcess
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 from hydrus.core.files import HydrusAudioHandling
@@ -53,7 +54,7 @@ def GetFFMPEGVersion():
     
     try:
         
-        sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
+        sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
         
         process = subprocess.Popen( cmd, stdin = subprocess.PIPE, stdout = subprocess.PIPE, stderr = subprocess.PIPE, **sbp_kwargs )
         
@@ -140,7 +141,7 @@ def GetFFMPEGInfoLines( path, count_frames_manually = False, only_first_second =
             
         
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
@@ -479,7 +480,7 @@ def RenderImageToImagePath( path, temp_image_path ):
         cmd = [ FFMPEG_PATH, '-y', "-i", path, temp_image_path ]
         
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
@@ -949,7 +950,7 @@ def VideoHasAudio( path, info_lines ) -> bool:
         '-' ] )
         
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
@@ -1129,7 +1130,7 @@ class VideoRendererFFMPEG( object ):
         ] )
         
         
-        sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+        sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
         
         HydrusData.CheckProgramIsNotShuttingDown()
         

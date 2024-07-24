@@ -5,6 +5,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusText
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 
@@ -190,7 +191,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
                     
                 elif and_or_or == 'OR':
                     
-                    return sum( ( 1 for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) ) )
+                    return sum( ( 1 for m in flat_media if HydrusLists.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) ) )
                     
                 
             
@@ -271,7 +272,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
                     
                 elif and_or_or == 'OR':
                     
-                    filtered_media = [ m for m in flat_media if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) ]
+                    filtered_media = [ m for m in flat_media if HydrusLists.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) ]
                     
                 
             
@@ -335,7 +336,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
                     
                 elif and_or_or == 'OR':
                     
-                    filtered_media = { m for m in media_list.GetSortedMedia() if HydrusData.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) }
+                    filtered_media = { m for m in media_list.GetSortedMedia() if HydrusLists.SetsIntersect( m.GetTagsManager().GetCurrentAndPending( tag_service_key, ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL ), select_tags ) }
                     
                 
             

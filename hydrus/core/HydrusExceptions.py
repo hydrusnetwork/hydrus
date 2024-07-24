@@ -105,6 +105,7 @@ class NotAcceptable( NetworkException ): pass
 class NotModifiedException( NetworkException ): pass
 class BadRequestException( NetworkException ): pass
 class ConflictException( NetworkException ): pass
+class UnprocessableEntity( NetworkException ): pass
 class RangeNotSatisfiableException( NetworkException ): pass
 class MissingCredentialsException( NetworkException ): pass
 class DoesNotSupportCORSException( NetworkException ): pass

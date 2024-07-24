@@ -772,7 +772,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
             
             gauge_num_done = num_files_imported + 1
             
-            job_status.SetStatusText( 'importing file ' + HydrusData.ConvertValueRangeToPrettyString( gauge_num_done, num_total ) )
+            job_status.SetStatusText( 'importing file ' + HydrusNumbers.ValueRangeToPrettyString( gauge_num_done, num_total ) )
             job_status.SetVariable( 'popup_gauge_1', ( gauge_num_done, num_total ) )
             
             path = file_seed.file_seed_data

@@ -397,9 +397,6 @@ class Controller( object ):
                 
                 job_status.SetErrorException( e )
                 
-                HydrusData.Print( 'CallBlockingToQt just caught this error:' )
-                HydrusData.DebugPrint( traceback.format_exc() )
-                
             finally:
                 
                 job_status.Finish()

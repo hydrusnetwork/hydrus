@@ -20,6 +20,7 @@ except:
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
 from hydrus.core.files import HydrusFileHandling
@@ -1050,7 +1051,7 @@ class AnimationBar( QW.QWidget ):
             
             if num_frames_are_useful:
                 
-                progress_strings.append( HydrusData.ConvertValueRangeToPrettyString( current_frame_index + 1, self._num_frames ) )
+                progress_strings.append( HydrusNumbers.ValueRangeToPrettyString( current_frame_index + 1, self._num_frames ) )
                 
             
             if current_timestamp_ms is not None:

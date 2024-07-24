@@ -187,7 +187,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 percentage_difference = ( s_size / c_size ) - 1.0
                 
             
-            percentage_different_string = ' ({}{})'.format( sign, HydrusData.ConvertFloatToPercentage( percentage_difference ) )
+            percentage_different_string = ' ({}{})'.format( sign, HydrusNumbers.FloatToPercentage( percentage_difference ) )
             
             if is_a_pixel_dupe:
                 
@@ -248,7 +248,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 
             else:
                 
-                s_string = HydrusData.ConvertResolutionToPrettyString( s_resolution )
+                s_string = HydrusNumbers.ResolutionToPrettyString( s_resolution )
                 
                 if s_w % 2 == 1 or s_h % 2 == 1:
                     
@@ -262,7 +262,7 @@ def GetDuplicateComparisonStatements( shown_media, comparison_media ):
                 
             else:
                 
-                c_string = HydrusData.ConvertResolutionToPrettyString( c_resolution )
+                c_string = HydrusNumbers.ResolutionToPrettyString( c_resolution )
                 
                 if c_w % 2 == 1 or c_h % 2 == 1:
                     
@@ -758,7 +758,7 @@ class DuplicatesManager( object ):
                         
                     
                 
-                text = 'searching: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_searched_estimate, total_num_files ) )
+                text = 'searching: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_searched_estimate, total_num_files ) )
                 job_status.SetStatusText( text )
                 job_status.SetVariable( 'popup_gauge_1', ( num_searched_estimate, total_num_files ) )
                 

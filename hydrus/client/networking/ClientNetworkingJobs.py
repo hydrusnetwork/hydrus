@@ -95,6 +95,10 @@ def ConvertStatusCodeAndDataIntoExceptionInfo( status_code, data, is_hydrus_serv
         
         eclass = HydrusExceptions.SessionException
         
+    elif status_code == 422:
+        
+        eclass = HydrusExceptions.UnprocessableEntity
+        
     elif status_code == 426:
         
         eclass = HydrusExceptions.NetworkVersionException

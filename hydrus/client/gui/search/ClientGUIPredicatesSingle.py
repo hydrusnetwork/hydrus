@@ -8,13 +8,13 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
-from hydrus.core import HydrusGlobals as HG
 from hydrus.core.files import HydrusFileHandling
 from hydrus.core.files.images import HydrusImageHandling
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientImageHandling
+from hydrus.client import ClientParsing
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIOptionsPanels
@@ -397,6 +397,8 @@ class PanelPredicateSystemDate( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._sign )
+        
     
     def _GetSystemPredicateLabel( self ) -> str:
         
@@ -561,6 +563,8 @@ class PanelPredicateSystemAgeDelta( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._sign )
         
     
     def GetDefaultPredicate( self ):
@@ -792,6 +796,8 @@ class PanelPredicateSystemDuplicateRelationships( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._sign )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -842,6 +848,8 @@ class PanelPredicateSystemDuration( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._number_test )
         
     
     def GetDefaultPredicate( self ):
@@ -907,6 +915,8 @@ class PanelPredicateSystemFileService( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._sign )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -969,6 +979,8 @@ class PanelPredicateSystemFileViewingStatsViews( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._sign )
         
     
     def GetDefaultPredicate( self ):
@@ -1044,6 +1056,8 @@ class PanelPredicateSystemFileViewingStatsViewtime( PanelPredicateSystemSingle )
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._sign )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1105,6 +1119,8 @@ class PanelPredicateSystemFramerate( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._number_test )
         
     
     def GetDefaultPredicate( self ):
@@ -1170,6 +1186,8 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._sign )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1187,7 +1205,7 @@ class PanelPredicateSystemHash( PanelPredicateSystemSingle ):
         
         hex_hashes_raw = self._hashes.toPlainText()
         
-        hashes = HydrusData.ParseHashesFromRawHexText( hash_type, hex_hashes_raw )
+        hashes = ClientParsing.ParseHashesFromRawHexText( hash_type, hex_hashes_raw )
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, ( hashes, hash_type ), inclusive = inclusive ), )
         
@@ -1227,6 +1245,8 @@ class PanelPredicateSystemHasNoteName( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._operator )
         
     
     def GetDefaultPredicate( self ):
@@ -1287,6 +1307,8 @@ class PanelPredicateSystemHeight( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._number_test )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1336,6 +1358,8 @@ class PanelPredicateSystemKnownURLsExactURL( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._exact_url, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._operator )
         
     
     def GetDefaultPredicate( self ):
@@ -1409,6 +1433,8 @@ class PanelPredicateSystemKnownURLsDomain( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._operator )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1478,6 +1504,8 @@ class PanelPredicateSystemKnownURLsRegex( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._regex, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._operator )
         
     
     def GetDefaultPredicate( self ):
@@ -1571,6 +1599,8 @@ class PanelPredicateSystemKnownURLsURLClass( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._operator )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1632,6 +1662,8 @@ class PanelPredicateSystemLimit( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._limit )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1678,6 +1710,8 @@ class PanelPredicateSystemMime( PanelPredicateSystemSingle ):
         QP.AddToLayout( hbox, self._mimes, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._mimes )
         
     
     def GetDefaultPredicate( self ):
@@ -1737,6 +1771,8 @@ class PanelPredicateSystemNumPixels( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._sign )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1789,6 +1825,8 @@ class PanelPredicateSystemNumFrames( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._number_test )
         
     
     def GetDefaultPredicate( self ):
@@ -1852,6 +1890,8 @@ class PanelPredicateSystemNumTags( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._sign )
         
     
     def GetDefaultPredicate( self ):
@@ -1928,6 +1968,8 @@ class PanelPredicateSystemNumNotes( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._number_test )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -1979,6 +2021,8 @@ class PanelPredicateSystemNumURLs( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._number_test )
         
     
     def GetDefaultPredicate( self ):
@@ -2033,6 +2077,8 @@ class PanelPredicateSystemNumWords( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._number_test )
         
     
     def GetDefaultPredicate( self ):
@@ -2091,6 +2137,8 @@ class PanelPredicateSystemRatio( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._sign )
         
     
     def GetDefaultPredicate( self ):
@@ -2190,6 +2238,8 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         big_vbox.addStretch( 1 )
         
         self.setLayout( big_vbox )
+        
+        self.setFocusProxy( self._pixel_hashes )
         
     
     def _Clear( self ):
@@ -2302,11 +2352,11 @@ class PanelPredicateSystemSimilarToData( PanelPredicateSystemSingle ):
         
         hex_pixel_hashes_raw = self._pixel_hashes.toPlainText()
         
-        pixel_hashes = HydrusData.ParseHashesFromRawHexText( 'pixel', hex_pixel_hashes_raw )
+        pixel_hashes = ClientParsing.ParseHashesFromRawHexText( 'pixel', hex_pixel_hashes_raw )
         
         hex_perceptual_hashes_raw = self._perceptual_hashes.toPlainText()
         
-        perceptual_hashes = HydrusData.ParseHashesFromRawHexText( 'perceptual', hex_perceptual_hashes_raw )
+        perceptual_hashes = ClientParsing.ParseHashesFromRawHexText( 'perceptual', hex_perceptual_hashes_raw )
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( pixel_hashes, perceptual_hashes, self._max_hamming.value() ) ), )
         
@@ -2368,6 +2418,8 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         
         self.setLayout( vbox )
         
+        self.setFocusProxy( self._hashes )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -2381,7 +2433,7 @@ class PanelPredicateSystemSimilarToFiles( PanelPredicateSystemSingle ):
         
         hex_hashes_raw = self._hashes.toPlainText()
         
-        hashes = HydrusData.ParseHashesFromRawHexText( 'sha256', hex_hashes_raw )
+        hashes = ClientParsing.ParseHashesFromRawHexText( 'sha256', hex_hashes_raw )
         
         predicates = ( ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, ( hashes, self._max_hamming.value() ) ), )
         
@@ -2422,6 +2474,8 @@ class PanelPredicateSystemSize( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._sign )
         
     
     def GetDefaultPredicate( self ):
@@ -2480,6 +2534,8 @@ class PanelPredicateSystemTagAsNumber( PanelPredicateSystemSingle ):
         
         self.setLayout( hbox )
         
+        self.setFocusProxy( self._sign )
+        
     
     def GetDefaultPredicate( self ):
         
@@ -2532,6 +2588,8 @@ class PanelPredicateSystemWidth( PanelPredicateSystemSingle ):
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
+        
+        self.setFocusProxy( self._number_test )
         
     
     def GetDefaultPredicate( self ):

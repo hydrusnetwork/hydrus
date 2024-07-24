@@ -15,6 +15,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
+from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusLists
@@ -179,7 +180,7 @@ def report_content_speed_to_job_status( job_status, rows_done, total_rows, preci
     
     rows_s = HydrusNumbers.ToHumanInt( int( num_rows / it_took ) )
     
-    popup_message = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
+    popup_message = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( rows_done, total_rows ) + ': processing ' + row_name + ' at ' + rows_s + ' rows/s'
     
     CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
     job_status.SetStatusText( popup_message, 2 )
@@ -195,6 +196,7 @@ def report_speed_to_job_status( job_status, precise_timestamp, num_rows, row_nam
     CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
     job_status.SetStatusText( popup_message, 2 )
     
+
 def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     
     if num_rows == 0:
@@ -210,7 +212,8 @@ def report_speed_to_log( precise_timestamp, num_rows, row_name ):
     
     HydrusData.Print( summary )
     
-class JobDatabaseClient( HydrusData.JobDatabase ):
+
+class JobDatabaseClient( HydrusDBBase.JobDatabase ):
     
     def _DoDelayedResultRelief( self ):
         
@@ -225,6 +228,7 @@ class JobDatabaseClient( HydrusData.JobDatabase ):
             
         
     
+
 class DB( HydrusDB.HydrusDB ):
     
     READ_WRITE_ACTIONS = [ 'service_info', 'system_predicates', 'missing_thumbnail_hashes' ]
@@ -983,7 +987,7 @@ class DB( HydrusDB.HydrusDB ):
             
             self.modules_tag_search.AddTags( file_service_id, tag_service_id, group_of_tag_ids )
             
-            message = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+            message = HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )
             
             self._controller.frame_splash_status.SetSubtext( message )
             
@@ -1608,7 +1612,7 @@ class DB( HydrusDB.HydrusDB ):
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_tag_display_application' )
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_force_refresh_tags_data' )
         
-        self.pub_service_updates_after_commit( { service_key : [ HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
+        self.pub_service_updates_after_commit( { service_key : [ ClientServices.ServiceUpdate( HC.SERVICE_UPDATE_DELETE_PENDING ) ] } )
         
     
     def _DeleteService( self, service_id ):
@@ -1640,7 +1644,7 @@ class DB( HydrusDB.HydrusDB ):
         
         self.modules_services.DeleteService( service_id )
         
-        service_update = HydrusData.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
+        service_update = ClientServices.ServiceUpdate( HC.SERVICE_UPDATE_RESET )
         
         service_keys_to_service_updates = { service_key : [ service_update ] }
         
@@ -7528,7 +7532,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 # yes we do want 'actual' here I think. we are regenning the actual current computation
                 # maybe we'll ultimately expand this to the ideal also, we'll see how it goes
-                affected_tag_ids = HydrusData.MassUnion( ( self.modules_tag_display.GetChainsMembers( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ( tag_id, ) ) for tag_id in tag_ids ) )
+                affected_tag_ids = HydrusLists.MassUnion( ( self.modules_tag_display.GetChainsMembers( ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, tag_service_id, ( tag_id, ) ) for tag_id in tag_ids ) )
                 
                 tag_service_ids_to_affected_tag_ids[ tag_service_id ] = affected_tag_ids
                 
@@ -7543,7 +7547,7 @@ class DB( HydrusDB.HydrusDB ):
                 job_status.SetStatusText( message )
                 self._controller.frame_splash_status.SetSubtext( message )
                 
-                all_affected_tag_ids = HydrusData.MassUnion( tag_service_ids_to_affected_tag_ids.values() )
+                all_affected_tag_ids = HydrusLists.MassUnion( tag_service_ids_to_affected_tag_ids.values() )
                 
                 self.modules_tags_local_cache.DropTagIdsFromCache( all_affected_tag_ids )
                 # I think the clever add is done by later regen gubbins here
@@ -7922,7 +7926,7 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ), HydrusNumbers.ToHumanInt( bad_tag_count ) )
+                message = 'Scanning tags: {} - Bad Found: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ), HydrusNumbers.ToHumanInt( bad_tag_count ) )
                 
                 job_status.SetStatusText( message )
                 
@@ -7965,7 +7969,7 @@ class DB( HydrusDB.HydrusDB ):
                     break
                     
                 
-                message = 'Fixing bad tags: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, bad_tag_count ) )
+                message = 'Fixing bad tags: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, bad_tag_count ) )
                 
                 job_status.SetStatusText( message )
                 
@@ -8069,7 +8073,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 if job_status is not None:
                     
-                    message = 'Doing "{}": {}'.format( name, HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                    message = 'Doing "{}": {}'.format( name, HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
                     message += '\n' * 2
                     message += 'Total rows recovered: {}'.format( HydrusNumbers.ToHumanInt( num_rows_recovered ) )
                     
@@ -8211,7 +8215,7 @@ class DB( HydrusDB.HydrusDB ):
                 
                 for ( group_of_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, 'SELECT hash_id FROM {};'.format( table_name ), 1024 ):
                     
-                    message = 'repopulating {} {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_service_ids ) ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                    message = 'repopulating {} {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( file_service_ids ) ), HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
                     
                     job_status.SetStatusText( message )
                     self._controller.frame_splash_status.SetSubtext( message )
@@ -8868,7 +8872,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     for ( chunk_of_tag_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, f'SELECT tag_id FROM {tags_table_name};', CHUNK_SIZE ):
                         
-                        num_string = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                        num_string = HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )
                         
                         self._controller.frame_splash_status.SetSubtext( f'{message} - {num_string}' )
                         
@@ -9892,7 +9896,7 @@ class DB( HydrusDB.HydrusDB ):
                     
                     for ( chunk_of_url_ids, num_done, num_to_do ) in HydrusDB.ReadLargeIdQueryInSeparateChunks( self._c, f'SELECT url_id FROM urls;', CHUNK_SIZE ):
                         
-                        num_string = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                        num_string = HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )
                         
                         self._controller.frame_splash_status.SetSubtext( f'bad url scan - {num_string} - bad urls: {HydrusNumbers.ToHumanInt(len( bad_url_ids))}' )
                         
@@ -10445,6 +10449,36 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to rename "all deleted files" failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 583:
+            
+            try:
+                
+                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'shimmie file page parser'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

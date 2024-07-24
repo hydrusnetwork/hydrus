@@ -132,6 +132,10 @@ except Exception as e:
     
     title = 'Critical boot error occurred! Details written to crash.log in either your db dir, userdir, or desktop!'
     
+    import traceback
+    
+    error_trace = str( e ) + '\n\n' + traceback.format_exc()
+    
     try:
         
         HydrusData.DebugPrint( title )
@@ -139,12 +143,10 @@ except Exception as e:
         
     except:
         
-        pass
+        print( title )
+        print( 'Note for hydev: HydrusData did not import; probably a very early import (Qt?) issue!' )
+        print( error_trace )
         
-    
-    import traceback
-    
-    error_trace = str( e ) + '\n\n' + traceback.format_exc()
     
     if 'db_dir' in locals() and os.path.exists( db_dir ):
         
@@ -185,7 +187,16 @@ except Exception as e:
         
     except:
         
-        HydrusData.DebugPrint( 'Could not start up Qt to show the error visually!' )
+        message = 'Could not start up Qt to show the error visually!'
+        
+        try:
+            
+            HydrusData.Print( message )
+            
+        except:
+            
+            print( message )
+            
         
     
     sys.exit( 1 )
@@ -246,6 +257,8 @@ def boot():
     
     if HG.restart:
         
-        HydrusData.RestartProcess()
+        from hydrus.core import HydrusProcess
+        
+        HydrusProcess.RestartProcess()
         
     

@@ -69,6 +69,7 @@ class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
         
         edit_panel = ClientGUICommon.StaticBox( self, 'edit' )
         
+        # TODO: get rid of all the GetClientData for this guy, below. replace with newer stuff, add methods to BetterQListWidget (ReplaceData?) as needed
         self._formulae = ClientGUIListBoxes.BetterQListWidget( edit_panel )
         self._formulae.setSelectionMode( QW.QAbstractItemView.SingleSelection )
         self._formulae.itemDoubleClicked.connect( self.Edit )
@@ -236,7 +237,7 @@ class EditCompoundFormulaPanel( EditSpecificFormulaPanel ):
     
     def GetValue( self ):
         
-        formulae = [ QP.GetClientData( self._formulae, i ) for i in range( self._formulae.count() ) ]
+        formulae = self._formulae.GetData()
         
         sub_phrase = self._sub_phrase.text()
         

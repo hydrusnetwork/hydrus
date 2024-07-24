@@ -8,6 +8,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -1407,7 +1408,7 @@ class ShortcutsHandler( QC.QObject ):
             
             ancestor_shortcuts_handlers = AncestorShortcutsHandlers( self._parent )
             
-            all_ancestor_shortcut_names = HydrusData.MassUnion( [ ancestor_shortcuts_handler.GetShortcutNames() for ancestor_shortcuts_handler in ancestor_shortcuts_handlers ] )
+            all_ancestor_shortcut_names = HydrusLists.MassUnion( [ ancestor_shortcuts_handler.GetShortcutNames() for ancestor_shortcuts_handler in ancestor_shortcuts_handlers ] )
             
             ancestor_command = shortcuts_manager().GetCommand( all_ancestor_shortcut_names, shortcut )
             

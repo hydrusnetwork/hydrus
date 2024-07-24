@@ -1,6 +1,7 @@
 from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 
+from hydrus.core import HydrusExceptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import QtPorting as QP
@@ -18,8 +19,6 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
         self._list.itemDoubleClicked.connect( self.EventSelect )
         
         #
-        
-        selected_a_value = False
         
         if sort_tuples:
             
@@ -47,17 +46,15 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
             item.setData( QC.Qt.UserRole, value )
             self._list.addItem( item )
             
-            if value_to_select is not None and value_to_select == value:
-                
-                QP.ListWidgetSetSelection( self._list, i )
-                
-                selected_a_value = True
-                
+        
+        if value_to_select is not None:
+            
+            self._list.SelectData( ( value_to_select, ) )
             
         
-        if not selected_a_value:
+        if len( list( self._list.selectedItems() ) ) == 0:
             
-            QP.ListWidgetSetSelection( self._list, 0 )
+            self._list.item( 0 ).setSelected( True )
             
         
         #
@@ -94,11 +91,22 @@ class EditSelectFromListPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def GetValue( self ):
         
-        selection = QP.ListWidgetGetSelection( self._list ) 
+        data = self._list.GetData( only_selected = True )
         
-        return QP.GetClientData( self._list, selection )
+        if len( data ) == 0:
+            
+            data = self._list.GetData()
+            
+        
+        if len( data ) == 0:
+            
+            raise HydrusExceptions.CancelledException( 'No data selected!' )
+            
+        
+        return data[0]
         
     
+
 class EditSelectFromListButtonsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, choices, message = '' ):

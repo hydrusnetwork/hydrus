@@ -1,6 +1,4 @@
 import collections
-import itertools
-import os
 import threading
 import time
 import typing
@@ -10,6 +8,7 @@ from qtpy import QtWidgets as QW
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusText
@@ -728,7 +727,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if num_archived + num_deleted > 0:
                 
-                percent = HydrusData.ConvertFloatToPercentage( num_archived / ( num_archived + num_deleted ) )
+                percent = HydrusNumbers.FloatToPercentage( num_archived / ( num_archived + num_deleted ) )
                 
             else:
                 
@@ -780,7 +779,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if num_archived + num_deleted > 0:
                 
-                data_string += ' | good {}'.format( HydrusData.ConvertFloatToPercentage( num_archived / ( num_archived + num_deleted ) ) )
+                data_string += ' | good {}'.format( HydrusNumbers.FloatToPercentage( num_archived / ( num_archived + num_deleted ) ) )
                 
             
             data_strings.append( data_string )
@@ -2043,7 +2042,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         subscriptions = self._subscriptions.GetData( only_selected = True )
         
-        query_headers = HydrusData.MassExtend( ( subscription.GetQueryHeaders() for subscription in subscriptions ) )
+        query_headers = HydrusLists.MassExtend( ( subscription.GetQueryHeaders() for subscription in subscriptions ) )
         
         try:
             
@@ -2312,7 +2311,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                         
                     else:
                         
-                        label = '{} (has {} duplicate queries)'.format( subscription.GetName(), HydrusData.ConvertValueRangeToPrettyString( len( dupe_query_texts_it_can_do ), len( query_texts_we_want_to_dedupe_now ) ) )
+                        label = '{} (has {} duplicate queries)'.format( subscription.GetName(), HydrusNumbers.ValueRangeToPrettyString( len( dupe_query_texts_it_can_do ), len( query_texts_we_want_to_dedupe_now ) ) )
                         
                     
                     choice_tuples.append( ( label, subscription, ', '.join( sorted( dupe_query_texts_it_can_do ) ) ) )

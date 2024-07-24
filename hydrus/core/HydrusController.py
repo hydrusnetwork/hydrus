@@ -10,6 +10,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPubSub
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTemp
@@ -736,7 +737,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
         
         self._i_own_running_file = True
         
-        HydrusData.RecordRunningStart( self.db_dir, self._name )
+        HydrusProcess.RecordRunningStart( self.db_dir, self._name )
         
     
     def ReleaseThreadSlot( self, thread_type ):

@@ -4,6 +4,7 @@ import time
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusProcess
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
 
@@ -55,7 +56,7 @@ def RenderPageToFile( path, temp_path, page_index ):
     
     timeout = HydrusTime.GetNow() + 60
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs()
+    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs()
     
     sbp_kwargs[ 'stdout' ] = subprocess.DEVNULL
     sbp_kwargs[ 'stderr' ] = subprocess.DEVNULL

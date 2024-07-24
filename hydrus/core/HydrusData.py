@@ -7,21 +7,16 @@ import numpy
 import random
 import re
 import struct
-import subprocess
 import sys
-import threading
 import time
 import traceback
 import typing
 import yaml
 
-from hydrus.core import HydrusBoot
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPSUtil
-from hydrus.core import HydrusText
 
 def default_dict_list(): return collections.defaultdict( list )
 
@@ -35,6 +30,7 @@ def BuildKeyToListDict( pairs ):
     
     return d
     
+
 def BuildKeyToSetDict( pairs ):
     
     d = collections.defaultdict( set )
@@ -43,6 +39,7 @@ def BuildKeyToSetDict( pairs ):
     
     return d
     
+
 def BytesToNoneOrHex( b: typing.Optional[ bytes ] ):
     
     if b is None:
@@ -54,6 +51,7 @@ def BytesToNoneOrHex( b: typing.Optional[ bytes ] ):
         return b.hex()
         
     
+
 def CalculateScoreFromRating( count, rating ):
     
     # https://www.evanmiller.org/how-not-to-sort-by-average-rating.html
@@ -68,6 +66,7 @@ def CalculateScoreFromRating( count, rating ):
     
     return score
     
+
 def CheckProgramIsNotShuttingDown():
     
     if HG.model_shutdown:
@@ -75,6 +74,7 @@ def CheckProgramIsNotShuttingDown():
         raise HydrusExceptions.ShutdownException( 'Application is shutting down!' )
         
     
+
 def CleanRunningFile( db_path, instance ):
     
     # just to be careful
@@ -91,59 +91,6 @@ def CleanRunningFile( db_path, instance ):
         
     
 
-# TODO: remove all the 'Convert' from these
-def ConvertFloatToPercentage( f ):
-    
-    percent = f * 100
-    
-    if percent == int( percent ):
-        
-        return f'{int( percent )}%'
-        
-    else:
-        
-        return f'{percent:.1f}%'
-        
-    
-def ConvertIntToPixels( i ):
-    
-    if i == 1: return 'pixels'
-    elif i == 1000: return 'kilopixels'
-    elif i == 1000000: return 'megapixels'
-    else: return 'megapixels'
-    
-def ConvertIntToUnit( unit ):
-    
-    if unit == 1: return 'B'
-    elif unit == 1024: return 'KB'
-    elif unit == 1048576: return 'MB'
-    elif unit == 1073741824: return 'GB'
-    
-
-def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result = False, out_of = True ):
-    
-    rating_converted = ( rating * ( upper - lower ) ) + lower
-    
-    if rounded_result:
-        
-        rating_converted = round( rating_converted )
-        
-    
-    s = '{:.2f}'.format( rating_converted )
-    
-    if out_of and lower in ( 0, 1 ):
-        
-        s += '/{:.2f}'.format( upper )
-        
-    
-    return s
-    
-def ConvertPixelsToInt( unit ):
-    
-    if unit == 'pixels': return 1
-    elif unit == 'kilopixels': return 1000
-    elif unit == 'megapixels': return 1000000
-    
 def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     
     result = { s for s in pretty_strings if s != 'no namespace' }
@@ -152,34 +99,7 @@ def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
     
     return result
     
-def ConvertResolutionToPrettyString( resolution ):
-    
-    if resolution is None:
-        
-        return 'no resolution'
-        
-    
-    if not isinstance( resolution, tuple ):
-        
-        try:
-            
-            resolution = tuple( resolution )
-            
-        except:
-            
-            return 'broken resolution'
-            
-        
-    
-    if resolution in HC.NICE_RESOLUTIONS:
-        
-        return HC.NICE_RESOLUTIONS[ resolution ]
-        
-    
-    ( width, height ) = resolution
-    
-    return '{}x{}'.format( HydrusNumbers.ToHumanInt( width ), HydrusNumbers.ToHumanInt( height ) )
-    
+
 def ConvertStatusToPrefix( status ):
     
     if status == HC.CONTENT_STATUS_CURRENT: return ''
@@ -189,40 +109,11 @@ def ConvertStatusToPrefix( status ):
     else: return '(?)'
     
 
-def ConvertUglyNamespaceToPrettyString( namespace ):
-    
-    if namespace is None or namespace == '':
-        
-        return 'no namespace'
-        
-    else:
-        
-        return namespace
-        
-    
-def ConvertUglyNamespacesToPrettyStrings( namespaces ):
-    
-    namespaces = sorted( namespaces )
-    
-    result = [ ConvertUglyNamespaceToPrettyString( namespace ) for namespace in namespaces ]
-    
-    return result
-    
-def ConvertUnitToInt( unit ):
-    
-    if unit == 'B': return 1
-    elif unit == 'KB': return 1024
-    elif unit == 'MB': return 1048576
-    elif unit == 'GB': return 1073741824
-    
 def ConvertValueRangeToBytes( value, range ):
     
     return ToHumanBytes( value ) + '/' + ToHumanBytes( range )
     
-def ConvertValueRangeToPrettyString( value, range ):
-    
-    return HydrusNumbers.ToHumanInt( value ) + '/' + HydrusNumbers.ToHumanInt( range )
-    
+
 def DebugPrint( debug_info ):
     
     Print( debug_info )
@@ -230,6 +121,7 @@ def DebugPrint( debug_info ):
     sys.stdout.flush()
     sys.stderr.flush()
     
+
 def DedupeList( xs: typing.Iterable ):
     
     if isinstance( xs, set ):
@@ -255,6 +147,7 @@ def DedupeList( xs: typing.Iterable ):
     
     return xs_return
     
+
 def GenerateKey():
     
     return os.urandom( HC.HYDRUS_KEY_LENGTH )
@@ -363,225 +256,6 @@ def GetNonDupeName( original_name, disallowed_names ):
     return non_dupe_name
     
 
-def GetSiblingProcessPorts( db_path, instance ):
-    
-    path = os.path.join( db_path, instance + '_running' )
-    
-    if os.path.exists( path ):
-        
-        with open( path, 'r', encoding = 'utf-8' ) as f:
-            
-            file_text = f.read()
-            
-            try:
-                
-                ( pid, create_time ) = HydrusText.DeserialiseNewlinedTexts( file_text )
-                
-                pid = int( pid )
-                
-            except ValueError:
-                
-                return None
-                
-            
-            if not HydrusPSUtil.PSUTIL_OK:
-                
-                raise HydrusExceptions.CancelledException( 'psutil is not available--cannot determine sibling process ports!' )
-                
-            
-            try:
-                
-                if HydrusPSUtil.psutil.pid_exists( pid ):
-                    
-                    ports = []
-                    
-                    p = HydrusPSUtil.psutil.Process( pid )
-                    
-                    for conn in p.connections():
-                        
-                        if conn.status == 'LISTEN':
-                            
-                            ports.append( int( conn.laddr[1] ) )
-                            
-                        
-                    
-                    return ports
-                    
-                
-            except HydrusPSUtil.psutil.Error:
-                
-                return None
-                
-            
-        
-    
-    return None
-    
-
-def GetSubprocessEnv():
-    
-    if HG.subprocess_report_mode:
-        
-        env = os.environ.copy()
-        
-        ShowText( 'Your unmodified env is: {}'.format( env ) )
-        
-    
-    env = os.environ.copy()
-    
-    if HydrusBoot.ORIGINAL_PATH is not None:
-        
-        env[ 'PATH' ] = HydrusBoot.ORIGINAL_PATH
-        
-    
-    if HC.RUNNING_FROM_FROZEN_BUILD:
-        
-        # let's make a proper env for subprocess that doesn't have pyinstaller woo woo in it
-        
-        changes_made = False
-        
-        orig_swaperoo_strings = [ 'LD_LIBRARY_PATH', 'XDG_DATA_DIRS'  ]
-        ok_to_remove_absent_orig = [ 'LD_LIBRARY_PATH' ]
-        
-        for key in orig_swaperoo_strings:
-            
-            orig_key = '{}_ORIG'.format( key )
-            
-            if orig_key in env:
-                
-                env[ key ] = env[ orig_key ]
-                
-                changes_made = True
-                
-            elif key in env and key in ok_to_remove_absent_orig:
-                
-                del env[ key ]
-                
-                changes_made = True
-                
-            
-        
-        remove_if_hydrus_base_dir = [ 'QT_PLUGIN_PATH', 'QML2_IMPORT_PATH', 'SSL_CERT_FILE' ]
-        hydrus_base_dir = HG.controller.GetDBDir()
-        
-        for key in remove_if_hydrus_base_dir:
-            
-            if key in env and env[ key ].startswith( hydrus_base_dir ):
-                
-                del env[ key ]
-                
-                changes_made = True
-                
-            
-        
-        if ( HC.PLATFORM_LINUX or HC.PLATFORM_MACOS ):
-            
-            if 'PATH' in env:
-                
-                # fix for pyinstaller, which drops this stuff for some reason and hence breaks ffmpeg
-                
-                path = env[ 'PATH' ]
-                
-                path_locations = set( path.split( ':' ) )
-                desired_path_locations = [ '/usr/bin', '/usr/local/bin' ]
-                
-                for desired_path_location in desired_path_locations:
-                    
-                    if desired_path_location not in path_locations:
-                        
-                        path = desired_path_location + ':' + path
-                        
-                        env[ 'PATH' ] = path
-                        
-                        changes_made = True
-                        
-                    
-                
-            
-            if 'XDG_DATA_DIRS' in env:
-                
-                xdg_data_dirs = env[ 'XDG_DATA_DIRS' ]
-                
-                # pyinstaller can just replace this nice usually long str with multiple paths with base_dir/share
-                # absent the _orig above to rescue this, we'll populate with basic
-                if ':' not in xdg_data_dirs and HC.BASE_DIR in xdg_data_dirs:
-                    
-                    xdg_data_dirs = '/usr/local/share:/usr/share'
-                    
-                    changes_made = True
-                    
-                
-            
-        
-        if not changes_made:
-            
-            env = None
-            
-        
-    else:
-        
-        env = None
-        
-    
-    return env
-    
-def GetSubprocessHideTerminalStartupInfo():
-    
-    if HC.PLATFORM_WINDOWS:
-        
-        # This suppresses the terminal window that tends to pop up when calling ffmpeg or whatever
-        
-        startupinfo = subprocess.STARTUPINFO()
-        
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        
-    else:
-        
-        startupinfo = None
-        
-    
-    return startupinfo
-    
-def GetSubprocessKWArgs( hide_terminal = True, text = False ):
-    
-    sbp_kwargs = {}
-    
-    sbp_kwargs[ 'env' ] = GetSubprocessEnv()
-    
-    if text:
-        
-        # probably need to override the stdXXX pipes with i/o encoding wrappers in the case of 3.5 here
-        
-        if sys.version_info.minor >= 6:
-            
-            sbp_kwargs[ 'encoding' ] = 'utf-8'
-            
-        
-        if sys.version_info.minor >= 7:
-            
-            sbp_kwargs[ 'text' ] = True
-            
-        else:
-            
-            sbp_kwargs[ 'universal_newlines' ] = True
-            
-        
-    
-    if hide_terminal:
-        
-        sbp_kwargs[ 'startupinfo' ] = GetSubprocessHideTerminalStartupInfo()
-        
-    
-    if HG.subprocess_report_mode:
-        
-        message = 'KWargs are: {}'.format( sbp_kwargs )
-        
-        ShowText( message )
-        
-    
-    return sbp_kwargs
-    
-
 def GetTypeName( obj_type ):
     
     if hasattr( obj_type, '__name__' ):
@@ -593,6 +267,7 @@ def GetTypeName( obj_type ):
         return repr( obj_type )
         
     
+
 def GenerateHumanTextSortKey():
     """Solves the 19, 20, 200, 21, 22 issue when sorting 'Page 21.jpg' type strings.
     Breaks the string into groups of text and int (i.e. ( "Page ", 21, ".jpg" ) )."""
@@ -610,126 +285,7 @@ def HumanTextSort( texts ):
     
     texts.sort( key = HumanTextSortKey ) 
     
-def IntelligentMassIntersect( sets_to_reduce ):
-    
-    answer = None
-    
-    for set_to_reduce in sets_to_reduce:
-        
-        if len( set_to_reduce ) == 0:
-            
-            return set()
-            
-        
-        if answer is None:
-            
-            answer = set( set_to_reduce )
-            
-        else:
-            
-            if len( answer ) == 0:
-                
-                return set()
-                
-            else:
-                
-                answer.intersection_update( set_to_reduce )
-                
-            
-        
-    
-    if answer is None:
-        
-        return set()
-        
-    else:
-        
-        return answer
-        
-    
 
-def IsAListLikeCollection( obj ):
-    
-    # protip: don't do isinstance( possible_list, collections.abc.Collection ) for a 'list' detection--strings pass it (and sometimes with infinite recursion) lol!
-    return isinstance( obj, ( tuple, list, set, frozenset ) )
-    
-
-def IsAlreadyRunning( db_path, instance ):
-    
-    if not HydrusPSUtil.PSUTIL_OK:
-        
-        Print( 'psutil is not available, so cannot do the "already running?" check!' )
-        
-        return False
-        
-    
-    path = os.path.join( db_path, instance + '_running' )
-    
-    if os.path.exists( path ):
-        
-        try:
-            
-            with open( path, 'r', encoding = 'utf-8' ) as f:
-                
-                file_text = f.read()
-                
-                try:
-                    
-                    ( pid, create_time ) = HydrusText.DeserialiseNewlinedTexts( file_text )
-                    
-                    pid = int( pid )
-                    create_time = float( create_time )
-                    
-                except ValueError:
-                    
-                    return False
-                    
-                
-                try:
-                    
-                    me = HydrusPSUtil.psutil.Process()
-                    
-                    if me.pid == pid and me.create_time() == create_time:
-                        
-                        # this is me! there is no conflict, lol!
-                        # this happens when a linux process restarts with os.execl(), for instance (unlike Windows, it keeps its pid)
-                        
-                        return False
-                        
-                    
-                    if HydrusPSUtil.psutil.pid_exists( pid ):
-                        
-                        p = HydrusPSUtil.psutil.Process( pid )
-                        
-                        if p.create_time() == create_time and p.is_running():
-                            
-                            return True
-                            
-                        
-                    
-                except HydrusPSUtil.psutil.Error:
-                    
-                    return False
-                    
-                
-            
-        except UnicodeDecodeError:
-            
-            Print( 'The already-running file was incomprehensible!' )
-            
-            return False
-            
-        except Exception as e:
-            
-            Print( 'Problem loading the already-running file:' )
-            PrintException( e )
-            
-            return False
-            
-        
-    
-    return False
-    
 def IterateHexPrefixes():
     
     hex_chars = '0123456789abcdef'
@@ -765,26 +321,6 @@ def LastShutdownWasBad( db_path, instance ):
         return False
         
 
-def MassExtend( iterables ):
-    
-    return [ item for item in itertools.chain.from_iterable( iterables ) ]
-    
-
-def MassUnion( iterables ):
-    
-    return { item for item in itertools.chain.from_iterable( iterables ) }
-    
-
-def MedianPop( population ):
-    
-    # assume it has at least one and comes sorted
-    
-    median_index = len( population ) // 2
-    
-    row = population.pop( median_index )
-    
-    return row
-    
 def MergeKeyToListDicts( key_to_list_dicts ):
     
     result = collections.defaultdict( list )
@@ -802,50 +338,12 @@ def PartitionIterator( pred: typing.Callable[ [ object ], bool ], stream: typing
     
     return ( itertools.filterfalse( pred, t1 ), filter( pred, t2 ) )
     
+
 def PartitionIteratorIntoLists( pred: typing.Callable[ [ object ], bool ], stream: typing.Iterable[ object ] ):
     
     ( a, b ) = PartitionIterator( pred, stream )
     
     return ( list( a ), list( b ) )
-    
-def ParseHashesFromRawHexText( hash_type, hex_hashes_raw ):
-    
-    hash_type_to_hex_length = {
-        'md5' : 32,
-        'sha1' : 40,
-        'sha256' : 64,
-        'sha512' : 128,
-        'pixel' : 64,
-        'perceptual' : 16
-    }
-    
-    hex_hashes = HydrusText.DeserialiseNewlinedTexts( hex_hashes_raw )
-    
-    # convert md5:abcd to abcd
-    hex_hashes = [ hex_hash.split( ':' )[-1] for hex_hash in hex_hashes ]
-    
-    hex_hashes = [ HydrusText.HexFilter( hex_hash ) for hex_hash in hex_hashes ]
-    
-    expected_hex_length = hash_type_to_hex_length[ hash_type ]
-    
-    bad_hex_hashes = [ hex_hash for hex_hash in hex_hashes if len( hex_hash ) != expected_hex_length ]
-    
-    if len( bad_hex_hashes ):
-        
-        m = 'Sorry, {} hashes should have {} hex characters! These did not:'.format( hash_type, expected_hex_length )
-        m += '\n' * 2
-        m += '\n'.join( ( '{} ({} characters)'.format( bad_hex_hash, len( bad_hex_hash ) ) for bad_hex_hash in bad_hex_hashes ) )
-        
-        raise Exception( m )
-        
-    
-    hex_hashes = [ hex_hash for hex_hash in hex_hashes if len( hex_hash ) % 2 == 0 ]
-    
-    hex_hashes = DedupeList( hex_hashes )
-    
-    hashes = tuple( [ bytes.fromhex( hex_hash ) for hex_hash in hex_hashes ] )
-    
-    return hashes
     
 
 def Print( text ):
@@ -859,6 +357,7 @@ def Print( text ):
         print( repr( text ) )
         
     
+
 ShowText = Print
 
 def PrintException( e, do_wait = True ):
@@ -931,66 +430,6 @@ def RandomPop( population ):
     return row
     
 
-def RecordRunningStart( db_path, instance ):
-    
-    if not HydrusPSUtil.PSUTIL_OK:
-        
-        return
-        
-    
-    path = os.path.join( db_path, instance + '_running' )
-    
-    record_string = ''
-    
-    try:
-        
-        me = HydrusPSUtil.psutil.Process()
-        
-        record_string += str( me.pid )
-        record_string += '\n'
-        record_string += str( me.create_time() )
-        
-    except HydrusPSUtil.psutil.Error:
-        
-        return
-        
-    
-    with open( path, 'w', encoding = 'utf-8' ) as f:
-        
-        f.write( record_string )
-        
-    
-
-def RestartProcess():
-    
-    time.sleep( 1 ) # time for ports to unmap
-    
-    # note argv is unreliable in weird script-launching situations, but there we go
-    exe = sys.executable
-    me = sys.argv[0]
-    
-    if HC.RUNNING_FROM_SOURCE:
-        
-        # exe is python's exe, me is the script
-        
-        args = [ exe ] + sys.argv
-        
-    else:
-        
-        # we are running a frozen release--both exe and me are the built exe
-        
-        # wrap it in quotes because pyinstaller passes it on as raw text, breaking any path with spaces :/
-        if not me.startswith( '"' ):
-            
-            me = '"{}"'.format( me )
-            
-        
-        args = [ me ] + sys.argv[1:]
-        
-    
-    os.execv( exe, args )
-    
-
 def SampleSetByGettingFirst( s: set, n ):
     
     # sampling from a big set can be slow, so if we don't care about super random, let's just rip off the front and let __hash__ be our random
@@ -1016,27 +455,7 @@ def SampleSetByGettingFirst( s: set, n ):
     
     return sample
     
-def SetsIntersect( a, b ):
-    
-    # not a.isdisjoint( b )
-    
-    if not isinstance( a, set ):
-        
-        a = set( a )
-        
-    
-    if not isinstance( b, set ):
-        
-        b = set( b )
-        
-    
-    if len( a ) > len( b ):
-        
-        ( a, b ) = ( b, a )
-        
-    
-    return True in ( i in b for i in a )
-    
+
 def SmoothOutMappingIterator( xs, n ):
     
     # de-spikifies mappings, so if there is ( tag, 20k files ), it breaks that up into manageable chunks
@@ -1052,10 +471,12 @@ def SmoothOutMappingIterator( xs, n ):
             
         
     
+
 def SplayListForDB( xs ):
     
     return '(' + ','.join( ( str( x ) for x in xs ) ) + ')'
     
+
 def SplitIteratorIntoChunks( iterator, n ):
     
     chunk = []
@@ -1247,102 +668,5 @@ class Call( object ):
     def SetLabel( self, label: str ):
         
         self._label = label
-        
-    
-
-class JobDatabase( object ):
-    
-    def __init__( self, job_type, synchronous, action, *args, **kwargs ):
-        
-        self._type = job_type
-        self._synchronous = synchronous
-        self._action = action
-        self._args = args
-        self._kwargs = kwargs
-        
-        self._result_ready = threading.Event()
-        
-    
-    def __str__( self ):
-        
-        return 'DB Job: {}'.format( self.ToString() )
-        
-    
-    def _DoDelayedResultRelief( self ):
-        
-        pass
-        
-    
-    def GetCallableTuple( self ):
-        
-        return ( self._action, self._args, self._kwargs )
-        
-    
-    def GetResult( self ):
-        
-        time.sleep( 0.00001 ) # this one neat trick can save hassle on superquick jobs as event.wait can be laggy
-        
-        while True:
-            
-            result_was_ready = self._result_ready.wait( 2 )
-            
-            if result_was_ready:
-                
-                break
-                
-            
-            if HG.model_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
-                
-            
-            self._DoDelayedResultRelief()
-            
-        
-        if isinstance( self._result, Exception ):
-            
-            e = self._result
-            
-            raise e
-            
-        else:
-            
-            return self._result
-            
-        
-    
-    def GetType( self ):
-        
-        return self._type
-        
-    
-    def IsSynchronous( self ):
-        
-        return self._synchronous
-        
-    
-    def PutResult( self, result ):
-        
-        self._result = result
-        
-        self._result_ready.set()
-        
-    
-    def ToString( self ):
-        
-        return '{} {}'.format( self._type, self._action )
-        
-    
-class ServiceUpdate( object ):
-    
-    def __init__( self, action, row = None ):
-        
-        self._action = action
-        self._row = row
-        
-    
-    def ToTuple( self ):
-        
-        return ( self._action, self._row )
         
     

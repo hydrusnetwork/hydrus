@@ -8,6 +8,7 @@ from hydrus.core import HydrusLists
 from hydrus.core import HydrusThreading
 
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientServices
 from hydrus.client.media import ClientMediaResult
 from hydrus.client.metadata import ClientContentUpdates
 from hydrus.client.metadata import ClientTags
@@ -214,7 +215,7 @@ class MediaResultCache( object ):
             
         
     
-    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates: typing.Dict[ bytes, typing.Collection[ ClientServices.ServiceUpdate ] ] ):
         
         with self._lock:
             

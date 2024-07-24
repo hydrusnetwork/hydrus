@@ -1632,7 +1632,7 @@ class ChildrenTab( ListBoxTagsPredicatesAC ):
                     
                     new_tags_to_child_tags = CG.client_controller.Read( 'tag_descendants_lookup', tag_service_key, uncached_context_tags )
                     
-                    new_child_tags = HydrusData.MassUnion( new_tags_to_child_tags.values() )
+                    new_child_tags = HydrusLists.MassUnion( new_tags_to_child_tags.values() )
                     
                     child_predicates = CG.client_controller.Read(
                         'tag_predicates',

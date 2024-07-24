@@ -12,6 +12,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusTime
@@ -24,6 +25,7 @@ from hydrus.client import ClientFiles
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
 from hydrus.client import ClientPaths
+from hydrus.client import ClientServices
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIDialogs
@@ -2489,11 +2491,11 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             
         
     
-    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates: typing.Dict[ bytes, typing.Collection[ ClientServices.ServiceUpdate ] ] ):
         
         ClientMedia.ListeningMediaList.ProcessServiceUpdates( self, service_keys_to_service_updates )
         
-        for ( service_key, service_updates ) in list(service_keys_to_service_updates.items()):
+        for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
             for service_update in service_updates:
                 
@@ -3811,7 +3813,7 @@ class MediaPanelThumbnails( MediaPanel ):
         selection_has_archive = True in ( media.HasArchive() and media.GetLocationsManager().IsLocal() for media in self._selected_media )
         selection_has_deletion_record = True in ( CC.COMBINED_LOCAL_FILE_SERVICE_KEY in locations_manager.GetDeleted() for locations_manager in selected_locations_managers )
         
-        all_file_domains = HydrusData.MassUnion( locations_manager.GetCurrent() for locations_manager in all_locations_managers )
+        all_file_domains = HydrusLists.MassUnion( locations_manager.GetCurrent() for locations_manager in all_locations_managers )
         all_specific_file_domains = all_file_domains.difference( { CC.COMBINED_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_FILE_SERVICE_KEY } )
         
         some_downloading = True in ( locations_manager.IsDownloading() for locations_manager in selected_locations_managers )
@@ -3915,15 +3917,15 @@ class MediaPanelThumbnails( MediaPanel ):
             groups_of_petitioned_remote_service_keys = [ locations_manager.GetPetitioned().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
             groups_of_deleted_remote_service_keys = [ locations_manager.GetDeleted().intersection( remote_service_keys ) for locations_manager in selected_locations_managers ]
             
-            current_remote_service_keys = HydrusData.MassUnion( groups_of_current_remote_service_keys )
-            pending_remote_service_keys = HydrusData.MassUnion( groups_of_pending_remote_service_keys )
-            petitioned_remote_service_keys = HydrusData.MassUnion( groups_of_petitioned_remote_service_keys )
-            deleted_remote_service_keys = HydrusData.MassUnion( groups_of_deleted_remote_service_keys )
+            current_remote_service_keys = HydrusLists.MassUnion( groups_of_current_remote_service_keys )
+            pending_remote_service_keys = HydrusLists.MassUnion( groups_of_pending_remote_service_keys )
+            petitioned_remote_service_keys = HydrusLists.MassUnion( groups_of_petitioned_remote_service_keys )
+            deleted_remote_service_keys = HydrusLists.MassUnion( groups_of_deleted_remote_service_keys )
             
-            common_current_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_current_remote_service_keys )
-            common_pending_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_pending_remote_service_keys )
-            common_petitioned_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_petitioned_remote_service_keys )
-            common_deleted_remote_service_keys = HydrusData.IntelligentMassIntersect( groups_of_deleted_remote_service_keys )
+            common_current_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_current_remote_service_keys )
+            common_pending_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_pending_remote_service_keys )
+            common_petitioned_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_petitioned_remote_service_keys )
+            common_deleted_remote_service_keys = HydrusLists.IntelligentMassIntersect( groups_of_deleted_remote_service_keys )
             
             disparate_current_remote_service_keys = current_remote_service_keys - common_current_remote_service_keys
             disparate_pending_remote_service_keys = pending_remote_service_keys - common_pending_remote_service_keys

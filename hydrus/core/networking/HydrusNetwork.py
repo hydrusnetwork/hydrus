@@ -2100,7 +2100,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             
             for ( update_index, ( update_hashes, begin, end ) ) in sorted( self._metadata.items() ):
                 
-                if HydrusData.SetsIntersect( hashes, update_hashes ):
+                if HydrusLists.SetsIntersect( hashes, update_hashes ):
                     
                     return end
                     

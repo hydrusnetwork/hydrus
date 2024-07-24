@@ -778,13 +778,13 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             page_parent = self._notebook
             
         
+        first_editable_pred_panel = None
+        
         for ( i, ( page_name, recent_predicate_types, static_pred_buttons, editable_pred_panels ) ) in enumerate( pages ):
             
             page_panel = QW.QWidget( page_parent )
             
             page_vbox = QP.VBoxLayout()
-            
-            recent_predicates = []
             
             all_static_preds = set()
             
@@ -829,6 +829,11 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             for panel in editable_pred_panels:
                 
+                if first_editable_pred_panel is None:
+                    
+                    first_editable_pred_panel = panel
+                    
+                
                 if isinstance( panel, self._PredOKPanel ) and isinstance( panel.GetPredicatePanel(), ClientGUIPredicatesSingle.PanelPredicateSystemMime ):
                     
                     flags = CC.FLAGS_EXPAND_BOTH_WAYS
@@ -853,6 +858,10 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             if i == 0 and len( static_pred_buttons ) > 0 and len( editable_pred_panels ) == 0:
                 
                 ClientGUIFunctions.SetFocusLater( static_pred_buttons[0] )
+                
+            elif first_editable_pred_panel is not None:
+                
+                ClientGUIFunctions.SetFocusLater( first_editable_pred_panel )
                 
             
             if len( pages ) > 1:
@@ -932,7 +941,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
             
             self.setLayout( hbox )
             
-            ClientGUIFunctions.SetFocusLater( self._ok )
+            self.setFocusProxy( self._ok )
             
         
         def _DefaultsMenu( self ):

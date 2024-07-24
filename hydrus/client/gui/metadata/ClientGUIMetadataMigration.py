@@ -208,7 +208,7 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._test_notebook.addTab( list_ctrl, 'init' )
                 
             
-            page_name = HydrusText.ElideText( HydrusNumbers.ConvertIndexToPrettyOrdinalString( i ), 14 )
+            page_name = HydrusText.ElideText( HydrusNumbers.IndexToPrettyOrdinalString( i ), 14 )
             
             self._test_notebook.setTabText( i, page_name )
             

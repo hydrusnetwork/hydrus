@@ -12,6 +12,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
@@ -395,8 +396,14 @@ class EditClientServicePanel( ClientGUIScrolledPanels.EditPanel ):
         
         hta_path = HydrusPaths.ConvertPortablePathToAbsPath( portable_hta_path )
         
-        if len( namespaces ) == 0: name_to_display = hta_path
-        else: name_to_display = hta_path + ' (' + ', '.join( HydrusData.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
+        if len( namespaces ) == 0:
+            
+            name_to_display = hta_path
+            
+        else:
+            
+            name_to_display = hta_path + ' (' + ', '.join( HydrusTags.ConvertUglyNamespacesToPrettyStrings( namespaces ) ) + ')'
+            
         
         return name_to_display
         
@@ -1769,7 +1776,7 @@ class ReviewServicePanel( QW.QWidget ):
             
             update_speed_string = ''
             
-            content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
+            content_update_index_string = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
             
             job_status.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
             
@@ -1786,7 +1793,7 @@ class ReviewServicePanel( QW.QWidget ):
                     return
                     
                 
-                content_update_index_string = 'content row ' + HydrusData.ConvertValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
+                content_update_index_string = 'content row ' + HydrusNumbers.ValueRangeToPrettyString( c_u_p_total_weight_processed, c_u_p_num_rows ) + ': '
                 
                 job_status.SetStatusText( content_update_index_string + 'committing' + update_speed_string )
                 
@@ -2941,7 +2948,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                                 
                             finally:
                                 
-                                job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do ) )
                                 job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
                                 
                             
@@ -3359,7 +3366,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 return
                 
             
-            download_text = 'downloaded {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_local_updates, num_updates ) )
+            download_text = 'downloaded {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_local_updates, num_updates ) )
             
             self._download_progress.SetValue( download_text, num_local_updates, num_updates )
             
@@ -3373,7 +3380,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                 processing_work_to_do = True
                 
             
-            definitions_text = 'definitions: {}'.format( HydrusData.ConvertValueRangeToPrettyString( d_value, d_range ) )
+            definitions_text = 'definitions: {}'.format( HydrusNumbers.ValueRangeToPrettyString( d_value, d_range ) )
             
             self._processing_definitions_progress.SetValue( definitions_text, d_value, d_range )
             
@@ -3388,7 +3395,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
                     processing_work_to_do = True
                     
                 
-                content_text = '{}: {}'.format( HC.content_type_string_lookup[ content_type ], HydrusData.ConvertValueRangeToPrettyString( c_value, c_range ) )
+                content_text = '{}: {}'.format( HC.content_type_string_lookup[ content_type ], HydrusNumbers.ValueRangeToPrettyString( c_value, c_range ) )
                 
                 gauge.SetValue( content_text, c_value, c_range )
                 

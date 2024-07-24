@@ -104,7 +104,7 @@ class CheckBoxLineEdit( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, label ):
+    def __init__( self, parent, placeholder_text ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -113,12 +113,13 @@ class CheckBoxLineEdit( QW.QWidget ):
         self._lineedit = QW.QLineEdit( self )
         self._lineedit.setMinimumWidth( 100 )
         
+        self._lineedit.setPlaceholderText( placeholder_text )
+        
         self._checkbox.clicked.connect( self.valueChanged )
         self._lineedit.textEdited.connect( self._LineEditChanged )
         
         hbox = QP.HBoxLayout()
         
-        QP.AddToLayout( hbox, ClientGUICommon.BetterStaticText( self, label ), CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( hbox, self._lineedit, CC.FLAGS_EXPAND_BOTH_WAYS )
         
@@ -343,7 +344,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._quick_namespaces_list.columnListContentsChanged.connect( self.tagsChanged )
             
-            self._regex_input.userHitEnter.connect( self.AddRegex )
+            self._regex_input.SetEnterCallable( self.AddRegex )
             
         
         def _ConvertQuickRegexDataToListCtrlTuples( self, data ):
@@ -534,7 +535,11 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             self._checkboxes_panel = ClientGUICommon.StaticBox( self, 'misc' )
             
-            self._filename_namespace = CheckBoxLineEdit( self._checkboxes_panel, 'add filename? [namespace]' )
+            rows = []
+            
+            self._filename_namespace = CheckBoxLineEdit( self._checkboxes_panel, 'namespace' )
+            
+            rows.append( ( 'add filename?', self._filename_namespace ) )
             
             # TODO: Ok, when we move to arbitrary string processing from filenames, and we scrub this, we will want 'easy-add rule' buttons to do this
             # When we do, add a thing that adds the nth, including negative n index values. as some users want four deep
@@ -553,10 +558,14 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             for ( index, phrase ) in directory_items:
                 
-                widget = CheckBoxLineEdit( self._checkboxes_panel, f'add {phrase} directory? [namespace]' )
+                widget = CheckBoxLineEdit( self._checkboxes_panel, 'namespace' )
+                
+                rows.append( ( f'add {phrase} directory?', widget ) )
                 
                 self._directory_namespace_controls[ index ] = widget
                 
+            
+            filename_gridbox = ClientGUICommon.WrapInGrid( self, rows )
             
             #
             
@@ -589,14 +598,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             self._single_tags_panel.Add( self._tag_autocomplete_selection, CC.FLAGS_EXPAND_PERPENDICULAR )
             self._single_tags_panel.Add( self._single_tags_paste_button, CC.FLAGS_EXPAND_PERPENDICULAR )
             
-            self._checkboxes_panel.Add( self._filename_namespace, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-            
-            for index in ( 0, 1, 2, -3, -2, -1 ):
-                
-                widget = self._directory_namespace_controls[ index ]
-                
-                self._checkboxes_panel.Add( widget, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-                
+            self._checkboxes_panel.Add( filename_gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self._checkboxes_panel.Add( QW.QWidget( self._checkboxes_panel ), CC.FLAGS_EXPAND_BOTH_WAYS )
             

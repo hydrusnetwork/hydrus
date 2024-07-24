@@ -6,6 +6,7 @@ from qtpy import QtGui as QG
 
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
+from hydrus.core import HydrusLists
 
 from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
@@ -48,7 +49,7 @@ def WrapInGrid( parent, rows, expand_text = False, add_stretch_at_end = True, ex
     
     for row in rows:
         
-        if HydrusData.IsAListLikeCollection( row ) and len( row ) == 2:
+        if HydrusLists.IsAListLikeCollection( row ) and len( row ) == 2:
             
             ( text, control ) = row
             

@@ -2,9 +2,8 @@ import collections
 import sqlite3
 import typing
 
-from hydrus.core import HydrusData
 from hydrus.core import HydrusDB
-from hydrus.core import HydrusTime
+from hydrus.core import HydrusNumbers
 
 from hydrus.client.db import ClientDBMappingsCacheCombinedFilesDisplay
 from hydrus.client.db import ClientDBMappingsCounts
@@ -119,7 +118,7 @@ class ClientDBMappingsCacheCombinedFilesStorage( ClientDBModule.ClientDBModule )
             
             if i % 100 == 0 and status_hook is not None:
                 
-                message = 'regenerating pending tags {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                message = 'regenerating pending tags {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do ) )
                 
                 status_hook( message )
                 

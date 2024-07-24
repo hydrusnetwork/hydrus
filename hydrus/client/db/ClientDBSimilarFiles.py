@@ -7,6 +7,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusDBBase
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusTime
 
@@ -162,7 +163,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         while len( process_queue ) > 0:
             
-            job_status.SetStatusText( 'generating new branch -- ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ), 2 )
+            job_status.SetStatusText( 'generating new branch -- ' + HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ), 2 )
             
             ( parent_id, perceptual_hash_id, perceptual_hash, children ) = process_queue.popleft()
             
@@ -204,7 +205,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 inner_population = len( inner_children )
                 outer_population = len( outer_children )
                 
-                ( inner_id, inner_perceptual_hash ) = self._PopBestRootNode( inner_children ) #HydrusData.MedianPop( inner_children )
+                ( inner_id, inner_perceptual_hash ) = self._PopBestRootNode( inner_children ) #HydrusLists.MedianPop( inner_children )
                 
                 if len( outer_children ) == 0:
                     
@@ -212,7 +213,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                     
                 else:
                     
-                    ( outer_id, outer_perceptual_hash ) = self._PopBestRootNode( outer_children ) #HydrusData.MedianPop( outer_children )
+                    ( outer_id, outer_perceptual_hash ) = self._PopBestRootNode( outer_children ) #HydrusLists.MedianPop( outer_children )
                     
                 
             
@@ -709,7 +710,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                 
                 num_done = num_to_do - len( rebalance_perceptual_hash_ids )
                 
-                text = 'rebalancing similar file metadata - ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+                text = 'rebalancing similar file metadata - ' + HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )
                 
                 CG.client_controller.frame_splash_status.SetSubtext( text )
                 job_status.SetStatusText( text )

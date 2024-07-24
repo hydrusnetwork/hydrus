@@ -674,6 +674,7 @@ class Page( QW.QWidget ):
         d[ 'page_key' ] = self._page_key.hex()
         d[ 'page_state' ] = self.GetPageState()
         d[ 'page_type' ] = self._management_controller.GetType()
+        d[ 'is_media_page' ] = True
         
         management_info = self._management_controller.GetAPIInfoDict( simple )
         
@@ -747,7 +748,7 @@ class Page( QW.QWidget ):
         
         if num_value != num_range:
             
-            name_for_menu = '{} - {}'.format( name_for_menu, HydrusData.ConvertValueRangeToPrettyString( num_value, num_range ) )
+            name_for_menu = '{} - {}'.format( name_for_menu, HydrusNumbers.ValueRangeToPrettyString( num_value, num_range ) )
             
         
         return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
@@ -847,6 +848,7 @@ class Page( QW.QWidget ):
         root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_state' ] = self.GetPageState()
         root[ 'page_type' ] = self._management_controller.GetType()
+        root[ 'is_media_page' ] = True
         root[ 'selected' ] = is_selected
         
         return root
@@ -1078,7 +1080,7 @@ class Page( QW.QWidget ):
                 
                 initial_media_results.extend( more_media_results )
                 
-                status = f'Loading initial files{HC.UNICODE_ELLIPSIS} {HydrusData.ConvertValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )}'
+                status = f'Loading initial files{HC.UNICODE_ELLIPSIS} {HydrusNumbers.ValueRangeToPrettyString( len( initial_media_results ), len( initial_hashes ) )}'
                 
                 controller.CallAfterQtSafe( self, 'setting status bar loading string', qt_code_status, status )
                 
@@ -1645,7 +1647,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
                     num_string += ', '
                     
                 
-                num_string += HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
+                num_string += HydrusNumbers.ValueRangeToPrettyString( num_value, num_range )
                 
             
         
@@ -2338,7 +2340,8 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             'name' : self.GetName(),
             'page_key' : self._page_key.hex(),
             'page_state' : self.GetPageState(),
-            'page_type' : ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES
+            'page_type' : ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES,
+            'is_media_page' : False
         }
         
     
@@ -2388,7 +2391,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if num_value != num_range:
             
-            name_for_menu = '{} - {}'.format( name_for_menu, HydrusData.ConvertValueRangeToPrettyString( num_value, num_range ) )
+            name_for_menu = '{} - {}'.format( name_for_menu, HydrusNumbers.ValueRangeToPrettyString( num_value, num_range ) )
             
         
         return HydrusText.ElideText( name_for_menu, 32, elide_center = True )
@@ -2606,7 +2609,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         
         if num_range > 0 and num_value != num_range:
             
-            num_string += ', ' + HydrusData.ConvertValueRangeToPrettyString( num_value, num_range )
+            num_string += ', ' + HydrusNumbers.ValueRangeToPrettyString( num_value, num_range )
             
         
         return HydrusNumbers.ToHumanInt( self.count() ) + ' pages, ' + num_string + ' files'
@@ -2656,6 +2659,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         root[ 'page_key' ] = self._page_key.hex()
         root[ 'page_state' ] = self.GetPageState()
         root[ 'page_type' ] = ClientGUIManagementController.MANAGEMENT_TYPE_PAGE_OF_PAGES
+        root[ 'is_media_page' ] = False
         root[ 'selected' ] = is_selected
         root[ 'pages' ] = my_pages_list
         

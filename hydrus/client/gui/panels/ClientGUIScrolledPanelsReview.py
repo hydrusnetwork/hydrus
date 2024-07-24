@@ -19,8 +19,6 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
-from hydrus.core import HydrusTags
-from hydrus.core import HydrusTagArchive
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -475,7 +473,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         fp = locations_to_file_weights[ base_location ]
         tp = locations_to_thumb_weights[ base_location ]
         
-        p = HydrusData.ConvertFloatToPercentage
+        p = HydrusNumbers.FloatToPercentage
         
         current_bytes = fp * f_space + tp * t_space_max
         
@@ -3137,7 +3135,7 @@ class ReviewLocalFileImports( ClientGUIScrolledPanels.ReviewPanel ):
                 
             else:
                 
-                message = HydrusData.ConvertValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
+                message = HydrusNumbers.ValueRangeToPrettyString( num_good_files, total_paths ) + ' files parsed successfully'
                 
             
             if num_empty_files + num_missing_files + num_unimportable_mime_files + num_occupied_files + num_sidecars > 0:
@@ -3809,7 +3807,7 @@ Vacuuming is an expensive operation. It requires lots of free space on your driv
         
         if sort_total_size > 0:
             
-            pretty_free_size = '{} ({})'.format( pretty_free_size, HydrusData.ConvertFloatToPercentage( sort_free_size / sort_total_size ) )
+            pretty_free_size = '{} ({})'.format( pretty_free_size, HydrusNumbers.FloatToPercentage( sort_free_size / sort_total_size ) )
             
         
         sort_last_vacuumed_ms = vacuum_dict[ 'last_vacuumed_ms' ]

@@ -2196,6 +2196,18 @@ class ListBox( QW.QScrollArea ):
                         ctrl_down = event.modifiers() & QC.Qt.ControlModifier
                         shift_down = event.modifiers() & QC.Qt.ShiftModifier
                         
+                        if ctrl_down:
+                            
+                            logical_index = self._GetLogicalIndexUnderMouse( event )
+                            
+                            if not self._LogicalIndexIsSelected( logical_index ):
+                                
+                                # ok we will assume that the user just deselected with the first ctrl-click, and to fudge the awkward moment, we will sneakily re-select it
+                                
+                                self._Hit( False, True, logical_index )
+                                
+                            
+                        
                         action_occurred = self._Activate( ctrl_down, shift_down )
                         
                         if action_occurred:
@@ -3281,7 +3293,7 @@ class ListBoxTags( ListBox ):
                             ClientGUIMenus.AppendMenuItem( search_menu, 'add an OR of {} to current search'.format( predicates_selection_string ), 'Add the selected predicates as an OR predicate to the current search.', self._ProcessMenuPredicateEvent, 'add_or_predicate' )
                             
                         
-                        some_selected_in_current = HydrusData.SetsIntersect( predicates, current_predicates )
+                        some_selected_in_current = HydrusLists.SetsIntersect( predicates, current_predicates )
                         
                         if some_selected_in_current:
                             

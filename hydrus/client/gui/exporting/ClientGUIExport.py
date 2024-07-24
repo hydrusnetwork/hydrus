@@ -879,7 +879,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 try:
                     
-                    x_of_y = HydrusData.ConvertValueRangeToPrettyString( index + 1, num_to_do )
+                    x_of_y = HydrusNumbers.ValueRangeToPrettyString( index + 1, num_to_do )
                     
                     job_status.SetStatusText( 'Done {}'.format( x_of_y ) )
                     job_status.SetVariable( 'popup_gauge_1', ( index + 1, num_to_do ) )

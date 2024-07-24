@@ -422,7 +422,7 @@ class RelatedTagsPanel( QW.QWidget ):
                     
                 else:
                     
-                    num_done_s = '{} {} searched fully in '.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ), tags_s )
+                    num_done_s = '{} {} searched fully in '.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ), tags_s )
                     
                 
                 label = '{}{}.'.format( num_done_s, HydrusTime.TimeDeltaToPrettyTimeDelta( total_time_took ) )

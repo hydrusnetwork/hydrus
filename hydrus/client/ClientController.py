@@ -17,6 +17,7 @@ from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
+from hydrus.core import HydrusProcess
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusThreading
@@ -436,8 +437,8 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
                 
                 job_status.SetErrorException( e )
                 
-                HydrusData.Print( 'CallBlockingToQt just caught this error:' )
-                HydrusData.DebugPrint( traceback.format_exc() )
+                #HydrusData.Print( 'CallBlockingToQt just caught this error:' )
+                #HydrusData.DebugPrint( traceback.format_exc() )
                 
             finally:
                 
@@ -557,7 +558,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
     
     def CheckAlreadyRunning( self ):
         
-        while HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
+        while HydrusProcess.IsAlreadyRunning( self.db_dir, 'client' ):
             
             self.frame_splash_status.SetText( 'client already running' )
             
@@ -581,7 +582,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             for i in range( 10, 0, -1 ):
                 
-                if not HydrusData.IsAlreadyRunning( self.db_dir, 'client' ):
+                if not HydrusProcess.IsAlreadyRunning( self.db_dir, 'client' ):
                     
                     break
                     

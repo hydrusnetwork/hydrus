@@ -4584,6 +4584,35 @@ class TestClientAPI( unittest.TestCase ):
                 
             
         
+        # remove potentials
+        
+        HG.test_controller.ClearWrites( 'remove_potential_pairs' )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/manage_file_relationships/remove_potentials'
+        
+        test_hashes = [
+            "b54d09218e0d6efc964b78b070620a1fa19c7e069672b4c6313cee2c9b0623f2",
+            "bbaa9876dab238dcf5799bfd8319ed0bab805e844f45cf0de33f40697b11a845"
+        ]
+        
+        request_dict = { 'hashes' : test_hashes }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', path, body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetWrite( 'remove_potential_pairs' )
+        
+        self.assertEqual( set( args[0] ), { bytes.fromhex( h ) for h in test_hashes } )
+        
         # set kings
         
         HG.test_controller.ClearWrites( 'duplicate_set_king' )
@@ -4693,6 +4722,185 @@ class TestClientAPI( unittest.TestCase ):
         expected_result = [ ( ( page_key, ), {} ) ]
         
         self.assertEqual( result, expected_result )
+        
+    
+    def _test_manage_services( self, connection, set_up_permissions ):
+        
+        # this stuff is super dependent on the db requests, which aren't tested in this class, but we can do the arg parsing and wrapper
+        
+        api_permissions = set_up_permissions[ 'everything' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        default_location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
+        
+        # get pending counts
+        
+        db_response = {
+            bytes.fromhex( 'ae91919b0ea95c9e636f877f57a69728403b65098238c1a121e5ebf85df3b87e' ) :  {
+                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS : 11564,
+                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS : 5,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS : 2,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS : 0,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS : 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS : 0
+            },
+            bytes.fromhex( '3902aabc3c4c89d1b821eaa9c011be3047424fd2f0c086346e84794e08e136b0' ) :  {
+                HC.SERVICE_INFO_NUM_PENDING_MAPPINGS : 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_MAPPINGS : 0,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_SIBLINGS : 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_SIBLINGS : 0,
+                HC.SERVICE_INFO_NUM_PENDING_TAG_PARENTS : 0,
+                HC.SERVICE_INFO_NUM_PETITIONED_TAG_PARENTS : 0
+            },
+            bytes.fromhex( 'e06e1ae35e692d9fe2b83cde1510a11ecf495f51910d580681cd60e6f21fde73' ) : {
+                HC.SERVICE_INFO_NUM_PENDING_FILES : 2,
+                HC.SERVICE_INFO_NUM_PETITIONED_FILES : 0
+            }
+        }
+        
+        expected_response = {
+            "pending_counts" : {
+                "ae91919b0ea95c9e636f877f57a69728403b65098238c1a121e5ebf85df3b87e" :  {
+                    "pending_tag_mappings" : 11564,
+                    "petitioned_tag_mappings" : 5,
+                    "pending_tag_siblings" : 2,
+                    "petitioned_tag_siblings" : 0,
+                    "pending_tag_parents" : 0,
+                    "petitioned_tag_parents" : 0
+                },
+                "3902aabc3c4c89d1b821eaa9c011be3047424fd2f0c086346e84794e08e136b0" :  {
+                    "pending_tag_mappings" : 0,
+                    "petitioned_tag_mappings" : 0,
+                    "pending_tag_siblings" : 0,
+                    "petitioned_tag_siblings" : 0,
+                    "pending_tag_parents" : 0,
+                    "petitioned_tag_parents" : 0
+                },
+                "e06e1ae35e692d9fe2b83cde1510a11ecf495f51910d580681cd60e6f21fde73" : {
+                    "pending_files" : 2,
+                    "petitioned_files" : 0
+                }
+            }
+        }
+        
+        HG.test_controller.SetRead( 'nums_pending', db_response )
+        
+        path = '/manage_services/get_pending_counts'
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        self.assertEqual( d[ 'pending_counts' ], expected_response[ 'pending_counts' ] )
+        
+        #
+        
+        is_already_running = False
+        is_big_problem = False
+        magic_results_dict = {}
+        
+        def IsCurrentlyUploadingPending( *args ):
+            
+            magic_results_dict[ 'a' ] = True
+            
+            return is_already_running
+            
+        
+        CG.client_controller.IsCurrentlyUploadingPending = IsCurrentlyUploadingPending
+        
+        def UploadPending( *args ):
+            
+            magic_results_dict[ 'b' ] = True
+            
+            return not is_big_problem
+            
+        
+        CG.client_controller.UploadPending = UploadPending
+        
+        headers = { 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ], 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_services/commit_pending'
+        
+        body_dict = { 'service_key' : HG.test_controller.example_file_repo_service_key_1.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        self.assertEqual( magic_results_dict, { 'a' : True, 'b' : True } )
+        
+        #
+        
+        is_already_running = True
+        is_big_problem = False
+        magic_results_dict = {}
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 409 )
+        
+        self.assertEqual( magic_results_dict, { 'a' : True } )
+        
+        #
+        
+        is_already_running = False
+        is_big_problem = True
+        magic_results_dict = {}
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 422 )
+        
+        self.assertEqual( magic_results_dict, { 'a' : True, 'b' : True } )
+        
+        #
+        
+        HG.test_controller.ClearWrites( 'delete_pending' )
+        
+        headers = { 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ], 'Hydrus-Client-API-Access-Key' : access_key_hex }
+        
+        path = '/manage_services/forget_pending'
+        
+        body_dict = { 'service_key' : HG.test_controller.example_file_repo_service_key_1.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 200 )
+        
+        [ ( ( service_key, ), kwargs ) ] = HG.test_controller.GetWrite( 'delete_pending' )
+        
+        self.assertEqual( service_key, HG.test_controller.example_file_repo_service_key_1 )
         
     
     def _test_options( self, connection, set_up_permissions ):
@@ -6569,6 +6777,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_add_tags_get_tag_siblings_and_parents( connection, set_up_permissions )
         self._test_add_urls( connection, set_up_permissions )
         self._test_associate_urls( connection, set_up_permissions )
+        self._test_manage_services( connection, set_up_permissions )
         self._test_manage_duplicates( connection, set_up_permissions )
         self._test_manage_cookies( connection, set_up_permissions )
         self._test_manage_headers( connection, set_up_permissions )

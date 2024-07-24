@@ -8,6 +8,7 @@ import traceback
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusProcess
 from hydrus.core import HydrusText
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -88,7 +89,7 @@ def GetExternalIP():
         
         cmd = [ UPNPC_PATH, '-l' ]
         
-        sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
+        sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
         
         HydrusData.CheckProgramIsNotShuttingDown()
         
@@ -150,7 +151,7 @@ def AddUPnPMapping( internal_client, internal_port, external_port, protocol, des
     
     cmd = [ UPNPC_PATH, '-e', description, '-a', internal_client, str( internal_port ), str( external_port ), protocol, str( duration ) ]
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
+    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
@@ -214,7 +215,7 @@ def GetUPnPMappings():
     
     cmd = [ UPNPC_PATH, '-l' ]
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
+    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
     
     HydrusData.CheckProgramIsNotShuttingDown()
     
@@ -328,7 +329,7 @@ def RemoveUPnPMapping( external_port, protocol ):
     
     cmd = [ UPNPC_PATH, '-d', str( external_port ), protocol ]
     
-    sbp_kwargs = HydrusData.GetSubprocessKWArgs( text = True )
+    sbp_kwargs = HydrusProcess.GetSubprocessKWArgs( text = True )
     
     HydrusData.CheckProgramIsNotShuttingDown()
     

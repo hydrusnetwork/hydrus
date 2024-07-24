@@ -269,7 +269,7 @@ class QuickDownloadManager( object ):
             
             total_done = total_hashes_in_this_run - len( hashes_still_to_download_in_this_run )
             
-            job_status.SetStatusText( 'downloading files from remote services: {}'.format( HydrusData.ConvertValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
+            job_status.SetStatusText( 'downloading files from remote services: {}'.format( HydrusNumbers.ValueRangeToPrettyString( total_done, total_hashes_in_this_run ) ) )
             job_status.SetVariable( 'popup_gauge_1', ( total_done, total_hashes_in_this_run ) )
             
             try:

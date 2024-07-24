@@ -272,7 +272,7 @@ class BandwidthRules( HydrusSerialisable.SerialisableBase ):
                     
                 elif bandwidth_type == HC.BANDWIDTH_TYPE_REQUESTS:
                     
-                    s += HydrusData.ConvertValueRangeToPrettyString( usage, max_allowed ) + ' requests'
+                    s += HydrusNumbers.ValueRangeToPrettyString( usage, max_allowed ) + ' requests'
                     
                 
                 if time_delta is None:

@@ -513,7 +513,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         for ( i, block_of_hash_ids ) in enumerate( HydrusLists.SplitListIntoChunks( query_hash_ids, 256 ) ):
             
-            job_status.SetStatusText( 'searching: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * CHUNK_SIZE, len( query_hash_ids ) ) ) )
+            job_status.SetStatusText( 'searching: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * CHUNK_SIZE, len( query_hash_ids ) ) ) )
             
             if job_status.IsCancelled():
                 
@@ -551,7 +551,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         for ( i, media_result ) in enumerate( media_results ):
             
-            job_status.SetStatusText( 'exporting: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
+            job_status.SetStatusText( 'exporting: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
             
             if job_status.IsCancelled():
                 
@@ -663,7 +663,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     return
                     
                 
-                job_status.SetStatusText( 'delete-synchronising: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( deletee_paths ) ) ) )
+                job_status.SetStatusText( 'delete-synchronising: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( deletee_paths ) ) ) )
                 
                 ClientPaths.DeletePath( deletee_path )
                 
@@ -721,7 +721,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                     return
                     
                 
-                job_status.SetStatusText( 'delete-prepping: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
+                job_status.SetStatusText( 'delete-prepping: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i + 1, len( media_results ) ) ) )
                 
                 if media_result.IsDeleteLocked():
                     
@@ -753,7 +753,7 @@ class ExportFolder( HydrusSerialisable.SerialisableBaseNamed ):
                         return
                         
                     
-                    job_status.SetStatusText( 'deleting: {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * CHUNK_SIZE, len( deletee_hashes ) ) ) )
+                    job_status.SetStatusText( 'deleting: {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * CHUNK_SIZE, len( deletee_hashes ) ) ) )
                     
                     content_update = ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_DELETE, chunk_of_hashes, reason = reason )
                     

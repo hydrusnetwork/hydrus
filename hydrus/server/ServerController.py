@@ -13,6 +13,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusPaths
+from hydrus.core import HydrusProcess
 from hydrus.core import HydrusSessions
 from hydrus.core import HydrusThreading
 from hydrus.core import HydrusTime
@@ -25,7 +26,7 @@ from hydrus.server.networking import ServerServer
 
 def ProcessStartingAction( db_dir, action ):
     
-    already_running = HydrusData.IsAlreadyRunning( db_dir, 'server' )
+    already_running = HydrusProcess.IsAlreadyRunning( db_dir, 'server' )
     
     if action == 'start':
         
@@ -87,7 +88,7 @@ def ShutdownSiblingInstance( db_dir ):
     
     try:
         
-        ports = HydrusData.GetSiblingProcessPorts( db_dir, 'server' )
+        ports = HydrusProcess.GetSiblingProcessPorts( db_dir, 'server' )
         
     except HydrusExceptions.CancelledException as e:
         
@@ -141,7 +142,7 @@ def ShutdownSiblingInstance( db_dir ):
             
             time_waited = 0
             
-            while HydrusData.IsAlreadyRunning( db_dir, 'server' ):
+            while HydrusProcess.IsAlreadyRunning( db_dir, 'server' ):
                 
                 time.sleep( 1 )
                 

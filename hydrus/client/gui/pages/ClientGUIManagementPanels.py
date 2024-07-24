@@ -991,7 +991,7 @@ class ManagementPanelDuplicateFilter( ManagementPanel ):
                 
             else:
                 
-                self._num_searched.SetValue( 'Searched ' + HydrusData.ConvertValueRangeToPrettyString( num_searched, total_num_files ) + ' files at this distance.', num_searched, total_num_files )
+                self._num_searched.SetValue( 'Searched ' + HydrusNumbers.ValueRangeToPrettyString( num_searched, total_num_files ) + ' files at this distance.', num_searched, total_num_files )
                 
             
             page_name = 'preparation (needs work)'
@@ -1714,7 +1714,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                     
                     num_done = i * BLOCK_SIZE
                     
-                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) ) )
+                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
                     job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                     
                     if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
@@ -2226,7 +2226,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
                 ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
                 
-                text_top = '{} queries - {}'.format( HydrusNumbers.ToHumanInt( num_gallery_imports ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
+                text_top = '{} queries - {}'.format( HydrusNumbers.ToHumanInt( num_gallery_imports ), HydrusNumbers.ValueRangeToPrettyString( num_done, num_total ) )
                 text_bottom = file_seed_cache_status.GetStatusText()
                 
             
@@ -2828,7 +2828,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                     
                     num_done = i * BLOCK_SIZE
                     
-                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) ) )
+                    job_status.SetStatusText( 'Loading files: {}'.format( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) ) )
                     job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                     
                     if not have_published_job_status and HydrusTime.TimeHasPassedFloat( start_time + 3 ):
@@ -3360,7 +3360,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
                 ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
                 
-                text_top = '{} watchers - {}'.format( HydrusNumbers.ToHumanInt( num_watchers ), HydrusData.ConvertValueRangeToPrettyString( num_done, num_total ) )
+                text_top = '{} watchers - {}'.format( HydrusNumbers.ToHumanInt( num_watchers ), HydrusNumbers.ValueRangeToPrettyString( num_done, num_total ) )
                 text_bottom = file_seed_cache_status.GetStatusText()
                 
             
@@ -5628,7 +5628,7 @@ class ManagementPanelPetitions( ManagementPanel ):
                                     CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( service.GetServiceKey(), content_updates ) )
                                     
                                 
-                                job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+                                job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
                                 job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
                                 
                             

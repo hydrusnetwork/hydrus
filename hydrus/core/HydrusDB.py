@@ -395,7 +395,7 @@ class HydrusDB( HydrusDBBase.DBBase ):
     
     def _GenerateDBJob( self, job_type, synchronous, action, *args, **kwargs ):
         
-        return HydrusData.JobDatabase( job_type, synchronous, action, *args, **kwargs )
+        return HydrusDBBase.JobDatabase( job_type, synchronous, action, *args, **kwargs )
         
     
     def _GetPossibleAdditionalDBFilenames( self ):

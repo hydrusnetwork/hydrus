@@ -6,7 +6,6 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusNumbers
-from hydrus.core import HydrusPaths
 from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
@@ -1003,7 +1002,7 @@ class FileSeedCacheStatusControl( QW.QFrame ):
                 
             else:
                 
-                self._progress_st.setText( HydrusData.ConvertValueRangeToPrettyString(num_done,num_to_do) )
+                self._progress_st.setText( HydrusNumbers.ValueRangeToPrettyString(num_done,num_to_do) )
                 
             
             self._progress_gauge.SetRange( num_to_do )

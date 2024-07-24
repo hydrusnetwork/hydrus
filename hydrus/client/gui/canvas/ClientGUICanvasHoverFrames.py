@@ -7,6 +7,7 @@ from qtpy import QtGui as QG
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusSerialisable
 
 from hydrus.client import ClientApplicationCommand as CAC
@@ -89,7 +90,7 @@ class RatingIncDecCanvas( ClientGUIRatings.RatingIncDec ):
                         
                         hashes = content_update.GetHashes()
                         
-                        if HydrusData.SetsIntersect( self._hashes, hashes ):
+                        if HydrusLists.SetsIntersect( self._hashes, hashes ):
                             
                             ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
                             
@@ -198,7 +199,7 @@ class RatingLikeCanvas( ClientGUIRatings.RatingLike ):
                         
                         hashes = content_update.GetHashes()
                         
-                        if HydrusData.SetsIntersect( self._hashes, hashes ):
+                        if HydrusLists.SetsIntersect( self._hashes, hashes ):
                             
                             self._SetRatingFromCurrentMedia()
                             
@@ -318,7 +319,7 @@ class RatingNumericalCanvas( ClientGUIRatings.RatingNumerical ):
                         
                         hashes = content_update.GetHashes()
                         
-                        if HydrusData.SetsIntersect( self._hashes, hashes ):
+                        if HydrusLists.SetsIntersect( self._hashes, hashes ):
                             
                             ( self._rating_state, self._rating ) = ClientRatings.GetIncDecStateFromMedia( ( self._current_media, ), self._service_key )
                             

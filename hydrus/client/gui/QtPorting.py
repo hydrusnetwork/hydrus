@@ -17,6 +17,7 @@ from collections import defaultdict
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusProfiling
 from hydrus.core import HydrusTime
 
@@ -1992,7 +1993,7 @@ class TreeWidgetWithInheritedCheckState( QW.QTreeWidget ):
 
 def ListsToTuples( potentially_nested_lists ):
     
-    if HydrusData.IsAListLikeCollection( potentially_nested_lists ):
+    if HydrusLists.IsAListLikeCollection( potentially_nested_lists ):
         
         return tuple( map( ListsToTuples, potentially_nested_lists ) )
         

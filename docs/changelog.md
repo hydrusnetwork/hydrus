@@ -7,6 +7,40 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 584](https://github.com/hydrusnetwork/hydrus/releases/tag/v584)
+
+### misc
+
+* fixed a logical hole in the recent 'is this URL that is saying (deleted/already in db) trustworthy, or does it have weird mappings to other files?' pre-download check that was causing Pixiv, Kemono, and Twitter and any other multiple-URL Post URL Class to, on re-encountering the URL in a downloader, classify the underlying file URL as untrustworthy and re-download the files(l!!)
+* the 'copy all' and paste buttons in the manage known urls dialog are replaced with icon buttons, and the copy button now copies the current selection if there is one
+* the newish Regex input widget (the one that goes green/red based on current text validity) now propagates an Enter key into a dialog ok event when appropriate
+* when you ctrl+double-click a taglist, the program now ensures the item under the mouse is selected before firing off the double-click nega-activation event. this is slightly awkward, but I hope it smoothes out the awkward moment where you want to invert a selection of tags but doing a normal ctrl+double-click on them causes the one of them to be deselected and then messes up the selection
+* regex URL searches are now always the last job to run in a file query. if you mix in any other predicate like filesize or just some tag, your regex URL searches should run massively massively faster
+* improved some boot error handling when Qt fails to import
+* fixed the whack alignment of the 'filename'/'first directory'/etc.. checkbox-and-text-edit widgets in the filename tagging panel, and set 'namespace' placeholder text
+* force-selecting a null value in a 'select one from this list of things' dialog should no longer raise errors
+* thanks to a user, the new shimmie parser gets tags in a simpler, more reliable way
+
+### client api
+
+* added a new permission, `Commit Pending` (12), which allows you to see and commit pending content for each service
+* added `/manage_services/get_pending_counts`, which basically returns the content of the client's 'pending' menu
+* added `/manage_services/commit_pending`, which fires those commands off
+* added `/manage_services/forget_pending`, which does the same 'forget' command on that menu
+* added `/manage_file_relationships/remove_potentials`, which clears any known potential pairs off the given files
+* the `/manage_pages/get_pages` and `/manage_pages/get_page_info` commands now return `is_media_page` boolean, which is a simple shorthand for 'not a page of pages'
+* added the above to the Client API help
+* wrote unit tests covering the above
+* the client api version is now 66
+
+### boring cleanup
+
+* fixed up how some lists deliver their underlying data to various methods
+* `CallBlockingToQt` no longer spams encountered errors to the log--proper error handling should (and does now) occur elsewhere
+* the way the initial focus is set on system predicate flesh-out panels (when you double-click on like 'system:dimensions' and get a bunch of sub-panels) is more sane. should be, fairly reliably, on the first editable panel's ok button. I want it to be on an editable widget in the panel in future, I think, but I need to do some behind the scenes stuff to make this work in a nicer way
+* pulled some stuff out of `HydrusData`, mostly to `HydrusNumbers`, `HydrusLists`, and the new `HydrusProcess`, mostly for decoupling purposes
+* renamed some `ConvertXToY` stuff to just `XToY`
+
 ## [Version 583](https://github.com/hydrusnetwork/hydrus/releases/tag/v583)
 
 ### new
@@ -322,34 +356,3 @@ title: Changelog
 * moved `ClientDuplicates` up to a new `duplicates` module and migrated some duplicate enums over to it from `ClientConstants`
 * removed an old method-wrapper hack that applied the 'load images with PIL' option. I just moved to a global that I set on init and update on options change
 * cleaned some duplicate checking code
-
-## [Version 574](https://github.com/hydrusnetwork/hydrus/releases/tag/v574)
-
-### local hashes cache
-
-* we finally figured out the 'update 404' issue that some PTR-syncing users were getting, where PTR processing would halt with an error about an update file not being available on the server. long story short, SQLite was sometimes crossing a wire in the database on a crash, and this week I add some new maintenance code to fix this and catch it in future
-* the local hash cache has a bunch of new resync/recovery code. it can now efficiently recover from missing hash_ids, excess hash_ids, desynced hash_ids, and even repopulate the master hash table if that guy has missing hash_ids (which can happen after severe db damage due to hard drive failure). it records all recovery info to the log
-* the normal _database-&gt;regenerate-&gt;local hashes cache_ function now works entirely in this new resync code, making it significantly faster (previously it just deleted and re-added everything). this job also gets a nicer popup with a summary of any problems found
-* when the client recovers from a bad shutdown, it now runs a quick sync on the latest hash_ids added to the local hashes cache to ensure that desync did not occur. fingers crossed, this will work super fast and ensure that we don't get the 404 problem (or related hash_id cross-wire problems) again
-* on repository processing failure and a scheduling of update file maintenance, we now resync the update files in the local hash cache, meaning the 404 problem, if it does happen again, will now fix itself in the normal recovery code
-* on update, everyone is going to get a full local hash cache resync, just to catch any lingering issues here. it should now work super fast!
-* fixed an issue where the local hash and tags caches would not fully reset desynced results on a 'regenerate' call until a client restart
-
-### misc
-
-* thanks to a user, the default twitter downloader I added last week now gets full-size images. if you spammed a bunch of URLs last week, I apologise: please do a search for 'imported within the last 7 days/has a twitter url/height=1200px' and then copy/paste the results' tweet URLs into a new urls downloader. because of some special twitter settings, you shouldn't have to set 'download the file even if known url match' in the file import options; the downloader will discover the larger versions and download the full size files with no special settings needed. once done, assuming the file count is the same on both pages, go back to your first page and delete the 1200px tall files. then repeat for width=1200px!
-* the filetype selector in system:filetype now expands to eat extra vertical space if the dialog is resized
-* the filetype selector in file import options is moved a bit and also now expands to eat extra vertical space
-* thanks to a user, the Microsoft document recognition now has fewer false negatives (it was detecting some docs as zips)
-* when setting up an import folder, the dialog will now refuse to OK if you set a path that is 1) above the install dir or db dir or 2) above or below any of your file storage locations. shouldn't be possible to set up an import from your own file storage folder by accident any more
-* added a new 'apply image ICC Profile colour adjustments' checkbox to _options-&gt;media_. this simply turns off ICC profile loading and application, for debug purposes
-
-### boring cleanup
-
-* the default SQLite page size is now 4096 bytes on Linux, the SQLite default. it was 1024 previously, but SQLite now recommend 4096 for all platforms. the next time Linux users vacuum any of their databases, they will get fixed. I do not think this is a big deal, so don't rush to force this
-* fixed the last couple dozen missing layout flags across the program, which were ancient artifacts from the wx-&gt;Qt conversion
-* fixed the WTFPL licence to be my copyright, lol
-* deleted the local booru service management/UI code
-* deleted the local booru service db/init code
-* deleted the local booru service network code
-* on update, the local booru service will be deleted from the database

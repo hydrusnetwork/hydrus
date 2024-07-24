@@ -5,6 +5,7 @@ import unittest
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
 from hydrus.core.files.images import HydrusImageHandling
@@ -507,19 +508,19 @@ class TestClientDB( unittest.TestCase ):
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), tuple( perceptual_hashes ), 0 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, ( (), ( os.urandom( 32 ), ), 0 ), 0 ) )
         
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5271, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( HC.UNICODE_APPROX_EQUAL, 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( HC.UNICODE_APPROX_EQUAL, 0, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5270, HydrusData.ConvertUnitToInt( 'B' ) ), 0 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5269, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'B' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'KB' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'MB' ) ), 1 ) )
-        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusData.ConvertUnitToInt( 'GB' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 0, HydrusNumbers.UnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5270, HydrusNumbers.UnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '<', 5271, HydrusNumbers.UnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 5270, HydrusNumbers.UnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '=', 0, HydrusNumbers.UnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( HC.UNICODE_APPROX_EQUAL, 5270, HydrusNumbers.UnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( HC.UNICODE_APPROX_EQUAL, 0, HydrusNumbers.UnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5270, HydrusNumbers.UnitToInt( 'B' ) ), 0 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 5269, HydrusNumbers.UnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusNumbers.UnitToInt( 'B' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusNumbers.UnitToInt( 'KB' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusNumbers.UnitToInt( 'MB' ) ), 1 ) )
+        tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( '>', 0, HydrusNumbers.UnitToInt( 'GB' ) ), 1 ) )
         
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 201 ), 1 ) )
         tests.append( ( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ClientSearch.NumberTest.STATICCreateFromCharacters( '<', 200 ), 0 ) )

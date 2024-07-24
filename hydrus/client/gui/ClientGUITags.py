@@ -15,6 +15,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
@@ -3344,7 +3345,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                     for m in self._media:
                         
-                        if HydrusData.SetsIntersect( m.GetHashes(), content_update.GetHashes() ):
+                        if HydrusLists.SetsIntersect( m.GetHashes(), content_update.GetHashes() ):
                             
                             m.GetMediaResult().ProcessContentUpdate( service_key, content_update )
                             

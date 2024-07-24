@@ -439,7 +439,7 @@ def EditFileTimestamps( win: QW.QWidget, ordered_medias: typing.List[ ClientMedi
                         
                         for ( i, m ) in enumerate( medias_to_alter_modified_dates ):
                             
-                            job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i, num_to_do ) )
+                            job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i, num_to_do ) )
                             job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
                             
                             if not showed_popup and HydrusTime.TimeHasPassed( time_started + 3 ):
@@ -859,7 +859,7 @@ def MoveOrDuplicateLocalFiles( win: QW.QWidget, dest_service_key: bytes, action:
                 break
                 
             
-            job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+            job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
             job_status.SetVariable( 'popup_gauge_1', ( i * BLOCK_SIZE, num_to_do ) )
             
             content_updates = []
@@ -958,7 +958,7 @@ def OpenURLs( win: QW.QWidget, urls ):
                         return
                         
                     
-                    job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_urls ) )
+                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_urls ) )
                     job_status.SetVariable( 'popup_gauge_1', ( i + 1, num_urls ) )
                     
                 
@@ -1060,7 +1060,7 @@ def SetFilesForcedFiletypes( win: QW.QWidget, medias: typing.Collection[ ClientM
                         break
                         
                     
-                    job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+                    job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
                     job_status.SetVariable( 'popup_gauge_1', ( i * BLOCK_SIZE, num_to_do ) )
                     
                     hashes = { media.GetHash() for media in block_of_media }
@@ -1187,7 +1187,7 @@ def UndeleteMedia( win, media ):
         return
         
     
-    media_deleted_service_keys = HydrusData.MassUnion( ( m.GetLocationsManager().GetDeleted() for m in undeletable_media ) )
+    media_deleted_service_keys = HydrusLists.MassUnion( ( m.GetLocationsManager().GetDeleted() for m in undeletable_media ) )
     
     local_file_services = CG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) )
     

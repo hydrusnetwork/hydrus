@@ -1,9 +1,12 @@
 import collections
+import threading
+import time
 import typing
 
 import sqlite3
 
 from hydrus.core import HydrusData
+from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusPaths
 from hydrus.core import HydrusPSUtil
 from hydrus.core import HydrusGlobals as HG
@@ -178,6 +181,7 @@ class TemporaryIntegerTableNameCache( object ):
         self._column_names_to_table_names[ column_name ].append( table_name )
         
     
+
 class TemporaryIntegerTable( object ):
     
     def __init__( self, cursor: sqlite3.Cursor, integer_iterable, column_name ):
@@ -215,6 +219,91 @@ class TemporaryIntegerTable( object ):
         return False
         
     
+
+class JobDatabase( object ):
+    
+    def __init__( self, job_type, synchronous, action, *args, **kwargs ):
+        
+        self._type = job_type
+        self._synchronous = synchronous
+        self._action = action
+        self._args = args
+        self._kwargs = kwargs
+        
+        self._result_ready = threading.Event()
+        
+    
+    def __str__( self ):
+        
+        return 'DB Job: {}'.format( self.ToString() )
+        
+    
+    def _DoDelayedResultRelief( self ):
+        
+        pass
+        
+    
+    def GetCallableTuple( self ):
+        
+        return ( self._action, self._args, self._kwargs )
+        
+    
+    def GetResult( self ):
+        
+        time.sleep( 0.00001 ) # this one neat trick can save hassle on superquick jobs as event.wait can be laggy
+        
+        while True:
+            
+            result_was_ready = self._result_ready.wait( 2 )
+            
+            if result_was_ready:
+                
+                break
+                
+            
+            if HG.model_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application quit before db could serve result!' )
+                
+            
+            self._DoDelayedResultRelief()
+            
+        
+        if isinstance( self._result, Exception ):
+            
+            e = self._result
+            
+            raise e
+            
+        else:
+            
+            return self._result
+            
+        
+    
+    def GetType( self ):
+        
+        return self._type
+        
+    
+    def IsSynchronous( self ):
+        
+        return self._synchronous
+        
+    
+    def PutResult( self, result ):
+        
+        self._result = result
+        
+        self._result_ready.set()
+        
+    
+    def ToString( self ):
+        
+        return '{} {}'.format( self._type, self._action )
+        
+    
+
 class DBBase( object ):
     
     def __init__( self ):

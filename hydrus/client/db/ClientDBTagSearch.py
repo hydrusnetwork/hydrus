@@ -1542,7 +1542,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
                     
                 
             
-            message = HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do )
+            message = HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do )
             
             CG.client_controller.frame_splash_status.SetSubtext( message )
             

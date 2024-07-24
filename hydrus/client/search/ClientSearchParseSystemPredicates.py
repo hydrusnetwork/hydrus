@@ -5,6 +5,7 @@ from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusNumbers
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -234,14 +235,14 @@ pred_generators = {
     SystemPredicateParser.Predicate.NUM_OF_WORDS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_WORDS, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
     SystemPredicateParser.Predicate.HEIGHT : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HEIGHT, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
     SystemPredicateParser.Predicate.WIDTH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_WIDTH, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.FILESIZE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( o, v, HydrusData.ConvertUnitToInt( u ) ) ),
+    SystemPredicateParser.Predicate.FILESIZE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIZE, ( o, v, HydrusNumbers.UnitToInt( u ) ) ),
     SystemPredicateParser.Predicate.SIMILAR_TO_FILES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_FILES, convert_hex_hashlist_and_other_to_bytes_and_other( v ) ),
     SystemPredicateParser.Predicate.SIMILAR_TO_DATA : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_SIMILAR_TO_DATA, convert_double_hex_hashlist_and_other_to_double_bytes_and_other( v ) ),
     SystemPredicateParser.Predicate.HASH : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_HASH, convert_hex_hashlist_and_other_to_bytes_and_other( v ), inclusive = o == '=' ),
     SystemPredicateParser.Predicate.DURATION : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_DURATION, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v[0] * 1000 + v[1] ) ),
     SystemPredicateParser.Predicate.FRAMERATE : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_FRAMERATE, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
     SystemPredicateParser.Predicate.NUM_OF_FRAMES : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_FRAMES, ClientSearch.NumberTest.STATICCreateFromCharacters( o, v ) ),
-    SystemPredicateParser.Predicate.NUM_PIXELS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( o, v, HydrusData.ConvertPixelsToInt( u ) ) ),
+    SystemPredicateParser.Predicate.NUM_PIXELS : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_NUM_PIXELS, ( o, v, HydrusNumbers.PixelsToInt( u ) ) ),
     SystemPredicateParser.Predicate.RATIO : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( o, v[0], v[1] ) ),
     SystemPredicateParser.Predicate.RATIO_SPECIAL : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_RATIO, ( o, v[0], v[1] ) ),
     SystemPredicateParser.Predicate.TAG_AS_NUMBER : lambda o, v, u: ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_SYSTEM_TAG_AS_NUMBER, ( o[0], o[1], v ) ),

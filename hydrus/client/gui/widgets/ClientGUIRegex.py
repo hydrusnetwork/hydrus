@@ -167,11 +167,12 @@ class RegexButton( ClientGUICommon.BetterButton ):
 class RegexInput( QW.QWidget ):
     
     textChanged = QC.Signal()
-    userHitEnter = QC.Signal()
     
     def __init__( self, parent: QW.QWidget, show_group_menu = False ):
         
         QW.QWidget.__init__( self, parent )
+        
+        self._allow_enter_key_to_propagate_outside = True
         
         self._regex_text = QW.QLineEdit( self )
         self._regex_text.setPlaceholderText( 'regex input' )
@@ -185,7 +186,6 @@ class RegexInput( QW.QWidget ):
         
         self.setLayout( hbox )
         
-        self._regex_text.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self, self.userHitEnter.emit ) )
         self._regex_text.textChanged.connect( self.textChanged )
         self._regex_text.textChanged.connect( self._UpdateValidityStyle )
         
@@ -206,6 +206,12 @@ class RegexInput( QW.QWidget ):
             
         
         self._regex_text.style().polish( self._regex_text )
+        
+    
+    def SetEnterCallable( self, c ):
+        
+        # note that this guy stops further processing of Enter presses so this guy now won't trigger dialog ok!
+        self._regex_text.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self, c ) )
         
     
     def GetValue( self ) -> str:

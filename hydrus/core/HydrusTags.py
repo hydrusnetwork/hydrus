@@ -248,6 +248,27 @@ def ConvertTagSliceToPrettyString( tag_slice ):
         
     
 
+def ConvertUglyNamespaceToPrettyString( namespace ):
+    
+    if namespace is None or namespace == '':
+        
+        return 'no namespace'
+        
+    else:
+        
+        return namespace
+        
+    
+
+def ConvertUglyNamespacesToPrettyStrings( namespaces ):
+    
+    namespaces = sorted( namespaces )
+    
+    result = [ ConvertUglyNamespaceToPrettyString( namespace ) for namespace in namespaces ]
+    
+    return result
+    
+
 ALL_UNNAMESPACED_TAG_SLICE = ''
 ALL_NAMESPACED_TAG_SLICE = ':'
 

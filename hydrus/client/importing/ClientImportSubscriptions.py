@@ -306,7 +306,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 status_prefix += ' "' + query_name + '"'
                 
             
-            status_prefix += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
+            status_prefix += ' (' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_queries ) + ')'
             
             try:
                 
@@ -875,7 +875,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 query_summary_name += ': ' + query_name
                 
             
-            text_1 += ' (' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_queries ) + ')'
+            text_1 += ' (' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_queries ) + ')'
             
             job_status.SetStatusText( text_1 )
             
@@ -1054,7 +1054,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                     human_num_urls = num_urls - starting_num_done
                     human_num_done = num_done - starting_num_done
                     
-                    x_out_of_y = 'file ' + HydrusData.ConvertValueRangeToPrettyString( human_num_done + 1, human_num_urls ) + ': '
+                    x_out_of_y = 'file ' + HydrusNumbers.ValueRangeToPrettyString( human_num_done + 1, human_num_urls ) + ': '
                     
                     job_status.SetVariable( 'popup_gauge_2', ( human_num_done, human_num_urls ) )
                     

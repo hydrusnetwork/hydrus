@@ -18,7 +18,6 @@ from hydrus.core import HydrusPaths
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
 from hydrus.core import HydrusTime
-from hydrus.core.networking import HydrusNATPunch
 from hydrus.core.networking import HydrusNetwork
 from hydrus.core.networking import HydrusNetworkVariableHandling
 from hydrus.core.networking import HydrusNetworking
@@ -37,6 +36,25 @@ from hydrus.client.networking import ClientNetworkingJobs
 
 SHORT_DELAY_PERIOD = 50000
 ACCOUNT_SYNC_PERIOD = 250000
+
+def ConvertNumericalRatingToPrettyString( lower, upper, rating, rounded_result = False, out_of = True ):
+    
+    rating_converted = ( rating * ( upper - lower ) ) + lower
+    
+    if rounded_result:
+        
+        rating_converted = round( rating_converted )
+        
+    
+    s = '{:.2f}'.format( rating_converted )
+    
+    if out_of and lower in ( 0, 1 ):
+        
+        s += '/{:.2f}'.format( upper )
+        
+    
+    return s
+    
 
 def GenerateDefaultServiceDictionary( service_type ):
     
@@ -680,7 +698,7 @@ class ServiceLocalRatingNumerical( ServiceLocalRatingStars ):
             rating_value = self.ConvertRatingToStars( rating )
             rating_range = self._num_stars
             
-            return HydrusData.ConvertValueRangeToPrettyString( rating_value, rating_range )
+            return HydrusNumbers.ValueRangeToPrettyString( rating_value, rating_range )
             
         
         return 'unknown'
@@ -1653,7 +1671,7 @@ class ServiceRepository( ServiceRestricted ):
         
         rows_s = HydrusNumbers.ToHumanInt( int( rows_done_in_last_packet / it_took ) )
         
-        popup_message = '{} {}: processing at {} rows/s'.format( row_name, HydrusData.ConvertValueRangeToPrettyString( rows_done, total_rows ), rows_s )
+        popup_message = '{} {}: processing at {} rows/s'.format( row_name, HydrusNumbers.ValueRangeToPrettyString( rows_done, total_rows ), rows_s )
         
         CG.client_controller.frame_splash_status.SetText( popup_message, print_to_log = False )
         job_status.SetStatusText( popup_message, 2 )
@@ -1770,7 +1788,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( i, update_hash ) in enumerate( update_hashes ):
                     
-                    status = 'update ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( update_hashes ) )
+                    status = 'update ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( update_hashes ) )
                     
                     CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )
@@ -1968,7 +1986,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( definition_hash, content_types ) in definition_hashes_and_content_types:
                     
-                    progress_string = HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
+                    progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
                     
                     splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
                     
@@ -2097,7 +2115,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( content_hash, content_types ) in content_hashes_and_content_types:
                     
-                    progress_string = HydrusData.ConvertValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
+                    progress_string = HydrusNumbers.ValueRangeToPrettyString( num_updates_done + 1, num_updates_to_do )
                     
                     splash_title = '{} sync: processing updates {}'.format( self._name, progress_string )
                     
@@ -2716,7 +2734,7 @@ class ServiceRepository( ServiceRestricted ):
                 
                 for ( i, thumbnail_hash ) in enumerate( thumbnail_hashes ):
                     
-                    status = 'thumbnail ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do )
+                    status = 'thumbnail ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do )
                     
                     CG.client_controller.frame_splash_status.SetText( status, print_to_log = False )
                     job_status.SetStatusText( status )
@@ -3148,7 +3166,7 @@ class ServiceIPFS( ServiceRemote ):
                     return
                     
                 
-                job_status.SetStatusText( 'ensuring files are pinned: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( hashes ) ) )
+                job_status.SetStatusText( 'ensuring files are pinned: ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( hashes ) ) )
                 job_status.SetVariable( 'popup_gauge_1', ( i + 1, len( hashes ) ) )
                 
                 media_result = CG.client_controller.Read( 'media_result', hash )
@@ -3202,7 +3220,7 @@ class ServiceIPFS( ServiceRemote ):
                     return
                     
                 
-                job_status.SetStatusText( 'creating directory: ' + HydrusData.ConvertValueRangeToPrettyString( i + 1, len( file_info ) ) )
+                job_status.SetStatusText( 'creating directory: ' + HydrusNumbers.ValueRangeToPrettyString( i + 1, len( file_info ) ) )
                 job_status.SetVariable( 'popup_gauge_1', ( i + 1, len( file_info ) ) )
                 
                 object_multihash = response_json[ 'Hash' ]
@@ -3416,6 +3434,7 @@ class ServiceIPFS( ServiceRemote ):
         CG.client_controller.WriteSynchronous( 'content_updates', ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( self._service_key, content_updates ) )
         
     
+
 class ServicesManager( object ):
     
     def __init__( self, controller ):
@@ -3611,5 +3630,19 @@ class ServicesManager( object ):
             
             return service_key in self._keys_to_services
             
+        
+    
+
+class ServiceUpdate( object ):
+    
+    def __init__( self, action, row = None ):
+        
+        self._action = action
+        self._row = row
+        
+    
+    def ToTuple( self ):
+        
+        return ( self._action, self._row )
         
     

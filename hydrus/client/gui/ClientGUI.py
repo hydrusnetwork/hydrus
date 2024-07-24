@@ -276,7 +276,7 @@ def THREADUploadPending( service_key ):
             
             num_done = num_to_do - remaining_num_pending
             
-            job_status.SetStatusText( 'uploading to ' + service_name + ': ' + HydrusData.ConvertValueRangeToPrettyString( num_done, num_to_do ) )
+            job_status.SetStatusText( 'uploading to ' + service_name + ': ' + HydrusNumbers.ValueRangeToPrettyString( num_done, num_to_do ) )
             job_status.SetVariable( 'popup_gauge_1', ( num_done, num_to_do ) )
             
             while job_status.IsPaused() or job_status.IsCancelled():
@@ -1762,20 +1762,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
     
-    def _DeletePending( self, service_key ):
-        
-        service_name = self._controller.services_manager.GetName( service_key )
-        
-        message = 'Are you sure you want to delete the pending data for {}?'.format( service_name )
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, message )
-        
-        if result == QW.QDialog.Accepted:
-            
-            self._controller.Write( 'delete_pending', service_key )
-            
-        
-    
     def _DeleteServiceInfo( self, only_pending = False ):
         
         if only_pending:
@@ -2159,7 +2145,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                         
                     finally:
                         
-                        job_status.SetStatusText( HydrusData.ConvertValueRangeToPrettyString( i + 1, num_to_do ) )
+                        job_status.SetStatusText( HydrusNumbers.ValueRangeToPrettyString( i + 1, num_to_do ) )
                         job_status.SetVariable( 'popup_gauge_1', ( i, num_to_do ) )
                         
                     
@@ -2804,8 +2790,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                     
                     submenu = ClientGUIMenus.GenerateMenu( self._menubar_pending_submenu )
                     
-                    ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload {}\'s pending content.'.format( name ), self._UploadPending, service_key )
-                    ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear {}\'s pending content.'.format( name ), self._DeletePending, service_key )
+                    ClientGUIMenus.AppendMenuItem( submenu, 'commit', 'Upload {}\'s pending content.'.format( name ), self.UploadPending, service_key )
+                    ClientGUIMenus.AppendMenuItem( submenu, 'forget', 'Clear {}\'s pending content.'.format( name ), self.ForgetPending, service_key )
                     
                     ClientGUIMenus.SetMenuTitle( submenu, name )
                     
@@ -6900,43 +6886,6 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._controller.pub( 'notify_new_pages' )
         
     
-    def _UploadPending( self, service_key ):
-        
-        service = self._controller.services_manager.GetService( service_key )
-        
-        try:
-            
-            if isinstance( service, ClientServices.ServiceRestricted ):
-                
-                service.CheckFunctional( including_bandwidth = False )
-                
-            else:
-                
-                service.CheckFunctional()
-                
-            
-            if isinstance( service, ClientServices.ServiceRepository ):
-                
-                if not service.IsMostlyCaughtUp():
-                    
-                    raise Exception( 'Repository processing is not caught up--please process more before you upload new content.' )
-                    
-                
-            
-        except Exception as e:
-            
-            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Unfortunately, there is a problem with starting the upload: ' + str( e ) )
-            
-            return
-            
-        
-        self._currently_uploading_pending.add( service_key )
-        
-        self._menu_updater_pending.update()
-        
-        self._controller.CallToThread( THREADUploadPending, service_key )
-        
-    
     def _UpdateMenuPagesCount( self ):
         
         (
@@ -7441,6 +7390,20 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._menu_updater_network.update()
         
     
+    def ForgetPending( self, service_key ):
+        
+        service_name = self._controller.services_manager.GetName( service_key )
+        
+        message = 'Are you sure you want to delete the pending data for {}?'.format( service_name )
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, message )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self._controller.Write( 'delete_pending', service_key )
+            
+        
+    
     def GetCurrentPage( self ):
         
         return self._notebook.GetCurrentMediaPage()
@@ -7623,6 +7586,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             
             return page_key == result.GetPageKey()
             
+        
+    
+    def IsCurrentlyUploadingPending( self, service_key ):
+        
+        return service_key in self._currently_uploading_pending
         
     
     def MaintainCanvasFrameReferences( self ):
@@ -8649,5 +8617,49 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
     def UnregisterUIUpdateWindow( self, window ):
         
         self._ui_update_windows.discard( window )
+        
+    
+    def UploadPending( self, service_key ):
+        
+        if service_key in self._currently_uploading_pending:
+            
+            return False
+            
+        
+        service = self._controller.services_manager.GetService( service_key )
+        
+        try:
+            
+            if isinstance( service, ClientServices.ServiceRestricted ):
+                
+                service.CheckFunctional( including_bandwidth = False )
+                
+            else:
+                
+                service.CheckFunctional()
+                
+            
+            if isinstance( service, ClientServices.ServiceRepository ):
+                
+                if not service.IsMostlyCaughtUp():
+                    
+                    raise Exception( 'Repository processing is not caught up--please process more before you upload new content.' )
+                    
+                
+            
+        except Exception as e:
+            
+            ClientGUIDialogsMessage.ShowCritical( self, 'Error', 'Unfortunately, there is a problem with starting the upload: ' + str( e ) )
+            
+            return False
+            
+        
+        self._currently_uploading_pending.add( service_key )
+        
+        self._menu_updater_pending.update()
+        
+        self._controller.CallToThread( THREADUploadPending, service_key )
+        
+        return True
         
     

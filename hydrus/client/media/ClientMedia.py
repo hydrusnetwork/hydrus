@@ -5,6 +5,7 @@ import typing
 from hydrus.core import HydrusConstants as HC
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
+from hydrus.core import HydrusLists
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTime
@@ -13,6 +14,7 @@ from hydrus.core.files import HydrusPSDHandling
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientServices
 from hydrus.client import ClientTime
 from hydrus.client.media import ClientMediaManagers
 from hydrus.client.media import ClientMediaResult
@@ -1290,7 +1292,7 @@ class MediaList( object ):
         self._RecalcAfterContentUpdates( content_update_package )
         
     
-    def ProcessServiceUpdates( self, service_keys_to_service_updates ):
+    def ProcessServiceUpdates( self, service_keys_to_service_updates: typing.Dict[ bytes, typing.Collection[ ClientServices.ServiceUpdate ] ] ):
         
         for ( service_key, service_updates ) in service_keys_to_service_updates.items():
             
@@ -1529,8 +1531,8 @@ class MediaCollection( MediaList, Media ):
         current = set( current_to_timestamps_ms.keys() )
         deleted = set( deleted_to_timestamps_ms.keys() )
         
-        pending = HydrusData.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
-        petitioned = HydrusData.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
+        pending = HydrusLists.MassUnion( [ locations_manager.GetPending() for locations_manager in all_locations_managers ] )
+        petitioned = HydrusLists.MassUnion( [ locations_manager.GetPetitioned() for locations_manager in all_locations_managers ] )
         
         times_manager = ClientMediaManagers.TimesManager()
         
@@ -1935,7 +1937,7 @@ class MediaSingleton( Media ):
         
         if width is not None and height is not None:
             
-            info_string += f' ({HydrusData.ConvertResolutionToPrettyString( ( width, height ) )})'
+            info_string += f' ({HydrusNumbers.ResolutionToPrettyString( ( width, height ) )})'
             
         
         if duration is not None:

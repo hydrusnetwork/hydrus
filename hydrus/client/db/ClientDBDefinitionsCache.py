@@ -276,7 +276,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
             
             block_of_hash_ids = set( block_of_hash_ids )
             
-            text = 'syncing local hashes {}'.format( HydrusData.ConvertValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
+            text = 'syncing local hashes {}'.format( HydrusNumbers.ValueRangeToPrettyString( i * BLOCK_SIZE, num_to_do ) )
             
             CG.client_controller.frame_splash_status.SetSubtext( text )
             job_status.SetStatusText( text )
