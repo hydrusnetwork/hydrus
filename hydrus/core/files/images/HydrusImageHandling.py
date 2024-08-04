@@ -353,6 +353,62 @@ def GeneratePILImageFromNumPyImage( numpy_image: numpy.array ) -> PILImage.Image
     return pil_image
     
 
+def GenerateFileBytesNumPy( numpy_image, ext: str = '.png', params: list[int] = [] ) -> bytes:
+    
+    if len( numpy_image.shape ) == 2:
+                
+        convert = cv2.COLOR_GRAY2RGB
+        
+    else:
+        
+        ( im_height, im_width, depth ) = numpy_image.shape
+                
+        if depth == 4:
+            
+            convert = cv2.COLOR_RGBA2BGRA
+            
+        else:
+            
+            convert = cv2.COLOR_RGB2BGR
+            
+        
+    
+    numpy_image = cv2.cvtColor( numpy_image, convert )
+    
+    ( result_success, result_byte_array ) = cv2.imencode( ext, numpy_image, params )
+    
+    if result_success:
+        
+        return result_byte_array.tostring()
+        
+    else:
+        
+        raise HydrusExceptions.CantRenderWithCVException( 'Image failed to encode!' )
+        
+    
+
+def GenerateFileBytesForRenderAPI( numpy_image, format: int, quality: int ):
+    
+    ext = HC.mime_ext_lookup[format]
+    
+    params = []
+    
+    if format == HC.IMAGE_PNG:
+        
+        params = [ cv2.IMWRITE_PNG_COMPRESSION, quality ]
+        
+    elif format == HC.IMAGE_JPEG:
+        
+        params = [ cv2.IMWRITE_JPEG_QUALITY, quality, cv2.IMWRITE_JPEG_PROGRESSIVE, 1 ]
+        
+    elif format == HC.IMAGE_WEBP:
+        
+        params = [ cv2.IMWRITE_WEBP_QUALITY, quality ]
+        
+    
+    return GenerateFileBytesNumPy( numpy_image, ext, params )
+    
+
 def GenerateThumbnailNumPyFromStaticImagePath( path, target_resolution, mime ):
     
     numpy_image = GenerateNumPyImage( path, mime )
@@ -367,28 +423,11 @@ def GenerateThumbnailBytesFromNumPy( numpy_image ) -> bytes:
     if len( numpy_image.shape ) == 2:
         
         depth = 3
-        
-        convert = cv2.COLOR_GRAY2RGB
-        
+                
     else:
         
         ( im_height, im_width, depth ) = numpy_image.shape
         
-        numpy_image = HydrusImageNormalisation.StripOutAnyUselessAlphaChannel( numpy_image )
-        
-        if depth == 4:
-            
-            convert = cv2.COLOR_RGBA2BGRA
-            
-        else:
-            
-            convert = cv2.COLOR_RGB2BGR
-            
-        
-    
-    numpy_image = cv2.cvtColor( numpy_image, convert )
-    
-    ( im_height, im_width, depth ) = numpy_image.shape
     
     if depth == 4:
         
@@ -403,18 +442,7 @@ def GenerateThumbnailBytesFromNumPy( numpy_image ) -> bytes:
         params = CV_JPEG_THUMBNAIL_ENCODE_PARAMS
         
     
-    ( result_success, result_byte_array ) = cv2.imencode( ext, numpy_image, params )
-    
-    if result_success:
-        
-        thumbnail_bytes = result_byte_array.tostring()
-        
-        return thumbnail_bytes
-        
-    else:
-        
-        raise HydrusExceptions.CantRenderWithCVException( 'Thumb failed to encode!' )
-        
+    return GenerateFileBytesNumPy(numpy_image, ext, params)
     
 
 def GenerateThumbnailBytesFromPIL( pil_image: PILImage.Image ) -> bytes:
@@ -439,34 +467,6 @@ def GenerateThumbnailBytesFromPIL( pil_image: PILImage.Image ) -> bytes:
     return thumbnail_bytes
     
 
-def GeneratePNGBytesNumPy( numpy_image ) -> bytes:
-    
-    ( im_height, im_width, depth ) = numpy_image.shape
-
-    ext = '.png'
-
-    if depth == 4:
-        
-        convert = cv2.COLOR_RGBA2BGRA
-        
-    else:
-        
-        convert = cv2.COLOR_RGB2BGR
-        
-    
-    numpy_image = cv2.cvtColor( numpy_image, convert )
-    
-    ( result_success, result_byte_array ) = cv2.imencode( ext, numpy_image )
-    
-    if result_success:
-        
-        return result_byte_array.tostring()
-        
-    else:
-        
-        raise HydrusExceptions.CantRenderWithCVException( 'Image failed to encode!' )
-        
-    
 
 def GetImagePixelHash( path, mime ) -> bytes:
     
