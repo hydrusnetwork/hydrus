@@ -33,12 +33,12 @@ from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUIMenus
-from hydrus.client.gui import ClientGUIFileSeedCache
-from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
+from hydrus.client.gui.importing import ClientGUIFileSeedCache
+from hydrus.client.gui.importing import ClientGUIGallerySeedLog
 from hydrus.client.gui.importing import ClientGUIImport
 from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes

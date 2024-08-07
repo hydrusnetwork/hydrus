@@ -59,7 +59,7 @@ def CleanNoteText( t: str ):
     return t
     
 
-def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ str ], do_sort: bool = True ) -> str:
+def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ str ], do_sort: bool = True, no_trailing_whitespace = False ) -> str:
     """
     The purpose of this guy is to convert your list of 20 subscription names or whatever to something you can present to the user without making a giganto tall dialog.
     """
@@ -72,7 +72,14 @@ def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ st
     
     if len( texts ) == 1:
         
-        return f' "{texts[0]}" '
+        if no_trailing_whitespace:
+            
+            return f' "{texts[0]}"'
+            
+        else:
+            
+            return f' "{texts[0]}" '
+            
         
     else:
         
@@ -85,7 +92,14 @@ def ConvertManyStringsToNiceInsertableHumanSummary( texts: typing.Collection[ st
             t = ', '.join( texts )
             
         
-        return f'\n\n{t}\n\n'
+        if no_trailing_whitespace:
+            
+            return f'\n\n{t}'
+            
+        else:
+            
+            return f'\n\n{t}\n\n'
+            
         
     
 
@@ -283,13 +297,19 @@ def DefaultDecode( data ):
     
     return ( default_text, default_encoding, default_error_count )
     
+
 def NonFailingUnicodeDecode( data, encoding ):
     
     text = None
+    confidence = None
+    error_count = None
     
     try:
         
-        if encoding in ( 'ISO-8859-1', 'Windows-1252', None ):
+        ruh_roh_a = CHARDET_OK and encoding in ( 'ISO-8859-1', 'Windows-1252' )
+        ruh_roh_b = encoding is None
+        
+        if ruh_roh_a or ruh_roh_b:
             
             # ok, the site delivered one of these non-utf-8 'default' encodings. this is probably actually requests filling this in as default
             # we don't want to trust these because they are very permissive sets and'll usually decode garbage without errors
@@ -304,17 +324,12 @@ def NonFailingUnicodeDecode( data, encoding ):
         
         try:
             
-            if isinstance( e, UnicodeDecodeError ):
+            if encoding is not None:
                 
                 text = str( data, encoding, errors = 'replace' )
                 
                 confidence = 0.7
                 error_count = text.count( HC.UNICODE_REPLACEMENT_CHARACTER )
-                
-            else:
-                
-                confidence = None
-                error_count = None
                 
             
             if CHARDET_OK:
@@ -339,22 +354,20 @@ def NonFailingUnicodeDecode( data, encoding ):
                     encoding = chardet_encoding
                     
                 
-            else:
+            
+            if text is None:
                 
-                if text is None:
+                try:
                     
-                    try:
-                        
-                        ( default_text, default_encoding, default_error_count ) = DefaultDecode( data )
-                        
-                        text = default_text
-                        encoding = default_encoding
-                        
-                    except:
-                        
-                        text = 'Could not decode the page--problem with given encoding "{}" and no chardet library available.'.format( encoding )
-                        encoding = 'utf-8'
-                        
+                    ( default_text, default_encoding, default_error_count ) = DefaultDecode( data )
+                    
+                    text = default_text
+                    encoding = default_encoding
+                    
+                except:
+                    
+                    text = f'Could not decode the page--problem with given encoding "{encoding}" and no chardet library available.'
+                    encoding = 'utf-8'
                     
                 
             
@@ -365,7 +378,7 @@ def NonFailingUnicodeDecode( data, encoding ):
             
         except Exception as e:
             
-            text = 'Unfortunately, could not decode the page with given encoding "{}".'.format( encoding )
+            text = f'Unfortunately, could not decode the page with given encoding "{encoding}".'
             encoding = 'utf-8'
             
         

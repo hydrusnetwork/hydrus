@@ -19,11 +19,11 @@ from hydrus.client import ClientTime
 from hydrus.client.gui import ClientGUIDialogs
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIFunctions
-from hydrus.client.gui import ClientGUIGallerySeedLog
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.importing import ClientGUIFileSeedCache
+from hydrus.client.gui.importing import ClientGUIGallerySeedLog
 from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC

@@ -1147,6 +1147,31 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             return ( conversion_type, data )
             
         
+        def UserIsOKToOK( self ):
+            
+            if self._conversion_type.GetValue() == ClientStrings.STRING_CONVERSION_REGEX_SUB:
+                
+                regex_pattern = self._data_regex_pattern.GetValue()
+                
+                # doesn't start \(, and isn't followed by ?= or ?P stuff
+                magico_it_captures_groups_regex = re.compile( r'(?<!\\)\((?!\?:|[=!>])' )
+                
+                if magico_it_captures_groups_regex.match( self._data_regex_pattern.GetValue() ) is not None and self._data_regex_repl.text() == '':
+                    
+                    message = 'Are you sure you want this? It looks like you are matching a group, but the regex "replacement" input is empty.'
+                    
+                    result = ClientGUIDialogsQuick.GetYesNo( self, message )
+                    
+                    if result != QW.QDialog.Accepted:
+                        
+                        return False
+                        
+                    
+                
+            
+            return True
+            
+        
     
 
 class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):

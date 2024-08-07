@@ -82,7 +82,9 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._name = QW.QLineEdit( self )
         
-        self._basic_permissions = ClientGUICommon.BetterCheckBoxList( self )
+        self._permissions_panel = ClientGUICommon.StaticBox( self, 'permissions' )
+        
+        self._basic_permissions = ClientGUICommon.BetterCheckBoxList( self._permissions_panel )
         
         for permission in ClientAPI.ALLOWED_PERMISSIONS:
             
@@ -91,7 +93,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._basic_permissions.sortItems()
         
-        self._check_all_permissions_button = ClientGUICommon.BetterButton( self, 'check all permissions', self._CheckAllPermissions )
+        self._check_all_permissions_button = ClientGUICommon.BetterButton( self._permissions_panel, 'check all permissions', self._CheckAllPermissions )
         
         search_tag_filter = api_permissions.GetSearchTagFilter()
         
@@ -99,7 +101,7 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         message += '\n' * 2
         message += 'If you want to allow all tags, just leave it as is, permitting everything. If you want to limit it to just one tag, such as "do waifu2x on this", set up a whitelist with only that tag allowed.'
         
-        self._search_tag_filter = ClientGUITags.TagFilterButton( self, message, search_tag_filter, label_prefix = 'permitted tags: ' )
+        self._search_tag_filter = ClientGUITags.TagFilterButton( self._permissions_panel, message, search_tag_filter, label_prefix = 'permitted tags: ' )
         
         #
         
@@ -121,15 +123,17 @@ class EditAPIPermissionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         rows.append( ( 'access key: ', self._access_key ) )
         rows.append( ( 'name: ', self._name ) )
-        rows.append( ( 'permissions: ', self._basic_permissions ) )
-        rows.append( ( '', self._check_all_permissions_button ) )
-        rows.append( ( 'tag search permissions: ', self._search_tag_filter ) )
         
         gridbox = ClientGUICommon.WrapInGrid( self, rows )
+        
+        self._permissions_panel.Add( self._basic_permissions, CC.FLAGS_EXPAND_BOTH_WAYS )
+        self._permissions_panel.Add( self._check_all_permissions_button, CC.FLAGS_EXPAND_PERPENDICULAR )
+        self._permissions_panel.Add( ClientGUICommon.WrapInText( self._search_tag_filter, self._permissions_panel, 'tag search permissions: ' ), CC.FLAGS_EXPAND_PERPENDICULAR )
         
         vbox = QP.VBoxLayout()
         
         QP.AddToLayout( vbox, gridbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._permissions_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
         
         self.widget().setLayout( vbox )
         

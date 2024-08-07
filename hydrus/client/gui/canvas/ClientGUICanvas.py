@@ -673,6 +673,11 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def BeginDrag( self ):
         
+        if self._media_container.HasAnimationbar() and CG.client_controller.new_options.GetBoolean( 'disallow_media_drags_on_duration_media' ):
+            
+            return
+            
+        
         point = self.mapFromGlobal( QG.QCursor.pos() )
         
         self._last_drag_pos = point
@@ -2374,6 +2379,8 @@ class CanvasWithHovers( CanvasWithDetails ):
             hover.DoRegularHideShow()
             
         
+    
+
 class CanvasFilterDuplicates( CanvasWithHovers ):
     
     CANVAS_TYPE = CC.CANVAS_MEDIA_VIEWER_DUPLICATES

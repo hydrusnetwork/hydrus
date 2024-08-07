@@ -70,6 +70,8 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._has_done_deletes = False
         self._can_delete_callback = can_delete_callback
         
+        self._copy_rows_callable = None
+        
         self._rows_menu_callable = None
         
         ( self._sort_column_type, self._sort_asc ) = self._column_list_status.GetSort()
@@ -251,16 +253,6 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._data_to_indices[ data ] = index
         
     
-    def _SectionsResized( self, logical_index, old_size, new_size ):
-        
-        if self._has_initialised_size:
-            
-            self._DoStatusChanged()
-            
-            self.updateGeometry()
-            
-        
-    
     def _DoStatusChanged( self ):
         
         self._column_list_status = self._GenerateCurrentStatus()
@@ -428,6 +420,16 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             self.headerItem().setText( i, name_for_title )
             self.headerItem().setToolTip( i, ClientGUIFunctions.WrapToolTip( name ) )
+            
+        
+    
+    def _SectionsResized( self, logical_index, old_size, new_size ):
+        
+        if self._has_initialised_size:
+            
+            self._DoStatusChanged()
+            
+            self.updateGeometry()
             
         
     
@@ -701,6 +703,26 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             self.selectAll()
             
+        elif key in ( ord( 'C' ), ord( 'c' ) ) and modifier == QC.Qt.ControlModifier:
+            
+            if self._copy_rows_callable is None:
+                
+                return True
+                
+            else:
+                
+                copyable_texts = self._copy_rows_callable()
+                
+                if len( copyable_texts ) == 0:
+                    
+                    return True
+                    
+                else:
+                    
+                    CG.client_controller.pub( 'clipboard', 'text', '\n'.join( copyable_texts ) )
+                    
+                
+            
         else:
             
             return True # was: event.ignore()
@@ -922,6 +944,11 @@ class BetterListCtrl( QW.QTreeWidget ):
                 item.setSelected( True )
                 
             
+        
+    
+    def SetCopyRowsCallable( self, copy_rows_callable ):
+        
+        self._copy_rows_callable = copy_rows_callable
         
     
     def SetData( self, datas: typing.Iterable[ object ] ):

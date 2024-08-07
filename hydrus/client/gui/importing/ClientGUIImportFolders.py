@@ -11,10 +11,10 @@ from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client.gui import ClientGUIDialogsMessage
 from hydrus.client.gui import ClientGUIDialogsQuick
-from hydrus.client.gui import ClientGUIFileSeedCache
 from hydrus.client.gui import ClientGUIFunctions
 from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
+from hydrus.client.gui.importing import ClientGUIFileSeedCache
 from hydrus.client.gui.importing import ClientGUIImport
 from hydrus.client.gui.importing import ClientGUIImportOptions
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC

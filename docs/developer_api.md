@@ -2488,10 +2488,11 @@ Arguments: n/a
 ```
 
 Response:
-:   A JSON Object of all the service keys capable of uploading and their current pending content counts.
+:   A JSON Object of all the service keys capable of uploading and their current pending content counts. Also [The Services Object](#services_object).
 
 ```json title="Example response"
 {
+  "services" : "The Services Object",
   "pending_counts" : {
     "ae91919b0ea95c9e636f877f57a69728403b65098238c1a121e5ebf85df3b87e" :  {
       "pending_tag_mappings" : 11564,

@@ -276,6 +276,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
         self._list_ctrl.AddRowsMenuCallable( self._GetListCtrlMenu )
+        self._list_ctrl.SetCopyRowsCallable( self._GetCopyableRows )
         
         self._controller.sub( self, 'NotifyGallerySeedsUpdated', 'gallery_seed_log_gallery_seeds_updated' )
         
@@ -315,15 +316,11 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def _CopySelectedGalleryURLs( self ):
         
-        gallery_seeds = self._list_ctrl.GetData( only_selected = True )
+        texts = self._GetCopyableRows()
         
-        if len( gallery_seeds ) > 0:
+        if len( texts ) > 0:
             
-            separator = '\n' * 2
-            
-            text = separator.join( ( gallery_seed.url for gallery_seed in gallery_seeds ) )
-            
-            CG.client_controller.pub( 'clipboard', 'text', text )
+            CG.client_controller.pub( 'clipboard', 'text', '\n'.join( texts ) )
             
         
     
@@ -366,6 +363,13 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
                 self._gallery_seed_log.RemoveGallerySeeds( gallery_seeds_to_delete )
                 
             
+        
+    
+    def _GetCopyableRows( self ):
+        
+        texts = [ gallery_seed.url for gallery_seed in self._list_ctrl.GetData( only_selected = True ) ]
+        
+        return texts
         
     
     def _GetListCtrlMenu( self ):
