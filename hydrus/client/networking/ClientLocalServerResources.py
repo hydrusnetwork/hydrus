@@ -65,7 +65,7 @@ from hydrus.client.search import ClientSearchParseSystemPredicates
 from hydrus.client.gui import ClientGUIPopupMessages
 
 # if a variable name isn't defined here, a GET with it won't work
-CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs' }
+CLIENT_API_INT_PARAMS = { 'file_id', 'file_sort_type', 'potentials_search_type', 'pixel_duplicates', 'max_hamming_distance', 'max_num_pairs', 'width', 'height', 'render_format', 'render_quality' }
 CLIENT_API_BYTE_PARAMS = { 'hash', 'destination_page_key', 'page_key', 'service_key', 'Hydrus-Client-API-Access-Key', 'Hydrus-Client-API-Session-Key', 'file_service_key', 'deleted_file_service_key', 'tag_service_key', 'tag_service_key_1', 'tag_service_key_2', 'rating_service_key', 'job_status_key' }
 CLIENT_API_STRING_PARAMS = { 'name', 'url', 'domain', 'search', 'service_name', 'reason', 'tag_display_type', 'source_hash_type', 'desired_hash_type' }
 CLIENT_API_JSON_PARAMS = { 'basic_permissions', 'tags', 'tags_1', 'tags_2', 'file_ids', 'download', 'only_return_identifiers', 'only_return_basic_information', 'include_blurhash', 'create_new_file_ids', 'detailed_url_information', 'hide_service_keys_tags', 'simple', 'file_sort_asc', 'return_hashes', 'return_file_ids', 'include_notes', 'include_milliseconds', 'include_services_object', 'notes', 'note_names', 'doublecheck_file_system', 'only_in_view' }
@@ -2889,6 +2889,19 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
     
     def _threadDoGETJob( self, request: HydrusServerRequest.HydrusRequest ):
         
+        if 'render_format' in request.parsed_request_args:
+            
+            format = request.parsed_request_args.GetValue( 'render_format', int )
+            
+            if not format in [ HC.IMAGE_PNG, HC.IMAGE_JPEG, HC.IMAGE_WEBP ]:
+                
+                raise HydrusExceptions.BadRequestException( 'Invalid render format!' )
+                
+            
+        else:
+            
+            format = HC.IMAGE_PNG
+        
         try:
             
             media_result: ClientMedia.MediaSingleton
@@ -2933,16 +2946,50 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
                 return
                 
             
-            time.sleep( 0.1 )
+            time.sleep( 0.01 )
             
-
+        
         numpy_image = renderer.GetNumPyImage()
         
-        body = HydrusImageHandling.GeneratePNGBytesNumPy( numpy_image )
+        if 'width' in request.parsed_request_args and 'height' in request.parsed_request_args:
+            
+            width = request.parsed_request_args.GetValue( 'width', int )
+            height = request.parsed_request_args.GetValue( 'height', int )
+            
+            if width < 1:
+                
+                raise HydrusExceptions.BadRequestException( 'Width must be greater than 0!' )
+                
+            
+            if height < 1:
+                
+                raise HydrusExceptions.BadRequestException( 'Height must be greater than 0!' )
+                
+            
+            numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( width, height ) )
+            
+        
+        if 'render_quality' in request.parsed_request_args:
+            
+            quality = request.parsed_request_args.GetValue( 'render_quality', int )
+            
+        else:
+            
+            if format == HC.IMAGE_PNG:
+                
+                quality = 1  # fastest png compression
+                
+            else:
+                
+                quality = 80
+                
+            
+        
+        body = HydrusImageHandling.GenerateFileBytesForRenderAPI( numpy_image, format, quality )
         
         is_attachment = request.parsed_request_args.GetValue( 'download', bool, default_value = False )
 
-        response_context = HydrusServerResources.ResponseContext( 200, mime = HC.IMAGE_PNG, body = body, is_attachment = is_attachment, max_age = 86400 * 365 )
+        response_context = HydrusServerResources.ResponseContext( 200, mime = format, body = body, is_attachment = is_attachment, max_age = 86400 * 365 )
         
         return response_context
         
