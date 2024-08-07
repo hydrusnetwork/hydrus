@@ -2946,9 +2946,9 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
                 return
                 
             
-            time.sleep( 0.02 )
+            time.sleep( 0.01 )
             
-
+        
         numpy_image = renderer.GetNumPyImage()
         
         if 'width' in request.parsed_request_args and 'height' in request.parsed_request_args:
@@ -2956,7 +2956,18 @@ class HydrusResourceClientAPIRestrictedGetFilesGetRenderedFile( HydrusResourceCl
             width = request.parsed_request_args.GetValue( 'width', int )
             height = request.parsed_request_args.GetValue( 'height', int )
             
+            if width < 1:
+                
+                raise HydrusExceptions.BadRequestException( 'Width must be greater than 0!' )
+                
+            
+            if height < 1:
+                
+                raise HydrusExceptions.BadRequestException( 'Height must be greater than 0!' )
+                
+            
             numpy_image = HydrusImageHandling.ResizeNumPyImage( numpy_image, ( width, height ) )
+            
         
         if 'render_quality' in request.parsed_request_args:
             
