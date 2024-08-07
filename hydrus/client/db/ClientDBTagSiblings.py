@@ -668,7 +668,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return tag_ids_to_ideal_tag_ids
         
     
-    def GetTagSiblingsForTags( self, service_key, tags ) -> typing.Dict[ str, str ]:
+    def GetTagSiblingsForTags( self, service_key, tags ) -> typing.Dict[ str, typing.Set[ str ] ]:
         
         if service_key == CC.COMBINED_TAG_SERVICE_KEY:
             
@@ -736,11 +736,33 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         return tags_to_ideals
         
     
-    def GetTagSiblings( self, service_key ):
+    def GetTagSiblings( self, service_key, tags = None, where_chain_includes_pending_or_petitioned = False ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        statuses_to_pair_ids = self.GetTagSiblingsIds( service_id )
+        if tags is None and not where_chain_includes_pending_or_petitioned:
+            
+            statuses_to_pair_ids = self.GetTagSiblingsIds( service_id )
+            
+        else:
+            
+            if where_chain_includes_pending_or_petitioned:
+                
+                tag_ids = set()
+                
+                for ( bad_tag_id, good_tag_id ) in self._Execute( 'SELECT bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ?', ( service_id, ) ):
+                    
+                    tag_ids.add( bad_tag_id )
+                    tag_ids.add( good_tag_id )
+                    
+                
+            else:
+                
+                tag_ids = set( self.modules_tags_local_cache.GetTagIdsToTags( tags = tags ).keys() )
+                
+            
+            statuses_to_pair_ids = self.GetTagSiblingsIdsChains( service_id, tag_ids )
+            
         
         all_tag_ids = set()
         

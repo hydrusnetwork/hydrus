@@ -1394,6 +1394,7 @@ class COLUMN_LIST_TAG_PARENTS( COLUMN_LIST_DEFINITION ):
     STATUS = 0
     CHILD = 1
     PARENT = 2
+    NOTE = 3
     
 
 column_list_type_name_lookup[ COLUMN_LIST_TAG_PARENTS.ID ] = 'tag parents'
@@ -1401,6 +1402,7 @@ column_list_type_name_lookup[ COLUMN_LIST_TAG_PARENTS.ID ] = 'tag parents'
 register_column_type( COLUMN_LIST_TAG_PARENTS.ID, COLUMN_LIST_TAG_PARENTS.STATUS, '', False, 6, True )
 register_column_type( COLUMN_LIST_TAG_PARENTS.ID, COLUMN_LIST_TAG_PARENTS.CHILD, 'child', False, 25, True )
 register_column_type( COLUMN_LIST_TAG_PARENTS.ID, COLUMN_LIST_TAG_PARENTS.PARENT, 'parent', False, 25, True )
+register_column_type( COLUMN_LIST_TAG_PARENTS.ID, COLUMN_LIST_TAG_PARENTS.NOTE, 'note', False, 40, True )
 
 default_column_list_sort_lookup[ COLUMN_LIST_TAG_PARENTS.ID ] = ( COLUMN_LIST_TAG_PARENTS.PARENT, True )
 

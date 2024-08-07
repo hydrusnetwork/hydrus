@@ -14,7 +14,7 @@ def GetSidecarPath( actual_file_path: str, remove_actual_filename_ext: bool, suf
     path_components = []
     
     if remove_actual_filename_ext and '.' in actual_file_path:
-    
+        
         ( filename_without_ext, gumpf ) = actual_file_path.rsplit( '.', 1 )
         
         path_components.append( filename_without_ext )

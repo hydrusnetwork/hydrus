@@ -10484,6 +10484,50 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 584:
+            
+            try:
+                
+                from hydrus.client.networking import ClientNetworkingContexts
+                
+                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                network_contexts_to_custom_header_dicts = domain_manager.GetNetworkContextsToCustomHeaderDicts()
+                
+                pixiv_network_context = ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( 'pixiv.net' )
+                
+                if pixiv_network_context not in network_contexts_to_custom_header_dicts:
+                    
+                    network_contexts_to_custom_header_dicts[ pixiv_network_context ] = {}
+                    
+                
+                custom_header_dict = network_contexts_to_custom_header_dicts[ pixiv_network_context ]
+                
+                if 'Accept-Language' not in custom_header_dict:
+                    
+                    custom_header_dict[ 'Accept-Language' ] = ( 'en-US,en;q=0.5', ClientNetworkingDomain.VALID_APPROVED, 'Tells Pixiv to give English tag translations.' )
+                    
+                
+                domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

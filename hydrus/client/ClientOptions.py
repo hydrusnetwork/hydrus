@@ -243,7 +243,6 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'focus_preview_on_shift_click_only_static' : False,
             'fade_sibling_connector' : True,
             'use_custom_sibling_connector_colour' : False,
-            'hide_uninteresting_local_import_time' : True,
             'hide_uninteresting_modified_time' : True,
             'draw_tags_hover_in_media_viewer_background' : True,
             'draw_top_hover_in_media_viewer_background' : True,
@@ -260,7 +259,8 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'override_stylesheet_colours' : False,
             'command_palette_show_page_of_pages' : False,
             'command_palette_show_main_menu' : False,
-            'command_palette_show_media_menu' : False
+            'command_palette_show_media_menu' : False,
+            'disallow_media_drags_on_duration_media' : False
         }
         
         #

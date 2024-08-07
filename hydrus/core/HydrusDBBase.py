@@ -15,7 +15,8 @@ from hydrus.core import HydrusTime
 
 def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
     
-    space_needed = int( num_bytes * 1.1 )
+    temp_space_needed = int( num_bytes * 1.1 )
+    destination_space_needed = temp_space_needed * 2 # not only do we need the space on disk, we'll have a very brief WAL or (for vacuum) complete file copy!
     
     if HG.no_db_temp_files:
         
@@ -25,15 +26,15 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
             
             if approx_available_memory < num_bytes:
                 
-                raise Exception( 'I believe you need about {} available memory, since you are running in no_db_temp_files mode, but you only seem to have {}.'.format( HydrusData.ToHumanBytes( space_needed ), HydrusData.ToHumanBytes( approx_available_memory ) ) )
+                raise Exception( f'I believe you need about {HydrusData.ToHumanBytes(temp_space_needed)} available memory, since you are running in no_db_temp_files mode, but you only seem to have {HydrusData.ToHumanBytes( approx_available_memory )}.' )
                 
             
         
         db_disk_free_space = HydrusPaths.GetFreeSpace( db_dir )
         
-        if db_disk_free_space is not None and db_disk_free_space < space_needed:
+        if db_disk_free_space is not None and db_disk_free_space < destination_space_needed:
             
-            raise Exception( 'I believe you need about {} on your db\'s disk partition, but you only seem to have {}.'.format( HydrusData.ToHumanBytes( space_needed ), HydrusData.ToHumanBytes( db_disk_free_space ) ) )
+            raise Exception( f'I believe you need about {HydrusData.ToHumanBytes( destination_space_needed )} on your db\'s disk partition (perhaps only temporarily), but you only seem to have {HydrusData.ToHumanBytes( db_disk_free_space )}.' )
             
         
     else:
@@ -46,18 +47,18 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
         
         if temp_and_db_on_same_device:
             
-            space_needed *= 2
+            space_needed = temp_space_needed + destination_space_needed
             
             if temp_disk_free_space is not None and temp_disk_free_space < space_needed:
                 
-                raise Exception( 'I believe you need about {} on your db\'s disk partition, which I think also holds your temporary path, but you only seem to have {}.'.format( HydrusData.ToHumanBytes( space_needed ), HydrusData.ToHumanBytes( temp_disk_free_space ) ) )
+                raise Exception( f'I believe you need about {HydrusData.ToHumanBytes( space_needed )} on your db\'s disk partition (perhaps only temporarily), which I think also holds your temporary path ({temp_dir}), but you only seem to have {HydrusData.ToHumanBytes( temp_disk_free_space )}.' )
                 
             
         else:
             
-            if temp_disk_free_space is not None and temp_disk_free_space < space_needed:
+            if temp_disk_free_space is not None and temp_disk_free_space < temp_space_needed:
                 
-                message = 'I believe you need about {} on your temporary path\'s disk partition, which I think is {}, but you only seem to have {}.'.format( HydrusData.ToHumanBytes( space_needed ), temp_dir, HydrusData.ToHumanBytes( temp_disk_free_space ) )
+                message = f'I believe you need about {HydrusData.ToHumanBytes( temp_space_needed )} on your temporary path\'s disk partition, which I think is "{temp_dir}", but you only seem to have {HydrusData.ToHumanBytes( temp_disk_free_space )}.'
                 
                 temp_total_space = HydrusPaths.GetTotalSpace( temp_dir )
                 
@@ -75,9 +76,9 @@ def CheckHasSpaceForDBTransaction( db_dir, num_bytes ):
             
             db_disk_free_space = HydrusPaths.GetFreeSpace( db_dir )
             
-            if db_disk_free_space is not None and db_disk_free_space < space_needed:
+            if db_disk_free_space is not None and db_disk_free_space < destination_space_needed:
                 
-                raise Exception( 'I believe you need about {} on your db\'s disk partition, but you only seem to have {}.'.format( HydrusData.ToHumanBytes( space_needed ), HydrusData.ToHumanBytes( db_disk_free_space ) ) )
+                raise Exception( f'I believe you need about {HydrusData.ToHumanBytes( destination_space_needed )} on your db\'s disk partition (perhaps only temporarily), but you only seem to have {HydrusData.ToHumanBytes( db_disk_free_space )}.' )
                 
             
         

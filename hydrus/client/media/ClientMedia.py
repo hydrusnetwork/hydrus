@@ -1993,7 +1993,7 @@ class MediaSingleton( Media ):
                 
                 import_timestamp_ms = times_manager.GetImportedTimestampMS( local_file_service.GetServiceKey() )
                 
-                lines.append( ( True, 'added to {}: {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( import_timestamp_ms ) ) ) ) )
+                lines.append( ( False, 'added to {}: {}'.format( local_file_service.GetName(), ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( import_timestamp_ms ) ) ) ) )
                 
                 seen_local_file_service_timestamps_ms.add( import_timestamp_ms )
                 
@@ -2003,15 +2003,7 @@ class MediaSingleton( Media ):
             
             import_timestamp_ms = times_manager.GetImportedTimestampMS( CC.COMBINED_LOCAL_FILE_SERVICE_KEY )
             
-            if CG.client_controller.new_options.GetBoolean( 'hide_uninteresting_local_import_time' ):
-                
-                # if we haven't already printed this timestamp somewhere
-                line_is_interesting = False not in ( timestamp_ms_is_interesting( timestamp_ms, import_timestamp_ms ) for timestamp_ms in seen_local_file_service_timestamps_ms )
-                
-            else:
-                
-                line_is_interesting = True
-                
+            line_is_interesting = True
             
             lines.append( ( line_is_interesting, 'imported: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( import_timestamp_ms ) ) ) ) )
             
@@ -2104,7 +2096,7 @@ class MediaSingleton( Media ):
             
             if archived_timestamp_ms is not None:
                 
-                lines.append( ( True, 'archived: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) ) ) )
+                lines.append( ( False, 'archived: {}'.format( ClientTime.TimestampToPrettyTimeDelta( HydrusTime.SecondiseMS( archived_timestamp_ms ) ) ) ) )
                 
             
         
@@ -2541,11 +2533,27 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
                     
                     if pixel_hash is None:
                         
-                        return b'\xff' * 32
+                        return ( 0 if reverse else 1, b'\xff' * 32 )
                         
                     else:
                         
-                        return pixel_hash
+                        return ( 1 if reverse else 0, pixel_hash )
+                        
+                    
+                
+            elif sort_data == CC.SORT_FILES_BY_BLURHASH:
+                
+                def sort_key( x ):
+                    
+                    blurhash = x.GetDisplayMedia().GetMediaResult().GetFileInfoManager().blurhash
+                    
+                    if blurhash is None:
+                        
+                        return ( 0 if reverse else 1, '' )
+                        
+                    else:
+                        
+                        return ( 1 if reverse else 0, blurhash )
                         
                     
                 
@@ -2846,6 +2854,7 @@ class MediaSort( HydrusSerialisable.SerialisableBase ):
             sort_string_lookup[ CC.SORT_FILES_BY_RANDOM ] = ( 'random', 'random', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_PIXEL_HASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
+            sort_string_lookup[ CC.SORT_FILES_BY_BLURHASH ] = ( 'lexicographic', 'reverse lexicographic', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_WIDTH ] = ( 'slimmest first', 'widest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_HEIGHT ] = ( 'shortest first', 'tallest first', CC.SORT_ASC )
             sort_string_lookup[ CC.SORT_FILES_BY_RATIO ] = ( 'tallest first', 'widest first', CC.SORT_ASC )

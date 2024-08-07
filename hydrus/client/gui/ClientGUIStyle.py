@@ -72,6 +72,7 @@ def InitialiseDefaults():
         
     
     global ORIGINAL_STYLE_NAME
+    global CURRENT_STYLE_NAME
     
     if QtInit.WE_ARE_QT5:
         
@@ -81,6 +82,8 @@ def InitialiseDefaults():
         
         ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().name()
         
+    
+    CURRENT_STYLE_NAME = ORIGINAL_STYLE_NAME
     
     global ORIGINAL_STYLESHEET
     global CURRENT_STYLESHEET

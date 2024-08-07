@@ -42,9 +42,9 @@ from hydrus.client.gui.lists import ClientGUIListBoxes
 from hydrus.client.gui.lists import ClientGUIListConstants as CGLC
 from hydrus.client.gui.lists import ClientGUIListCtrl
 from hydrus.client.gui.metadata import ClientGUIMigrateTags
+from hydrus.client.gui.metadata import ClientGUITagActions
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
-from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.search import ClientGUIACDropdown
 from hydrus.client.gui.search import ClientGUILocation
 from hydrus.client.gui.widgets import ClientGUICommon
@@ -2743,7 +2743,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             if not self._i_am_local_tag_service and self._service.HasPermission( HC.CONTENT_TYPE_MAPPINGS, HC.PERMISSION_ACTION_MODERATE ):
                 
-                forced_reason = 'admin'
+                forced_reason = 'Entered by a janitor.'
                 
             
             tags_managers = [ m.GetTagsManager() for m in self._media ]
@@ -3514,23 +3514,25 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             QW.QWidget.__init__( self, parent )
             
+            self._current_pertinent_tags = set()
+            
             self._service_key = service_key
             
             self._service = CG.client_controller.services_manager.GetService( self._service_key )
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
-            self._pairs_to_reasons = {}
+            self._parent_action_context = ClientGUITagActions.ParentActionContext( self._service_key )
             
-            self._original_statuses_to_pairs = collections.defaultdict( set )
-            self._current_statuses_to_pairs = collections.defaultdict( set )
+            self._current_new = None
             
             self._show_all = QW.QCheckBox( self )
+            self._show_pending_and_petitioned = QW.QCheckBox( self )
             self._pursue_whole_chain = QW.QCheckBox( self )
             
             tt = 'When you enter tags in the bottom boxes, the upper list is filtered to pertinent related relationships.'
             tt += '\n' * 2
-            tt += 'With this off, it will show all (grand)children and (grand)parents. With it on, it shows the full chain, including cousins. This can be overwhelming!'
+            tt += 'With this off, it will show (grand)children and (grand)parents only. With it on, it walks up and down the full chain, including cousins. This can be overwhelming!'
             
             self._pursue_whole_chain.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -3544,28 +3546,26 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel.SetListCtrl( self._tag_parents )
             
-            self._tag_parents.Sort()
-            
             self._listctrl_panel.AddButton( 'add', self._AddButton, enabled_check_func = self._CanAddFromCurrentInput )
             self._listctrl_panel.AddButton( 'delete', self._DeleteSelectedRows, enabled_only_on_selection = True )
             
+            self._tag_parents.Sort()
+            
             menu_items = []
             
-            menu_items.append( ( 'normal', 'from clipboard', 'Load parents from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
-            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load parents from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
-            menu_items.append( ( 'normal', 'from .txt file', 'Load parents from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
-            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load parents from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
+            menu_items.append( ( 'normal', 'from clipboard', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, False ) ) )
+            menu_items.append( ( 'normal', 'from clipboard (only add pairs--no deletions)', 'Load siblings from text in your clipboard.', HydrusData.Call( self._ImportFromClipboard, True ) ) )
+            menu_items.append( ( 'normal', 'from .txt file', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, False ) ) )
+            menu_items.append( ( 'normal', 'from .txt file (only add pairs--no deletions)', 'Load siblings from a .txt file.', HydrusData.Call( self._ImportFromTXT, True ) ) )
             
             self._listctrl_panel.AddMenuButton( 'import', menu_items )
             
             menu_items = []
             
-            menu_items.append( ( 'normal', 'to clipboard', 'Save selected parents to your clipboard.', self._ExportToClipboard ) )
-            menu_items.append( ( 'normal', 'to .txt file', 'Save selected parents to a .txt file.', self._ExportToTXT ) )
+            menu_items.append( ( 'normal', 'to clipboard', 'Save selected siblings to your clipboard.', self._ExportToClipboard ) )
+            menu_items.append( ( 'normal', 'to .txt file', 'Save selected siblings to a .txt file.', self._ExportToTXT ) )
             
             self._listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
-            
-            self._listctrl_panel.setEnabled( False )
             
             ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._children, ( 12, 6 ) )
             
@@ -3574,23 +3574,22 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
-            self._child_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, default_location_context, service_key, show_paste_button = True )
-            self._child_input.setEnabled( False )
+            self._children_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterChildren, default_location_context, service_key, show_paste_button = True )
             
-            self._parent_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, default_location_context, service_key, show_paste_button = True )
-            self._parent_input.setEnabled( False )
+            self._parents_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterParents, default_location_context, service_key, show_paste_button = True )
             
-            self._children.tagsChanged.connect( self._child_input.SetContextTags )
-            self._parents.tagsChanged.connect( self._parent_input.SetContextTags )
+            self._children.tagsChanged.connect( self._children_input.SetContextTags )
+            self._parents.tagsChanged.connect( self._parents_input.SetContextTags )
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising' + HC.UNICODE_ELLIPSIS + '\n' + '.' )
+            self._status_st = ClientGUICommon.BetterStaticText( self,'Files with any tag on the left will also be given the tags on the right.' )
             self._sync_status_st = ClientGUICommon.BetterStaticText( self, '' )
             self._sync_status_st.setWordWrap( True )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
             
-            #
+            self._wipe_workspace = ClientGUICommon.BetterButton( self, 'wipe workspace', self._WipeWorkspace )
+            self._wipe_workspace.setEnabled( False )
             
             children_vbox = QP.VBoxLayout()
             
@@ -3609,16 +3608,22 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             input_box = QP.HBoxLayout()
             
-            QP.AddToLayout( input_box, self._child_input, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( input_box, self._parent_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( input_box, self._children_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            QP.AddToLayout( input_box, self._parents_input, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
+            workspace_hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( workspace_hbox, self._wipe_workspace, CC.FLAGS_SIZER_VCENTER )
+            QP.AddToLayout( workspace_hbox, self._count_st, CC.FLAGS_EXPAND_BOTH_WAYS )
             
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._sync_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._pursue_whole_chain,self,'show whole chains'), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._show_pending_and_petitioned, self, 'show pending and petitioned groups' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._pursue_whole_chain, self, 'show whole chains' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, workspace_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( vbox, tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
             QP.AddToLayout( vbox, input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
@@ -3627,15 +3632,20 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             #
             
-            self._children.listBoxChanged.connect( self._UpdateListCtrlData )
-            self._parents.listBoxChanged.connect( self._UpdateListCtrlData )
-            self._show_all.clicked.connect( self._UpdateListCtrlData )
-            self._pursue_whole_chain.clicked.connect( self._UpdateListCtrlData )
+            self._listctrl_async_updater = self._InitialiseListCtrlAsyncUpdater()
             
-            self._child_input.tagsPasted.connect( self.EnterChildrenOnlyAdd )
-            self._parent_input.tagsPasted.connect( self.EnterParentsOnlyAdd )
+            self._children.listBoxChanged.connect( self._listctrl_async_updater.update )
+            self._parents.listBoxChanged.connect( self._listctrl_async_updater.update )
+            self._show_all.clicked.connect( self._listctrl_async_updater.update )
+            self._show_pending_and_petitioned.clicked.connect( self._listctrl_async_updater.update )
+            self._pursue_whole_chain.clicked.connect( self._listctrl_async_updater.update )
             
-            CG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
+            self._children_input.tagsPasted.connect( self.EnterChildrenOnlyAdd )
+            self._parents_input.tagsPasted.connect( self.EnterParentsOnlyAdd )
+            
+            self._parent_action_context.RegisterQtUpdateCall( self, self._listctrl_async_updater.update )
+            
+            self._STARTInitialisation( tags, self._service_key )
             
         
         def _AddButton( self ):
@@ -3643,332 +3653,15 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             children = self._children.GetTags()
             parents = self._parents.GetTags()
             
-            pairs = list( itertools.product( children, parents ) )
-            
-            self._AddPairs( pairs )
-            
-            self._children.SetTags( [] )
-            self._parents.SetTags( [] )
-            
-            self._UpdateListCtrlData()
-            
-            self._listctrl_panel.UpdateButtons()
-            
-        
-        def _AddPairs( self, pairs, add_only = False ):
-            
-            pairs = list( pairs )
-            
-            pairs.sort( key = lambda c_p: HydrusTags.ConvertTagToSortable( c_p[1] ) )
-            
-            new_pairs = []
-            current_pairs = []
-            petitioned_pairs = []
-            pending_pairs = []
-            
-            for pair in pairs:
+            if len( children ) > 0 and len( parents ) > 0:
                 
-                if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    if not add_only:
-                        
-                        pending_pairs.append( pair )
-                        
-                    
-                elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
-                    
-                    petitioned_pairs.append( pair )
-                    
-                elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    if not add_only:
-                        
-                        current_pairs.append( pair )
-                        
-                    
-                elif self._CanAdd( pair ):
-                    
-                    new_pairs.append( pair )
-                    
+                pairs = list( itertools.product( children, parents ) )
                 
-            
-            affected_pairs = []
-            
-            if len( new_pairs ) > 0:
+                self._parent_action_context.EnterPairs( self, pairs )
                 
-                do_it = True
+                self._children.SetTags( [] )
+                self._parents.SetTags( [] )
                 
-                if self._i_am_local_tag_service:
-                    
-                    reason = 'added by user'
-                    
-                else:
-                    
-                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
-                        
-                        reason = 'admin'
-                        
-                    else:
-                        
-                        if len( new_pairs ) > 10:
-                            
-                            pair_strings = 'The many pairs you entered.'
-                            
-                        else:
-                            
-                            pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in new_pairs ) )
-                            
-                        
-                        message = 'Enter a reason for:' + '\n' * 2 + pair_strings + '\n' * 2 + 'To be added. A janitor will review your request.'
-                        
-                        fixed_suggestions = [
-                            'obvious by definition (a sword is a weapon)',
-                            'character/series/studio/etc... belonging (character x belongs to series y)'
-                        ]
-                        
-                        suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD )
-                        
-                        suggestions.extend( fixed_suggestions )
-                        
-                        with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
-                            
-                            if dlg.exec() == QW.QDialog.Accepted:
-                                
-                                reason = dlg.GetValue()
-                                
-                                if reason not in fixed_suggestions:
-                                    
-                                    CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, reason )
-                                    
-                                
-                            else:
-                                
-                                do_it = False
-                                
-                            
-                        
-                    
-                
-                if do_it:
-                    
-                    for pair in new_pairs:
-                        
-                        self._pairs_to_reasons[ pair ] = reason
-                        
-                    
-                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
-                    
-                    affected_pairs.extend( new_pairs )
-                    
-                
-            
-            if len( current_pairs ) > 0:
-                
-                do_it = True
-                
-                if self._i_am_local_tag_service:
-                    
-                    reason = 'removed by user'
-                    
-                else:
-                    
-                    if len( current_pairs ) > 10:
-                        
-                        pair_strings = 'The many pairs you entered.'
-                        
-                    else:
-                        
-                        pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in current_pairs ) )
-                        
-                    
-                    if len( current_pairs ) > 1:
-                        
-                        message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Already exist.'
-                        
-                    else:
-                        
-                        message = 'The pair ' + pair_strings + ' already exists.'
-                        
-                    
-                    result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'petition to remove', no_label = 'do nothing' )
-                    
-                    if result == QW.QDialog.Accepted:
-                        
-                        if self._service.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_MODERATE ):
-                            
-                            reason = 'admin'
-                            
-                        else:
-                            
-                            message = 'Enter a reason for:'
-                            message += '\n' * 2
-                            message += pair_strings
-                            message += '\n' * 2
-                            message += 'to be removed. A janitor will review your petition.'
-                            
-                            fixed_suggestions = [
-                                'obvious typo/mistake'
-                            ]
-                            
-                            suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE )
-                            
-                            suggestions.extend( fixed_suggestions )
-                            
-                            with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
-                                
-                                if dlg.exec() == QW.QDialog.Accepted:
-                                    
-                                    reason = dlg.GetValue()
-                                    
-                                    
-                                    if reason not in fixed_suggestions:
-                                        
-                                        CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, reason )
-                                        
-                                    
-                                else:
-                                    
-                                    do_it = False
-                                    
-                                
-                            
-                        
-                    else:
-                        
-                        do_it = False
-                        
-                    
-                
-                if do_it:
-                    
-                    for pair in current_pairs:
-                        
-                        self._pairs_to_reasons[ pair ] = reason
-                        
-                    
-                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
-                    
-                    affected_pairs.extend( current_pairs )
-                    
-                
-            
-            if len( pending_pairs ) > 0:
-                
-                if len( pending_pairs ) > 10:
-                    
-                    pair_strings = 'The many pairs you entered.'
-                    
-                else:
-                    
-                    pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in pending_pairs ) )
-                    
-                
-                if len( pending_pairs ) > 1:
-                    
-                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are pending.'
-                    
-                else:
-                    
-                    message = 'The pair ' + pair_strings + ' is pending.'
-                    
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
-                    
-                    affected_pairs.extend( pending_pairs )
-                    
-                
-            
-            if len( petitioned_pairs ) > 0:
-                
-                if len( petitioned_pairs ) > 10:
-                    
-                    pair_strings = 'The many pairs you entered.'
-                    
-                else:
-                    
-                    pair_strings = '\n'.join( ( child + '->' + parent for ( child, parent ) in petitioned_pairs ) )
-                    
-                
-                if len( petitioned_pairs ) > 1:
-                    
-                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are petitioned.'
-                    
-                else:
-                    
-                    message = 'The pair ' + pair_strings + ' is petitioned.'
-                    
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
-                    
-                    affected_pairs.extend( petitioned_pairs )
-                    
-                
-            
-            if len( affected_pairs ) > 0:
-                
-                def in_current( pair ):
-                    
-                    for status in ( HC.CONTENT_STATUS_CURRENT, HC.CONTENT_STATUS_PENDING, HC.CONTENT_STATUS_PETITIONED ):
-                        
-                        if pair in self._current_statuses_to_pairs[ status ]:
-                            
-                            return True
-                            
-                        
-                        return False
-                        
-                    
-                
-                affected_pairs = [ ( self._tag_parents.HasData( pair ), in_current( pair ), pair ) for pair in affected_pairs ]
-                
-                to_add = [ pair for ( exists, current, pair ) in affected_pairs if not exists ]
-                to_update = [ pair for ( exists, current, pair ) in affected_pairs if exists and current ]
-                to_delete = [ pair for ( exists, current, pair ) in affected_pairs if exists and not current ]
-                
-                self._tag_parents.AddDatas( to_add )
-                self._tag_parents.UpdateDatas( to_update )
-                self._tag_parents.DeleteDatas( to_delete )
-                
-                self._tag_parents.Sort()
-                
-            
-        
-        def _CanAdd( self, potential_pair ):
-            
-            ( potential_child, potential_parent ) = potential_pair
-            
-            if potential_child == potential_parent:
-                
-                return False
-                
-            
-            # test for loops
-            
-            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-            
-            current_children = { child for ( child, parent ) in current_pairs }
-            
-            if potential_parent in current_children:
-                
-                simple_children_to_parents = ClientManagers.BuildSimpleChildrenToParents( current_pairs )
-                
-                if ClientManagers.LoopInSimpleChildrenToParents( simple_children_to_parents, potential_child, potential_parent ):
-                    
-                    ClientGUIDialogsMessage.ShowWarning( self, f'Adding {potential_child}->{potential_parent} would create a loop!' )
-                    
-                    return False
-                    
-                
-            
-            return True
             
         
         def _CanAddFromCurrentInput( self ):
@@ -3983,40 +3676,47 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def _ConvertPairToListCtrlTuples( self, pair ):
             
-            ( child, parent ) = pair
+            ( old, new ) = pair
             
-            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+            ( in_pending, in_petitioned, reason ) = self._parent_action_context.GetPairListCtrlInfo( pair )
+            
+            note = reason
+            
+            if in_pending or in_petitioned:
                 
-                status = HC.CONTENT_STATUS_PENDING
+                if in_pending:
+                    
+                    status = HC.CONTENT_STATUS_PENDING
+                    
+                else:
+                    
+                    status = HC.CONTENT_STATUS_PETITIONED
+                    
                 
-            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
-                
-                status = HC.CONTENT_STATUS_PETITIONED
-                
-            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
+            else:
                 
                 status = HC.CONTENT_STATUS_CURRENT
+                
+                note = ''
                 
             
             sign = HydrusData.ConvertStatusToPrefix( status )
             
             pretty_status = sign
             
-            display_tuple = ( pretty_status, child, parent )
-            sort_tuple = ( status, child, parent )
+            display_tuple = ( pretty_status, old, new, note )
+            sort_tuple = ( status, old, new, note )
             
             return ( display_tuple, sort_tuple )
             
         
         def _DeleteSelectedRows( self ):
             
-            parents_to_children = collections.defaultdict( set )
-            
             pairs = self._tag_parents.GetData( only_selected = True )
             
             if len( pairs ) > 0:
                 
-                self._AddPairs( pairs )
+                self._parent_action_context.EnterPairs( self, pairs )
                 
             
         
@@ -4093,7 +3793,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             return export_string
             
         
-        def _ImportFromClipboard( self, add_only = False ):
+        def _ImportFromClipboard( self, only_add = False ):
             
             try:
                 
@@ -4112,9 +3812,13 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs = self._DeserialiseImportString( raw_text )
                 
-                self._AddPairs( pairs, add_only = add_only )
+                for ( a, b ) in pairs:
+                    
+                    self._current_pertinent_tags.add( a )
+                    self._current_pertinent_tags.add( b )
+                    
                 
-                self._UpdateListCtrlData()
+                self._parent_action_context.EnterPairs( self, pairs, only_add = only_add )
                 
             except Exception as e:
                 
@@ -4122,7 +3826,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def _ImportFromTXT( self, add_only = False ):
+        def _ImportFromTXT( self, only_add = False ):
             
             with QP.FileDialog( self, 'Select the file to import.', acceptMode = QW.QFileDialog.AcceptOpen ) as dlg:
                 
@@ -4143,147 +3847,78 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = self._DeserialiseImportString( import_string )
             
-            self._AddPairs( pairs, add_only = add_only )
+            for ( a, b ) in pairs:
+                
+                self._current_pertinent_tags.add( a )
+                self._current_pertinent_tags.add( b )
+                
             
-            self._UpdateListCtrlData()
+            self._parent_action_context.EnterPairs( self, pairs, only_add = only_add )
             
         
-        def _UpdateListCtrlData( self ):
+        def _InitialiseListCtrlAsyncUpdater( self ) -> ClientGUIAsync.AsyncQtUpdater:
             
-            children = self._children.GetTags()
-            parents = self._parents.GetTags()
-            
-            pertinent_pairs = set()
-            
-            show_all = self._show_all.isChecked()
-            pursue_whole_chain = self._pursue_whole_chain.isChecked()
-            
-            if len( children ) + len( parents ) == 0 or show_all:
+            def loading_callable():
                 
-                for ( status, pairs ) in self._current_statuses_to_pairs.items():
-                    
-                    if status == HC.CONTENT_STATUS_DELETED:
-                        
-                        continue
-                        
-                    
-                    if status == HC.CONTENT_STATUS_CURRENT and not show_all:
-                        
-                        continue
-                        
-                    
-                    # always show all pending/petitioned on empty
-                    
-                    pertinent_pairs.update( pairs )
-                    
-                
-            else:
-                
-                if pursue_whole_chain:
-                    
-                    next_pertinent_tags = children.union( parents )
-                    
-                    seen_pertinent_tags = set()
-                    
-                    while len( next_pertinent_tags ) > 0:
-                        
-                        current_pertinent_tags = next_pertinent_tags
-                        
-                        seen_pertinent_tags.update( current_pertinent_tags )
-                        
-                        next_pertinent_tags = set()
-                        
-                        for ( status, pairs ) in self._current_statuses_to_pairs.items():
-                            
-                            if status == HC.CONTENT_STATUS_DELETED:
-                                
-                                continue
-                                
-                            
-                            # show all appropriate
-                            
-                            for pair in pairs:
-                                
-                                ( a, b ) = pair
-                                
-                                if a in current_pertinent_tags or b in current_pertinent_tags:
-                                    
-                                    pertinent_pairs.add( pair )
-                                    
-                                    if a not in seen_pertinent_tags:
-                                        
-                                        next_pertinent_tags.add( a )
-                                        
-                                    
-                                    if b not in seen_pertinent_tags:
-                                        
-                                        next_pertinent_tags.add( b )
-                                        
-                                    
-                                
-                            
-                        
-                    
-                else:
-                    
-                    # start off searching in all directions, even if we disallow cousins later
-                    next_pertinent_children = children.union( parents )
-                    next_pertinent_parents = children.union( parents )
-                    
-                    seen_pertinent_tags = set()
-                    
-                    while len( next_pertinent_children ) + len( next_pertinent_parents ) > 0:
-                        
-                        current_pertinent_children = next_pertinent_children
-                        current_pertinent_parents = next_pertinent_parents
-                        
-                        seen_pertinent_tags.update( current_pertinent_children )
-                        seen_pertinent_tags.update( current_pertinent_parents )
-                        
-                        next_pertinent_children = set()
-                        next_pertinent_parents = set()
-                        
-                        for ( status, pairs ) in self._current_statuses_to_pairs.items():
-                            
-                            if status == HC.CONTENT_STATUS_DELETED:
-                                
-                                continue
-                                
-                            
-                            # show all appropriate
-                            
-                            for pair in pairs:
-                                
-                                ( a, b ) = pair
-                                
-                                if a in current_pertinent_parents:
-                                    
-                                    pertinent_pairs.add( pair )
-                                    
-                                    if b not in seen_pertinent_tags:
-                                        
-                                        next_pertinent_parents.add( b )
-                                        
-                                    
-                                
-                                if b in current_pertinent_children:
-                                    
-                                    pertinent_pairs.add( pair )
-                                    
-                                    if a not in seen_pertinent_tags:
-                                        
-                                        next_pertinent_children.add( a )
-                                        
-                                    
-                                
-                            
-                        
-                    
+                self._count_st.setText( 'loading' + HC.UNICODE_ELLIPSIS )
                 
             
-            self._tag_parents.SetData( pertinent_pairs )
+            def pre_work_callable():
+                
+                children = self._children.GetTags()
+                parents = self._parents.GetTags()
+                
+                self._current_pertinent_tags.update( children )
+                self._current_pertinent_tags.update( parents )
+                
+                show_all = self._show_all.isChecked()
+                show_pending_and_petitioned = self._show_pending_and_petitioned.isChecked()
+                pursue_whole_chain = self._pursue_whole_chain.isChecked()
+                
+                return ( set( self._current_pertinent_tags ), show_all, show_pending_and_petitioned, pursue_whole_chain, self._parent_action_context )
+                
             
-            self._tag_parents.Sort()
+            def work_callable( args ):
+                
+                ( pertinent_tags, show_all, show_pending_and_petitioned, pursue_whole_chain, parent_action_context ) = args
+                
+                pertinent_pairs = parent_action_context.GetPertinentPairsForTags( pertinent_tags, show_all, show_pending_and_petitioned, pursue_whole_chain )
+                
+                return pertinent_pairs
+                
+            
+            def publish_callable( result ):
+                
+                pairs = result
+                
+                num_active_pertinent_tags = len( self._children.GetTags() ) + len( self._parents.GetTags() )
+                
+                self._wipe_workspace.setEnabled( len( self._current_pertinent_tags ) > num_active_pertinent_tags )
+                
+                message = 'This dialog will remember the tags you enter and leave all the related pairs in view. Once you are done editing a group, hit this and it will clear the old pairs away.'
+                
+                if len( self._current_pertinent_tags ) > 0:
+                    
+                    message += f' Current workspace:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( self._current_pertinent_tags, no_trailing_whitespace = True )}'
+                    
+                
+                self._wipe_workspace.setToolTip( ClientGUIFunctions.WrapToolTip( message ) )
+                
+                self._count_st.setText( f'{HydrusNumbers.ToHumanInt(len(pairs))} pairs.' )
+                
+                self._tag_parents.SetData( pairs )
+                
+                self._listctrl_panel.UpdateButtons()
+                
+            
+            return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
+            
+        
+        def _WipeWorkspace( self ):
+            
+            self._current_pertinent_tags = set()
+            
+            self._listctrl_async_updater.update()
             
         
         def EnterChildren( self, tags ):
@@ -4294,10 +3929,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._children.EnterTags( tags )
                 
-                self._UpdateListCtrlData()
-                
-                self._listctrl_panel.UpdateButtons()
-                
+            
+            self._listctrl_async_updater.update()
             
         
         def EnterChildrenOnlyAdd( self, tags ):
@@ -4320,10 +3953,8 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._parents.EnterTags( tags )
                 
-                self._UpdateListCtrlData()
-                
-                self._listctrl_panel.UpdateButtons()
-                
+            
+            self._listctrl_async_updater.update()
             
         
         def EnterParentsOnlyAdd( self, tags ):
@@ -4340,42 +3971,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def GetContentUpdates( self ):
             
-            # we make it manually here because of the mass pending tags done (but not undone on a rescind) on a pending pair!
-            # we don't want to send a pend and then rescind it, cause that will spam a thousand bad tags and not undo it
-            
-            content_updates = []
-            
-            if self._i_am_local_tag_service:
-                
-                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
-                    
-                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_DELETE, pair ) )
-                    
-                
-                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_ADD, pair ) )
-                    
-                
-            else:
-                
-                current_pending = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
-                original_pending = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
-                
-                current_petitioned = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
-                original_petitioned = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
-                
-                new_pends = current_pending.difference( original_pending )
-                rescinded_pends = original_pending.difference( current_pending )
-                
-                new_petitions = current_petitioned.difference( original_petitioned )
-                rescinded_petitions = original_petitioned.difference( current_petitioned )
-                
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_PARENTS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
-                
+            content_updates = self._parent_action_context.GetContentUpdates()
             
             return ( self._service_key, content_updates )
             
@@ -4392,27 +3988,46 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def SetTagBoxFocus( self ):
             
-            if len( self._children.GetTags() ) == 0: self._child_input.setFocus( QC.Qt.OtherFocusReason )
-            else: self._parent_input.setFocus( QC.Qt.OtherFocusReason )
+            if len( self._children.GetTags() ) == 0:
+                
+                self._children_input.setFocus( QC.Qt.OtherFocusReason )
+                
+            else:
+                
+                self._parents_input.setFocus( QC.Qt.OtherFocusReason )
+                
             
         
-        def THREADInitialise( self, tags, service_key ):
+        def _STARTInitialisation( self, tags, service_key ):
             
-            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do ):
+            def work_callable():
+                
+                ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = CG.client_controller.Read( 'tag_display_application' )
+                
+                service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_parent_applicable_service_keys.items() if service_key in s_ks }
+                
+                service_keys_to_work_to_do = {}
+                
+                for s_k in service_keys_we_care_about:
+                    
+                    status = CG.client_controller.Read( 'tag_display_maintenance_status', s_k )
+                    
+                    work_to_do = status[ 'num_parents_to_sync' ] > 0
+                    
+                    service_keys_to_work_to_do[ s_k ] = work_to_do
+                    
+                
+                return service_keys_to_work_to_do
+                
+            
+            def publish_callable( result ):
+                
+                service_keys_to_work_to_do = result
                 
                 if not self or not QP.isValid( self ):
                     
                     return
                     
-                
-                self._original_statuses_to_pairs = original_statuses_to_pairs
-                self._current_statuses_to_pairs = current_statuses_to_pairs
-                
-                simple_status_text = 'Files with a tag on the left will also be given the tag on the right.'
-                simple_status_text += '\n'
-                simple_status_text += 'As an experiment, this panel will only display the \'current\' pairs for those tags entered below.'
-                
-                self._status_st.setText( simple_status_text )
                 
                 looking_good = True
                 
@@ -4444,7 +4059,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         else:
                             
-                            service_part = '{} apply these parents and still have sync work to do.'.format( unsynced_string )
+                            service_part = '{} apply these parents but still have sync work to do.'.format( unsynced_string )
                             
                         
                     
@@ -4477,7 +4092,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    s = '\n'
+                    s = ' | '
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
                     
                 
@@ -4491,15 +4106,15 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                         
                         s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _review services_.'
                         
-                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
+                        status_text = '{}\n\n{}'.format( s, status_text )
                         
-                    elif not account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ):
+                    elif not account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
                         
                         looking_good = False
                         
                         s = 'The account for this service does not seem to have permission to upload parents! You can edit them here for now, but the pending menu will not try to upload any changes you make.'
                         
-                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
+                        status_text = '{}\n\n{}'.format( s, status_text )
                         
                     
                 
@@ -4516,15 +4131,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._sync_status_st.style().polish( self._sync_status_st )
                 
-                self._count_st.setText( 'Starting with '+HydrusNumbers.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
-                
-                self._listctrl_panel.setEnabled( True )
-                self._child_input.setEnabled( True )
-                self._parent_input.setEnabled( True )
-                
                 if tags is None:
                     
-                    self._UpdateListCtrlData()
+                    self._listctrl_async_updater.update()
                     
                 else:
                     
@@ -4537,28 +4146,11 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            original_statuses_to_pairs = CG.client_controller.Read( 'tag_parents', service_key )
+            self._sync_status_st.setText( 'initialising sync data' + HC.UNICODE_ELLIPSIS )
             
-            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = CG.client_controller.Read( 'tag_display_application' )
+            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
             
-            service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_parent_applicable_service_keys.items() if service_key in s_ks }
-            
-            service_keys_to_work_to_do = {}
-            
-            for s_k in service_keys_we_care_about:
-                
-                status = CG.client_controller.Read( 'tag_display_maintenance_status', s_k )
-                
-                work_to_do = status[ 'num_parents_to_sync' ] > 0
-                
-                service_keys_to_work_to_do[ s_k ] = work_to_do
-                
-            
-            current_statuses_to_pairs = collections.defaultdict( set )
-            
-            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in list(original_statuses_to_pairs.items()) } )
-            
-            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do )
+            job.start()
             
         
     
@@ -4671,11 +4263,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
     
     class _Panel( QW.QWidget ):
         
-        AUTO_PETITION_REASON = 'TO BE AUTO-PETITIONED'
-        
         def __init__( self, parent, service_key, tags = None ):
             
             QW.QWidget.__init__( self, parent )
+            
+            self._current_pertinent_tags = set()
             
             self._service_key = service_key
             
@@ -4683,16 +4275,12 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._i_am_local_tag_service = self._service.GetServiceType() == HC.LOCAL_TAG
             
-            self._original_statuses_to_pairs = collections.defaultdict( set )
-            self._current_statuses_to_pairs = collections.defaultdict( set )
-            
-            self._current_pairs_lock = threading.Lock()
-            
-            self._pairs_to_reasons = {}
+            self._sibling_action_context = ClientGUITagActions.SiblingActionContext( self._service_key )
             
             self._current_new = None
             
             self._show_all = QW.QCheckBox( self )
+            self._show_pending_and_petitioned = QW.QCheckBox( self )
             
             # leave up here since other things have updates based on them
             self._old_siblings = ClientGUIListBoxes.ListBoxTagsStringsAddRemove( self, self._service_key, tag_display_type = ClientTags.TAG_DISPLAY_DISPLAY_ACTUAL, height_num_chars = 4 )
@@ -4700,7 +4288,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 6, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 14, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_siblings )
             
@@ -4725,28 +4313,26 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel.AddMenuButton( 'export', menu_items, enabled_only_on_selection = True )
             
-            self._listctrl_panel.setEnabled( False )
-            
-            ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 6 ) )
+            ( gumpf, preview_height ) = ClientGUIFunctions.ConvertTextToPixels( self._old_siblings, ( 12, 4 ) )
             
             self._old_siblings.setMinimumHeight( preview_height )
             
             default_location_context = CG.client_controller.new_options.GetDefaultLocalLocationContext()
             
             self._old_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.EnterOlds, default_location_context, service_key, show_paste_button = True )
-            self._old_input.setEnabled( False )
-            
             self._new_input = ClientGUIACDropdown.AutoCompleteDropdownTagsWrite( self, self.SetNew, default_location_context, service_key )
-            self._new_input.setEnabled( False )
             
             self._old_siblings.tagsChanged.connect( self._old_input.SetContextTags )
             
             #
             
-            self._status_st = ClientGUICommon.BetterStaticText( self, 'initialising' + HC.UNICODE_ELLIPSIS )
+            self._status_st = ClientGUICommon.BetterStaticText( self,'Tags on the left will appear as those on the right.' )
             self._sync_status_st = ClientGUICommon.BetterStaticText( self, '' )
             self._sync_status_st.setWordWrap( True )
             self._count_st = ClientGUICommon.BetterStaticText( self, '' )
+            
+            self._wipe_workspace = ClientGUICommon.BetterButton( self, 'wipe workspace', self._WipeWorkspace )
+            self._wipe_workspace.setEnabled( False )
             
             old_sibling_box = QP.VBoxLayout()
             
@@ -4770,28 +4356,38 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( input_box, self._old_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             QP.AddToLayout( input_box, self._new_input, CC.FLAGS_EXPAND_BOTH_WAYS )
             
+            workspace_hbox = QP.HBoxLayout()
+            
+            QP.AddToLayout( workspace_hbox, self._wipe_workspace, CC.FLAGS_SIZER_VCENTER )
+            QP.AddToLayout( workspace_hbox, self._count_st, CC.FLAGS_EXPAND_BOTH_WAYS )
+            
             vbox = QP.VBoxLayout()
             
             QP.AddToLayout( vbox, self._status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._sync_status_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, self._count_st, CC.FLAGS_EXPAND_PERPENDICULAR )
-            QP.AddToLayout( vbox, ClientGUICommon.WrapInText(self._show_all,self,'show all pairs'), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._show_all, self, 'show all pairs' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._show_pending_and_petitioned, self, 'show pending and petitioned groups' ), CC.FLAGS_EXPAND_PERPENDICULAR )
+            QP.AddToLayout( vbox, workspace_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, text_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, text_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.setLayout( vbox )
             
             #
             
-            self._show_all.clicked.connect( self._UpdateListCtrlData )
-            self._old_siblings.listBoxChanged.connect( self._UpdateListCtrlData )
-            
-            CG.client_controller.CallToThread( self.THREADInitialise, tags, self._service_key )
-            
             self._listctrl_async_updater = self._InitialiseListCtrlAsyncUpdater()
             
+            self._show_all.clicked.connect( self._listctrl_async_updater.update )
+            self._show_pending_and_petitioned.clicked.connect( self._listctrl_async_updater.update )
+            
+            self._old_siblings.listBoxChanged.connect( self._listctrl_async_updater.update )
+            
+            self._sibling_action_context.RegisterQtUpdateCall( self, self._listctrl_async_updater.update )
+            
             self._old_input.tagsPasted.connect( self.EnterOldsOnlyAdd )
+            
+            self._STARTInitialisation( tags, self._service_key )
             
         
         def _AddButton( self ):
@@ -4802,479 +4398,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs = [ ( old, self._current_new ) for old in olds ]
                 
-                self._AutoPetitionConflicts( pairs )
-                
-                self._AutoPetitionLoops( pairs )
-                
-                self._AddPairs( pairs )
+                self._sibling_action_context.EnterPairs( self, pairs )
                 
                 self._old_siblings.SetTags( set() )
                 self.SetNew( set() )
                 
-                self._UpdateListCtrlData()
-                
-                self._listctrl_panel.UpdateButtons()
-                
-            
-        
-        def _AddPairs( self, pairs, add_only = False, remove_only = False, default_reason = None ):
-            
-            pairs = list( pairs )
-            
-            pairs.sort( key = lambda c_p1: HydrusTags.ConvertTagToSortable( c_p1[1] ) )
-            
-            new_pairs = []
-            current_pairs = []
-            petitioned_pairs = []
-            pending_pairs = []
-            
-            for pair in pairs:
-                
-                with self._current_pairs_lock:
-                    
-                    in_pending = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
-                    in_petitioned = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
-                    
-                
-                if in_pending:
-                    
-                    if not add_only:
-                        
-                        pending_pairs.append( pair )
-                        
-                    
-                elif in_petitioned:
-                    
-                    if not remove_only:
-                        
-                        petitioned_pairs.append( pair )
-                        
-                    
-                elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
-                    
-                    if not add_only:
-                        
-                        current_pairs.append( pair )
-                        
-                    
-                elif not remove_only and self._CanAdd( pair ):
-                    
-                    new_pairs.append( pair )
-                    
-                
-            
-            if len( new_pairs ) > 0:
-                
-                do_it = True
-                
-                if default_reason is not None:
-                    
-                    reason = default_reason
-                    
-                elif self._i_am_local_tag_service:
-                    
-                    reason = 'added by user'
-                    
-                else:
-                    
-                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
-                        
-                        reason = 'admin'
-                        
-                    else:
-                        
-                        if len( new_pairs ) > 10:
-                            
-                            pair_strings = 'The many pairs you entered.'
-                            
-                        else:
-                            
-                            pair_strings = '\n'.join( ( old + '->' + new for ( old, new ) in new_pairs ) )
-                            
-                        
-                        fixed_suggestions = [
-                            'merging underscores/typos/phrasing/unnamespaced to a single uncontroversial good tag',
-                            'rewording/namespacing based on preference'
-                        ]
-                        
-                        suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD )
-                        
-                        suggestions.extend( fixed_suggestions )
-                        
-                        message = 'Enter a reason for:' + '\n' * 2 + pair_strings + '\n' * 2 + 'To be added. A janitor will review your petition.'
-                        
-                        with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
-                            
-                            if dlg.exec() == QW.QDialog.Accepted:
-                                
-                                reason = dlg.GetValue()
-                                
-                                if reason not in fixed_suggestions:
-                                    
-                                    CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, reason )
-                                    
-                                
-                            else:
-                                
-                                do_it = False
-                                
-                            
-                        
-                    
-                
-                if do_it:
-                    
-                    we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
-                    
-                    if we_are_autopetitioning:
-                        
-                        if self._i_am_local_tag_service:
-                            
-                            reason = 'REPLACEMENT: by user'
-                            
-                        else:
-                            
-                            reason = 'REPLACEMENT: {}'.format( reason )
-                            
-                        
-                    
-                    for pair in new_pairs:
-                        
-                        self._pairs_to_reasons[ pair ] = reason
-                        
-                    
-                    if we_are_autopetitioning:
-                        
-                        for ( p, r ) in list( self._pairs_to_reasons.items() ):
-                            
-                            if r == self.AUTO_PETITION_REASON:
-                                
-                                self._pairs_to_reasons[ p ] = reason
-                                
-                            
-                        
-                    
-                    with self._current_pairs_lock:
-                        
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( new_pairs )
-                        
-                    
-                
-            
-            if len( current_pairs ) > 0:
-                
-                do_it = True
-                
-                if default_reason is not None:
-                    
-                    reason = default_reason
-                    
-                elif self._i_am_local_tag_service:
-                    
-                    reason = 'removed by user'
-                    
-                else:
-                    
-                    if self._service.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_MODERATE ):
-                        
-                        reason = 'admin'
-                        
-                    else:
-                        
-                        if len( current_pairs ) > 10:
-                            
-                            pair_strings = 'The many pairs you entered.'
-                            
-                        else:
-                            
-                            pair_strings = '\n'.join( ( old + '->' + new for ( old, new ) in current_pairs ) )
-                            
-                        
-                        message = 'Enter a reason for:'
-                        message += '\n' * 2
-                        message += pair_strings
-                        message += '\n' * 2
-                        message += 'to be removed. You will see the delete as soon as you upload, but a janitor will review your petition to decide if all users should receive it as well.'
-                        
-                        fixed_suggestions = [
-                            'obvious typo/mistake',
-                            'disambiguation',
-                            'correcting to repository standard'
-                        ]
-                        
-                        suggestions = CG.client_controller.new_options.GetRecentPetitionReasons( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE )
-                        
-                        suggestions.extend( fixed_suggestions )
-                        
-                        with ClientGUIDialogs.DialogTextEntry( self, message, suggestions = suggestions ) as dlg:
-                            
-                            if dlg.exec() == QW.QDialog.Accepted:
-                                
-                                reason = dlg.GetValue()
-                                
-                                if reason not in fixed_suggestions:
-                                    
-                                    CG.client_controller.new_options.PushRecentPetitionReason( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, reason )
-                                    
-                                
-                            else:
-                                
-                                do_it = False
-                                
-                            
-                        
-                    
-                
-                if do_it:
-                    
-                    we_are_autopetitioning = self.AUTO_PETITION_REASON in self._pairs_to_reasons.values()
-                    
-                    if we_are_autopetitioning:
-                        
-                        if self._i_am_local_tag_service:
-                            
-                            reason = 'REPLACEMENT: by user'
-                            
-                        else:
-                            
-                            reason = 'REPLACEMENT: {}'.format( reason )
-                            
-                        
-                    
-                    for pair in current_pairs:
-                        
-                        self._pairs_to_reasons[ pair ] = reason
-                        
-                    
-                    if we_are_autopetitioning:
-                        
-                        for ( p, r ) in list( self._pairs_to_reasons.items() ):
-                            
-                            if r == self.AUTO_PETITION_REASON:
-                                
-                                self._pairs_to_reasons[ p ] = reason
-                                
-                            
-                        
-                    
-                    with self._current_pairs_lock:
-                        
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( current_pairs )
-                        
-                    
-                
-            
-            if len( pending_pairs ) > 0:
-                
-                if len( pending_pairs ) > 10:
-                    
-                    pair_strings = 'The many pairs you entered.'
-                    
-                else:
-                    
-                    pair_strings = '\n'.join( ( old + '->' + new for ( old, new ) in pending_pairs ) )
-                    
-                
-                if len( pending_pairs ) > 1:
-                    
-                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are pending.'
-                    
-                else:
-                    
-                    message = 'The pair ' + pair_strings + ' is pending.'
-                    
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the pend', no_label = 'do nothing' )
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    with self._current_pairs_lock:
-                        
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pending_pairs )
-                        
-                    
-                
-            
-            if len( petitioned_pairs ) > 0:
-                
-                if len( petitioned_pairs ) > 10:
-                    
-                    pair_strings = 'The many pairs you entered.'
-                    
-                else:
-                    
-                    pair_strings = ', '.join( ( old + '->' + new for ( old, new ) in petitioned_pairs ) )
-                    
-                
-                if len( petitioned_pairs ) > 1:
-                    
-                    message = 'The pairs:' + '\n' * 2 + pair_strings + '\n' * 2 + 'Are petitioned.'
-                    
-                else:
-                    
-                    message = 'The pair ' + pair_strings + ' is petitioned.'
-                    
-                
-                result = ClientGUIDialogsQuick.GetYesNo( self, message, title = 'Choose what to do.', yes_label = 'rescind the petition', no_label = 'do nothing' )
-                
-                if result == QW.QDialog.Accepted:
-                    
-                    with self._current_pairs_lock:
-                        
-                        self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( petitioned_pairs )
-                        
-                    
-                
-            
-        
-        def _AutoPetitionConflicts( self, pairs ):
-            
-            with self._current_pairs_lock:
-                
-                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-            
-            current_olds_to_news = dict( current_pairs )
-            
-            current_olds = { current_old for ( current_old, current_new ) in current_pairs }
-            
-            pairs_to_auto_petition = set()
-            
-            for ( old, new ) in pairs:
-                
-                if old in current_olds:
-                    
-                    conflicting_new = current_olds_to_news[ old ]
-                    
-                    if conflicting_new != new:
-                        
-                        conflicting_pair = ( old, conflicting_new )
-                        
-                        pairs_to_auto_petition.add( conflicting_pair )
-                        
-                    
-                
-            
-            if len( pairs_to_auto_petition ) > 0:
-                
-                pairs_to_auto_petition = list( pairs_to_auto_petition )
-                
-                self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = self.AUTO_PETITION_REASON )
-                
-            
-        
-        def _AutoPetitionLoops( self, pairs ):
-            
-            with self._current_pairs_lock:
-                
-                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-            
-            current_dict = dict( current_pairs )
-            
-            for ( potential_old, potential_new ) in pairs:
-                
-                if potential_new in current_dict:
-                    
-                    loop_new = potential_new
-                    
-                    seen_tags = set()
-                    
-                    while loop_new in current_dict:
-                        
-                        seen_tags.add( loop_new )
-                        
-                        next_new = current_dict[ loop_new ]
-                        
-                        if next_new in seen_tags:
-                            
-                            message = 'The pair you mean to add seems to connect to a sibling loop already in your database! Please undo this loop manually. The tags involved in the loop are:'
-                            message += '\n' * 2
-                            message += ', '.join( seen_tags )
-                            
-                            ClientGUIDialogsMessage.ShowCritical( self, 'Loop problem!', message )
-                            
-                            break
-                            
-                        
-                        if next_new == potential_old:
-                            
-                            pairs_to_auto_petition = [ ( loop_new, next_new ) ]
-                            
-                            self._AddPairs( pairs_to_auto_petition, remove_only = True, default_reason = self.AUTO_PETITION_REASON )
-                            
-                            with self._current_pairs_lock:
-                                
-                                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-                                
-                            
-                            current_dict = dict( current_pairs )
-                            
-                            break
-                            
-                        
-                        loop_new = next_new
-                        
-                    
-                
-            
-            
-        
-        def _CanAdd( self, potential_pair ):
-            
-            ( potential_old, potential_new ) = potential_pair
-            
-            with self._current_pairs_lock:
-                
-                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
-                
-            
-            current_dict = dict( current_pairs )
-            
-            # test for ambiguity
-            
-            if potential_old in current_dict:
-                
-                ClientGUIDialogsMessage.ShowWarning( self, 'There already is a relationship set for the tag {potential_old}.' )
-                
-                return False
-                
-            
-            # test for loops
-            
-            if potential_new in current_dict:
-                
-                seen_tags = set()
-                
-                next_new = potential_new
-                
-                while next_new in current_dict:
-                    
-                    next_new = current_dict[ next_new ]
-                    
-                    if next_new == potential_old:
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, f'Adding {potential_old}->{potential_new} would create a loop!' )
-                        
-                        return False
-                        
-                    
-                    if next_new in seen_tags:
-                        
-                        message = 'The pair you mean to add seems to connect to a sibling loop already in your database! Please undo this loop first. The tags involved in the loop are:'
-                        message += '\n' * 2
-                        message += ', '.join( seen_tags )
-                        
-                        ClientGUIDialogsMessage.ShowWarning( self, message )
-                        
-                        return False
-                        
-                    
-                    seen_tags.add( next_new )
-                    
-                
-            
-            return True
             
         
         def _CanAddFromCurrentInput( self ):
@@ -5291,25 +4419,11 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             ( old, new ) = pair
             
-            note = ''
+            ( in_pending, in_petitioned, reason ) = self._sibling_action_context.GetPairListCtrlInfo( pair )
             
-            with self._current_pairs_lock:
-                
-                in_pending = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
-                in_petitioned = pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
-                
+            note = reason
             
             if in_pending or in_petitioned:
-                
-                if pair in self._pairs_to_reasons:
-                    
-                    note = self._pairs_to_reasons[ pair ]
-                    
-                    if note is None:
-                        
-                        note = 'unknown'
-                        
-                    
                 
                 if in_pending:
                     
@@ -5323,6 +4437,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             else:
                 
                 status = HC.CONTENT_STATUS_CURRENT
+                
+                note = ''
                 
             
             sign = HydrusData.ConvertStatusToPrefix( status )
@@ -5355,10 +4471,8 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             if len( pairs ) > 0:
                 
-                self._AddPairs( pairs )
+                self._sibling_action_context.EnterPairs( self, pairs )
                 
-            
-            self._UpdateListCtrlData()
             
         
         def _DeserialiseImportString( self, import_string ):
@@ -5434,7 +4548,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             return export_string
             
         
-        def _ImportFromClipboard( self, add_only = False ):
+        def _ImportFromClipboard( self, only_add = False ):
             
             try:
                 
@@ -5453,13 +4567,13 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs = self._DeserialiseImportString( raw_text )
                 
-                self._AutoPetitionConflicts( pairs )
+                for ( a, b ) in pairs:
+                    
+                    self._current_pertinent_tags.add( a )
+                    self._current_pertinent_tags.add( b )
+                    
                 
-                self._AutoPetitionLoops( pairs )
-                
-                self._AddPairs( pairs, add_only = add_only )
-                
-                self._UpdateListCtrlData()
+                self._sibling_action_context.EnterPairs( self, pairs, only_add = only_add )
                 
             except Exception as e:
                 
@@ -5467,7 +4581,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def _ImportFromTXT( self, add_only = False ):
+        def _ImportFromTXT( self, only_add = False ):
             
             with QP.FileDialog( self, 'Select the file to import.', acceptMode = QW.QFileDialog.AcceptOpen ) as dlg:
                 
@@ -5488,113 +4602,46 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             pairs = self._DeserialiseImportString( import_string )
             
-            self._AutoPetitionConflicts( pairs )
+            for ( a, b ) in pairs:
+                
+                self._current_pertinent_tags.add( a )
+                self._current_pertinent_tags.add( b )
+                
             
-            self._AutoPetitionLoops( pairs )
-            
-            self._AddPairs( pairs, add_only = add_only )
-            
-            self._UpdateListCtrlData()
+            self._sibling_action_context.EnterPairs( self, pairs, only_add = only_add )
             
         
         def _InitialiseListCtrlAsyncUpdater( self ) -> ClientGUIAsync.AsyncQtUpdater:
             
             def loading_callable():
                 
-                pass
+                self._count_st.setText( 'loading' + HC.UNICODE_ELLIPSIS )
                 
             
             def pre_work_callable():
                 
                 olds = self._old_siblings.GetTags()
                 
-                pertinent_tags = set( olds )
+                self._current_pertinent_tags.update( olds )
                 
                 if self._current_new is not None:
                     
-                    pertinent_tags.add( self._current_new )
+                    self._current_pertinent_tags.add( self._current_new )
                     
                 
                 show_all = self._show_all.isChecked()
+                show_pending_and_petitioned = self._show_pending_and_petitioned.isChecked()
                 
-                return ( pertinent_tags, show_all, self._current_pairs_lock, self._current_statuses_to_pairs )
+                return ( set( self._current_pertinent_tags ), show_all, show_pending_and_petitioned, self._sibling_action_context )
                 
             
             def work_callable( args ):
                 
-                # and ultimately we replace this with a db call or whatever
-                # although to keep things synced we might want to delay UI updates on the ultimate fetch so we know logic on adds etc... is not on imperfect data
-                # also rather than this looped gubbins, it prob makes sense to make and maintain the full TagSiblingsStructure of what we fetch and just ask for full chain members etc... efficiently
+                ( pertinent_tags, show_all, show_pending_and_petitioned, sibling_action_context ) = args
                 
-                ( next_pertinent_tags, show_all, async_lock, current_statuses_to_pairs ) = args
+                pursue_whole_chain = True # parent hack
                 
-                pertinent_pairs = set()
-                
-                with async_lock:
-                    
-                    if len( next_pertinent_tags ) == 0 or show_all:
-                        
-                        for ( status, pairs ) in current_statuses_to_pairs.items():
-                            
-                            if status == HC.CONTENT_STATUS_DELETED:
-                                
-                                continue
-                                
-                            
-                            if status == HC.CONTENT_STATUS_CURRENT and not show_all:
-                                
-                                continue
-                                
-                            
-                            # always show all pending/petitioned on empty
-                            
-                            pertinent_pairs.update( pairs )
-                            
-                        
-                    else:
-                        
-                        seen_pertinent_tags = set()
-                        
-                        while len( next_pertinent_tags ) > 0:
-                            
-                            current_pertinent_tags = next_pertinent_tags
-                            
-                            seen_pertinent_tags.update( current_pertinent_tags )
-                            
-                            next_pertinent_tags = set()
-                            
-                            for ( status, pairs ) in current_statuses_to_pairs.items():
-                                
-                                if status == HC.CONTENT_STATUS_DELETED:
-                                    
-                                    continue
-                                    
-                                
-                                # show all appropriate
-                                
-                                for pair in pairs:
-                                    
-                                    ( a, b ) = pair
-                                    
-                                    if a in current_pertinent_tags or b in current_pertinent_tags:
-                                        
-                                        pertinent_pairs.add( pair )
-                                        
-                                        if a not in seen_pertinent_tags:
-                                            
-                                            next_pertinent_tags.add( a )
-                                            
-                                        
-                                        if b not in seen_pertinent_tags:
-                                            
-                                            next_pertinent_tags.add( b )
-                                            
-                                        
-                                    
-                                
-                            
-                        
-                    
+                pertinent_pairs = sibling_action_context.GetPertinentPairsForTags( pertinent_tags, show_all, show_pending_and_petitioned, pursue_whole_chain )
                 
                 return pertinent_pairs
                 
@@ -5603,72 +4650,39 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 pairs = result
                 
+                num_active_pertinent_tags = len( self._old_siblings.GetTags() )
+                
+                if self._current_new is not None:
+                    
+                    num_active_pertinent_tags += 1
+                    
+                
+                self._wipe_workspace.setEnabled( len( self._current_pertinent_tags ) > num_active_pertinent_tags )
+                
+                message = 'This dialog will remember the tags you enter and leave all the related pairs in view. Once you are done editing a group, hit this and it will clear the old pairs away.'
+                
+                if len( self._current_pertinent_tags ) > 0:
+                    
+                    message += f' Current workspace:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( self._current_pertinent_tags, no_trailing_whitespace = True )}'
+                    
+                
+                self._wipe_workspace.setToolTip( ClientGUIFunctions.WrapToolTip( message ) )
+                
+                self._count_st.setText( f'{HydrusNumbers.ToHumanInt(len(pairs))} pairs.' )
+                
                 self._tag_siblings.SetData( pairs )
                 
-                self._tag_siblings.Sort()
+                self._listctrl_panel.UpdateButtons()
                 
             
             return ClientGUIAsync.AsyncQtUpdater( self, loading_callable, work_callable, publish_callable, pre_work_callable = pre_work_callable )
             
         
-        def _UpdateListCtrlData( self ):
+        def _WipeWorkspace( self ):
+            
+            self._current_pertinent_tags = set()
             
             self._listctrl_async_updater.update()
-            
-            return
-            
-            olds = self._old_siblings.GetTags()
-            
-            pertinent_tags = set( olds )
-            
-            if self._current_new is not None:
-                
-                pertinent_tags.add( self._current_new )
-                
-            
-            self._tag_siblings.DeleteDatas( self._tag_siblings.GetData() )
-            
-            all_pairs = set()
-            
-            show_all = self._show_all.isChecked()
-            
-            for ( status, pairs ) in self._current_statuses_to_pairs.items():
-                
-                if status == HC.CONTENT_STATUS_DELETED:
-                    
-                    continue
-                    
-                
-                if len( pertinent_tags ) == 0:
-                    
-                    if status == HC.CONTENT_STATUS_CURRENT and not show_all:
-                        
-                        continue
-                        
-                    
-                    # show all pending/petitioned
-                    
-                    all_pairs.update( pairs )
-                    
-                else:
-                    
-                    # show all appropriate
-                    
-                    for pair in pairs:
-                        
-                        ( a, b ) = pair
-                        
-                        if a in pertinent_tags or b in pertinent_tags or show_all:
-                            
-                            all_pairs.add( pair )
-                            
-                        
-                    
-                
-            
-            self._tag_siblings.AddDatas( all_pairs )
-            
-            self._tag_siblings.Sort()
             
         
         def EnterOlds( self, olds ):
@@ -5680,9 +4694,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._old_siblings.EnterTags( olds )
             
-            self._UpdateListCtrlData()
-            
-            self._listctrl_panel.UpdateButtons()
+            self._listctrl_async_updater.update()
             
         
         def EnterOldsOnlyAdd( self, olds ):
@@ -5699,44 +4711,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def GetContentUpdates( self ):
             
-            # we make it manually here because of the mass pending tags done (but not undone on a rescind) on a pending pair!
-            # we don't want to send a pend and then rescind it, cause that will spam a thousand bad tags and not undo it
-            
-            # actually, we don't do this for siblings, but we do for parents, and let's have them be the same
-            
-            content_updates = []
-            
-            if self._i_am_local_tag_service:
-                
-                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
-                    
-                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_DELETE, pair ) )
-                    
-                
-                for pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
-                    
-                    content_updates.append( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_ADD, pair ) )
-                    
-                
-            else:
-                
-                current_pending = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
-                original_pending = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]
-                
-                current_petitioned = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
-                original_petitioned = self._original_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]
-                
-                new_pends = current_pending.difference( original_pending )
-                rescinded_pends = original_pending.difference( current_pending )
-                
-                new_petitions = current_petitioned.difference( original_petitioned )
-                rescinded_petitions = original_petitioned.difference( current_petitioned )
-                
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PETITION, pair ) for pair in rescinded_petitions ) )
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_RESCIND_PEND, pair ) for pair in rescinded_pends ) )
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PETITION, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_petitions ) )
-                content_updates.extend( ( ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.CONTENT_UPDATE_PEND, pair, reason = self._pairs_to_reasons[ pair ] ) for pair in new_pends ) )
-                
+            content_updates = self._sibling_action_context.GetContentUpdates()
             
             return ( self._service_key, content_updates )
             
@@ -5770,9 +4745,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 self._current_new = new
                 
             
-            self._UpdateListCtrlData()
-            
-            self._listctrl_panel.UpdateButtons()
+            self._listctrl_async_updater.update()
             
         
         def SetTagBoxFocus( self ):
@@ -5787,19 +4760,36 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
             
         
-        def THREADInitialise( self, tags, service_key ):
+        def _STARTInitialisation( self, tags, service_key ):
             
-            def qt_code( original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do ):
+            def work_callable():
+                
+                ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = CG.client_controller.Read( 'tag_display_application' )
+                
+                service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_sibling_applicable_service_keys.items() if service_key in s_ks }
+                
+                service_keys_to_work_to_do = {}
+                
+                for s_k in service_keys_we_care_about:
+                    
+                    status = CG.client_controller.Read( 'tag_display_maintenance_status', s_k )
+                    
+                    work_to_do = status[ 'num_siblings_to_sync' ] > 0
+                    
+                    service_keys_to_work_to_do[ s_k ] = work_to_do
+                    
+                
+                return service_keys_to_work_to_do
+                
+            
+            def publish_callable( result ):
+                
+                service_keys_to_work_to_do = result
                 
                 if not self or not QP.isValid( self ):
                     
                     return
                     
-                
-                self._original_statuses_to_pairs = original_statuses_to_pairs
-                self._current_statuses_to_pairs = current_statuses_to_pairs
-                
-                self._status_st.setText( 'Tags on the left will appear as those on the right.' )
                 
                 looking_good = True
                 
@@ -5864,7 +4854,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                             
                         
                     
-                    s = '\n'
+                    s = ' | '
                     status_text = s.join( ( service_part, maintenance_part, changes_part ) )
                     
                 
@@ -5876,17 +4866,17 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                         
                         looking_good = False
                         
-                        s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload parents! Please try to refresh the account in _review services_.'
+                        s = 'The account for this service is currently unsynced! It is uncertain if you have permission to upload siblings! Please try to refresh the account in _review services_.'
                         
-                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
+                        status_text = '{}\n\n{}'.format( s, status_text )
                         
                     elif not account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
                         
                         looking_good = False
                         
-                        s = 'The account for this service does not seem to have permission to upload parents! You can edit them here for now, but the pending menu will not try to upload any changes you make.'
+                        s = 'The account for this service does not seem to have permission to upload siblings! You can edit them here for now, but the pending menu will not try to upload any changes you make.'
                         
-                        status_text = '{}{}{}'.format( s, '\n' * 2, status_text )
+                        status_text = '{}\n\n{}'.format( s, status_text )
                         
                     
                 
@@ -5903,16 +4893,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 
                 self._sync_status_st.style().polish( self._sync_status_st )
                 
-                self._count_st.setText( 'Starting with '+HydrusNumbers.ToHumanInt(len(original_statuses_to_pairs[HC.CONTENT_STATUS_CURRENT]))+' pairs.' )
-                
-                self._listctrl_panel.setEnabled( True )
-                
-                self._old_input.setEnabled( True )
-                self._new_input.setEnabled( True )
-                
                 if tags is None:
                     
-                    self._UpdateListCtrlData()
+                    self._listctrl_async_updater.update()
                     
                 else:
                     
@@ -5925,31 +4908,15 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            original_statuses_to_pairs = CG.client_controller.Read( 'tag_siblings', service_key )
+            self._sync_status_st.setText( 'initialising sync data' + HC.UNICODE_ELLIPSIS )
             
-            ( master_service_keys_to_sibling_applicable_service_keys, master_service_keys_to_parent_applicable_service_keys ) = CG.client_controller.Read( 'tag_display_application' )
+            job = ClientGUIAsync.AsyncQtJob( self, work_callable, publish_callable )
             
-            service_keys_we_care_about = { s_k for ( s_k, s_ks ) in master_service_keys_to_sibling_applicable_service_keys.items() if service_key in s_ks }
-            
-            service_keys_to_work_to_do = {}
-            
-            for s_k in service_keys_we_care_about:
-                
-                status = CG.client_controller.Read( 'tag_display_maintenance_status', s_k )
-                
-                work_to_do = status[ 'num_siblings_to_sync' ] > 0
-                
-                service_keys_to_work_to_do[ s_k ] = work_to_do
-                
-            
-            current_statuses_to_pairs = collections.defaultdict( set )
-            
-            current_statuses_to_pairs.update( { key : set( value ) for ( key, value ) in original_statuses_to_pairs.items() } )
-            
-            QP.CallAfter( qt_code, original_statuses_to_pairs, current_statuses_to_pairs, service_keys_to_work_to_do )
+            job.start()
             
         
     
+
 class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent ):

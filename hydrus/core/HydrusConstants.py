@@ -105,8 +105,8 @@ options = {}
 # Misc
 
 NETWORK_VERSION = 20
-SOFTWARE_VERSION = 584
-CLIENT_API_VERSION = 66
+SOFTWARE_VERSION = 585
+CLIENT_API_VERSION = 67
 
 SERVER_THUMBNAIL_DIMENSIONS = ( 200, 200 )
 
@@ -125,7 +125,7 @@ noneable_str = typing.Optional[ str ]
 
 BANDWIDTH_TYPE_DATA = 0
 BANDWIDTH_TYPE_REQUESTS = 1
-    
+
 bandwidth_type_string_lookup = {
     BANDWIDTH_TYPE_DATA : 'data',
     BANDWIDTH_TYPE_REQUESTS : 'requests'

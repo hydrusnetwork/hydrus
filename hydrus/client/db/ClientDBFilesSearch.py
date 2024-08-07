@@ -2472,7 +2472,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 elif sort_data == CC.SORT_FILES_BY_RATIO:
                     
                     query = 'SELECT hash_id, width, height FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
-                    
+                        
                 elif sort_data == CC.SORT_FILES_BY_NUM_PIXELS:
                     
                     query = 'SELECT hash_id, width, height FROM {temp_table} CROSS JOIN files_info USING ( hash_id );'
@@ -2658,11 +2658,47 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
                 
                 hash_ids_to_hashes = self.modules_hashes_local_cache.GetHashIdsToHashes( hash_ids = hash_ids )
                 
-                hash_ids_to_hex_hashes = { hash_id : hash.hex() for ( hash_id, hash ) in hash_ids_to_hashes.items() }
+                reverse = sort_order == CC.SORT_DESC
+                
+                hash_ids = sorted( hash_ids, key = lambda hash_id: hash_ids_to_hashes[ hash_id ], reverse = reverse )
+                
+                did_sort = True
+                
+            elif sort_data == CC.SORT_FILES_BY_PIXEL_HASH:
+                
+                with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids_to_pixel_hashes = self.modules_similar_files.GetHashIdsToPixelHashes( temp_hash_ids_table_name )
+                    
+                
+                hash_ids_to_pixel_hashes = { hash_id : pixel_hash for ( hash_id, pixel_hash ) in hash_ids_to_pixel_hashes.items() if pixel_hash is not None }
+                
+                missed_hash_ids = [ hash_id for hash_id in hash_ids if hash_id not in hash_ids_to_pixel_hashes ]
                 
                 reverse = sort_order == CC.SORT_DESC
                 
-                hash_ids = sorted( hash_ids, key = lambda hash_id: hash_ids_to_hex_hashes[ hash_id ], reverse = reverse )
+                hash_ids = sorted( list( hash_ids_to_pixel_hashes.keys() ), key = lambda hash_id: hash_ids_to_pixel_hashes[ hash_id ], reverse = reverse )
+                
+                hash_ids.extend( missed_hash_ids )
+                
+                did_sort = True
+                
+            elif sort_data == CC.SORT_FILES_BY_BLURHASH:
+                
+                with self._MakeTemporaryIntegerTable( hash_ids, 'hash_id' ) as temp_hash_ids_table_name:
+                    
+                    hash_ids_to_blurhashes = self.modules_files_metadata_basic.GetHashIdsToBlurhashes( temp_hash_ids_table_name )
+                    
+                
+                hash_ids_to_blurhashes = { hash_id : blurhash for ( hash_id, blurhash ) in hash_ids_to_blurhashes.items() if blurhash is not None }
+                
+                missed_hash_ids = [ hash_id for hash_id in hash_ids if hash_id not in hash_ids_to_blurhashes ]
+                
+                reverse = sort_order == CC.SORT_DESC
+                
+                hash_ids = sorted( list( hash_ids_to_blurhashes.keys() ), key = lambda hash_id: hash_ids_to_blurhashes[ hash_id ], reverse = reverse )
+                
+                hash_ids.extend( missed_hash_ids )
                 
                 did_sort = True
                 

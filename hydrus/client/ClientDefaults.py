@@ -866,6 +866,12 @@ def SetDefaultDomainManagerData( domain_manager ):
     
     network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.GLOBAL_NETWORK_CONTEXT ] = custom_header_dict
     
+    custom_header_dict = {}
+    
+    custom_header_dict[ 'Accept-Language' ] = ( 'en-US,en;q=0.5', ClientNetworkingDomain.VALID_APPROVED, 'Tells Pixiv to give English tag translations.' )
+    
+    network_contexts_to_custom_header_dicts[ ClientNetworkingContexts.NetworkContext.STATICGenerateForDomain( 'pixiv.net' ) ] = custom_header_dict
+    
     #
     
     domain_manager.SetNetworkContextsToCustomHeaderDicts( network_contexts_to_custom_header_dicts )

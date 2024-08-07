@@ -1608,11 +1608,11 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
                                 
                                 if can_parse:
                                     
-                                    raise HydrusExceptions.VetoException( 'Found a URL--{}--but could not understand it!'.format( desired_url ) )
+                                    raise HydrusExceptions.VetoException( 'Found a URL--{}--but it was not a file/post URL!'.format( desired_url ) )
                                     
                                 else:
                                     
-                                    raise HydrusExceptions.VetoException( 'Found a URL--{}--but could not parse it: {}'.format( desired_url, cannot_parse_reason ) )
+                                    raise HydrusExceptions.VetoException( 'Found a URL--{}--but it was not a file/post URL! Also, even then, it seems I cannot parse it anyway: {}'.format( desired_url, cannot_parse_reason ) )
                                     
                                 
                             

@@ -35,6 +35,59 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_585"><a href="#version_585">version 585</a></h2>
+                    <ul>
+                        <li><h3>the new asynchronous siblings and parent dialogs</h3></li>
+                        <li>the `tags->manage tag siblings/parents` dialogs now load quickly. rather than fetching all known pairs on every open, they now only load pertinent pairs as they are needed. if you type in tag A in the left or right side, all the pairs that involve A directly or point to a pair that involves A directly or indirectly are loaded in the background (usually so fast it seems instant). the dialog can still do 'ah, that would cause a conflict, what do you want to do?' logic, but it only fetches what it needs</li>
+                        <li>the main edit operations in this dialog are now 'asynchronous', which means there is actually a short delay between the action firing and the UI updating. most of the time it is so fast it isn't noticeable, and in general because of other cleanup it tends to be faster about everything it does</li>
+                        <li>the dialogs now have a sticky workspace 'memory'. when you type tags in, the dialog still shows the related rows as normal, but now it does not clear those rows away once you actually enter those new pairs. the 'workspace' shows anything related to anything you have typed until you hit the new 'wipe workspace' button, which will reset back to a blank view. I hope this makes it less frustrating to work on a large group--it now stays in view the whole time, rather than the 'current' stuff jumping in and out of view vs the pending/petitioned as you type and submit stuff. the 'wipe workspace' button also has the current workspace tags in its tooltip</li>
+                        <li>the 'show all pairs' checkbox remains. it may well take twenty seconds to load up the hundreds of thousands of pairs from the PTR, but you can do it</li>
+                        <li>also added is a 'show pending and petitioned groups', which will load up anything waiting to be uploaded to a tag repository, and all related pairs</li>
+                        <li>when a user with 'modify siblings/parents' adds a pair, the auto-assigned 'reason' is now "Entered by a janitor.' (previously it was the enigmatic "admin")</li>
+                        <li>some misc layout improvements aross the board. the green/red text at the top is compressed; the 'num pairs' now shows the current number of pairs count; there are more rows for the pairs list, fewer for the input list; and the pairs list eats up all new expand space</li>
+                        <li>a great amount of misc code cleanup in all these panels and systems, and most of the logic is shared between both sibling and parent dialogs. a lot of janky old stuff is cleared up!</li>
+                        <li>these dialogs are better about showing invalid, duplicated, or loop-causing pairs. the idea is to show you everything as-is in storage so you can better directly edit problems out (previously, I am pretty sure it was sometimes collapsing stuff and obscuring problems)</li>
+                        <li>the 'manage tag parents' dialog now auto-petitions new loops when entering pairs (it was just siblings before)</li>
+                        <li>this tech now works on multiple potential loops, rather than just the first</li>
+                        <li>the 'manage tag parents' dialog now detects pre-existing loops in the database record and warns about this when trying to enter pairs that join the loop (it was just siblings before)</li>
+                        <li>this tech works better and now detects multiple loops, including completely invalid records that nonetheless exist (e.g. `a->b, a->c` siblings that point to more than one locations), and when it reports them, it now reports them all in one dialog, and it shows the actual `a->b->c->d` route that forms the loop</li>
+                        <li>a bad final 'do not allow loop-inputs' backstop check in the main pair-add routine is removed--it was not helping</li>
+                        <li><h3>misc</h3></li>
+                        <li>hitting escape on any taglist will now deselect all tags</li>
+                        <li>added 'Do not allow mouse media drag-panning when the media has duration' to the _options->media viewer_ page. if you often misclick and pan when scrubbing through videos, try it out!</li>
+                        <li>the media viewer's top hover window no longer shows every 'added-to' time for all the local file services; it was spammy, so it now just says 'imported: (time)'. the related 'hide uninteresting import time' option is retired. I also removed the 'archived: (time)' label, so this is now pretty much just 'imported, modified'. if I bring detailed times back to the file summary, it'll be part of a more flexible system. note that all these timestamps are still available in the media top-row flyout menu</li>
+                        <li>the file log and gallery log now copy their urls/sources on a ctrl+c hit. also, the 'copy' right-click commands here also no longer unhelpfully double-newline-separates rows</li>
+                        <li>a `StringConverter` edit panel now throws up a yes/no confirmation if you try to ok on a regex substitution that seems to match a group in the pattern but has an empty string in the 'replacement' box</li>
+                        <li>updated the 'test' versions of OpenCV (4.10.0.84), Pyside6 (6.7.2), and python-mpv (1.0.7). I'll be testing these myself, and devving with them, mostly to iron out some Qt 6.7.x stuff we've seen, and then put out a future release with them</li>
+                        <li>added a note to the default_mpv.conf to say 'try commenting out the audio normalisation line if you get mpv problems and are on Arch'</li>
+                        <li>added different example launch paths to the 'external programs' options panel depending on the current OS</li>
+                        <li>added a note about running with `QT_QPA_PLATFORM=xcb` on Wayland to the install help</li>
+                        <li>refactored the `ClientGUIFileSeedCache` and `ClientGUIGallerySeedLog` files, which do the file and gallery log panels, up to the 'gui.importing' module</li>
+                        <li>thanks to a user, added a new darkmode 'Nord' stylesheet</li>
+                        <li><h3>fixes</h3></li>
+                        <li>fixed 'scrub invalidity' in the manage logins dialog--sorry, it was a stupid typo from the recent multiple-column list rework. also, this button is now only enabled if the login script is active</li>
+                        <li>fixed a bug opening the 'migrate files' dialog when you have no files!</li>
+                        <li>I force-added `Accept-Language: en-US,en;q=0.5` to the client's default http headers for pixiv.net. this appears to get the API to give us English tags again. let me know if this completely screws anything up</li>
+                        <li>updated the 'do we have enough disk space to do this transaction?' test to check for double the destination disk amount. thanks to the user who helped navigate this--regardless of temp dir work, when you do a vacuum or other gigantic single transaction, there is a very brief period as the transaction commits when either the stuffed WAL journal or (for a vacuum) cloned db file exists at the same time in the same folder as the original db file. I also updated the text in the 'review vacuum data' window to talk about this a bit. good luck vacuuming your client.mappings.db file bros</li>
+                        <li>improved the error handling when a sidecar import fails--it now says the original file path in the report</li>
+                        <li>improved failure-recovery of unicode decoding (usually used in webpage parsing) when the given text includes errors and the encoding is `ISO-8859-1` (or the encoding is unparseable and `requests` falls back to it) and/or if `chardet` is not available</li>
+                        <li>I hacked the menubar padding back to something sensible on the new 'windows11' style int Qt 6.7.x. for whatever reason, this new style adds about 15px of padding/margin to each menubar menu button. I am aware the collect-by combobox is still busted in this style--let me know if you spot anything else! btw switching from 'windows11' to 'windowsvista' seems to make all the menubar menus transparent, let's go</li>
+                        <li>improved the layout of the 'edit client api access key permissions' panel. it wasn't vertically expanding before</li>
+                        <li>fixed up some keypress handling in taglists. some stuff that was being swallowed or promoted unintentionally is fixed</li>
+                        <li>thanks to a user, fixed a weird bug in the 'repair missing file storage locations' boot repair dialog where it would always say you only had missing thumbs</li>
+                        <li>also thanks to that user, the 'repair missing file storage locations' dialog now checks `client_files` and `thumbnails` subdirectories when trying to auto-discover with the 'add a possibly correct location' action</li>
+                        <li><h3>some hash-sorting stuff</h3></li>
+                        <li>_you can probably ignore this section, don't worry about it_</li>
+                        <li>you can now sort by blurhash. this works at the database level too, when mixed with system:limit</li>
+                        <li>when sorting by pixel hash, a file search with system:limit now pre-sorts by pixel hash before the limit clips the resultset</li>
+                        <li>when sorting by pixel hash or blurhash, the files with no such hash (e.g. audio files) are now always put at the end</li>
+                        <li>searching many tens of thousands of files and sorting by hash, pixel hash, or blurhash is now just a tiny bit faster</li>
+                        <li><h3>client api</h3></li>
+                        <li>the new `/manage_services/get_pending_counts` command now includes the 'Services Object' in its response</li>
+                        <li>the client api version is now 67</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_584"><a href="#version_584">version 584</a></h2>
                     <ul>
                         <li><h3>misc</h3></li>

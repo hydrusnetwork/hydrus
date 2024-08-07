@@ -3711,11 +3711,11 @@ class ReviewVacuumData( ClientGUIScrolledPanels.ReviewPanel ):
         
         #
         
-        info_message = '''Vacuuming is essentially an aggressive defrag of a database file. The entire database is copied contiguously to a new file, which then has tightly packed pages and no empty 'free' pages.
+        info_message = '''Vacuuming is essentially an aggressive defrag of a database file. The entire database is copied contiguously to a new file, which then has tightly packed pages and no empty 'free' pages. Note that even a database currently has no free pages can still _sometimes_ be packed more efficiently, saving up to 40% of space, but there is no easy way to determine this ahead of time (in general, if it has been five years, you might save some space), and the database will bloat back up in time as more work happens.
 
 Because the new database is tightly packed, it will generally be smaller than the original file. This is currently the only way to truncate a hydrus database file.
 
-Vacuuming is an expensive operation. It requires lots of free space on your drive(s) (including a full copy in your temp directory!), hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it on files with a lot of free space.'''
+Vacuuming is an expensive operation. It requires lots of free space on your drive(s) as it creates one (temporary) copy of the database file in your temp directory and another copy in your db dir. Hydrus cannot operate while it is going on, and it tends to run quite slow, about 1-40MB/s. The main benefit is in truncating the database files after you delete a lot of data, so I recommend you only do it after you delete the PTR or similar. If the db file is more than 2GB and has less than 5% free pages, it probably is not worth doing.'''
         
         st = ClientGUICommon.BetterStaticText( self, label = info_message )
         

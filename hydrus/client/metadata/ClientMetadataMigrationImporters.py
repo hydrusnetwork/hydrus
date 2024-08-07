@@ -613,7 +613,7 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
             
         except Exception as e:
             
-            raise Exception( 'Could not import from {}: {}'.format( path, str( e ) ) )
+            raise Exception( f'Could not import from {path} (from file path {actual_file_path}: {e}' )
             
         
         parsing_context = {}
@@ -778,7 +778,7 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
             
         except Exception as e:
             
-            raise Exception( 'Could not import from {}: {}'.format( path, str( e ) ) )
+            raise Exception( f'Could not import from {path} (from file path {actual_file_path}: {e}' )
             
         
         rows = HydrusText.DeserialiseNewlinedTexts( raw_text )

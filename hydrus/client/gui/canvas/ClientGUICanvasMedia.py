@@ -1919,6 +1919,11 @@ class MediaContainer( QW.QWidget ):
             
         
     
+    def HasAnimationbar( self ):
+        
+        return self._animation_bar.isVisible()
+        
+    
     def HasPlayedOnceThrough( self ):
         
         if self.CurrentlyPresentingMediaWithDuration():

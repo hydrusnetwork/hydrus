@@ -4859,7 +4859,8 @@ class HydrusResourceClientAPIRestrictedManageServicesPendingCounts( HydrusResour
         service_keys_to_info_types_to_counts = CG.client_controller.Read( 'nums_pending' )
         
         body_dict = {
-            'pending_counts' : { service_key.hex() : { info_type_to_str_lookup[ info_type ] : count for ( info_type, count ) in info_types_to_counts.items() } for ( service_key, info_types_to_counts ) in service_keys_to_info_types_to_counts.items() }
+            'pending_counts' : { service_key.hex() : { info_type_to_str_lookup[ info_type ] : count for ( info_type, count ) in info_types_to_counts.items() } for ( service_key, info_types_to_counts ) in service_keys_to_info_types_to_counts.items() },
+            'services' : GetServicesDict()
         }
         
         body = Dumps( body_dict, request.preferred_mime )

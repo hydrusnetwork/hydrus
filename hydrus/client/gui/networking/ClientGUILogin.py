@@ -576,7 +576,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
             
-            if validity == ClientNetworkingLogin.VALIDITY_INVALID:
+            if active and validity == ClientNetworkingLogin.VALIDITY_INVALID:
                 
                 return True
                 
@@ -1084,6 +1084,11 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = domain_and_login_info
             
+            if not active:
+                
+                continue
+                
+            
             if validity != ClientNetworkingLogin.VALIDITY_INVALID:
                 
                 continue
@@ -1115,7 +1120,7 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
             
             scrubbed_domain_and_login_info = ( login_domain, login_script_key_and_name, credentials_tuple, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
             
-            edit_tuples.append( domain_and_login_info, scrubbed_domain_and_login_info )
+            edit_tuples.append( ( domain_and_login_info, scrubbed_domain_and_login_info ) )
             
         
         self._domains_and_login_info.ReplaceDatas( edit_tuples, sort_and_scroll = True )

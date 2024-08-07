@@ -933,7 +933,19 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             text += '\n' * 2
             text += 'The command here must include a "%path%" component, normally ideally within those quote marks, which is where hydrus will place the URL when it executes the command. A good example would be:'
             text += '\n' * 2
-            text += 'C:\\program files\\firefox\\firefox.exe "%path%"'
+            
+            if HC.PLATFORM_WINDOWS:
+                
+                text += 'C:\\program files\\firefox\\firefox.exe "%path%"'
+                
+            elif HC.PLATFORM_MACOS:
+                
+                text += 'open -a /Applications/Firefox.app -g "%path%"'
+                
+            else:
+                
+                text += 'firefox "%path%"'
+                
             
             st = ClientGUICommon.BetterStaticText( browser_panel, text )
             st.setWordWrap( True )
@@ -1968,13 +1980,13 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._command_palette_panel = ClientGUICommon.StaticBox( self, 'command palette' )
             
             self._command_palette_show_page_of_pages = QW.QCheckBox( self._command_palette_panel )
-            self._command_palette_show_page_of_pages.setToolTip( 'Show "page of pages" as selectable page results. This will focus the page, and whatever sub-page it previously focused (including none, if it has no child pages).' )
+            self._command_palette_show_page_of_pages.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show "page of pages" as selectable page results. This will focus the page, and whatever sub-page it previously focused (including none, if it has no child pages).' ) )
             
             self._command_palette_show_main_menu = QW.QCheckBox( self._command_palette_panel )
-            self._command_palette_show_main_menu.setToolTip( 'Show the main gui window\'s menubar actions.' )
+            self._command_palette_show_main_menu.setToolTip( ClientGUIFunctions.WrapToolTip(  'Show the main gui window\'s menubar actions.' ) )
             
             self._command_palette_show_media_menu = QW.QCheckBox( self._command_palette_panel )
-            self._command_palette_show_media_menu.setToolTip( 'Show the actions for the thumbnail menu on the current media page. Be careful with this, it basically just shows everything with slightly ugly labels..' )
+            self._command_palette_show_media_menu.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show the actions for the thumbnail menu on the current media page. Be careful with this, it basically just shows everything with slightly ugly labels..' ) )
             
             #
             
@@ -2543,6 +2555,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             self._media_viewer_cursor_autohide_time_ms = ClientGUICommon.NoneableSpinCtrl( media_viewer_panel, none_phrase = 'do not autohide', min = 100, max = 100000, unit = 'ms' )
             
+            self._disallow_media_drags_on_duration_media = QW.QCheckBox( media_viewer_panel )
+            
             self._anchor_and_hide_canvas_drags = QW.QCheckBox( media_viewer_panel )
             self._touchscreen_canvas_drags_unanchor = QW.QCheckBox( media_viewer_panel )
             
@@ -2560,9 +2574,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_notes_hover_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the right list of notes in the background of the media viewer.' ) )
             self._draw_bottom_right_index_in_media_viewer_background = QW.QCheckBox( media_canvas_panel )
             self._draw_bottom_right_index_in_media_viewer_background.setToolTip( ClientGUIFunctions.WrapToolTip( 'Draw the bottom-right index string in the background of the media viewer.' ) )
-            
-            self._hide_uninteresting_local_import_time = QW.QCheckBox( media_canvas_panel )
-            self._hide_uninteresting_local_import_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file was imported at a similar time to when it was added to its current services (i.e. the number of seconds since both events differs by less than 10%), hide the import time in the top of the media viewer.' ) )
             
             self._hide_uninteresting_modified_time = QW.QCheckBox( media_canvas_panel )
             self._hide_uninteresting_modified_time.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the file has a modified time similar to its import time (i.e. the number of seconds since both events differs by less than 10%), hide the modified time in the top of the media viewer.' ) )
@@ -2608,10 +2619,10 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._draw_top_right_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_top_right_hover_in_media_viewer_background' ) )
             self._draw_notes_hover_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_notes_hover_in_media_viewer_background' ) )
             self._draw_bottom_right_index_in_media_viewer_background.setChecked( self._new_options.GetBoolean( 'draw_bottom_right_index_in_media_viewer_background' ) )
-            self._hide_uninteresting_local_import_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_local_import_time' ) )
             self._hide_uninteresting_modified_time.setChecked( self._new_options.GetBoolean( 'hide_uninteresting_modified_time' ) )
             
             self._media_viewer_cursor_autohide_time_ms.SetValue( self._new_options.GetNoneableInteger( 'media_viewer_cursor_autohide_time_ms' ) )
+            self._disallow_media_drags_on_duration_media.setChecked( self._new_options.GetBoolean( 'disallow_media_drags_on_duration_media' ) )
             self._anchor_and_hide_canvas_drags.setChecked( self._new_options.GetBoolean( 'anchor_and_hide_canvas_drags' ) )
             self._touchscreen_canvas_drags_unanchor.setChecked( self._new_options.GetBoolean( 'touchscreen_canvas_drags_unanchor' ) )
             
@@ -2633,6 +2644,7 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Animation scanbar height:', self._animated_scanbar_height ) )
             rows.append( ( 'Animation scanbar height when mouse away:', self._animated_scanbar_hide_height ) )
             rows.append( ( 'Animation scanbar nub width:', self._animated_scanbar_nub_width ) )
+            rows.append( ( 'Do not allow mouse media drag-panning when the media has duration:', self._disallow_media_drags_on_duration_media ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: Hide and anchor mouse cursor on media viewer drags:', self._anchor_and_hide_canvas_drags ) )
             rows.append( ( 'RECOMMEND WINDOWS ONLY: If set to hide and anchor, undo on apparent touchscreen drag:', self._touchscreen_canvas_drags_unanchor ) )
             
@@ -2647,7 +2659,6 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             rows.append( ( 'Duplicate top-right hover-window information in the background of the viewer:', self._draw_top_right_hover_in_media_viewer_background ) )
             rows.append( ( 'Duplicate notes hover-window information in the background of the viewer:', self._draw_notes_hover_in_media_viewer_background ) )
             rows.append( ( 'Draw bottom-right index text in the background of the viewer:', self._draw_bottom_right_index_in_media_viewer_background ) )
-            rows.append( ( 'Hide uninteresting import times:', self._hide_uninteresting_local_import_time ) )
             rows.append( ( 'Hide uninteresting modified times:', self._hide_uninteresting_modified_time ) )
             
             media_canvas_gridbox = ClientGUICommon.WrapInGrid( media_canvas_panel, rows )
@@ -2709,9 +2720,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._new_options.SetBoolean( 'draw_top_right_hover_in_media_viewer_background', self._draw_top_right_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'draw_notes_hover_in_media_viewer_background', self._draw_notes_hover_in_media_viewer_background.isChecked() )
             self._new_options.SetBoolean( 'draw_bottom_right_index_in_media_viewer_background', self._draw_bottom_right_index_in_media_viewer_background.isChecked() )
-            self._new_options.SetBoolean( 'hide_uninteresting_local_import_time', self._hide_uninteresting_local_import_time.isChecked() )
             self._new_options.SetBoolean( 'hide_uninteresting_modified_time', self._hide_uninteresting_modified_time.isChecked() )
             
+            self._new_options.SetBoolean( 'disallow_media_drags_on_duration_media', self._disallow_media_drags_on_duration_media.isChecked() )
             self._new_options.SetBoolean( 'anchor_and_hide_canvas_drags', self._anchor_and_hide_canvas_drags.isChecked() )
             self._new_options.SetBoolean( 'touchscreen_canvas_drags_unanchor', self._touchscreen_canvas_drags_unanchor.isChecked() )
             
@@ -4125,6 +4136,8 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
                 ClientGUIDialogsMessage.ShowCritical( self, 'Critical', f'Could not apply style: {e}' )
                 
             
+            CG.client_controller.gui._DoMenuBarStyleHack()
+            
             try:
                 
                 if qt_stylesheet_name is None:
@@ -5416,7 +5429,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         # TODO: This needs another pass as we move to multiple locations and other tech
         # if someone has f10 and we are expecting 16 lots of f10x, or vice versa, (e.g. on an out of sync db recovery, not uncommon) we'll need to handle that
         
-        self._only_thumbs = True
+        self._only_thumbs = True not in ( subfolder.IsForFiles() for subfolder in missing_subfolders )
         
         self._missing_subfolders_to_new_subfolders = {}
         
@@ -5472,17 +5485,26 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
                 
                 path = dlg.GetPath()
                 
-                base_location = ClientFilesPhysical.FilesStorageBaseLocation( path, 0 )
+                potential_base_locations = [
+                    ClientFilesPhysical.FilesStorageBaseLocation( path, 0 ),
+                    ClientFilesPhysical.FilesStorageBaseLocation( os.path.join( path, 'client_files' ), 0 ),
+                    ClientFilesPhysical.FilesStorageBaseLocation( os.path.join( path, 'thumbnails' ), 0 )
+                ]
                 
                 for subfolder in self._locations.GetData():
                     
-                    new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, base_location )
-                    
-                    ok = new_subfolder.PathExists()
-                    
-                    if ok:
+                    for potential_base_location in potential_base_locations:
                         
-                        self._missing_subfolders_to_new_subfolders[ subfolder ] = ( new_subfolder, ok )
+                        new_subfolder = ClientFilesPhysical.FilesStorageSubfolder( subfolder.prefix, potential_base_location )
+                        
+                        ok = new_subfolder.PathExists()
+                        
+                        if ok:
+                            
+                            self._missing_subfolders_to_new_subfolders[ subfolder ] = ( new_subfolder, ok )
+                            
+                            break
+                            
                         
                     
                 

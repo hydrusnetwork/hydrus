@@ -217,7 +217,6 @@ class NetworkJob( object ):
         self._response_mime = None
         
         self._encoding = 'utf-8'
-        self._encoding_confirmed = False
         
         self._stream_io = io.BytesIO()
         
@@ -698,7 +697,6 @@ class NetworkJob( object ):
         self._response_mime = None
         
         self._encoding = 'utf-8'
-        self._encoding_confirmed = False
         
         self._stream_io = io.BytesIO()
         

@@ -1836,6 +1836,31 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             
         
     
+    def _DoMenuBarStyleHack( self ):
+        
+        # yo just as a fun side thing, if you try to set your style to windowsvista after windows11 on 6.7.2, all your menubar menus go transparent
+        
+        try:
+            
+            if ClientGUIStyle.CURRENT_STYLE_NAME == 'windows11':
+                
+                stylesheet = '''QMenuBar { padding: 2px; margin: 0px }
+QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
+                
+            else:
+                
+                stylesheet = ''
+                
+            
+            self._menubar.setStyleSheet( stylesheet )
+            
+        except Exception as e:
+            
+            HydrusData.Print( 'I tried to do the menubar style hack, but got this exception (please let hydev know):' )
+            HydrusData.PrintException( e, do_wait = False)
+            
+        
+    
     def _ExportDownloader( self ):
         
         with ClientGUITopLevelWindowsPanels.DialogNullipotent( self, 'export downloaders' ) as dlg:
@@ -2289,6 +2314,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             self._menubar = QW.QMenuBar( self )
             
             self._menubar.setNativeMenuBar( False )
+            
+            self._DoMenuBarStyleHack()
             
         
         self._menu_updater_file = self._InitialiseMenubarGetMenuUpdaterFile()
@@ -4412,6 +4439,8 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
                 
                 HydrusData.ShowException( e )
                 
+            
+            self._DoMenuBarStyleHack()
             
         
         if qt_stylesheet_name != ClientGUIStyle.CURRENT_STYLESHEET_FILENAME:

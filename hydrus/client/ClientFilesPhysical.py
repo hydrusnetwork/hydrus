@@ -208,6 +208,11 @@ class FilesStorageBaseLocation( object ):
         # This is kind of tacked on logic versus the eager/able/needs/would stuff, but I'm collecting it here so at least the logic, pseudo-doubled, is in one place
         # EDIT: I like this logic now, after some fixes and simplification, so perhaps it can be used elsewhere
         
+        if total_num_bytes_to_hold == 0:
+            
+            total_num_bytes_to_hold = 1048576
+            
+        
         result = {}
         
         total_ideal_weight = sum( ( base_location.ideal_weight for base_location in base_locations ) )

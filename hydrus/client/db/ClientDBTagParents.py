@@ -499,11 +499,33 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         return []
         
     
-    def GetTagParents( self, service_key ):
+    def GetTagParents( self, service_key, tags = None, where_chain_includes_pending_or_petitioned = False ):
         
         service_id = self.modules_services.GetServiceId( service_key )
         
-        statuses_to_pair_ids = self.GetTagParentsIds( service_id )
+        if tags is None and not where_chain_includes_pending_or_petitioned:
+            
+            statuses_to_pair_ids = self.GetTagParentsIds( service_id )
+            
+        else:
+            
+            if where_chain_includes_pending_or_petitioned:
+                
+                tag_ids = set()
+                
+                for ( bad_tag_id, good_tag_id ) in self._Execute( 'SELECT child_tag_id, parent_tag_id FROM tag_parent_petitions WHERE service_id = ?', ( service_id, ) ):
+                    
+                    tag_ids.add( bad_tag_id )
+                    tag_ids.add( good_tag_id )
+                    
+                
+            else:
+                
+                tag_ids = set( self.modules_tags_local_cache.GetTagIdsToTags( tags = tags ).keys() )
+                
+            
+            statuses_to_pair_ids = self.GetTagParentsIdsChains( service_id, tag_ids )
+            
         
         all_tag_ids = set()
         

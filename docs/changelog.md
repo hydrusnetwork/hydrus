@@ -7,6 +7,66 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 585](https://github.com/hydrusnetwork/hydrus/releases/tag/v585)
+
+### the new asynchronous siblings and parent dialogs
+
+* the `tags->manage tag siblings/parents` dialogs now load quickly. rather than fetching all known pairs on every open, they now only load pertinent pairs as they are needed. if you type in tag A in the left or right side, all the pairs that involve A directly or point to a pair that involves A directly or indirectly are loaded in the background (usually so fast it seems instant). the dialog can still do 'ah, that would cause a conflict, what do you want to do?' logic, but it only fetches what it needs
+* the main edit operations in this dialog are now 'asynchronous', which means there is actually a short delay between the action firing and the UI updating. most of the time it is so fast it isn't noticeable, and in general because of other cleanup it tends to be faster about everything it does
+* the dialogs now have a sticky workspace 'memory'. when you type tags in, the dialog still shows the related rows as normal, but now it does not clear those rows away once you actually enter those new pairs. the 'workspace' shows anything related to anything you have typed until you hit the new 'wipe workspace' button, which will reset back to a blank view. I hope this makes it less frustrating to work on a large group--it now stays in view the whole time, rather than the 'current' stuff jumping in and out of view vs the pending/petitioned as you type and submit stuff. the 'wipe workspace' button also has the current workspace tags in its tooltip
+* the 'show all pairs' checkbox remains. it may well take twenty seconds to load up the hundreds of thousands of pairs from the PTR, but you can do it
+* also added is a 'show pending and petitioned groups', which will load up anything waiting to be uploaded to a tag repository, and all related pairs
+* when a user with 'modify siblings/parents' adds a pair, the auto-assigned 'reason' is now "Entered by a janitor.' (previously it was the enigmatic "admin")
+* some misc layout improvements aross the board. the green/red text at the top is compressed; the 'num pairs' now shows the current number of pairs count; there are more rows for the pairs list, fewer for the input list; and the pairs list eats up all new expand space
+* a great amount of misc code cleanup in all these panels and systems, and most of the logic is shared between both sibling and parent dialogs. a lot of janky old stuff is cleared up!
+* these dialogs are better about showing invalid, duplicated, or loop-causing pairs. the idea is to show you everything as-is in storage so you can better directly edit problems out (previously, I am pretty sure it was sometimes collapsing stuff and obscuring problems)
+* the 'manage tag parents' dialog now auto-petitions new loops when entering pairs (it was just siblings before)
+* this tech now works on multiple potential loops, rather than just the first
+* the 'manage tag parents' dialog now detects pre-existing loops in the database record and warns about this when trying to enter pairs that join the loop (it was just siblings before)
+* this tech works better and now detects multiple loops, including completely invalid records that nonetheless exist (e.g. `a->b, a->c` siblings that point to more than one locations), and when it reports them, it now reports them all in one dialog, and it shows the actual `a->b->c->d` route that forms the loop
+* a bad final 'do not allow loop-inputs' backstop check in the main pair-add routine is removed--it was not helping
+
+### misc
+
+* hitting escape on any taglist will now deselect all tags
+* added 'Do not allow mouse media drag-panning when the media has duration' to the _options->media viewer_ page. if you often misclick and pan when scrubbing through videos, try it out!
+* the media viewer's top hover window no longer shows every 'added-to' time for all the local file services; it was spammy, so it now just says 'imported: (time)'. the related 'hide uninteresting import time' option is retired. I also removed the 'archived: (time)' label, so this is now pretty much just 'imported, modified'. if I bring detailed times back to the file summary, it'll be part of a more flexible system. note that all these timestamps are still available in the media top-row flyout menu
+* the file log and gallery log now copy their urls/sources on a ctrl+c hit. also, the 'copy' right-click commands here also no longer unhelpfully double-newline-separates rows
+* a `StringConverter` edit panel now throws up a yes/no confirmation if you try to ok on a regex substitution that seems to match a group in the pattern but has an empty string in the 'replacement' box
+* updated the 'test' versions of OpenCV (4.10.0.84), Pyside6 (6.7.2), and python-mpv (1.0.7). I'll be testing these myself, and devving with them, mostly to iron out some Qt 6.7.x stuff we've seen, and then put out a future release with them
+* added a note to the default_mpv.conf to say 'try commenting out the audio normalisation line if you get mpv problems and are on Arch'
+* added different example launch paths to the 'external programs' options panel depending on the current OS
+* added a note about running with `QT_QPA_PLATFORM=xcb` on Wayland to the install help
+* refactored the `ClientGUIFileSeedCache` and `ClientGUIGallerySeedLog` files, which do the file and gallery log panels, up to the 'gui.importing' module
+* thanks to a user, added a new darkmode 'Nord' stylesheet
+
+### fixes
+
+* fixed 'scrub invalidity' in the manage logins dialog--sorry, it was a stupid typo from the recent multiple-column list rework. also, this button is now only enabled if the login script is active
+* fixed a bug opening the 'migrate files' dialog when you have no files!
+* I force-added `Accept-Language: en-US,en;q=0.5` to the client's default http headers for pixiv.net. this appears to get the API to give us English tags again. let me know if this completely screws anything up
+* updated the 'do we have enough disk space to do this transaction?' test to check for double the destination disk amount. thanks to the user who helped navigate this--regardless of temp dir work, when you do a vacuum or other gigantic single transaction, there is a very brief period as the transaction commits when either the stuffed WAL journal or (for a vacuum) cloned db file exists at the same time in the same folder as the original db file. I also updated the text in the 'review vacuum data' window to talk about this a bit. good luck vacuuming your client.mappings.db file bros
+* improved the error handling when a sidecar import fails--it now says the original file path in the report
+* improved failure-recovery of unicode decoding (usually used in webpage parsing) when the given text includes errors and the encoding is `ISO-8859-1` (or the encoding is unparseable and `requests` falls back to it) and/or if `chardet` is not available
+* I hacked the menubar padding back to something sensible on the new 'windows11' style int Qt 6.7.x. for whatever reason, this new style adds about 15px of padding/margin to each menubar menu button. I am aware the collect-by combobox is still busted in this style--let me know if you spot anything else! btw switching from 'windows11' to 'windowsvista' seems to make all the menubar menus transparent, let's go
+* improved the layout of the 'edit client api access key permissions' panel. it wasn't vertically expanding before
+* fixed up some keypress handling in taglists. some stuff that was being swallowed or promoted unintentionally is fixed
+* thanks to a user, fixed a weird bug in the 'repair missing file storage locations' boot repair dialog where it would always say you only had missing thumbs
+* also thanks to that user, the 'repair missing file storage locations' dialog now checks `client_files` and `thumbnails` subdirectories when trying to auto-discover with the 'add a possibly correct location' action
+
+### some hash-sorting stuff
+
+* _you can probably ignore this section, don't worry about it_
+* you can now sort by blurhash. this works at the database level too, when mixed with system:limit
+* when sorting by pixel hash, a file search with system:limit now pre-sorts by pixel hash before the limit clips the resultset
+* when sorting by pixel hash or blurhash, the files with no such hash (e.g. audio files) are now always put at the end
+* searching many tens of thousands of files and sorting by hash, pixel hash, or blurhash is now just a tiny bit faster
+
+### client api
+
+* the new `/manage_services/get_pending_counts` command now includes the 'Services Object' in its response
+* the client api version is now 67
+
 ## [Version 584](https://github.com/hydrusnetwork/hydrus/releases/tag/v584)
 
 ### misc
@@ -323,36 +383,3 @@ title: Changelog
 * refactored some of the client files manager to work with a 'prefix chunk', which will represent an umbrella prefix in the future system that supports overlapping folders and folders with differing prefix lengths'
 * deleted some old client files manager code
 * thanks to a user, the macOS setup_venv is fixed to point at the correct Cocoa/Quartz requirements.txt file
-
-## [Version 575](https://github.com/hydrusnetwork/hydrus/releases/tag/v575)
-
-### misc
-
-* the new 'children' tab now sorts its results by count, and it only shows the top n (default 40) results. you can edit the n under _options-&gt;tags_. let me know how this works IRL, as this new count-sorting needs a bit of extra CPU
-* when you ask subscriptions to 'check now', either in the 'edit subscription' or 'edit subscriptions' dialogs, if there is a mix of DEAD and ALIVE subs, it now pops up a quick question dialog asking whether you want to check now for all/alive/dead
-* fixed the (do not) 'alphabetise GET query parameters' URL Class checkbox, which I broke in v569. sorry for the trouble--the new URL encoding handling was accidentally alphabetising all URLs on ingestion. a new unit test will catch this in future, so it shouldn't happen again (issue #1551)
-* thanks to a user, I think we have fixed ICC profile processing when your system ICC Profile is non-sRGB
-* fixed a logical test that was disallowing thumbnail regen on files with no resolution (certain svg, for instance). all un-resolutioned files will now (re)render a thumb to the max bounding thumbnail resolution setting. fingers crossed we'll be able to figure out a ratio solution in future
-* added a _debug-&gt;help-&gt;gui actions-&gt;reload current stylesheet_ menu action. it unloads and reloads the current QSS
-* added a _debug-&gt;help-&gt;gui actions-&gt;reload current gui session_ menu action. it saves the current session and reloads it
-* fixed the rendering of some 16-bit pngs that seem to be getting a slightly different image mode on the new version of PIL
-* the debug 'gui report mode' now reports extensive info about virtual taglist heights. if I have been working with you on taglists, mostly on the manage tags dialog, that spawn without a scrollbar even though they should, please run this mode and then try to capture the error. hit me up and we'll see if the numbers explain what's going on. I may have also simply fixed the bug
-* I think I sped up adding tags to a local tag service that has a lot of siblings/parents
-* updated the default danbooru parsers to get the original and/or translated artist notes. I don't know if a user did this or I did, but my dev machine somehow already had the tech while the defaults did not--if you did this, thinks!
-* added more tweet URL Classes for the default downloader. you should now be able to drag and drop a vxtwitter or fxtwitter URL on the client and it'll work
-
-### auto-duplicate resolution
-
-* I have nothing real to show today, but I have a skeleton of code and a good plan on how to get the client resolving easy duplicate pairs by itself. so far, it looks easier than I feared, but, as always, there will be a lot to do. I will keep chipping away at this and will release features in tentative waves for advanced users to play with
-* with this system, I will be launching the very first version of the 'Metadata Conditional' object I have been talking about for a few years. fingers crossed, we'll be able to spam it to all sorts of other places to do 'if the file has x property, then do y' in a standardised way
-
-### boring stuff
-
-* refactored the new tag children autocomplete tab to its own class so it can handle its new predicate gubbins and sorted/culled search separately. it is also now aware of the current file location context to give file-domain-sensitive suggestions (falling back to 'all known files' for fast search if things are complicated)
-* fixed a layout issue on file import options panel when a sister page caused it to be taller than it wanted; the help button ended up being the expanding widget jej
-* non-menubar menus and submenus across the program now remove a hanging final separator item, making the logic of forming menu groups a little easier in future
-* the core 'Load image in PIL' method has some better error reporting, and many calls now explicitly tell it a human-readable source description so we can avoid repeats of `DamagedOrUnusualFileException: Could not load the image at "&lt;_io.BytesIO object at 0x000001F60CE45620&gt;"--it was likely malformed!`
-* cleaned up some dict instantiations in `ClientOptions`
-* moved `ClientDuplicates` up to a new `duplicates` module and migrated some duplicate enums over to it from `ClientConstants`
-* removed an old method-wrapper hack that applied the 'load images with PIL' option. I just moved to a global that I set on init and update on options change
-* cleaned some duplicate checking code

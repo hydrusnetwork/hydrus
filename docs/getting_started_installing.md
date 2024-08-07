@@ -36,7 +36,9 @@ I try to release a new version every Wednesday by 8pm EST and write an accompany
 === "Linux"
     
     !!! warning "Wayland"
-        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. [Running from source](running_from_source.md) may improve the situation, but some of these issues seem to be intractable for now. X11 is much happier with hydrus. 
+        Unfortunately, hydrus has several bad bugs in Wayland. The mpv window will often not embed properly into the media viewer, menus and windows may position on the wrong screen, and the taskbar icon may not work at all. [Running from source](running_from_source.md) may improve the situation, but some of these issues seem to be intractable for now. X11 is much happier with hydrus.
+        
+        One user notes that launching with the environment variable `QT_QPA_PLATFORM=xcb` may help!
     
     !!! note "XCB Qt compatibility"
         
