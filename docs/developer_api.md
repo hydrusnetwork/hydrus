@@ -2069,8 +2069,17 @@ Arguments :
     *   `file_id`: (selective, numerical file id for the file)
     *   `hash`: (selective, a hexadecimal SHA256 hash for the file)
     *   `download`: (optional, boolean, default `false`)
+    *   `render_format`: (optional, integer, the filetype enum value to render the file to, default `2` for PNG)
+    *   `render_quality`: (optional, integer, the quality or PNG compression level to use for encoding the image, default `1` for PNG and `80` for JPEG and WEBP)
+    *   `width` and `height`: (optional but must provide both if used, integer, the width and height to scale the image to)
 
     Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.
+    
+    Currently the only accepted values for `render_format` are:
+    
+    *   `1` for JPEG (`quality` sets JPEG quality 0 to 100, always progressive 4:2:0 encoding)
+    *   `2` for PNG (`quality` sets the compression level from 0 to 9. A higher value means a smaller size and longer compression time)
+    *   `33` for WEBP (`quality` sets WEBP quality 1 to 100, for values over 100 lossless compression is used)
 
 The file you request must be a still image file that Hydrus can render (this includes PSD files). This request uses the client image cache.
 
@@ -2082,7 +2091,7 @@ The file you request must be a still image file that Hydrus can render (this inc
 ```
    
 Response:
-:   A PNG file of the image as would be rendered in the client. It will be converted to sRGB color if the file had a color profile but the rendered PNG will not have any color profile.
+:   A PNG, JPEG, or WEBP file of the image as would be rendered in the client, optionally resized as specified in the query parameters. It will be converted to sRGB color if the file had a color profile but the rendered file will not have any color profile.
 
 By default, this will set the `Content-Disposition` header to `inline`, which causes a web browser to show the file. If you set `download=true`, it will set it to `attachment`, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.
 
