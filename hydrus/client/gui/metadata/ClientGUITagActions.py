@@ -506,6 +506,8 @@ class TagPairActionContext( object ):
                 
                 self._notify_new_tags_info.wait( 0.5 )
                 
+                self._notify_new_tags_info.clear()
+                
             
             CG.client_controller.CallAfterQtSafe( widget, 'add tag pairs (after preload)', do_it_qt_and_lock )
             

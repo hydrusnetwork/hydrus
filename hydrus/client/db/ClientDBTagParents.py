@@ -572,39 +572,47 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         while len( next_tag_ids ) > 0:
             
-            tag_ids_seen_this_round = set()
+            this_loop_tag_ids = set( next_tag_ids )
             
-            ideal_tag_ids = self.modules_tag_siblings.GetIdealTagIds( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, service_id, next_tag_ids )
+            next_tag_ids = set()
             
-            tag_ids_seen_this_round.update( self.modules_tag_siblings.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, service_id, ideal_tag_ids ) )
+            ideal_tag_ids = self.modules_tag_siblings.GetIdealTagIds( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, service_id, this_loop_tag_ids )
             
-            with self._MakeTemporaryIntegerTable( next_tag_ids, 'tag_id' ) as temp_next_tag_ids_table_name:
+            this_loop_tag_ids.update( self.modules_tag_siblings.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, service_id, ideal_tag_ids ) )
+            
+            # I _think_ this is always a no-op?
+            this_loop_tag_ids.difference_update( searched_tag_ids )
+            
+            with self._MakeTemporaryIntegerTable( this_loop_tag_ids, 'tag_id' ) as temp_this_loop_tag_ids_table_name:
                 
-                searched_tag_ids.update( next_tag_ids )
+                searched_tag_ids.update( this_loop_tag_ids )
                 
                 # keep these separate--older sqlite can't do cross join to an OR ON
+                # ALSO ditching UNION, which perhaps was not helping!
                 
                 # temp tag_ids to parents
                 queries = [
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( child_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( parent_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( child_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( parent_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name )
+                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( service_id = ? AND child_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name ),
+                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( service_id = ? AND parent_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name ),
+                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( service_id = ? AND child_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name ),
+                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( service_id = ? AND parent_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name )
                 ]
                 
-                query = ' UNION '.join( queries )
-                
-                for row in self._Execute( query, ( service_id, service_id, service_id, service_id ) ):
+                for query in queries:
                     
-                    result_rows.add( row )
-                    
-                    ( status, child_tag_id, parent_tag_id ) = row
-                    
-                    tag_ids_seen_this_round.update( ( child_tag_id, parent_tag_id ) )
+                    for row in self._Execute( query, ( service_id, ) ):
+                        
+                        result_rows.add( row )
+                        
+                        ( status, child_tag_id, parent_tag_id ) = row
+                        
+                        next_tag_ids.add( child_tag_id )
+                        next_tag_ids.add( parent_tag_id )
+                        
                     
                 
             
-            next_tag_ids = tag_ids_seen_this_round.difference( searched_tag_ids )
+            next_tag_ids.difference_update( searched_tag_ids )
             
         
         unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( child_tag_id, parent_tag_id ) ) for ( status, child_tag_id, parent_tag_id ) in result_rows )

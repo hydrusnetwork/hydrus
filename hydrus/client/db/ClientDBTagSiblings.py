@@ -799,45 +799,45 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def GetTagSiblingsIdsChains( self, service_id, tag_ids ):
         
-        done_tag_ids = set()
+        searched_tag_ids = set()
         next_tag_ids = set( tag_ids )
         result_rows = set()
         
         while len( next_tag_ids ) > 0:
             
-            with self._MakeTemporaryIntegerTable( next_tag_ids, 'tag_id' ) as temp_next_tag_ids_table_name:
+            loop_tag_ids = set( next_tag_ids )
+            next_tag_ids = set()
+            
+            with self._MakeTemporaryIntegerTable( loop_tag_ids, 'tag_id' ) as temp_next_tag_ids_table_name:
                 
-                done_tag_ids.update( next_tag_ids )
-                
-                next_tag_ids = set()
+                searched_tag_ids.update( loop_tag_ids )
                 
                 # keep these separate--older sqlite can't do cross join to an OR ON
+                # ALSO ditching UNION, which perhaps was not helping!
                 
                 # temp tag_ids to siblings
                 queries = [
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( bad_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( good_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( bad_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( good_tag_id = tag_id ) WHERE service_id = ?'.format( temp_next_tag_ids_table_name )
+                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( service_id = ? AND bad_tag_id = tag_id );'.format( temp_next_tag_ids_table_name ),
+                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( service_id = ? AND good_tag_id = tag_id );'.format( temp_next_tag_ids_table_name ),
+                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( service_id = ? AND bad_tag_id = tag_id );'.format( temp_next_tag_ids_table_name ),
+                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( service_id = ? AND good_tag_id = tag_id );'.format( temp_next_tag_ids_table_name )
                 ]
                 
-                query = ' UNION '.join( queries )
-                
-                for row in self._Execute( query, ( service_id, service_id, service_id, service_id ) ):
+                for query in queries:
                     
-                    result_rows.add( row )
-                    
-                    ( status, bad_tag_id, good_tag_id ) = row
-                    
-                    for tag_id in ( bad_tag_id, good_tag_id ):
+                    for row in self._Execute( query, ( service_id, ) ):
                         
-                        if tag_id not in done_tag_ids:
-                            
-                            next_tag_ids.add( tag_id )
-                            
+                        result_rows.add( row )
+                        
+                        ( status, bad_tag_id, good_tag_id ) = row
+                        
+                        next_tag_ids.add( bad_tag_id )
+                        next_tag_ids.add( good_tag_id )
                         
                     
                 
+            
+            next_tag_ids.difference_update( searched_tag_ids )
             
         
         unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( bad_tag_id, good_tag_id ) ) for ( status, bad_tag_id, good_tag_id ) in result_rows )
