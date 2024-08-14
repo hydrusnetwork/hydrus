@@ -679,6 +679,8 @@ class TagPairActionContext( object ):
                 
                 self._notify_new_tags_info.wait( 0.5 )
                 
+                self._notify_new_tags_info.clear()
+                
             
         
         pertinent_pairs = set()
