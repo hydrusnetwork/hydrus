@@ -2020,6 +2020,15 @@
 </li>
         
           <li class="md-nav__item">
+  <a href="#add_files_migrate_files" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /add_files/migrate_files
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#add_files_archive_files" class="md-nav__link">
     <span class="md-ellipsis">
       POST /add_files/archive_files
@@ -3218,6 +3227,15 @@
   <a href="#add_files_clear_file_deletion_record" class="md-nav__link">
     <span class="md-ellipsis">
       POST /add_files/clear_file_deletion_record
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#add_files_migrate_files" class="md-nav__link">
+    <span class="md-ellipsis">
+      POST /add_files/migrate_files
     </span>
   </a>
   
@@ -4442,6 +4460,7 @@ Accept: application/json
 <dd>
 <ul>
 <li><code>path</code>: (the path you want to import)</li>
+<li><a href="#parameters_file_domain">file domain</a> (optional, defaults to your "quiet" file import options's destination)</li>
 </ul>
 </dd>
 </dl>
@@ -4449,6 +4468,7 @@ Accept: application/json
 <span class="w">  </span><span class="nt">&quot;path&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;E:\\to_import\\ayanami.jpg&quot;</span>
 <span class="p">}</span>
 </code></pre></div>
+<p>If you include a <a href="#parameters_file_domain">file domain</a>, it can only include 'local' file domains (by default this would be "my files"), but you can send multiple to import to more than one location at once. Sending 'all local files', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.</p>
 <dl>
 <dt>Arguments (as bytes):</dt>
 <dd>You can alternately just send the file's bytes as the POST body.</dd>
@@ -4558,6 +4578,37 @@ Accept: application/json
 <dd>200 and no content.</dd>
 </dl>
 <p>This is the same as the advanced deletion option of the same basic name. It will erase the record that a file has been physically deleted (i.e. it only applies to deletion records in the 'all local files' domain). A file that no longer has a 'all local files' deletion record will pass a 'exclude previously deleted files' check in a <em>file import options</em>.</p>
+<h3 id="add_files_migrate_files"><strong>POST <code>/add_files/migrate_files</code></strong><a class="headerlink" href="#add_files_migrate_files" title="Permanent link">&para;</a></h3>
+<p><em>Copy files from one local file domain to another.</em></p>
+<dl>
+<dt>Restricted access:</dt>
+<dd>YES. Import Files permission needed.</dd>
+<dt>Required Headers:</dt>
+<dd>
+<ul>
+<li><code>Content-Type</code>: <code>application/json</code></li>
+</ul>
+</dd>
+<dt>Arguments (in JSON):</dt>
+<dd>
+<ul>
+<li><a href="#parameters_files">files</a></li>
+<li><a href="#parameters_file_domain">file domain</a></li>
+</ul>
+</dd>
+</dl>
+<div class="highlight"><span class="filename">Example request body</span><pre><span></span><code><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;hash&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;file_service_key&quot;</span><span class="w"> </span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;572ff2bd34857c0b3210b967a5a40cb338ca4c5747f2218d4041ddf8b6d077f1&quot;</span>
+<span class="p">}</span>
+</code></pre></div>
+<dl>
+<dt>Response:</dt>
+<dd>200 and no content.</dd>
+</dl>
+<p>This is only appropriate if the user has multiple local file services. It does the same as the media <em>files-&gt;add to-&gt;domain</em> menu action. If the files are originally in local file domain A, and you say to add to B, then afterwards they will be in both A and B. You can say 'B and C' to add to multiple domains at once, if needed. The action is idempotent and will not overwrite 'already in' files with fresh timestamps or anything.</p>
+<p>If you need to do a 'move' migrate, then please follow this command with a delete from wherever you need to remove from.</p>
+<p>If you try to add non-local files (specifically, files that are not in 'all my files'), or migrate to a file domain that is not a local file domain, then this will 400!</p>
 <h3 id="add_files_archive_files"><strong>POST <code>/add_files/archive_files</code></strong><a class="headerlink" href="#add_files_archive_files" title="Permanent link">&para;</a></h3>
 <p><em>Tell the client to archive inboxed files.</em></p>
 <dl>
@@ -4759,6 +4810,7 @@ Accept: application/json
 <li><code>url</code>: (the url you want to add)</li>
 <li><code>destination_page_key</code>: (optional page identifier for the page to receive the url)</li>
 <li><code>destination_page_name</code>: (optional page name to receive the url)</li>
+<li><a href="#parameters_file_domain">file domain</a> (optional, sets where to import the file)</li>
 <li><code>show_destination_page</code>: (optional, defaulting to false, controls whether the UI will change pages on add)</li>
 <li><code>service_keys_to_additional_tags</code>: (optional, selective, tags to give to any files imported from this url)</li>
 <li><code>filterable_tags</code>: (optional tags to be filtered by any tag import options that applies to the URL)</li>
@@ -4767,6 +4819,7 @@ Accept: application/json
 </dl>
 <p>If you specify a <code>destination_page_name</code> and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.</p>
 <p>Alternately, <code>destination_page_key</code> defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the <a href="#manage_pages_get_pages">/manage_pages/get_pages</a> call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.</p>
+<p>You can set a destination <a href="#parameters_file_domain">file domain</a>, which will select (or, for probably most of your initial requests, create) a download page that has a non-default 'file import options' with the given destination. If you set both a file domain and also a <code>destination_page_key</code>, then the page key takes precedence. If you do not set a file domain, then the import uses whatever the page has, like normal; for url import pages, this is probably your "loud" file import options default. </p>
 <p><code>show_destination_page</code> defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.</p>
 <p><code>service_keys_to_additional_tags</code> uses the same data structure as in /add_tags/add_tags--service keys to a list of tags to add. You will need 'add tags' permission or this will 403. These tags work exactly as 'additional' tags work in a <em>tag import options</em>. They are service specific, and always added unless some advanced tag import options checkbox (like 'only add tags to new files') is set.</p>
 <p>filterable_tags works like the tags parsed by a hydrus downloader. It is just a list of strings. They have no inherant service and will be sent to a <em>tag import options</em>, if one exists, to decide which tag services get what. This parameter is useful if you are pulling all a URL's tags outside of hydrus and want to have them processed like any other downloader, rather than figuring out service names and namespace filtering on your end. Note that in order for a tag import options to kick in, I think you will have to have a Post URL URL Class hydrus-side set up for the URL so some tag import options (whether that is Class-specific or just the default) can be loaded at import time.</p>
@@ -5462,8 +5515,11 @@ Accept: application/json
 <li>16 - number of frames (smallest first/largest first)</li>
 <li>18 - last viewed time (oldest first/newest first)</li>
 <li>19 - archive timestamp (oldest first/newest first)</li>
-<li>20 - hash hex (N/A)</li>
+<li>20 - hash hex (lexicographic/reverse lexicographic)</li>
+<li>21 - pixel hash hex (lexicographic/reverse lexicographic)</li>
+<li>22 - blurhash (lexicographic/reverse lexicographic)</li>
 </ul>
+<p>The pixel and blurhash sorts will put files without one of these (e.g. an mp3) at the end, regardless of asc/desc.</p>
 <dl>
 <dt>Response:</dt>
 <dd>
@@ -5914,8 +5970,17 @@ Accept: application/json
 <li><code>file_id</code>: (selective, numerical file id for the file)</li>
 <li><code>hash</code>: (selective, a hexadecimal SHA256 hash for the file)</li>
 <li><code>download</code>: (optional, boolean, default <code>false</code>)</li>
+<li><code>render_format</code>: (optional, integer, the filetype enum value to render the file to, default <code>2</code> for PNG)</li>
+<li><code>render_quality</code>: (optional, integer, the quality or PNG compression level to use for encoding the image, default <code>1</code> for PNG and <code>80</code> for JPEG and WEBP)</li>
+<li><code>width</code> and <code>height</code>: (optional but must provide both if used, integer, the width and height to scale the image to)</li>
 </ul>
 <p>Only use one of file_id or hash. As with metadata fetching, you may only use the hash argument if you have access to all files. If you are tag-restricted, you will have to use a file_id in the last search you ran.</p>
+<p>Currently the only accepted values for <code>render_format</code> are:</p>
+<ul>
+<li><code>1</code> for JPEG (<code>quality</code> sets JPEG quality 0 to 100, always progressive 4:2:0 encoding)</li>
+<li><code>2</code> for PNG (<code>quality</code> sets the compression level from 0 to 9. A higher value means a smaller size and longer compression time)</li>
+<li><code>33</code> for WEBP (<code>quality</code> sets WEBP quality 1 to 100, for values over 100 lossless compression is used)</li>
+</ul>
 </dd>
 </dl>
 <p>The file you request must be a still image file that Hydrus can render (this includes PSD files). This request uses the client image cache.</p>
@@ -5925,7 +5990,7 @@ Accept: application/json
 </code></pre></div></p>
 <dl>
 <dt>Response:</dt>
-<dd>A PNG file of the image as would be rendered in the client. It will be converted to sRGB color if the file had a color profile but the rendered PNG will not have any color profile.</dd>
+<dd>A PNG, JPEG, or WEBP file of the image as would be rendered in the client, optionally resized as specified in the query parameters. It will be converted to sRGB color if the file had a color profile but the rendered file will not have any color profile.</dd>
 </dl>
 <p>By default, this will set the <code>Content-Disposition</code> header to <code>inline</code>, which causes a web browser to show the file. If you set <code>download=true</code>, it will set it to <code>attachment</code>, which triggers the browser to automatically download it (or open the 'save as' dialog) instead.</p>
 <h2 id="managing_file_relationships">Managing File Relationships<a class="headerlink" href="#managing_file_relationships" title="Permanent link">&para;</a></h2>
@@ -7319,7 +7384,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 7, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 14, 2024</span>
   </span>
 
     
