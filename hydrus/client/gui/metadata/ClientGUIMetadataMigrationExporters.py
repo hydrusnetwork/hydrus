@@ -82,7 +82,7 @@ class EditSingleFileMetadataExporterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._forced_note_name_panel = ClientGUICommon.StaticBox( self, 'name' )
         
-        self._forced_note_name = ClientGUICommon.NoneableTextCtrl( self._forced_note_name_panel, message = 'Forced Note Name: ', none_phrase = 'use "name: text" format' )
+        self._forced_note_name = ClientGUICommon.NoneableTextCtrl( self._forced_note_name_panel, '', message = 'Forced Note Name: ', none_phrase = 'use "name: text" format' )
         tt = 'Normally, the sidecar exporter is at this stage expecting notes in the format "name: text". If you only have the text, you can force the name here. This is only useful if you are parsing one note through here, or you will get all sorts of renaming conflicts.'
         self._forced_note_name.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         

@@ -302,6 +302,9 @@ HANGUL_FILLER_CHARACTER = '\u3164'
 
 def StripTextOfGumpf( t ):
     
+    # TODO: intro this sometime with a full db update
+    # t = t.replace( HC.UNICODE_ZERO_WIDTH_SPACE, '' )
+    
     t = HydrusText.re_one_or_more_whitespace.sub( ' ', t )
     
     t = t.strip()
@@ -322,6 +325,7 @@ def StripTextOfGumpf( t ):
     
     return t
     
+
 def TagOK( t ):
     
     try:

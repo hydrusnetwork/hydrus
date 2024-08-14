@@ -1456,7 +1456,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return insertion_index
         
     
-    def _GetMediaPages( self, only_my_level ):
+    def _GetMediaPages( self, only_my_level ) -> typing.List[ Page ]:
         
         results = []
         
@@ -2509,7 +2509,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         
     
-    def GetOrMakeURLImportPage( self, desired_page_name = None, desired_page_key = None, select_page =  True ):
+    def GetOrMakeURLImportPage( self, desired_page_name = None, desired_page_key = None, select_page = True, destination_location_context = None ):
         
         potential_url_import_pages = [ page for page in self._GetMediaPages( False ) if page.IsURLImportPage() ]
         
@@ -2520,6 +2520,25 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         elif desired_page_name is not None:
             
             potential_url_import_pages = [ page for page in potential_url_import_pages if page.GetName() == desired_page_name ]
+            
+        
+        if destination_location_context is not None:
+            
+            good_url_import_pages = []
+            
+            for url_import_page in potential_url_import_pages:
+                
+                urls_import = url_import_page.GetManagementController().GetVariable( 'urls_import' )
+                
+                file_import_options = urls_import.GetFileImportOptions()
+                
+                if not file_import_options.IsDefault() and file_import_options.GetDestinationLocationContext() == destination_location_context:
+                    
+                    good_url_import_pages.append( url_import_page )
+                    
+                
+            
+            potential_url_import_pages = good_url_import_pages
             
         
         if len( potential_url_import_pages ) > 0:
@@ -2539,7 +2558,7 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
             
         else:
             
-            return self.NewPageImportURLs( page_name = desired_page_name, on_deepest_notebook = True, select_page = select_page )
+            return self.NewPageImportURLs( page_name = desired_page_name, on_deepest_notebook = True, select_page = select_page, destination_location_context = destination_location_context )
             
         
     
@@ -3239,9 +3258,9 @@ class PagesNotebook( QP.TabWidgetWithDnD ):
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         
     
-    def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False, select_page = True ):
+    def NewPageImportURLs( self, page_name = None, on_deepest_notebook = False, select_page = True, destination_location_context = None ):
         
-        management_controller = ClientGUIManagementController.CreateManagementControllerImportURLs( page_name = page_name )
+        management_controller = ClientGUIManagementController.CreateManagementControllerImportURLs( page_name = page_name, destination_location_context = destination_location_context )
         
         return self.NewPage( management_controller, on_deepest_notebook = on_deepest_notebook, select_page = select_page )
         

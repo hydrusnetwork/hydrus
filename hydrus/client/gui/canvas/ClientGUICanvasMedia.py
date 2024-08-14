@@ -897,11 +897,25 @@ class AnimationBar( QW.QWidget ):
         self._num_frames = 1
         self._last_drawn_info = None
         self._next_draw_info = None
+        self._show_gubbins = True
         
         self._show_text = True
         
         self._currently_in_a_drag = False
         self._it_was_playing_before_drag = False
+        
+    
+    def _DoAnimationStatusUpdate( self ):
+        
+        # we must never call this method in the paintEvent
+        current_animation_bar_status = self._media_window.GetAnimationBarStatus()
+        
+        if self._last_drawn_info != current_animation_bar_status:
+            
+            self._next_draw_info = current_animation_bar_status
+            
+            self.update()
+            
         
     
     def _DrawBlank( self, painter ):
@@ -977,98 +991,101 @@ class AnimationBar( QW.QWidget ):
         
         #
         
-        if buffer_indices is not None:
+        if self._show_gubbins:
             
-            ( start_index, rendered_to_index, end_index ) = buffer_indices
-            
-            if ClientRendering.FrameIndexOutOfRange( rendered_to_index, start_index, end_index ):
+            if buffer_indices is not None:
                 
-                rendered_to_index = start_index
+                ( start_index, rendered_to_index, end_index ) = buffer_indices
                 
-            
-            start_x = self._GetXFromFrameIndex( start_index )
-            rendered_to_x = self._GetXFromFrameIndex( rendered_to_index )
-            end_x = self._GetXFromFrameIndex( end_index )
-            
-            if start_x != rendered_to_x:
-                
-                rendered_colour = ClientGUIFunctions.GetDifferentLighterDarkerColour( background_colour )
-                
-                if rendered_to_x > start_x:
+                if ClientRendering.FrameIndexOutOfRange( rendered_to_index, start_index, end_index ):
                     
-                    painter.fillRect( start_x, 0, rendered_to_x - start_x, my_height, rendered_colour )
-                    
-                else:
-                    
-                    painter.fillRect( start_x, 0, my_width - start_x, my_height, rendered_colour )
-                    
-                    painter.fillRect( 0, 0, rendered_to_x, my_height, rendered_colour )
+                    rendered_to_index = start_index
                     
                 
-            
-            if rendered_to_x != end_x:
+                start_x = self._GetXFromFrameIndex( start_index )
+                rendered_to_x = self._GetXFromFrameIndex( rendered_to_index )
+                end_x = self._GetXFromFrameIndex( end_index )
                 
-                to_be_rendered_colour = ClientGUIFunctions.GetDifferentLighterDarkerColour( background_colour, 1 )
-                
-                if end_x > rendered_to_x:
+                if start_x != rendered_to_x:
                     
-                    painter.fillRect( rendered_to_x, 0, end_x - rendered_to_x, my_height, to_be_rendered_colour )
+                    rendered_colour = ClientGUIFunctions.GetDifferentLighterDarkerColour( background_colour )
                     
-                else:
+                    if rendered_to_x > start_x:
+                        
+                        painter.fillRect( start_x, 0, rendered_to_x - start_x, my_height, rendered_colour )
+                        
+                    else:
+                        
+                        painter.fillRect( start_x, 0, my_width - start_x, my_height, rendered_colour )
+                        
+                        painter.fillRect( 0, 0, rendered_to_x, my_height, rendered_colour )
+                        
                     
-                    painter.fillRect( rendered_to_x, 0, my_width - rendered_to_x, my_height, to_be_rendered_colour )
+                
+                if rendered_to_x != end_x:
                     
-                    painter.fillRect( 0, 0, end_x, my_height, to_be_rendered_colour )
+                    to_be_rendered_colour = ClientGUIFunctions.GetDifferentLighterDarkerColour( background_colour, 1 )
+                    
+                    if end_x > rendered_to_x:
+                        
+                        painter.fillRect( rendered_to_x, 0, end_x - rendered_to_x, my_height, to_be_rendered_colour )
+                        
+                    else:
+                        
+                        painter.fillRect( rendered_to_x, 0, my_width - rendered_to_x, my_height, to_be_rendered_colour )
+                        
+                        painter.fillRect( 0, 0, end_x, my_height, to_be_rendered_colour )
+                        
                     
                 
             
-        
-        animated_scanbar_nub_width = CG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
-        
-        num_frames_are_useful = self._num_frames is not None and self._num_frames > 1
-        
-        nub_x = None
-        
-        if num_frames_are_useful and current_frame_index is not None:
+            animated_scanbar_nub_width = CG.client_controller.new_options.GetInteger( 'animated_scanbar_nub_width' )
             
-            nub_x = self._GetXFromFrameIndex( current_frame_index, width_offset = animated_scanbar_nub_width )
+            num_frames_are_useful = self._num_frames is not None and self._num_frames > 1
             
-        elif self._duration_ms is not None and current_timestamp_ms is not None:
+            nub_x = None
             
-            nub_x = self._GetXFromTimestamp( current_timestamp_ms, width_offset = animated_scanbar_nub_width )
-            
-        
-        if nub_x is not None:
-            
-            painter.fillRect( nub_x, 0, animated_scanbar_nub_width, my_height, self._qss_colours[ 'hab_nub' ] )
-            
-        
-        #
-        
-        if self._show_text:
-            
-            progress_strings = []
-            
-            if num_frames_are_useful:
+            if num_frames_are_useful and current_frame_index is not None:
                 
-                progress_strings.append( HydrusNumbers.ValueRangeToPrettyString( current_frame_index + 1, self._num_frames ) )
+                nub_x = self._GetXFromFrameIndex( current_frame_index, width_offset = animated_scanbar_nub_width )
+                
+            elif self._duration_ms is not None and current_timestamp_ms is not None:
+                
+                nub_x = self._GetXFromTimestamp( current_timestamp_ms, width_offset = animated_scanbar_nub_width )
                 
             
-            if current_timestamp_ms is not None:
+            if nub_x is not None:
                 
-                progress_strings.append( HydrusTime.ValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
+                painter.fillRect( nub_x, 0, animated_scanbar_nub_width, my_height, self._qss_colours[ 'hab_nub' ] )
                 
             
-            s = ' - '.join( progress_strings )
+            #
             
-            if len( s ) > 0:
+            if self._show_text:
                 
-                ( text_size, s ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, s )
+                progress_strings = []
                 
-                x = my_width - text_size.width() - 3
-                y = ( my_height - text_size.height() ) / 2
+                if num_frames_are_useful:
+                    
+                    progress_strings.append( HydrusNumbers.ValueRangeToPrettyString( current_frame_index + 1, self._num_frames ) )
+                    
                 
-                ClientGUIFunctions.DrawText( painter, x, y, s )
+                if current_timestamp_ms is not None:
+                    
+                    progress_strings.append( HydrusTime.ValueRangeToScanbarTimestampsMS( current_timestamp_ms, self._duration_ms ) )
+                    
+                
+                s = ' - '.join( progress_strings )
+                
+                if len( s ) > 0:
+                    
+                    ( text_size, s ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, s )
+                    
+                    x = my_width - text_size.width() - 3
+                    y = ( my_height - text_size.height() ) / 2
+                    
+                    ClientGUIFunctions.DrawText( painter, x, y, s )
+                    
                 
             
         
@@ -1079,8 +1096,6 @@ class AnimationBar( QW.QWidget ):
         painter.setPen( QG.QPen( self._qss_colours[ 'hab_border' ] ) )
         
         painter.drawRect( 0, 0, my_width - 1, my_height - 1 )
-        
-        self._last_drawn_info = self._next_draw_info
         
     
     def _ScanToCurrentMousePos( self ):
@@ -1117,6 +1132,7 @@ class AnimationBar( QW.QWidget ):
     def ClearMedia( self ):
         
         self._media_window = None
+        self._show_gubbins = True
         
         CG.client_controller.gui.UnregisterAnimationUpdateWindow( self )
         
@@ -1197,10 +1213,23 @@ class AnimationBar( QW.QWidget ):
             
             self._DrawBlank( painter )
             
+            self._next_draw_info = None
+            
         else:
             
             self._Redraw( painter )
             
+        
+        self._last_drawn_info = self._next_draw_info
+        
+    
+    def setGubbinsVisible( self, show: bool ):
+        
+        self._show_gubbins = show
+        
+        self._DoAnimationStatusUpdate()
+        
+        self.update()
         
     
     def SetMediaAndWindow( self, media, media_window ):
@@ -1226,6 +1255,10 @@ class AnimationBar( QW.QWidget ):
         
         self._next_draw_info = None
         
+        self._show_gubbins = True
+        
+        self._DoAnimationStatusUpdate()
+        
         self.update()
         
     
@@ -1243,20 +1276,7 @@ class AnimationBar( QW.QWidget ):
             return
             
         
-        if not self.isVisible():
-            
-            return
-            
-        
-        # we must never call this method in the paintEvent
-        current_animation_bar_status = self._media_window.GetAnimationBarStatus()
-        
-        if self._last_drawn_info != current_animation_bar_status:
-            
-            self._next_draw_info = current_animation_bar_status
-            
-            self.update()
-            
+        self._DoAnimationStatusUpdate()
         
     
     def get_hab_background( self ):
@@ -1917,11 +1937,6 @@ class MediaContainer( QW.QWidget ):
                     
                 
             
-        
-    
-    def HasAnimationbar( self ):
-        
-        return self._animation_bar.isVisible()
         
     
     def HasPlayedOnceThrough( self ):
@@ -2610,10 +2625,11 @@ class MediaContainer( QW.QWidget ):
             
             if not self._controls_bar.isVisible():
                 
-                self._animation_bar.SetMediaAndWindow( self._media, self._media_window )
-                
                 self._controls_bar.show()
                 self._controls_bar.raise_()
+                
+                self._animation_bar.setGubbinsVisible( True )
+                self._animation_bar.repaint()
                 
             
             should_show_volume = self.ShouldHaveVolumeControl()
@@ -2633,8 +2649,7 @@ class MediaContainer( QW.QWidget ):
                 # this ensures that when we show again, we won't have the nub in the wrong place for a frame before it repaints
                 # we'll have no nub, but this is less noticeable
                 
-                self._animation_bar.ClearMedia()
-                
+                self._animation_bar.setGubbinsVisible( False )
                 self._animation_bar.repaint()
                 
                 self._controls_bar.hide()

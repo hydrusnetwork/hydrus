@@ -1192,7 +1192,7 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
         self._joiner = QW.QLineEdit( self._controls_panel )
         self._joiner.setToolTip( ClientGUIFunctions.WrapToolTip( 'The strings will be joined using this text. For instance, joining "A" "B" "C" with ", " will create "A, B, C". Entering "\\n" will convert to a newline, which means if you want to join by backslash, you need to enter two, "\\\\". You can enter the empty string, which simply concatenates.' ) )
         
-        self._join_tuple_size = ClientGUICommon.NoneableSpinCtrl( self._controls_panel, none_phrase = 'merge all into one string', min = 2 )
+        self._join_tuple_size = ClientGUICommon.NoneableSpinCtrl( self._controls_panel, 2, none_phrase = 'merge all into one string', min = 2 )
         self._join_tuple_size.setToolTip( ClientGUIFunctions.WrapToolTip( 'If you want to merge your strings in a 1-2, 1-2, 1-2 (e.g. you have domain-path pairs you want to joint into URLs), or 1-2-3, 1-2-3, 1-2-3 fashion, set the size of your groups here. If the remainder at the end of the list does not fit the group size, it is discarded.' ) )
         
         self._summary_st = ClientGUICommon.BetterStaticText( self._controls_panel )
@@ -1328,8 +1328,8 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
         self._match_value_flexible_input.addItem( 'alphanumeric characters (a-zA-Z0-9)', ClientStrings.ALPHANUMERIC )
         self._match_value_flexible_input.addItem( 'numeric characters (0-9)', ClientStrings.NUMERIC )
         
-        self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
-        self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        self._min_chars = ClientGUICommon.NoneableSpinCtrl( self, 16, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
+        self._max_chars = ClientGUICommon.NoneableSpinCtrl( self, 64, min = 1, max = 65535, unit = 'characters', none_phrase = 'no limit' )
         
         self._example_string = QW.QLineEdit( self )
         
@@ -1580,8 +1580,8 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._range_panel = QW.QWidget( self._controls_panel )
         
-        self._index_start = ClientGUICommon.NoneableSpinCtrl( self._range_panel, none_phrase = 'start at the beginning', min = -65536, max = 65536)
-        self._index_end = ClientGUICommon.NoneableSpinCtrl( self._range_panel, none_phrase = 'finish at the end', min = -65536, max = 65536)
+        self._index_start = ClientGUICommon.NoneableSpinCtrl( self._range_panel, 0, none_phrase = 'start at the beginning', min = -65536, max = 65536)
+        self._index_end = ClientGUICommon.NoneableSpinCtrl( self._range_panel, -1, none_phrase = 'finish at the end', min = -65536, max = 65536)
         
         self._summary_st = ClientGUICommon.BetterStaticText( self._controls_panel )
         
@@ -1775,7 +1775,7 @@ class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._asc = QW.QCheckBox( self._controls_panel )
         
-        self._regex = ClientGUICommon.NoneableTextCtrl( self._controls_panel, none_phrase = 'use whole string' )
+        self._regex = ClientGUICommon.NoneableTextCtrl( self._controls_panel, r'\d+', none_phrase = 'use whole string' )
         
         tt = 'If you want to sort by a substring, for instance a number in a longer string, you can place a regex here like \'\\d+\' just to capture and sort by that number. It does not affect the final strings, just what it compared for sort.'
         
@@ -1925,7 +1925,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
         tt = 'The string will be split wherever it encounters these characters. Entering "\\n" will convert to a newline, which means if you want to split by backslash, you need to enter two, "\\\\".'
         self._separator.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._max_splits = ClientGUICommon.NoneableSpinCtrl( self._controls_panel, min = 1, max = 65535, unit = 'splits', none_phrase = 'no limit' )
+        self._max_splits = ClientGUICommon.NoneableSpinCtrl( self._controls_panel, 1, min = 1, max = 65535, unit = 'splits', none_phrase = 'no limit' )
         
         #
         

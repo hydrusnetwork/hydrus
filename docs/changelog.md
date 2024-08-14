@@ -7,6 +7,51 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 586](https://github.com/hydrusnetwork/hydrus/releases/tag/v586)
+
+### faster sibling/parent fetching
+
+* for a while, some users have had extremely slow selective sibling/parent fetching, usually manifesting in sibling/parent display calculation or autocomplete results decoration. with last week's new sibling/parent async dialogs, the problem was suddenly exposed further. thankfully, this situation was a useful testbed, and I have made multiple updates that I believe should remove much if not all of the unreasonable megalag. if you saw 30 second delays in the new sibling/parent dialogs, let me know how this all works for you. the ideal is that simple stuff takes 50ms, and something that behind the scenes might have 14,000 rows (stuff like 'gender:female' in parents can sprawl like this), should be no more than a couple of seconds on first fetch, and much faster thereafter
+* fixed up a bad preload routine in the new sibling/parents dialogs that was doing busy wait and eating up bunch of extra CPU
+* simplified the main sibling/parent chain-following search
+* removed all the UNION queries from the sibling and parent modules; maybe I'll reintroduce it one day, but it doesn't really save much time and can limit search cleverness by making the query planner go bananas
+* further optimised the recursive loop of this search, particularly for parents which has to do some additional sibling ideal lookup stuff to join chains coupled by sibling relations
+* overhauled the tag parents/siblings storage tables from the old two-table combined format to dynamic sub-tables separated by both service_id and status. this makes parent and sibling storage a little more spammy but also significantly smaller and more simple, and it ensures search code is always working on clean, efficient, and fast indices, which means no more crazy search variability no matter how we work with these things. as a side benefit, I relaxed the logic so the siblings storage is now capable of storing more 'conflicting' pairs, no longer enforcing an old overly optimistic 1-&gt;n rule (which was probably the cause of some 'I see a different loop to you, how do we debug this?' frustration amongst PTR users comparing siblings). **if you sync with the PTR, the database update to v586 will take a few seconds this week**
+* there may still be a single slow-the-first-time query for parents in a PTR-syncing client, simply because certain joiner tags like 'gender:female' merge many groups together. I am considering what to do here, so let's see how it goes
+* plugged a hole in the 'fetch relevant sibling/parent pairs' routine where if you triggered two searches at the same time with overlapping tags (e.g. let's say things were working super slow), the second routine was not waiting correctly for the results and the main EnterPairs method was raising a 'hey, this should not have happened' message
+
+### misc
+
+* fixed an issue in the media scanbar where if you had it set to hide completely when the mouse is not over it, then if the media was paused while the scanbar was hidden, the scanbar would unhide in a blank state until you clicked it. further, the anti-show/hide-flicker tech is improved here
+* when you open up a tag search page from the media viewer's tag list (e.g. by middle-clicking a tag), the original context's file domain is now preserved. if you open a media viewer on 'my files', then new search pages from the taglist will now be in 'my files' (it was previously defaulting to the safe backstop of 'all my files')
+* the client now forces a full tag presentation refresh when deleting a service or resetting a tag respository's processing. this should clear up some ghost tags we were seeing here without having to restart
+* the master decoding call used by the parsing system (which does 'convert this raw I/O input to nice unicode text') will now implicitly trust encoding provided by the network engine if that encoding is exlpcitly set in the response (previously it would defer to `chardet` if that was more confident), and if the given document is encoded incorrectly, it will replace bad characters with special question marks
+* when an import options button handles only one options type (e.g. the tag import options button in edit subscription query panel, where it also only does 'additional tags' stuff, or the file import buttons in _options-&gt;importing_), the button now previews what it does in its label. the way these summary statements is produced (and, more generally, used in the button's tooltips) is also tightened up--there is less newline spam, and smaller changes will collect into a single line
+* because of some remaining display bugs, if your Qt's default style would be the new 'windows11' (which is true for Win Qt 6.7.x), I am saying 'no' and switching it back to 'windowsvista'
+* I removed a 'do not allow an import folder to run for more than an hour' timer. this was an undocumented backstop hack and was messing with 'do not run regularly' import folders that operate on 100,000+ file mega folders. if you want a gigantic import job, you got it
+* silenced some spammy network reporting--the main file and gallery import objects were printing tracebacks to the log on many failure states, which in some unusual SSL/Connection errors was resulting in a whole lot of html garbage being dumped to the log
+* improved the error message when an audio file's duration cannot be determined
+* tweaked the 'help my db is broke.txt' document
+* fixed up some weird tag application logic: the client db and the tags manager object now agree that you can, through programmatic means, petition content that does not yet exist (e.g. to insert deleted rows from an external source), and thus if you wish to _pend_ content, we need to check for conflicting pre-existing _petitioned_ content, and _vice versa_. the manage tags dialog similarly understands this, but it won't offer the 'petition' action when things do not yet exist because this is a bit technical and best left to programmatic editing like the Client API or migrate tags window. it was previously possible to create a situation where a file had both pending and petitioned data that did not yet exist (`tag (+1) (-1)`, lol)--this should no longer be possible. if you got into this situation and want to clean it up, try doing a search for 'system:has tags' on just 'include pending tags', and then ctrl+a-&gt;F3 your results and then ctrl+a the taglist and hit enter on it--you should be given an option to 'undo petition on x tags' and clear it all up in one go
+
+### noneable defaults
+
+* all of the 'noneable' (nullable) integer widgets (where you have an editable number with a 'no limit' checkbox beside it) now initialise with an appropriate default value in the integer box, even if they otherwise initialise in the 'None' state. previously, these would usually sit at '1' on the number side, when starting at None, meaning you'd have to guess an appropriate number when switching from None to something concrete. all the noneable integers in the options dialog now initialise with their respective options default
+* similarly, most of the noneable text input boxes now initialise with a suggested value in the text box even if the initial value for that dialog or whatever is the 'None' checkbox ticked
+* and all of the nullable bytes widgets (a number-of-bytes value and then 'no limit' checkbox) similarly now initialise with a default value. they kind of already did, but it is better formalised now
+* dejanked some nullable int widget code design. the ones that have two dimensions are now their own class
+
+### client api
+
+* thanks to a user, `/get_files/render` has new parameters that let you now ask for a png/jpeg/webp rather than just png, at a certain quality, and a certain resolution
+* added the 'sort by pixel hash hex and blurhash' sort_type definitions to the help for `/get_files/search_files` and noted that you can asc/desc these too
+* `/add_files/add_file` now accepts a 'file domain' to set a custom import destination (just like in file import options). obviously you can only set local file domains here
+* `/add_urls/add_url` also now accepts a 'file domain', same deal. it will select/create a new url downloader page with non-default file import options set with that import destination
+* updated the help and unit tests to reflect the above
+* added `/add_urls/migrate_files` to copy files to new local file domains (essentially doing _files-&gt;add to_ from the thumbnail menu)
+* with (I think) all multiple local file service capabilities added to the Client API, issue #251 is finally ticked off
+* client api version is now 68
+
 ## [Version 585](https://github.com/hydrusnetwork/hydrus/releases/tag/v585)
 
 ### the new asynchronous siblings and parent dialogs
@@ -344,42 +389,3 @@ title: Changelog
 * cleaned a bunch of db table code for the new orphan table stuff
 * deleted the old 'yaml_dumps' table and all associated methods, which are all now unused
 * added a couple help labels to the "colours" and "style" pages to better explain what is actually going on here
-
-## [Version 576](https://github.com/hydrusnetwork/hydrus/releases/tag/v576)
-
-### file access latency
-
-* the mpv player no longer hangs the UI thread on file load if the file manager is busy. it now just shows a black square until things are freed up. sorry this took so long to fix!
-* the client file storage system has a new two-layer locking mechanism that allows for massively more parallel access, even when files are importing. file imports should lag out file/thumbnail load significantly less
-* the 'check for file orphans' maintenance job is now a significantly less-blocking process. it'll lock each of the 512 subfolders in turn, which will delay some file/thumb access, but it won't need an exclusive write lock on the whole client files manager for the entire job any more
-* also, the 'check for file orphans' job now saves thumbnails, sticking them in a subdirectory of the export location you designate. some users wanted to try using saucenao-type services to try and recover when they had a thumb but no file, so let's see how this works out
-
-### import options in watchers and gallery downloaders
-
-* instead of the mysterious 'set options to queries' button, there is now a button beside the 'import options' one that is only visible when the current selection of downloaders has differing file limit or import options than the main page. although this is still a complicated idea, I hope this will make it a little more obvious what is going on
-* I did the same deal for the watchers page, for checker options or the import options
-* it may be that some import options appear to differ after a client restart despite having the same settings. if you get this, let me know the details and I'll fix it!
-* the 'set options to watchers' command now updates note import options
-* fixed gallery imports not always saving changes to their note/tag import options in the main gui session, particularly if they are paused and the client is closed soon after options change
-* improved the import options button's handling of certain options objects when editing, I suspect this fixed some weird edge-case situations of 'I thought I did not set that there' kind of thing, particularly when doing multiple sets of editing to a page and then sub-queries within it
-* the import options button also has a stricter 'set default' command, clearing out old data more thoroughly to help with inter-widget comparisons here
-
-### misc
-
-* thanks to a user, we now have support for legacy Microsoft Office documents (.doc, .ppt, .xls), and a framework for other OLE based documents in future
-* this new feature requires the `olefile` library. this is optional, and everyone who runs the normal built release now gets it, but if you run from source you might like to re-run the `setup_venv` script this week so you get it
-* thanks to a user, the danbooru parsers now grab a danbooru post time accurate and precise to the second (previously they were getting 24-hour resolution, I think UTC midnight)
-* uploading large files to the file repository should now use significantly less memory and be far less error prone. due to an in-elegant network request, it was previously timing out the connection if files took too long to upload. the code now streams the upload more cleverly. thanks to the users who helped with this one
-* (tl;dr: if you have a darkmode stylesheet, the colour picker dialog is now fast) it looks like Qt fixed the weird bug that meant certain stylesheets broke the colour picker, so my test that says 'if the user is on Qt 6 and they have a hover-includiig stylesheet, then force a fake stylesheet without that tech before they open the colour-picker dialog and then restore the old one after they close, adding multiple seconds of entry and exit lag to this dialog argh' now no longer applies if you are on Qt 6.6 or later, which is anyone on the built release. let me know if you still have any problems!
-* URLs are now tested against URL Classes by descending order of domain length. this ensures that if you have a URL class for 'api.example.com' and another for 'example.com', and this latter one is set to also apply to subdomains, the specific 'api.example.com' URL Class will be tested first! this was frequently working as desired before, but only for accidental reasons; it is now explicit in all cases
-
-### boring stuff
-
-* cleaned up the the regex list in the filename tagging panel, which had some ancient bad code from the wx days that stored the data in the string labels
-* similarly significantly dejanked the 'ListBook' widget used in the options dialog
-* overhauled my four(!!) separate radiobox classes, merging the best of all into one unified class and getting rid of some similar ancient and horrible 'select by label' tech. about twenty or thirty radioboxes across the program, particularly the stuff you see in system predicate panels, now operate on slightly saner principles
-* fixed up the 'default gui session' combobox in the options, which was also inexplicably using ancient tech
-* updated some misc UI typos and unhelpful tooltips
-* refactored some of the client files manager to work with a 'prefix chunk', which will represent an umbrella prefix in the future system that supports overlapping folders and folders with differing prefix lengths'
-* deleted some old client files manager code
-* thanks to a user, the macOS setup_venv is fixed to point at the correct Cocoa/Quartz requirements.txt file

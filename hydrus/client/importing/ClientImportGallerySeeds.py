@@ -353,9 +353,6 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
             note += '\n'
             note += traceback.format_exc()
             
-            HydrusData.Print( 'Error when processing ' + self.url + ' !' )
-            HydrusData.Print( traceback.format_exc() )
-            
         
         self.status = status
         self.note = note

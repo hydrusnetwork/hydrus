@@ -1600,8 +1600,8 @@ class DB( HydrusDB.HydrusDB ):
             
             self._UpdateMappings( service_id, pending_rescinded_mappings_ids = pending_rescinded_mappings_ids, petitioned_rescinded_mappings_ids = petitioned_rescinded_mappings_ids )
             
-            self._Execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, ) )
-            self._Execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, ) )
+            self.modules_tag_siblings.DeletePending( service_id )
+            self.modules_tag_parents.DeletePending( service_id )
             
         elif service.GetServiceType() in ( HC.FILE_REPOSITORY, HC.IPFS ):
             
@@ -3995,7 +3995,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if account.HasPermission( HC.CONTENT_TYPE_TAG_PARENTS, HC.PERMISSION_ACTION_PETITION ):
                         
-                        pending = self._Execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT 1;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchall()
+                        statuses_to_storage_table_names = ClientDBTagParents.GenerateTagParentsStorageTableNames( service_id )
+                        
+                        pending = self._Execute( f'SELECT child_tag_id, parent_tag_id, reason_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]} ORDER BY reason_id LIMIT ?;', ( ideal_weight, ) ).fetchall()
                         
                         for ( child_tag_id, parent_tag_id, reason_id ) in pending:
                             
@@ -4009,7 +4011,7 @@ class DB( HydrusDB.HydrusDB ):
                             client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
                             
                         
-                        petitioned = self._Execute( 'SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED, ideal_weight ) ).fetchall()
+                        petitioned = self._Execute( f'SELECT child_tag_id, parent_tag_id, reason_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]} ORDER BY reason_id LIMIT ?;', ( ideal_weight, ) ).fetchall()
                         
                         for ( child_tag_id, parent_tag_id, reason_id ) in petitioned:
                             
@@ -4029,7 +4031,9 @@ class DB( HydrusDB.HydrusDB ):
                     
                     if account.HasPermission( HC.CONTENT_TYPE_TAG_SIBLINGS, HC.PERMISSION_ACTION_PETITION ):
                         
-                        pending = self._Execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT ?;', ( service_id, HC.CONTENT_STATUS_PENDING, ideal_weight ) ).fetchall()
+                        statuses_to_storage_table_names = ClientDBTagSiblings.GenerateTagSiblingsStorageTableNames( service_id )
+                        
+                        pending = self._Execute( f'SELECT bad_tag_id, good_tag_id, reason_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]} ORDER BY reason_id LIMIT ?;', ( ideal_weight, ) ).fetchall()
                         
                         for ( bad_tag_id, good_tag_id, reason_id ) in pending:
                             
@@ -4043,7 +4047,7 @@ class DB( HydrusDB.HydrusDB ):
                             client_to_server_update.AddContent( HC.CONTENT_UPDATE_PEND, content, reason )
                             
                         
-                        petitioned = self._Execute( 'SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ? ORDER BY reason_id LIMIT ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED, ideal_weight ) ).fetchall()
+                        petitioned = self._Execute( f'SELECT bad_tag_id, good_tag_id, reason_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]} ORDER BY reason_id LIMIT ?;', ( ideal_weight, ) ).fetchall()
                         
                         for ( bad_tag_id, good_tag_id, reason_id ) in petitioned:
                             
@@ -5670,20 +5674,28 @@ class DB( HydrusDB.HydrusDB ):
         
         if content_type == HC.CONTENT_TYPE_TAG_PARENTS:
             
-            source_table_names = [ 'tag_parents', 'tag_parent_petitions' ]
+            statuses_to_storage_table_names = ClientDBTagParents.GenerateTagParentsStorageTableNames( tag_service_id )
+            
+            source_table_names = [ table_name for ( status, table_name ) in statuses_to_storage_table_names.items() if status in content_statuses ]
             left_column_name = 'child_tag_id'
             right_column_name = 'parent_tag_id'
             
         elif content_type == HC.CONTENT_TYPE_TAG_SIBLINGS:
             
-            source_table_names = [ 'tag_siblings', 'tag_sibling_petitions' ]
+            statuses_to_storage_table_names = ClientDBTagSiblings.GenerateTagSiblingsStorageTableNames( tag_service_id )
+            
+            source_table_names = [ table_name for ( status, table_name ) in statuses_to_storage_table_names.items() if status in content_statuses ]
             left_column_name = 'bad_tag_id'
             right_column_name = 'good_tag_id'
+            
+        else:
+            
+            raise NotImplementedError()
             
         
         for source_table_name in source_table_names:
             
-            self._Execute( 'INSERT OR IGNORE INTO {} ( left_tag_id, right_tag_id ) SELECT {}, {} FROM {} WHERE service_id = ? AND status IN {};'.format( database_temp_job_name, left_column_name, right_column_name, source_table_name, HydrusData.SplayListForDB( content_statuses ) ), ( tag_service_id, ) )
+            self._Execute( f'INSERT OR IGNORE INTO {database_temp_job_name} ( left_tag_id, right_tag_id ) SELECT {left_column_name}, {right_column_name} FROM {source_table_name};' )
             
         
     
@@ -8280,6 +8292,11 @@ class DB( HydrusDB.HydrusDB ):
             
             self._AddService( service_key, service_type, name, dictionary )
             
+            if service_type == HC.TAG_REPOSITORY:
+                    
+                CG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                
+            
             self._cursor_transaction_wrapper.pub_after_job( 'notify_account_sync_due' )
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_pending' )
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_data' )
@@ -8379,8 +8396,17 @@ class DB( HydrusDB.HydrusDB ):
             
             if HC.CONTENT_TYPE_TAG_PARENTS in content_types:
                 
-                self._Execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( service_id, ) )
-                self._Execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
+                statuses_to_storage_table_names = ClientDBTagParents.GenerateTagParentsStorageTableNames( service_id )
+                
+                for ( status, table_name ) in statuses_to_storage_table_names.items():
+                    
+                    if status ==  HC.CONTENT_STATUS_PENDING:
+                        
+                        continue
+                        
+                    
+                    self._Execute( f'DELETE FROM {table_name};' )
+                    
                 
                 ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = ClientDBTagParents.GenerateTagParentsLookupCacheTableNames( service_id )
                 
@@ -8390,8 +8416,17 @@ class DB( HydrusDB.HydrusDB ):
             
             if HC.CONTENT_TYPE_TAG_SIBLINGS in content_types:
                 
-                self._Execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( service_id, ) )
-                self._Execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
+                statuses_to_storage_table_names = ClientDBTagSiblings.GenerateTagSiblingsStorageTableNames( service_id )
+                
+                for ( status, table_name ) in statuses_to_storage_table_names.items():
+                    
+                    if status ==  HC.CONTENT_STATUS_PENDING:
+                        
+                        continue
+                        
+                    
+                    self._Execute( f'DELETE FROM {table_name};' )
+                    
                 
                 ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = ClientDBTagSiblings.GenerateTagSiblingsLookupCacheTableNames( service_id )
                 
@@ -8418,6 +8453,11 @@ class DB( HydrusDB.HydrusDB ):
             
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_data' )
             self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_gui' )
+            
+            if service_type == HC.TAG_REPOSITORY:
+                    
+                CG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+                
             
             job_status.SetStatusText( prefix + ': done!' )
             
@@ -10528,6 +10568,79 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 585:
+            
+            if self._TableExists( 'tag_siblings' ):
+                
+                for service_id in self.modules_services.GetServiceIds( HC.REAL_TAG_SERVICES ):
+                    
+                    self._controller.frame_splash_status.SetSubtext( f'moving parents/siblings: {service_id}' )
+                    
+                    statuses_to_storage_table_names = ClientDBTagParents.GenerateTagParentsStorageTableNames( service_id )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id ) SELECT child_tag_id, parent_tag_id FROM tag_parents WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_CURRENT ) )
+                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id ) SELECT child_tag_id, parent_tag_id FROM tag_parents WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_DELETED ) )
+                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id, reason_id ) SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) )
+                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( child_tag_id INTEGER, parent_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( child_tag_id, parent_tag_id, reason_id ) SELECT child_tag_id, parent_tag_id, reason_id FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
+                    self._CreateIndex( table_name, [ 'parent_tag_id' ] )
+                    
+                    for table_name in statuses_to_storage_table_names.values():
+                        
+                        self.modules_db_maintenance.AnalyzeTable( table_name )
+                        
+                    
+                    #
+                    
+                    statuses_to_storage_table_names = ClientDBTagSiblings.GenerateTagSiblingsStorageTableNames( service_id )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id ) SELECT bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_CURRENT ) )
+                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id ) SELECT bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_DELETED ) )
+                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id, reason_id ) SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) )
+                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
+                    
+                    table_name = statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]
+                    self._Execute( f'CREATE TABLE IF NOT EXISTS {table_name} ( bad_tag_id INTEGER, good_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );' )
+                    self._Execute( f'INSERT OR IGNORE INTO {table_name} ( bad_tag_id, good_tag_id, reason_id ) SELECT bad_tag_id, good_tag_id, reason_id FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) )
+                    self._CreateIndex( table_name, [ 'good_tag_id' ] )
+                    
+                    for table_name in statuses_to_storage_table_names.values():
+                        
+                        self.modules_db_maintenance.AnalyzeTable( table_name )
+                        
+                    
+                
+                self._Execute( 'DROP TABLE tag_parents;' )
+                self._Execute( 'DROP TABLE tag_parent_petitions;' )
+                
+                self._Execute( 'DROP TABLE tag_siblings;' )
+                self._Execute( 'DROP TABLE tag_sibling_petitions;' )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )
@@ -10857,11 +10970,18 @@ class DB( HydrusDB.HydrusDB ):
         
         future_service_keys = { service.GetServiceKey() for service in services }
         
+        we_deleted_tag_service = False
+        
         for service_key in current_service_keys:
             
             if service_key not in future_service_keys:
                 
                 service_id = self.modules_services.GetServiceId( service_key )
+                
+                if self.modules_services.GetServiceType( service_id ) in HC.ALL_TAG_SERVICES:
+                    
+                    we_deleted_tag_service = True
+                    
                 
                 self._DeleteService( service_id )
                 
@@ -10887,6 +11007,11 @@ class DB( HydrusDB.HydrusDB ):
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_data' )
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_services_gui' )
         self._cursor_transaction_wrapper.pub_after_job( 'notify_new_pending' )
+        
+        if we_deleted_tag_service:
+            
+            CG.client_controller.pub( 'notify_new_force_refresh_tags_data' )
+            
         
     
     def _Vacuum( self, names: typing.Collection[ str ], maintenance_mode = HC.MAINTENANCE_FORCED, stop_time = None, force_vacuum = False ):

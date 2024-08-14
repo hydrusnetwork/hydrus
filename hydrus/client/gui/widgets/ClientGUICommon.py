@@ -1157,33 +1157,24 @@ class NoneableSpinCtrl( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1, num_dimensions = 1 ):
+    def __init__( self, parent, default_int: int, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1 ):
         
         QW.QWidget.__init__( self, parent )
         
         self._unit = unit
         self._multiplier = multiplier
-        self._num_dimensions = num_dimensions
         
         self._checkbox = QW.QCheckBox( self )
         self._checkbox.stateChanged.connect( self.EventCheckBox )
         self._checkbox.setText( none_phrase )
         
-        self._one = BetterSpinBox( self, min=min, max=max )
+        self._number_value = BetterSpinBox( self, min=min, max=max )
         
-        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._one, len( str( max ) ) + 5 )
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._number_value, len( str( max ) ) + 5 )
         
-        self._one.setMaximumWidth( width )
+        self._number_value.setMaximumWidth( width )
         
-        if num_dimensions == 2:
-            
-            self._two = BetterSpinBox( self, initial=0, min=min, max=max )
-            self._two.valueChanged.connect( self._HandleValueChanged )
-            
-            width = ClientGUIFunctions.ConvertTextToPixelWidth( self._two, len( str( max ) ) + 5 )
-            
-            self._two.setMinimumWidth( width )
-            
+        self.SetValue( default_int )
         
         hbox = QP.HBoxLayout( margin = 0 )
         
@@ -1192,26 +1183,20 @@ class NoneableSpinCtrl( QW.QWidget ):
             QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_CENTER_PERPENDICULAR )
             
         
-        QP.AddToLayout( hbox, self._one, CC.FLAGS_CENTER_PERPENDICULAR )
-        
-        if self._num_dimensions == 2:
-            
-            QP.AddToLayout( hbox, BetterStaticText(self,'x'), CC.FLAGS_CENTER_PERPENDICULAR )
-            QP.AddToLayout( hbox, self._two, CC.FLAGS_CENTER_PERPENDICULAR )
-            
+        QP.AddToLayout( hbox, self._number_value, CC.FLAGS_CENTER_PERPENDICULAR )
         
         if self._unit is not None:
             
             QP.AddToLayout( hbox, BetterStaticText(self,self._unit), CC.FLAGS_CENTER_PERPENDICULAR )
-        
+            
         
         QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
         
         hbox.addStretch( 1 )
         
         self.setLayout( hbox )
-    
-        self._one.valueChanged.connect( self._HandleValueChanged )
+        
+        self._number_value.valueChanged.connect( self._HandleValueChanged )
         self._checkbox.stateChanged.connect( self._HandleValueChanged )
         
         
@@ -1223,22 +1208,12 @@ class NoneableSpinCtrl( QW.QWidget ):
     def EventCheckBox( self, state ):
         
         if self._checkbox.isChecked():
-    
-            self._one.setEnabled( False )
             
-            if self._num_dimensions == 2:
-                
-                self._two.setEnabled( False )
-                
+            self._number_value.setEnabled( False )
             
         else:
             
-            self._one.setEnabled( True )
-            
-            if self._num_dimensions == 2:
-                
-                self._two.setEnabled( True )
-                
+            self._number_value.setEnabled( True )
             
         
     
@@ -1250,14 +1225,7 @@ class NoneableSpinCtrl( QW.QWidget ):
             
         else:
             
-            if self._num_dimensions == 2:
-                
-                return ( self._one.value() * self._multiplier, self._two.value() * self._multiplier )
-                
-            else:
-                
-                return self._one.value() * self._multiplier
-                
+            return self._number_value.value() * self._multiplier
             
         
     
@@ -1279,33 +1247,149 @@ class NoneableSpinCtrl( QW.QWidget ):
             
             self._checkbox.setChecked( True )
             
-            self._one.setEnabled( False )
-            if self._num_dimensions == 2: self._two.setEnabled( False )
+            self._number_value.setEnabled( False )
             
         else:
             
             self._checkbox.setChecked( False )
             
-            if self._num_dimensions == 2:
-                
-                self._two.setEnabled( True )
-                
-                ( value, y ) = value
-                
-                self._two.setValue( y // self._multiplier )
-                
+            self._number_value.setEnabled( True )
             
-            self._one.setEnabled( True )
-            
-            self._one.setValue( value // self._multiplier )
+            self._number_value.setValue( value // self._multiplier )
             
         
     
+
+class NoneableDoubleSpinCtrl( QW.QWidget ):
+    
+    valueChanged = QC.Signal()
+    
+    def __init__( self, parent, default_ints, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1 ):
+        
+        QW.QWidget.__init__( self, parent )
+        
+        self._unit = unit
+        self._multiplier = multiplier
+        
+        self._checkbox = QW.QCheckBox( self )
+        self._checkbox.stateChanged.connect( self.EventCheckBox )
+        self._checkbox.setText( none_phrase )
+        
+        self._one = BetterSpinBox( self, min=min, max=max )
+        
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._one, len( str( max ) ) + 5 )
+        
+        self._one.setMaximumWidth( width )
+        
+        self._two = BetterSpinBox( self, initial=0, min=min, max=max )
+        self._two.valueChanged.connect( self._HandleValueChanged )
+        
+        width = ClientGUIFunctions.ConvertTextToPixelWidth( self._two, len( str( max ) ) + 5 )
+        
+        self._two.setMinimumWidth( width )
+        
+        self.SetValue( default_ints )
+        
+        hbox = QP.HBoxLayout( margin = 0 )
+        
+        if len( message ) > 0:
+            
+            QP.AddToLayout( hbox, BetterStaticText(self,message+': '), CC.FLAGS_CENTER_PERPENDICULAR )
+            
+        
+        QP.AddToLayout( hbox, self._one, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        QP.AddToLayout( hbox, BetterStaticText(self,'x'), CC.FLAGS_CENTER_PERPENDICULAR )
+        QP.AddToLayout( hbox, self._two, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        if self._unit is not None:
+            
+            QP.AddToLayout( hbox, BetterStaticText(self,self._unit), CC.FLAGS_CENTER_PERPENDICULAR )
+                
+        
+        QP.AddToLayout( hbox, self._checkbox, CC.FLAGS_CENTER_PERPENDICULAR )
+        
+        hbox.addStretch( 1 )
+        
+        self.setLayout( hbox )
+        
+        self._one.valueChanged.connect( self._HandleValueChanged )
+        self._checkbox.stateChanged.connect( self._HandleValueChanged )
+        
+        
+    def _HandleValueChanged( self, val ):
+        
+        self.valueChanged.emit()
+        
+    
+    def EventCheckBox( self, state ):
+        
+        if self._checkbox.isChecked():
+            
+            self._one.setEnabled( False )
+            self._two.setEnabled( False )
+            
+        else:
+            
+            self._one.setEnabled( True )
+            self._two.setEnabled( True )
+            
+        
+    
+    def GetValue( self ):
+        
+        if self._checkbox.isChecked():
+            
+            return None
+            
+        else:
+            
+            return ( self._one.value() * self._multiplier, self._two.value() * self._multiplier )
+            
+        
+    
+    def setToolTip( self, text ):
+        
+        QW.QWidget.setToolTip( self, text )
+        
+        for c in self.children():
+            
+            if isinstance( c, QW.QWidget ):
+                
+                c.setToolTip( text )
+                
+            
+        
+    
+    def SetValue( self, value ):
+        
+        if value is None:
+            
+            self._checkbox.setChecked( True )
+            
+            self._one.setEnabled( False )
+            self._two.setEnabled( False )
+            
+        else:
+            
+            self._checkbox.setChecked( False )
+            
+            ( x, y ) = value
+            
+            self._one.setValue( x // self._multiplier )
+            self._two.setValue( y // self._multiplier )
+            
+            self._one.setEnabled( True )
+            self._two.setEnabled( True )
+            
+        
+    
+
 class NoneableTextCtrl( QW.QWidget ):
 
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, message = '', none_phrase = 'none' ):
+    def __init__( self, parent, default_text, message = '', none_phrase = 'none' ):
         
         QW.QWidget.__init__( self, parent )
         
@@ -1314,6 +1398,7 @@ class NoneableTextCtrl( QW.QWidget ):
         self._checkbox.setText( none_phrase )
         
         self._text = QW.QLineEdit( self )
+        self._text.setText( default_text )
         
         hbox = QP.HBoxLayout( margin = 0 )
         

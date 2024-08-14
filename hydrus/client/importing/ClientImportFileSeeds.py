@@ -1324,9 +1324,6 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             note += '\n'
             note += traceback.format_exc()
             
-            HydrusData.Print( 'Error when processing {}!'.format( self.file_seed_data ) )
-            HydrusData.Print( traceback.format_exc() )
-            
         
         self.status = status
         self.note = note

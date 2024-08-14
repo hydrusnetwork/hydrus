@@ -53,6 +53,7 @@ from hydrus.client.importing.options import FileImportOptions
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
+from hydrus.client.metadata import ClientFileMigration
 from hydrus.client.metadata import ClientRatings
 from hydrus.client.metadata import ClientTags
 from hydrus.client.networking import ClientNetworkingContexts
@@ -714,6 +715,28 @@ def ParseLocationContext( request: HydrusServerRequest.HydrusRequest, default: C
         
     
 
+def ParseLocalFileDomainLocationContext( request: HydrusServerRequest.HydrusRequest ) -> typing.Optional[ ClientLocation.LocationContext ]:
+    
+    custom_location_context = ParseLocationContext( request, ClientLocation.LocationContext(), deleted_allowed = False )
+    
+    if not custom_location_context.IsEmpty():
+        
+        for service_key in custom_location_context.current_service_keys:
+            
+            service = CG.client_controller.services_manager.GetService( service_key )
+            
+            if service.GetServiceType() not in ( HC.LOCAL_FILE_DOMAIN, ):
+                
+                raise HydrusExceptions.BadRequestException( 'Sorry, any custom file domain here must only declare local file domains.' )
+                
+            
+        
+        return custom_location_context
+        
+    
+    return None
+    
+
 def ParseHashes( request: HydrusServerRequest.HydrusRequest, optional = False ):
     
     something_was_set = False
@@ -768,15 +791,17 @@ def ParseHashes( request: HydrusServerRequest.HydrusRequest, optional = False ):
         if optional:
             
             return None
+            
         
         raise HydrusExceptions.BadRequestException( 'Please include some files in your request--file_id or hash based!' )
         
     
     hashes = HydrusData.DedupeList( hashes )
     
-    if not optional or len(hashes) > 0:
+    if not optional or len( hashes ) > 0:
         
         CheckHashLength( hashes )
+        
     
     return hashes
     
@@ -1452,7 +1477,14 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
         
         ( os_file_handle, temp_path ) = request.temp_file_info
         
-        file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET )
+        file_import_options = CG.client_controller.new_options.GetDefaultFileImportOptions( FileImportOptions.IMPORT_TYPE_QUIET ).Duplicate()
+        
+        custom_location_context = ParseLocalFileDomainLocationContext( request )
+        
+        if custom_location_context is not None:
+            
+            file_import_options.SetDestinationLocationContext( custom_location_context )
+            
         
         file_import_job = ClientImportFiles.FileImportJob( temp_path, file_import_options, human_file_description = f'API POSTed File' )
         
@@ -1575,6 +1607,40 @@ class HydrusResourceClientAPIRestrictedAddFilesDeleteFiles( HydrusResourceClient
             content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdate( service_key, content_update )
             
             CG.client_controller.WriteSynchronous( 'content_updates', content_update_package )
+            
+        
+        response_context = HydrusServerResources.ResponseContext( 200 )
+        
+        return response_context
+        
+    
+
+class HydrusResourceClientAPIRestrictedAddFilesMigrateFiles( HydrusResourceClientAPIRestrictedAddFiles ):
+    
+    def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
+        
+        hashes = set( ParseHashes( request ) )
+        
+        location_context = ParseLocalFileDomainLocationContext( request )
+        
+        if location_context is None:
+            
+            raise HydrusExceptions.BadRequestException( 'Sorry, you need to set a destination for the migration!' )
+            
+        
+        media_results = CG.client_controller.Read( 'media_results', hashes )
+        
+        for media_result in media_results:
+            
+            if not CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY in media_result.GetLocationsManager().GetCurrent():
+                
+                raise HydrusExceptions.BadRequestException( f'The file "{media_result.GetHash().hex()} is not in any local file domains, so I cannot copy!' )
+                
+            
+        
+        for service_key in location_context.current_service_keys:
+            
+            CG.client_controller.CallToThread( ClientFileMigration.MoveOrDuplicateLocalFiles, service_key, HC.CONTENT_UPDATE_ADD, media_results )
             
         
         response_context = HydrusServerResources.ResponseContext( 200 )
@@ -2458,9 +2524,11 @@ class HydrusResourceClientAPIRestrictedAddURLsImportURL( HydrusResourceClientAPI
         
         show_destination_page = request.parsed_request_args.GetValue( 'show_destination_page', bool, default_value = False )
         
+        destination_location_context = ParseLocalFileDomainLocationContext( request )
+        
         def do_it():
             
-            return CG.client_controller.gui.ImportURLFromAPI( url, filterable_tags, additional_service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page )
+            return CG.client_controller.gui.ImportURLFromAPI( url, filterable_tags, additional_service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page, destination_location_context )
             
         
         try:

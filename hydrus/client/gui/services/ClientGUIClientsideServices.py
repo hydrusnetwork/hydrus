@@ -1139,11 +1139,11 @@ class EditServiceClientServerSubPanel( ClientGUICommon.StaticBox ):
         self._use_normie_eris = QW.QCheckBox( self._client_server_options_panel )
         self._use_normie_eris.setToolTip( ClientGUIFunctions.WrapToolTip( 'Use alternate ASCII art on the root page of the server.' ) )
         
-        self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, none_phrase = 'do not forward port', max = 65535 )
+        self._upnp = ClientGUICommon.NoneableSpinCtrl( self._client_server_options_panel, 55555, none_phrase = 'do not forward port', max = 65535 )
         
-        self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
-        self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
-        self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel )
+        self._external_scheme_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, 'https' )
+        self._external_host_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, 'host.com' )
+        self._external_port_override = ClientGUICommon.NoneableTextCtrl( self._client_server_options_panel, '12345' )
         
         self._external_port_override.setToolTip( ClientGUIFunctions.WrapToolTip( 'Setting this to a non-none empty string will forego the \':\' in the URL.' ) )
         

@@ -298,7 +298,28 @@ def DefaultDecode( data ):
     return ( default_text, default_encoding, default_error_count )
     
 
-def NonFailingUnicodeDecode( data, encoding ):
+# ISO is the official default I understand, absent an explicit declaration in http header or html document
+# win-1252 is often assigned as an unofficial default after a scan suggests more complicated characters than the ISO
+# I believe I have seen requests give both as default, but I am only super confident in the former
+DEFAULT_WEB_ENCODINGS = ( 'ISO-8859-1', 'Windows-1252' )
+
+def NonFailingUnicodeDecode( data, encoding, trust_the_encoding = False ):
+    
+    if trust_the_encoding:
+        
+        try:
+            
+            text = str( data, encoding, errors = 'replace' )
+            
+            return ( text, encoding )
+            
+        except:
+            
+            # ok, the encoding type wasn't recognised locally or something, so revert to trying our best
+            encoding = None
+            trust_the_encoding = False
+            
+        
     
     text = None
     confidence = None
@@ -306,14 +327,14 @@ def NonFailingUnicodeDecode( data, encoding ):
     
     try:
         
-        ruh_roh_a = CHARDET_OK and encoding in ( 'ISO-8859-1', 'Windows-1252' )
+        ruh_roh_a = CHARDET_OK and encoding in DEFAULT_WEB_ENCODINGS
         ruh_roh_b = encoding is None
         
         if ruh_roh_a or ruh_roh_b:
             
-            # ok, the site delivered one of these non-utf-8 'default' encodings. this is probably actually requests filling this in as default
+            # ok, the site delivered one of these 'default' encodings. this is probably actually requests filling this in as default
             # we don't want to trust these because they are very permissive sets and'll usually decode garbage without errors
-            # we want chardet to have a proper look
+            # we want chardet to have a proper look and then compare them
             
             raise LookupError()
             
@@ -343,9 +364,9 @@ def NonFailingUnicodeDecode( data, encoding ):
                 else:
                     
                     chardet_confidence_is_better = confidence is None or chardet_confidence > confidence
-                    chardet_errors_is_better = error_count is None or chardet_error_count < error_count
+                    chardet_errors_is_as_good_or_better = error_count is None or chardet_error_count <= error_count
                     
-                    chardet_is_better = chardet_confidence_is_better and chardet_errors_is_better
+                    chardet_is_better = chardet_confidence_is_better and chardet_errors_is_as_good_or_better
                     
                 
                 if chardet_is_better:

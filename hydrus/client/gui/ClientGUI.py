@@ -2217,7 +2217,8 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         show_destination_page = True,
         allow_watchers = True,
         allow_other_recognised_urls = True,
-        allow_unrecognised_urls = True
+        allow_unrecognised_urls = True,
+        destination_location_context = None
         ):
         
         if filterable_tags is None:
@@ -2251,7 +2252,7 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
             
             url_caught = True
             
-            page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page )
+            page = self._notebook.GetOrMakeURLImportPage( desired_page_name = destination_page_name, desired_page_key = destination_page_key, select_page = show_destination_page, destination_location_context = destination_location_context )
             
             if page is not None:
                 
@@ -3437,7 +3438,7 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         profile_mode_message += '\n' * 2
         profile_mode_message += 'A new Query Planner mode also makes very detailed database analysis. This is an alternate profiling mode hydev is testing.'
         profile_mode_message += '\n' * 2
-        profile_mode_message += 'More information is available in the help, under \'reducing program lag\'.'
+        profile_mode_message += 'More information is available in the help, under \'reducing lag\'.'
         
         ClientGUIMenus.AppendMenuItem( profiling, 'what is this?', 'Show profile info.', ClientGUIDialogsMessage.ShowInformation, self, profile_mode_message )
         ClientGUIMenus.AppendMenuCheckItem( profiling, 'profile mode', 'Run detailed \'profiles\'.', HG.profile_mode, CG.client_controller.FlipProfileMode )
@@ -7555,11 +7556,11 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
         self._ImportFiles( paths )
         
     
-    def ImportURLFromAPI( self, url, filterable_tags, additional_service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page ):
+    def ImportURLFromAPI( self, url, filterable_tags, additional_service_keys_to_tags, destination_page_name, destination_page_key, show_destination_page, destination_location_context ):
         
         try:
             
-            ( normalised_url, result_text ) = self._ImportURL( url, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page )
+            ( normalised_url, result_text ) = self._ImportURL( url, filterable_tags = filterable_tags, additional_service_keys_to_tags = additional_service_keys_to_tags, destination_page_name = destination_page_name, destination_page_key = destination_page_key, show_destination_page = show_destination_page, destination_location_context = destination_location_context )
             
             return ( normalised_url, result_text )
             

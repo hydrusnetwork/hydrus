@@ -14,6 +14,7 @@ from hydrus.client import ClientApplicationCommand as CAC
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientData
 from hydrus.client import ClientGlobals as CG
+from hydrus.client import ClientLocation
 from hydrus.client.duplicates import ClientDuplicates
 from hydrus.client.gui import ClientGUIDragDrop
 from hydrus.client.gui import ClientGUICore as CGC
@@ -2010,7 +2011,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
                 
                 panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg )
                 
-                control = ClientGUICommon.NoneableSpinCtrl( panel, message = message, none_phrase = 'do not change', min = 1, max = 9 )
+                control = ClientGUICommon.NoneableSpinCtrl( panel, 3, message = message, none_phrase = 'do not change', min = 1, max = 9 )
                 control.setToolTip( ClientGUIFunctions.WrapToolTip( tooltip ) )
                 control.SetValue( value )
                 
@@ -2160,7 +2161,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
 class CanvasHoverFrameTags( CanvasHoverFrame ):
     
-    def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key ):
+    def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key, location_context: ClientLocation.LocationContext ):
         
         CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
         
@@ -2168,7 +2169,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
         
         vbox = QP.VBoxLayout()
         
-        self._tags = ClientGUIListBoxes.ListBoxTagsMediaHoverFrame( self, self._canvas_key )
+        self._tags = ClientGUIListBoxes.ListBoxTagsMediaHoverFrame( self, self._canvas_key, location_context )
         
         QP.AddToLayout( vbox, self._tags, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
         

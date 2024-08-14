@@ -90,7 +90,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             
             self._name = QW.QLineEdit( self )
             self._port = ClientGUICommon.BetterSpinBox( self, min=1, max=65535 )
-            self._upnp_port = ClientGUICommon.NoneableSpinCtrl( self, 'external upnp port', none_phrase = 'do not forward port', min = 1, max = 65535 )
+            self._upnp_port = ClientGUICommon.NoneableSpinCtrl( self, 55555, message = 'external upnp port', none_phrase = 'do not forward port', min = 1, max = 65535 )
             
             self._bandwidth_tracker_st = ClientGUICommon.BetterStaticText( self )
             
@@ -174,7 +174,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
             ClientGUICommon.StaticBox.__init__( self, parent, 'file repository' )
             
             self._log_uploader_ips = QW.QCheckBox( self )
-            self._max_storage = ClientGUIBytes.NoneableBytesControl( self, initial_value = 5 * 1024 * 1024 * 1024 )
+            self._max_storage = ClientGUIBytes.NoneableBytesControl( self, 5 * ( 1024 ** 3 ) )
             
             #
             

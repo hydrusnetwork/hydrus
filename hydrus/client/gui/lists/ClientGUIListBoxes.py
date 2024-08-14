@@ -4718,11 +4718,12 @@ class StaticBoxSorterForListBoxTags( ClientGUICommon.StaticBox ):
     
 class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
     
-    def __init__( self, parent, canvas_key ):
+    def __init__( self, parent, canvas_key, location_context: ClientLocation.LocationContext ):
         
         ListBoxTagsMedia.__init__( self, parent, ClientTags.TAG_DISPLAY_SINGLE_MEDIA, CC.TAG_PRESENTATION_MEDIA_VIEWER, include_counts = False )
         
         self._canvas_key = canvas_key
+        self._location_context = location_context
         
     
     def _Activate( self, ctrl_down, shift_down ) -> bool:
@@ -4732,6 +4733,12 @@ class ListBoxTagsMediaHoverFrame( ListBoxTagsMedia ):
         return True
         
     
+    def _GetCurrentLocationContext( self ):
+        
+        return self._location_context
+        
+    
+
 class ListBoxTagsMediaTagsDialog( ListBoxTagsMedia ):
     
     def __init__( self, parent, tag_presentation_location, enter_func, delete_func ):

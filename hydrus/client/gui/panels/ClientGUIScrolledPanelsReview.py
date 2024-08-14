@@ -831,7 +831,7 @@ class MoveMediaFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                     
                     panel = ClientGUIScrolledPanels.EditSingleCtrlPanel( dlg, message = message )
                     
-                    control = ClientGUIBytes.NoneableBytesControl( panel, initial_value = 100 * ( 1024 ** 3 ) )
+                    control = ClientGUIBytes.NoneableBytesControl( panel, 100 * ( 1024 ** 3 ) )
                     
                     control.SetValue( max_num_bytes )
                     

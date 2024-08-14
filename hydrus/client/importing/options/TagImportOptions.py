@@ -7,6 +7,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusSerialisable
 from hydrus.core import HydrusTags
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -564,7 +565,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                     continue
                     
                 
-                service_statement = name + ':' + '\n' * 2 + '\n'.join( sub_statements )
+                service_statement = f'{name}:{HydrusText.ConvertManyStringsToNiceInsertableHumanSummary( sub_statements, no_trailing_whitespace = True )}'
                 
                 statements.append( service_statement )
                 
@@ -603,7 +604,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
                 statements = pre_statements + [ '---' ] + statements
                 
             
-            separator = '\n' * 2
+            separator = '\n'
             
             summary = separator.join( statements )
             

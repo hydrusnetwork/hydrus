@@ -44,6 +44,23 @@ def GenerateTagSiblingsLookupCacheTableNames( service_id ):
     return ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name )
     
 
+TAG_SIBLINGS_CURRENT_STORAGE_PREFIX = 'current_tag_siblings_'
+TAG_SIBLINGS_DELETED_STORAGE_PREFIX = 'deleted_tag_siblings_'
+TAG_SIBLINGS_PENDING_STORAGE_PREFIX = 'pending_tag_siblings_'
+TAG_SIBLINGS_PETITIONED_STORAGE_PREFIX = 'petitioned_tag_siblings_'
+
+def GenerateTagSiblingsStorageTableNames( service_id ):
+    
+    suffix = service_id
+    
+    return {
+        HC.CONTENT_STATUS_CURRENT : f'{TAG_SIBLINGS_CURRENT_STORAGE_PREFIX}{suffix}',
+        HC.CONTENT_STATUS_DELETED : f'{TAG_SIBLINGS_DELETED_STORAGE_PREFIX}{suffix}',
+        HC.CONTENT_STATUS_PENDING : f'{TAG_SIBLINGS_PENDING_STORAGE_PREFIX}{suffix}',
+        HC.CONTENT_STATUS_PETITIONED : f'{TAG_SIBLINGS_PETITIONED_STORAGE_PREFIX}{suffix}'
+    }
+    
+
 class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
@@ -86,22 +103,12 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         index_generation_dict = {}
         
-        index_generation_dict[ 'tag_siblings' ] = [
-            ( [ 'service_id', 'good_tag_id' ], False, 420 )
-        ]
-        
-        index_generation_dict[ 'tag_sibling_petitions' ] = [
-            ( [ 'service_id', 'good_tag_id' ], False, 420 )
-        ]
-        
         return index_generation_dict
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.tag_siblings' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
-            'main.tag_sibling_petitions' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, bad_tag_id INTEGER, good_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, bad_tag_id, status ) );', 414 ),
             'main.tag_sibling_application' : ( 'CREATE TABLE IF NOT EXISTS {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
         }
         
@@ -120,16 +127,39 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             ( [ 'ideal_tag_id' ], False, 414 )
         ]
         
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ] ] = [
+            ( [ 'good_tag_id' ], False, 586 )
+        ]
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ] ] = [
+            ( [ 'good_tag_id' ], False, 586 )
+        ]
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ] ] = [
+            ( [ 'good_tag_id' ], False, 586 )
+        ]
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ] ] = [
+            ( [ 'good_tag_id' ], False, 586 )
+        ]
+        
         return index_generation_dict
         
     
     def _GetServiceTableGenerationDict( self, service_id ) -> dict:
         
         ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( service_id )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
         
         return {
             cache_actual_tag_siblings_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );', 414 ),
-            cache_ideal_tag_siblings_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );', 414 )
+            cache_ideal_tag_siblings_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER PRIMARY KEY, ideal_tag_id INTEGER );', 414 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ] : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER, good_tag_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );', 586 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ] : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER, good_tag_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );', 586 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ] : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER, good_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );', 586 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ] : ( 'CREATE TABLE IF NOT EXISTS {} ( bad_tag_id INTEGER, good_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( bad_tag_id, good_tag_id ) );', 586 )
         }
         
     
@@ -137,7 +167,11 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         return {
             TAG_SIBLINGS_IDEAL_PREFIX,
-            TAG_SIBLINGS_ACTUAL_PREFIX
+            TAG_SIBLINGS_ACTUAL_PREFIX,
+            TAG_SIBLINGS_CURRENT_STORAGE_PREFIX,
+            TAG_SIBLINGS_DELETED_STORAGE_PREFIX,
+            TAG_SIBLINGS_PENDING_STORAGE_PREFIX,
+            TAG_SIBLINGS_PETITIONED_STORAGE_PREFIX
         }
         
     
@@ -170,10 +204,12 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def AddTagSiblings( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_siblings WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ?;', ( ( service_id, bad_tag_id, good_tag_id ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ? AND status = ?;', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_PENDING ) for ( bad_tag_id, good_tag_id ) in pairs ) )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_siblings ( service_id, bad_tag_id, good_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( bad_tag_id, good_tag_id ) in pairs ) )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_DELETED]} WHERE bad_tag_id = ? AND good_tag_id = ?;', pairs )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_PENDING]} WHERE bad_tag_id = ? AND good_tag_id = ?;', pairs )
+        
+        self._ExecuteMany( f'INSERT OR IGNORE INTO {statuses_to_storage_table_names[HC.CONTENT_STATUS_CURRENT]} ( bad_tag_id, good_tag_id ) VALUES ( ?, ? );', pairs )
         
     
     def ClearActual( self, service_id, tag_ids = None ):
@@ -195,18 +231,30 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
         
     
+    def DeletePending( self, service_id ):
+        
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+        
+        self._Execute( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]};' )
+        self._Execute( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]};' )
+        
+    
     def DeleteTagSiblings( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_siblings WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ?;', ( ( service_id, bad_tag_id, good_tag_id ) for ( bad_tag_id, good_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ? AND status = ?;', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_PETITIONED ) for ( bad_tag_id, good_tag_id ) in pairs ) )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_siblings ( service_id, bad_tag_id, good_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_DELETED ) for ( bad_tag_id, good_tag_id ) in pairs ) )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_CURRENT]} WHERE bad_tag_id = ? AND good_tag_id = ?;', pairs )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_PETITIONED]} WHERE bad_tag_id = ? AND good_tag_id = ?;', pairs )
+        
+        self._ExecuteMany( f'INSERT OR IGNORE INTO {statuses_to_storage_table_names[HC.CONTENT_STATUS_DELETED]} ( bad_tag_id, good_tag_id ) VALUES ( ?, ? );', pairs )
         
     
     def Drop( self, tag_service_id ):
         
-        self._Execute( 'DELETE FROM tag_siblings WHERE service_id = ?;', ( tag_service_id, ) )
-        self._Execute( 'DELETE FROM tag_sibling_petitions WHERE service_id = ?;', ( tag_service_id, ) )
+        for table_name in GenerateTagSiblingsStorageTableNames( tag_service_id ).values():
+            
+            self.modules_db_maintenance.DeferredDropTable( table_name )
+            
         
         ( cache_ideal_tag_siblings_lookup_table_name, cache_actual_tag_siblings_lookup_table_name ) = GenerateTagSiblingsLookupCacheTableNames( tag_service_id )
         
@@ -603,31 +651,40 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def GetPendingSiblingsCount( self, service_id: int ):
         
-        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchone()
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+        
+        ( info, ) = self._Execute( f'SELECT COUNT( * ) FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]};' ).fetchone()
         
         return info
         
     
     def GetPetitionedSiblingsCount( self, service_id: int ):
         
-        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM tag_sibling_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchone()
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+        
+        ( info, ) = self._Execute( f'SELECT COUNT( * ) FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]};' ).fetchone()
         
         return info
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
+        tables_and_columns = []
+        
         if content_type == HC.CONTENT_TYPE_TAG:
             
-            return [
-                ( 'tag_siblings', 'bad_tag_id' ),
-                ( 'tag_siblings', 'good_tag_id' ),
-                ( 'tag_sibling_petitions', 'bad_tag_id' ),
-                ( 'tag_sibling_petitions', 'good_tag_id' )
-            ]
+            # don't are for actual/ideal, they feed off these guys
+            for service_id in self._GetServiceIdsWeGenerateDynamicTablesFor():
+                
+                for table_name in GenerateTagSiblingsStorageTableNames( service_id ):
+                    
+                    tables_and_columns.append( ( table_name, 'bad_tag_id' ) )
+                    tables_and_columns.append( ( table_name, 'good_tag_id' ) )
+                    
+                
             
         
-        return []
+        return tables_and_columns
         
     
     def GetTagIdsToIdealTagIds( self, display_type, tag_service_id, tag_ids ):
@@ -750,10 +807,19 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
                 
                 tag_ids = set()
                 
-                for ( bad_tag_id, good_tag_id ) in self._Execute( 'SELECT bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ?', ( service_id, ) ):
+                statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+                
+                queries = [
+                    f'SELECT bad_tag_id, good_tag_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]};',
+                    f'SELECT bad_tag_id, good_tag_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]};'
+                ]
+                
+                for query in queries:
                     
-                    tag_ids.add( bad_tag_id )
-                    tag_ids.add( good_tag_id )
+                    for pair in self._Execute( query ):
+                        
+                        tag_ids.update( pair )
+                        
                     
                 
             else:
@@ -786,22 +852,26 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def GetTagSiblingsIds( self, service_id ):
         
-        statuses_and_pair_ids = self._Execute( 'SELECT status, bad_tag_id, good_tag_id FROM tag_siblings WHERE service_id = ? UNION SELECT status, bad_tag_id, good_tag_id FROM tag_sibling_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( bad_tag_id, good_tag_id ) ) for ( status, bad_tag_id, good_tag_id ) in statuses_and_pair_ids )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
         
         statuses_to_pair_ids = collections.defaultdict( list )
         
-        statuses_to_pair_ids.update( { status : sorted( pair_ids ) for ( status, pair_ids ) in unsorted_statuses_to_pair_ids.items() } )
+        for ( status, table_name ) in statuses_to_storage_table_names.items():
+            
+            statuses_to_pair_ids[ status ] = sorted( self._Execute( f'SELECT bad_tag_id, good_tag_id FROM {table_name};' ).fetchall() )
+            
         
         return statuses_to_pair_ids
         
     
     def GetTagSiblingsIdsChains( self, service_id, tag_ids ):
         
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+        
         searched_tag_ids = set()
         next_tag_ids = set( tag_ids )
-        result_rows = set()
+        
+        unsorted_statuses_to_pair_ids = collections.defaultdict( set )
         
         while len( next_tag_ids ) > 0:
             
@@ -810,37 +880,35 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
             with self._MakeTemporaryIntegerTable( loop_tag_ids, 'tag_id' ) as temp_next_tag_ids_table_name:
                 
-                searched_tag_ids.update( loop_tag_ids )
-                
                 # keep these separate--older sqlite can't do cross join to an OR ON
                 # ALSO ditching UNION, which perhaps was not helping!
                 
-                # temp tag_ids to siblings
-                queries = [
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( service_id = ? AND bad_tag_id = tag_id );'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_siblings ON ( service_id = ? AND good_tag_id = tag_id );'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( service_id = ? AND bad_tag_id = tag_id );'.format( temp_next_tag_ids_table_name ),
-                    'SELECT status, bad_tag_id, good_tag_id FROM {} CROSS JOIN tag_sibling_petitions ON ( service_id = ? AND good_tag_id = tag_id );'.format( temp_next_tag_ids_table_name )
-                ]
+                # just a note, this thing is inefficient--it fetches the same rows twice, looking from either direction
+                # there's probably a way to more carefully shape the iterations of search, remembering which direction we got things from or something, but it wouldn't be trivial I think!
                 
-                for query in queries:
+                for ( status, table_name ) in statuses_to_storage_table_names.items():
                     
-                    for row in self._Execute( query, ( service_id, ) ):
+                    queries = [
+                        f'SELECT bad_tag_id, good_tag_id FROM {temp_next_tag_ids_table_name} CROSS JOIN {table_name} ON ( bad_tag_id = tag_id );',
+                        f'SELECT bad_tag_id, good_tag_id FROM {temp_next_tag_ids_table_name} CROSS JOIN {table_name} ON ( good_tag_id = tag_id );'
+                    ]
+                    
+                    for query in queries:
                         
-                        result_rows.add( row )
-                        
-                        ( status, bad_tag_id, good_tag_id ) = row
-                        
-                        next_tag_ids.add( bad_tag_id )
-                        next_tag_ids.add( good_tag_id )
+                        for pair in self._Execute( query ):
+                            
+                            unsorted_statuses_to_pair_ids[ status ].add( pair )
+                            
+                            next_tag_ids.update( pair )
+                            
                         
                     
                 
+            
+            searched_tag_ids.update( loop_tag_ids )
             
             next_tag_ids.difference_update( searched_tag_ids )
             
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( bad_tag_id, good_tag_id ) ) for ( status, bad_tag_id, good_tag_id ) in result_rows )
         
         statuses_to_pair_ids = collections.defaultdict( list )
         
@@ -886,26 +954,30 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
     
     def PendTagSiblings( self, service_id, triples ):
         
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ?;', ( ( service_id, bad_tag_id, good_tag_id ) for ( bad_tag_id, good_tag_id, reason_id ) in triples ) )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_sibling_petitions ( service_id, bad_tag_id, good_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, reason_id, HC.CONTENT_STATUS_PENDING ) for ( bad_tag_id, good_tag_id, reason_id ) in triples ) )
+        self._ExecuteMany( f'REPLACE INTO {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]} ( bad_tag_id, good_tag_id, reason_id ) VALUES ( ?, ?, ? );', triples )
         
     
     def PetitionTagSiblings( self, service_id, triples ):
         
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ?;', ( ( service_id, bad_tag_id, good_tag_id ) for ( bad_tag_id, good_tag_id, reason_id ) in triples ) )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_sibling_petitions ( service_id, bad_tag_id, good_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, bad_tag_id, good_tag_id, reason_id, HC.CONTENT_STATUS_PETITIONED ) for ( bad_tag_id, good_tag_id, reason_id ) in triples ) )
+        self._ExecuteMany( f'REPLACE INTO {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]} ( bad_tag_id, good_tag_id, reason_id ) VALUES ( ?, ?, ? );', triples )
         
     
     def RescindPendingTagSiblings( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ? AND status = ?;', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_PENDING ) for ( bad_tag_id, good_tag_id ) in pairs ) )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+        
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]} WHERE bad_tag_id = ? AND good_tag_id = ?;', pairs )
         
     
     def RescindPetitionedTagSiblings( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_sibling_petitions WHERE service_id = ? AND bad_tag_id = ? AND good_tag_id = ? AND status = ?;', ( ( service_id, bad_tag_id, good_tag_id, HC.CONTENT_STATUS_PETITIONED ) for ( bad_tag_id, good_tag_id ) in pairs ) )
+        statuses_to_storage_table_names = GenerateTagSiblingsStorageTableNames( service_id )
+        
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]} WHERE bad_tag_id = ? AND good_tag_id = ?;', pairs )
         
     
     def Regen( self, tag_service_ids ):

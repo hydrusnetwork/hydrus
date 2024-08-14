@@ -1127,9 +1127,7 @@ class ImportFolder( HydrusSerialisable.SerialisableBaseNamed ):
         
         error_occured = False
         
-        stop_time = HydrusTime.GetNow() + 3600
-        
-        job_status = ClientThreading.JobStatus( pausable = False, cancellable = True, stop_time = stop_time )
+        job_status = ClientThreading.JobStatus( pausable = False, cancellable = True )
         
         popup_desired = self._show_working_popup or self._check_now
         

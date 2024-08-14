@@ -246,7 +246,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._publish_files_to_popup_button = QW.QCheckBox( self._file_presentation_panel )
         self._publish_files_to_page = QW.QCheckBox( self._file_presentation_panel )
-        self._publish_label_override = ClientGUICommon.NoneableTextCtrl( self._file_presentation_panel, none_phrase = 'no, use subscription name' )
+        self._publish_label_override = ClientGUICommon.NoneableTextCtrl( self._file_presentation_panel, 'subscription files', none_phrase = 'no, use subscription name' )
         self._merge_query_publish_events = QW.QCheckBox( self._file_presentation_panel )
         
         tt = 'This is great to merge multiple subs to a combined location!'
@@ -1168,7 +1168,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._status_st.setMinimumWidth( st_width )
         
-        self._display_name = ClientGUICommon.NoneableTextCtrl( self, none_phrase = 'show query text' )
+        self._display_name = ClientGUICommon.NoneableTextCtrl( self, 'my subscription', none_phrase = 'use query text' )
         self._query_text = QW.QLineEdit( self )
         self._check_now = QW.QCheckBox( self )
         self._paused = QW.QCheckBox( self )

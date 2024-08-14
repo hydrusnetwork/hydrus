@@ -914,10 +914,10 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
         self._string_match = ClientGUIStringPanels.EditStringMatchPanel( string_match_panel, string_match )
         self._string_match.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the encoded value of the component matches this, the URL Class matches!' ) )
         
-        self._pretty_default_value = ClientGUICommon.NoneableTextCtrl( self )
+        self._pretty_default_value = ClientGUICommon.NoneableTextCtrl( self, '' )
         self._pretty_default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the URL is missing this component, you can add it here, and the URL Class will still match and will normalise by adding this default value. This can be useful if you need to add a /art or similar to a URL that ends with either /username or /username/art--sometimes it is better to make that stuff explicit in all cases.' ) )
         
-        self._default_value = ClientGUICommon.NoneableTextCtrl( self )
+        self._default_value = ClientGUICommon.NoneableTextCtrl( self, '' )
         self._default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'What actual value will be embedded into the URL sent to the server.' ) )
         
         #
@@ -1053,10 +1053,10 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         tt += 'These tokens are also allowed _en masse_ in the main URL Class by setting "allow extra parameters for server", BUT if you need a whitelist, you will want to define them here. Also, if you need to pass this token on to an API/redirect converter, you have to define it here!'
         self._is_ephemeral.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._pretty_default_value = ClientGUICommon.NoneableTextCtrl( self )
+        self._pretty_default_value = ClientGUICommon.NoneableTextCtrl( self, '' )
         self._pretty_default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'If the URL is missing this key=value pair, you can add it here, and the URL Class will still match and will normalise with this default value. This can be useful for gallery URLs that have an implicit page=1 or index=0 for their first result--sometimes it is better to make that stuff explicit in all cases.' ) )
         
-        self._default_value = ClientGUICommon.NoneableTextCtrl( self )
+        self._default_value = ClientGUICommon.NoneableTextCtrl( self, '' )
         self._default_value.setToolTip( ClientGUIFunctions.WrapToolTip( 'What actual value will be embedded into the URL sent to the server.' ) )
         
         self._default_value_string_processor = ClientGUIStringControls.StringProcessorButton( self, parameter.GetDefaultValueStringProcessor(), self._GetTestData )

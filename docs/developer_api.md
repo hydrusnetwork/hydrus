@@ -492,7 +492,9 @@ Required Headers:
 :   - Content-Type: `application/json` (if sending path), `application/octet-stream` (if sending file)
 
 Arguments (in JSON):
-:   - `path`: (the path you want to import)
+:   
+    * `path`: (the path you want to import)
+    * [file domain](#parameters_file_domain) (optional, defaults to your "quiet" file import options's destination)
 
 ```json title="Example request body"
 {
@@ -500,9 +502,12 @@ Arguments (in JSON):
 }
 ```
 
+If you include a [file domain](#parameters_file_domain), it can only include 'local' file domains (by default this would be "my files"), but you can send multiple to import to more than one location at once. Sending 'all local files', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.
+
 Arguments (as bytes): 
-:   You can alternately just send the file's bytes as the POST body.
-    
+:   
+    You can alternately just send the file's bytes as the POST body.
+
 Response: 
 :   Some JSON with the import result. Please note that file imports for large files may take several seconds, and longer if the client is busy doing other db work, so make sure your request is willing to wait that long for the response.
 ```json title="Example response"
@@ -609,6 +614,38 @@ Response:
 
 This is the same as the advanced deletion option of the same basic name. It will erase the record that a file has been physically deleted (i.e. it only applies to deletion records in the 'all local files' domain). A file that no longer has a 'all local files' deletion record will pass a 'exclude previously deleted files' check in a _file import options_.
 
+
+### **POST `/add_files/migrate_files`** { id="add_files_migrate_files" }
+
+_Copy files from one local file domain to another._
+
+Restricted access:
+:   YES. Import Files permission needed.
+
+Required Headers:
+:   
+*   `Content-Type`: `application/json`
+
+Arguments (in JSON):
+:   
+*   [files](#parameters_files)
+*   [file domain](#parameters_file_domain)
+
+```json title="Example request body"
+{
+  "hash" : "78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538",
+  "file_service_key" : "572ff2bd34857c0b3210b967a5a40cb338ca4c5747f2218d4041ddf8b6d077f1"
+}
+```
+
+Response:
+:   200 and no content.
+
+This is only appropriate if the user has multiple local file services. It does the same as the media _files->add to->domain_ menu action. If the files are originally in local file domain A, and you say to add to B, then afterwards they will be in both A and B. You can say 'B and C' to add to multiple domains at once, if needed. The action is idempotent and will not overwrite 'already in' files with fresh timestamps or anything.
+
+If you need to do a 'move' migrate, then please follow this command with a delete from wherever you need to remove from.
+
+If you try to add non-local files (specifically, files that are not in 'all my files'), or migrate to a file domain that is not a local file domain, then this will 400!
 
 ### **POST `/add_files/archive_files`** { id="add_files_archive_files" }
 
@@ -817,6 +854,7 @@ Arguments (in JSON):
     *   `url`: (the url you want to add)
     *   `destination_page_key`: (optional page identifier for the page to receive the url)
     *   `destination_page_name`: (optional page name to receive the url)
+    *   [file domain](#parameters_file_domain) (optional, sets where to import the file)
     *   `show_destination_page`: (optional, defaulting to false, controls whether the UI will change pages on add)
     *   `service_keys_to_additional_tags`: (optional, selective, tags to give to any files imported from this url)
     *   `filterable_tags`: (optional tags to be filtered by any tag import options that applies to the URL)
@@ -824,6 +862,8 @@ Arguments (in JSON):
 If you specify a `destination_page_name` and an appropriate importer page already exists with that name, that page will be used. Otherwise, a new page with that name will be recreated (and used by subsequent calls with that name). Make sure it that page name is unique (e.g. '/b/ threads', not 'watcher') in your client, or it may not be found.
 
 Alternately, `destination_page_key` defines exactly which page should be used. Bear in mind this page key is only valid to the current session (they are regenerated on client reset or session reload), so you must figure out which one you want using the [/manage\_pages/get\_pages](#manage_pages_get_pages) call. If the correct page_key is not found, or the page it corresponds to is of the incorrect type, the standard page selection/creation rules will apply.
+
+You can set a destination [file domain](#parameters_file_domain), which will select (or, for probably most of your initial requests, create) a download page that has a non-default 'file import options' with the given destination. If you set both a file domain and also a `destination_page_key`, then the page key takes precedence. If you do not set a file domain, then the import uses whatever the page has, like normal; for url import pages, this is probably your "loud" file import options default. 
 
 `show_destination_page` defaults to False to reduce flicker when adding many URLs to different pages quickly. If you turn it on, the client will behave like a URL drag and drop and select the final page the URL ends up on.
 
@@ -1577,7 +1617,11 @@ file\_sort\_type is by default _import time_. It is an integer according to the 
 * 16 - number of frames (smallest first/largest first)
 * 18 - last viewed time (oldest first/newest first)
 * 19 - archive timestamp (oldest first/newest first)
-* 20 - hash hex (N/A)
+* 20 - hash hex (lexicographic/reverse lexicographic)
+* 21 - pixel hash hex (lexicographic/reverse lexicographic)
+* 22 - blurhash (lexicographic/reverse lexicographic)
+
+The pixel and blurhash sorts will put files without one of these (e.g. an mp3) at the end, regardless of asc/desc.
 
 Response:
 :   The full list of numerical file ids that match the search.

@@ -1322,7 +1322,7 @@ class GalleryImportPanel( ClientGUICommon.StaticBox ):
         
         self._gallery_download_control = ClientGUINetworkJobControl.NetworkJobControl( self._gallery_panel )
         
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self, 'stop after this many files', min = 1, none_phrase = 'no limit' )
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self, 2000,'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.valueChanged.connect( self.EventFileLimit )
         self._file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'stop searching the gallery once this many files has been reached' ) )
         

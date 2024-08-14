@@ -2037,7 +2037,7 @@ class EditLoginStepPanel( ClientGUIScrolledPanels.EditPanel ):
         self._scheme.addItem( 'http', 'http' )
         self._scheme.addItem( 'https', 'https' )
         
-        self._subdomain = ClientGUICommon.NoneableTextCtrl( self, none_phrase = 'none' )
+        self._subdomain = ClientGUICommon.NoneableTextCtrl( self, '', none_phrase = 'none' )
         
         self._path = QW.QLineEdit( self )
         

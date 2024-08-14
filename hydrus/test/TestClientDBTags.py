@@ -663,8 +663,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # test empty
         
-        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), {} )
-        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), {} )
+        empty_result = {
+            HC.CONTENT_STATUS_CURRENT : set(),
+            HC.CONTENT_STATUS_DELETED : set(),
+            HC.CONTENT_STATUS_PENDING : set(),
+            HC.CONTENT_STATUS_PETITIONED : set()
+        }
+        
+        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), empty_result )
+        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), empty_result )
         
         # tricky situation, we have a parent that is not siblinged
         
@@ -702,8 +709,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # test empty
         
-        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), {} )
-        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), {} )
+        empty_result = {
+            HC.CONTENT_STATUS_CURRENT : set(),
+            HC.CONTENT_STATUS_DELETED : set(),
+            HC.CONTENT_STATUS_PENDING : set(),
+            HC.CONTENT_STATUS_PETITIONED : set()
+        }
+        
+        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), empty_result )
+        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), empty_result )
         
         # tricky situation, we have a parent that is not siblinged
         
@@ -946,8 +960,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # test empty
         
-        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), {} )
-        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), {} )
+        empty_result = {
+            HC.CONTENT_STATUS_CURRENT : set(),
+            HC.CONTENT_STATUS_DELETED : set(),
+            HC.CONTENT_STATUS_PENDING : set(),
+            HC.CONTENT_STATUS_PETITIONED : set()
+        }
+        
+        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), empty_result )
+        self.assertEqual( self._read( 'tag_siblings', self._my_service_key ), empty_result )
         
         #
         
@@ -1550,8 +1571,15 @@ class TestClientDBTags( unittest.TestCase ):
         
         # test empty
         
-        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), {} )
-        self.assertEqual( self._read( 'tag_parents', self._public_service_key ), {} )
+        empty_result = {
+            HC.CONTENT_STATUS_CURRENT : set(),
+            HC.CONTENT_STATUS_DELETED : set(),
+            HC.CONTENT_STATUS_PENDING : set(),
+            HC.CONTENT_STATUS_PETITIONED : set()
+        }
+        
+        self.assertEqual( self._read( 'tag_parents', self._my_service_key ), empty_result )
+        self.assertEqual( self._read( 'tag_parents', self._public_service_key ), empty_result )
         
         # now add some structures, a mixture of add and pend in two parts
         

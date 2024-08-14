@@ -837,7 +837,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     SERIALISABLE_NAME = 'URL Import'
     SERIALISABLE_VERSION = 4
     
-    def __init__( self ):
+    def __init__( self, destination_location_context = None ):
         
         HydrusSerialisable.SerialisableBase.__init__( self )
         
@@ -846,6 +846,13 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
         
         self._file_import_options = FileImportOptions.FileImportOptions()
         self._file_import_options.SetIsDefault( True )
+        
+        if destination_location_context is not None:
+            
+            self._file_import_options = FileImportOptions.GetRealFileImportOptions( self._file_import_options, FileImportOptions.IMPORT_TYPE_LOUD ).Duplicate()
+            
+            self._file_import_options.SetDestinationLocationContext( destination_location_context )
+            
         
         self._tag_import_options = TagImportOptions.TagImportOptions( is_default = True )
         

@@ -89,17 +89,14 @@ class NoneableBytesControl( QW.QWidget ):
     
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, initial_value = 65536, none_label = 'no limit' ):
+    def __init__( self, parent, default_bytes: int, none_label = 'no limit' ):
         
         QW.QWidget.__init__( self, parent )
         
         self._bytes = BytesControl( self )
+        self._bytes.SetValue( default_bytes )
         
         self._none_checkbox = QW.QCheckBox( none_label, self )
-        
-        #
-        
-        self.SetValue( initial_value )
         
         #
         

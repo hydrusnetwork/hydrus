@@ -2792,15 +2792,21 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
                     
                     if not only_remove:
                         
-                        if num_current + num_pending < num_files:
+                        # it is possible to have content petitioned without being current
+                        # we don't want to pend in this case!
+                        
+                        if num_current + num_pending + num_petitioned < num_files:
                             
-                            num_pendable = num_files - ( num_current + num_pending )
+                            num_pendable = num_files - ( num_current + num_pending + num_petitioned )
                             
                             choices[ HC.CONTENT_UPDATE_PEND ].append( ( tag, num_pendable ) )
                             
                         
                     
                     if not only_add:
+                        
+                        # although it is technically possible to petition content that doesn't exist yet...
+                        # for human uses, we do not want to provide petition as an option unless it is already current
                         
                         if num_current > num_petitioned and not only_add:
                             
@@ -3000,12 +3006,37 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
             
             for tag in tags:
                 
-                if choice_action == HC.CONTENT_UPDATE_ADD: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc ]
-                elif choice_action == HC.CONTENT_UPDATE_DELETE: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc ]
-                elif choice_action == HC.CONTENT_UPDATE_PEND: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc and tag not in mp ]
-                elif choice_action == HC.CONTENT_UPDATE_PETITION: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc and tag not in mpt ]
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mp ]
-                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION: media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mpt ]
+                if choice_action == HC.CONTENT_UPDATE_ADD:
+                    
+                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc ]
+                    
+                elif choice_action == HC.CONTENT_UPDATE_DELETE:
+                    
+                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc ]
+                    
+                elif choice_action == HC.CONTENT_UPDATE_PEND:
+                    
+                    # check petitioned too, we don't want both at once!
+                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag not in mc and tag not in mp and tag not in mpt ]
+                    
+                elif choice_action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    # check current even though we don't have to (it makes it more human to say things need to be current here before being petitioned)
+                    # check pending too, we don't want both at once!
+                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mc and tag not in mpt and tag not in mp ]
+                    
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PEND:
+                    
+                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mp ]
+                    
+                elif choice_action == HC.CONTENT_UPDATE_RESCIND_PETITION:
+                    
+                    media_to_affect = [ m for ( m, mc, mp, mpt ) in medias_and_sets_of_tags if tag in mpt ]
+                    
+                else:
+                    
+                    raise Exception( 'Unknown tag action choice!' )
+                    
                 
                 hashes = set( itertools.chain.from_iterable( ( m.GetHashes() for m in media_to_affect ) ) )
                 

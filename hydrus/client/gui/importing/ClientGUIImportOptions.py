@@ -9,6 +9,7 @@ from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusNumbers
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
@@ -144,24 +145,19 @@ class EditFileImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._allow_decompression_bombs.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._min_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel )
-        self._min_size.SetValue( 5 * 1024 )
+        self._min_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel, 5 * 1024 )
         
-        self._max_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel )
-        self._max_size.SetValue( 100 * 1024 * 1024 )
+        self._max_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel, 100 * 1024 * 1024 )
         
-        self._max_gif_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel )
-        self._max_gif_size.SetValue( 32 * 1024 * 1024 )
+        self._max_gif_size = ClientGUIBytes.NoneableBytesControl( pre_import_panel, 32 * 1024 * 1024 )
         
         tt = 'This catches most of those gif conversions of webms. These files are low quality but huge and mostly a waste of storage and bandwidth.'
         
         self._max_gif_size.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._min_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, num_dimensions = 2 )
-        self._min_resolution.SetValue( ( 50, 50 ) )
+        self._min_resolution = ClientGUICommon.NoneableDoubleSpinCtrl( pre_import_panel, ( 50, 50 ) )
         
-        self._max_resolution = ClientGUICommon.NoneableSpinCtrl( pre_import_panel, num_dimensions = 2 )
-        self._max_resolution.SetValue( ( 8192, 8192 ) )
+        self._max_resolution = ClientGUICommon.NoneableDoubleSpinCtrl( pre_import_panel, ( 8192, 8192 ) )
         
         tt = 'If either width or height is violated, the file will fail this test and be ignored. It does not have to be both.'
         
@@ -642,7 +638,7 @@ class EditNoteImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._names_to_name_overrides.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
         
-        self._all_name_override = ClientGUICommon.NoneableTextCtrl( self._specific_options_panel, none_phrase = 'do not mass-rename' )
+        self._all_name_override = ClientGUICommon.NoneableTextCtrl( self._specific_options_panel, '', none_phrase = 'do not mass-rename' )
         
         tt = 'If you want a hacky way to rename one note that is not caught by the above rename rules, whatever it is originally called, set this.'
         tt += '\n' * 2
@@ -2244,16 +2240,13 @@ class ImportOptionsButton( ClientGUICommon.ButtonWithMenuArrow ):
             
             label = single_label
             
-            if self._allow_default_selection:
+            if all_are_default:
                 
-                if all_are_default:
-                    
-                    label = f'{label} (default)'
-                    
-                else:
-                    
-                    label = f'{label} (set)'
-                    
+                label = f'{label} (default)'
+                
+            else:
+                
+                label = HydrusText.ElideText( f'{label} ({summaries[0]})', 48 )
                 
             
         

@@ -8,6 +8,7 @@ import unittest
 import urllib
 import urllib.parse
 
+from mock import patch
 from twisted.internet import reactor
 
 from hydrus.core import HydrusConstants as HC
@@ -1020,6 +1021,125 @@ class TestClientAPI( unittest.TestCase ):
         wash_example_json_response( expected_result )
         
         self.assertEqual( response_json, expected_result )
+        
+    
+    def _test_add_files_migrate_files( self, connection, set_up_permissions ):
+        
+        api_permissions = set_up_permissions[ 'add_files' ]
+        
+        access_key_hex = api_permissions.GetAccessKey().hex()
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        #
+        
+        hash = HydrusData.GenerateKey()
+        
+        # missing file
+        
+        HG.test_controller.ClearWrites( 'content_updates' )
+        
+        path = '/add_files/migrate_files'
+        
+        body_dict = { 'hash' : hash.hex(), 'file_service_key' : CC.LOCAL_FILE_SERVICE_KEY.hex() }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        self.assertEqual( response.status, 400 ) # file not in local domain
+        
+        # already-in no-op
+        
+        magic_now = 150
+        
+        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+            
+            hash = HydrusData.GenerateKey()
+            
+            media_result = HF.GetFakeMediaResult( hash )
+            
+            media_result.GetLocationsManager()._current = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, CC.LOCAL_FILE_SERVICE_KEY }
+            media_result.GetLocationsManager()._service_keys_to_filenames = {
+                CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 100,
+                CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 100,
+                CC.LOCAL_FILE_SERVICE_KEY : 100
+            }
+            
+            HG.test_controller.ClearWrites( 'content_updates' )
+            
+            HG.test_controller.SetRead( 'media_results', [ media_result ] )
+            
+            #
+            
+            path = '/add_files/migrate_files'
+            
+            body_dict = { 'hash' : hash.hex(), 'file_service_key' : CC.LOCAL_FILE_SERVICE_KEY.hex() }
+            
+            body = json.dumps( body_dict )
+            
+            connection.request( 'POST', path, body = body, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            self.assertEqual( response.status, 200 )
+            
+            results = HG.test_controller.GetWrite( 'content_updates' )
+            
+            self.assertEqual( results, [] )
+            
+        
+        # normal copy
+        
+        magic_now = 150
+        
+        with patch.object( HydrusTime, 'GetNowMS', return_value = magic_now ):
+            
+            hash = HydrusData.GenerateKey()
+            
+            media_result = HF.GetFakeMediaResult( hash )
+            
+            some_file_service_key = HydrusData.GenerateKey()
+            
+            media_result.GetLocationsManager()._current = { CC.COMBINED_LOCAL_FILE_SERVICE_KEY, CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY, some_file_service_key }
+            media_result.GetLocationsManager()._service_keys_to_filenames = {
+                CC.COMBINED_LOCAL_FILE_SERVICE_KEY : 100,
+                CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY : 100,
+                some_file_service_key : 100
+            }
+            
+            HG.test_controller.ClearWrites( 'content_updates' )
+            
+            HG.test_controller.SetRead( 'media_results', [ media_result ] )
+            
+            #
+            
+            path = '/add_files/migrate_files'
+            
+            body_dict = { 'hash' : hash.hex(), 'file_service_key' : CC.LOCAL_FILE_SERVICE_KEY.hex() }
+            
+            body = json.dumps( body_dict )
+            
+            connection.request( 'POST', path, body = body, headers = headers )
+            
+            response = connection.getresponse()
+            
+            data = response.read()
+            
+            self.assertEqual( response.status, 200 )
+            
+            [ ( ( content_update_package, ), kwargs ) ] = HG.test_controller.GetWrite( 'content_updates' )
+            
+            expected_content_update_package = ClientContentUpdates.ContentUpdatePackage.STATICCreateFromContentUpdates( CC.LOCAL_FILE_SERVICE_KEY, [ ClientContentUpdates.ContentUpdate( HC.CONTENT_TYPE_FILES, HC.CONTENT_UPDATE_ADD, ( media_result.GetFileInfoManager(), magic_now ) ) ] )
+            
+            HF.compare_content_update_packages( self, content_update_package, expected_content_update_package )
+            
         
     
     def _test_add_files_other_actions( self, connection, set_up_permissions ):
@@ -3229,7 +3349,36 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, None ), {} ) ] )
+        
+        # with import destination
+        
+        HG.test_controller.ClearWrites( 'import_url_test' )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        url = 'http://8ch.net/tv/res/1846574.html'
+        
+        request_dict = { 'url' : url, 'file_service_key' : CC.LOCAL_FILE_SERVICE_KEY.hex() }
+        
+        request_body = json.dumps( request_dict )
+        
+        connection.request( 'POST', '/add_urls/add_url', body = request_body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        response_json = json.loads( text )
+        
+        self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
+        self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
+        
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, None, False, ClientLocation.LocationContext.STATICCreateSimple( CC.LOCAL_FILE_SERVICE_KEY ) ), {} ) ] )
         
         # with name
         
@@ -3254,7 +3403,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), 'muh /tv/', None, False ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), 'muh /tv/', None, False, None ), {} ) ] )
         
         # with page_key
         
@@ -3282,7 +3431,7 @@ class TestClientAPI( unittest.TestCase ):
         self.assertEqual( response_json[ 'human_result_text' ], '"https://8ch.net/tv/res/1846574.html" URL added successfully.' )
         self.assertEqual( response_json[ 'normalised_url' ], 'https://8ch.net/tv/res/1846574.html' )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, page_key, False ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set(), ClientTags.ServiceKeysToTags(), None, page_key, False, None ), {} ) ] )
         
         # add tags and name, and show destination page
         
@@ -3310,7 +3459,7 @@ class TestClientAPI( unittest.TestCase ):
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
         
         # add tags with service key and name, and show destination page
         
@@ -3338,7 +3487,7 @@ class TestClientAPI( unittest.TestCase ):
         filterable_tags = [ 'filename:yo' ]
         additional_service_keys_to_tags = ClientTags.ServiceKeysToTags( { CC.DEFAULT_LOCAL_TAG_SERVICE_KEY : set( [ '/tv/ thread' ] ) } )
         
-        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True ), {} ) ] )
+        self.assertEqual( HG.test_controller.GetWrite( 'import_url_test' ), [ ( ( url, set( filterable_tags ), additional_service_keys_to_tags, 'muh /tv/', None, True, None ), {} ) ] )
         
     
     def _test_associate_urls( self, connection, set_up_permissions ):
@@ -6769,6 +6918,7 @@ class TestClientAPI( unittest.TestCase ):
         self._test_options( connection, set_up_permissions )
         self._test_add_files_add_file( connection, set_up_permissions )
         self._test_add_files_other_actions( connection, set_up_permissions )
+        self._test_add_files_migrate_files( connection, set_up_permissions )
         self._test_add_notes( connection, set_up_permissions )
         self._test_edit_ratings( connection, set_up_permissions )
         self._test_edit_times( connection, set_up_permissions )

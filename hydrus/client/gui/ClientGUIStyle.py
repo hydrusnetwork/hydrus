@@ -83,6 +83,15 @@ def InitialiseDefaults():
         ORIGINAL_STYLE_NAME  = QW.QApplication.instance().style().name()
         
     
+    BETTER_SUPPORT_FOR_NOW = 'windowsvista'
+    
+    if ORIGINAL_STYLE_NAME == 'windows11' and BETTER_SUPPORT_FOR_NOW in GetAvailableStyles():
+        
+        ORIGINAL_STYLE_NAME = BETTER_SUPPORT_FOR_NOW
+        
+        SetStyleFromName( BETTER_SUPPORT_FOR_NOW )
+        
+    
     CURRENT_STYLE_NAME = ORIGINAL_STYLE_NAME
     
     global ORIGINAL_STYLESHEET

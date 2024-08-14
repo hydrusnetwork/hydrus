@@ -2234,8 +2234,8 @@ class EditFrameLocationPanel( ClientGUIScrolledPanels.EditPanel ):
         self._remember_size = QW.QCheckBox( 'remember size', self )
         self._remember_position = QW.QCheckBox( 'remember position', self )
         
-        self._last_size = ClientGUICommon.NoneableSpinCtrl( self, 'last size', none_phrase = 'none set', min = 100, max = 1000000, unit = None, num_dimensions = 2 )
-        self._last_position = ClientGUICommon.NoneableSpinCtrl( self, 'last position', none_phrase = 'none set', min = -1000000, max = 1000000, unit = None, num_dimensions = 2 )
+        self._last_size = ClientGUICommon.NoneableDoubleSpinCtrl( self, ( 640, 480 ),'last size', none_phrase = 'none set', min = 100, max = 1000000, unit = None )
+        self._last_position = ClientGUICommon.NoneableDoubleSpinCtrl( self, ( 20, 20 ),'last position', none_phrase = 'none set', min = -1000000, max = 1000000, unit = None )
         
         self._default_gravity_x = ClientGUICommon.BetterChoice( self )
         

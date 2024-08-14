@@ -1314,7 +1314,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gug_key_and_name = ClientGUIImport.GUGKeyAndNameSelector( self._gallery_downloader_panel, self._multiple_gallery_import.GetGUGKeyAndName(), update_callable = self._SetGUGKeyAndName )
         
-        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 'stop after this many files', min = 1, none_phrase = 'no limit' )
+        self._file_limit = ClientGUICommon.NoneableSpinCtrl( self._gallery_downloader_panel, 2000, message = 'stop after this many files', min = 1, none_phrase = 'no limit' )
         self._file_limit.valueChanged.connect( self.EventFileLimit )
         self._file_limit.setToolTip( ClientGUIFunctions.WrapToolTip( 'per query, stop searching the gallery once this many files has been reached' ) )
         
@@ -4248,7 +4248,7 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._petition_panel = ClientGUICommon.StaticBox( self, 'highlighted petition' )
         
-        self._num_files_to_show = ClientGUICommon.NoneableSpinCtrl( self._petition_panel, message = 'number of files to show', min = 1 )
+        self._num_files_to_show = ClientGUICommon.NoneableSpinCtrl( self._petition_panel, 256, message = 'number of files to show', min = 1 )
         
         self._num_files_to_show.SetValue( management_controller.GetVariable( 'num_files_to_show' ) )
         

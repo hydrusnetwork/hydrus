@@ -212,6 +212,15 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
                     
                 elif action == HC.CONTENT_UPDATE_PEND:
                     
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( petitioned_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is not None:
+                        
+                        # we can technically petition without a thing being current, so we do need to check for a conflict here!
+                        
+                        continue
+                        
+                    
                     result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( current_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
                     
                     if result is None:
@@ -246,6 +255,15 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
                         
                     
                 elif action == HC.CONTENT_UPDATE_PETITION:
+                    
+                    # we are technically ok with deleting things that are not current yet, so do not need to check for that!
+                    
+                    result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( pending_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
+                    
+                    if result is not None: # but not if they are pending lol
+                        
+                        continue
+                        
                     
                     result = self._Execute( 'SELECT 1 FROM {} WHERE tag_id = ? AND hash_id = ?;'.format( petitioned_mappings_table_name ), ( tag_id, hash_id ) ).fetchone()
                     
@@ -298,6 +316,8 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
                         existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, current_mappings_table_name ), ( tag_id, ) ) )
                         # existing_hash_ids
                         existing_hash_ids.update( self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, pending_mappings_table_name ), ( tag_id, ) ) ) )
+                        # conflicting_hash_ids
+                        existing_hash_ids.update( self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, petitioned_mappings_table_name ), ( tag_id, ) ) ) )
                         
                         valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
                         
@@ -309,6 +329,8 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
                         
                         # we are technically ok with deleting tags that don't exist yet!
                         existing_hash_ids = self._STS( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, petitioned_mappings_table_name ), ( tag_id, ) ) )
+                        # but we won't conflict with pending!
+                        existing_hash_ids.update( self._STI( self._Execute( 'SELECT hash_id FROM {} CROSS JOIN {} USING ( hash_id ) WHERE tag_id = ?;'.format( temp_hash_ids_table_name, pending_mappings_table_name ), ( tag_id, ) ) ) )
                         
                         valid_hash_ids = set( hash_ids ).difference( existing_hash_ids )
                         

@@ -616,6 +616,11 @@ def GetFileInfo( path, mime = None, ok_to_look_for_hydrus_updates = False ):
         
         ( file_duration_in_s, stream_duration_in_s ) = HydrusVideoHandling.ParseFFMPEGDuration( ffmpeg_lines )
         
+        if file_duration_in_s is None:
+            
+            raise HydrusExceptions.DamagedOrUnusualFileException( 'Could not determine the duration of this file!' )
+            
+        
         duration = int( file_duration_in_s * 1000 )
         
     

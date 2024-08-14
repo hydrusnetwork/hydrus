@@ -1985,7 +1985,7 @@ class TagsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_PEND:
                 
-                if tag not in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
+                if tag not in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ] and tag not in statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ]:
                     
                     statuses_to_tags[ HC.CONTENT_STATUS_PENDING ].add( tag )
                     
@@ -1996,7 +1996,7 @@ class TagsManager( object ):
                 
             elif action == HC.CONTENT_UPDATE_PETITION:
                 
-                if tag in statuses_to_tags[ HC.CONTENT_STATUS_CURRENT ]:
+                if tag not in statuses_to_tags[ HC.CONTENT_STATUS_PENDING ]:
                     
                     statuses_to_tags[ HC.CONTENT_STATUS_PETITIONED ].add( tag )
                     

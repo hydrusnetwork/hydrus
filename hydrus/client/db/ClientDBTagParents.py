@@ -42,6 +42,23 @@ def GenerateTagParentsLookupCacheTableNames( service_id ):
     return ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name )
     
 
+TAG_PARENTS_CURRENT_STORAGE_PREFIX = 'current_tag_parents_'
+TAG_PARENTS_DELETED_STORAGE_PREFIX = 'deleted_tag_parents_'
+TAG_PARENTS_PENDING_STORAGE_PREFIX = 'pending_tag_parents_'
+TAG_PARENTS_PETITIONED_STORAGE_PREFIX = 'petitioned_tag_parents_'
+
+def GenerateTagParentsStorageTableNames( service_id ):
+    
+    suffix = service_id
+    
+    return {
+        HC.CONTENT_STATUS_CURRENT : f'{TAG_PARENTS_CURRENT_STORAGE_PREFIX}{suffix}',
+        HC.CONTENT_STATUS_DELETED : f'{TAG_PARENTS_DELETED_STORAGE_PREFIX}{suffix}',
+        HC.CONTENT_STATUS_PENDING : f'{TAG_PARENTS_PENDING_STORAGE_PREFIX}{suffix}',
+        HC.CONTENT_STATUS_PETITIONED : f'{TAG_PARENTS_PETITIONED_STORAGE_PREFIX}{suffix}'
+    }
+    
+
 class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     CAN_REPOPULATE_ALL_MISSING_DATA = True
@@ -72,22 +89,12 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         index_generation_dict = {}
         
-        index_generation_dict[ 'tag_parents' ] = [
-            ( [ 'service_id', 'parent_tag_id' ], False, 420 )
-        ]
-        
-        index_generation_dict[ 'tag_parent_petitions' ] = [
-            ( [ 'service_id', 'parent_tag_id' ], False, 420 )
-        ]
-        
         return index_generation_dict
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:
         
         return {
-            'main.tag_parents' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
-            'main.tag_parent_petitions' : ( 'CREATE TABLE IF NOT EXISTS {} ( service_id INTEGER, child_tag_id INTEGER, parent_tag_id INTEGER, status INTEGER, reason_id INTEGER, PRIMARY KEY ( service_id, child_tag_id, parent_tag_id, status ) );', 414 ),
             'main.tag_parent_application' : ( 'CREATE TABLE IF NOT EXISTS {} ( master_service_id INTEGER, service_index INTEGER, application_service_id INTEGER, PRIMARY KEY ( master_service_id, service_index ) );', 414 )
         }
         
@@ -106,16 +113,39 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             ( [ 'ancestor_tag_id' ], False, 414 )
         ]
         
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ] ] = [
+            ( [ 'parent_tag_id' ], False, 586 )
+        ]
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ] ] = [
+            ( [ 'parent_tag_id' ], False, 586 )
+        ]
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ] ] = [
+            ( [ 'parent_tag_id' ], False, 586 )
+        ]
+        
+        index_generation_dict[ statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ] ] = [
+            ( [ 'parent_tag_id' ], False, 586 )
+        ]
+        
         return index_generation_dict
         
     
     def _GetServiceTableGenerationDict( self, service_id ) -> dict:
         
         ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( service_id )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
         
         return {
             cache_actual_tag_parents_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );', 414 ),
-            cache_ideal_tag_parents_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );', 414 )
+            cache_ideal_tag_parents_lookup_table_name : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, ancestor_tag_id INTEGER, PRIMARY KEY ( child_tag_id, ancestor_tag_id ) );', 414 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_CURRENT ] : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, parent_tag_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );', 586 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_DELETED ] : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, parent_tag_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );', 586 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ] : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, parent_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );', 586 ),
+            statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ] : ( 'CREATE TABLE IF NOT EXISTS {} ( child_tag_id INTEGER, parent_tag_id INTEGER, reason_id INTEGER, PRIMARY KEY ( child_tag_id, parent_tag_id ) );', 586 )
         }
         
     
@@ -123,7 +153,11 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         return {
             TAG_PARENTS_IDEAL_PREFIX,
-            TAG_PARENTS_ACTUAL_PREFIX
+            TAG_PARENTS_ACTUAL_PREFIX,
+            TAG_PARENTS_CURRENT_STORAGE_PREFIX,
+            TAG_PARENTS_DELETED_STORAGE_PREFIX,
+            TAG_PARENTS_PENDING_STORAGE_PREFIX,
+            TAG_PARENTS_PETITIONED_STORAGE_PREFIX
         }
         
     
@@ -156,10 +190,12 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     def AddTagParents( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_parents WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ?;', ( ( service_id, child_tag_id, parent_tag_id ) for ( child_tag_id, parent_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ? AND status = ?;', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_PENDING ) for ( child_tag_id, parent_tag_id ) in pairs )  )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_tag_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_CURRENT ) for ( child_tag_id, parent_tag_id ) in pairs ) )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_DELETED]} WHERE child_tag_id = ? AND parent_tag_id = ?;', pairs )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_PENDING]} WHERE child_tag_id = ? AND parent_tag_id = ?;', pairs )
+        
+        self._ExecuteMany( f'INSERT OR IGNORE INTO {statuses_to_storage_table_names[HC.CONTENT_STATUS_CURRENT]} ( child_tag_id, parent_tag_id ) VALUES ( ?, ? );', pairs )
         
     
     def ClearActual( self, service_id, tag_ids = None ):
@@ -181,18 +217,30 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             
         
     
+    def DeletePending( self, service_id ):
+        
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+        
+        self._Execute( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]};' )
+        self._Execute( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]};' )
+        
+    
     def DeleteTagParents( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_parents WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ?;', ( ( service_id, child_tag_id, parent_tag_id ) for ( child_tag_id, parent_tag_id ) in pairs ) )
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ? AND status = ?;', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_PETITIONED ) for ( child_tag_id, parent_tag_id ) in pairs )  )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_parents ( service_id, child_tag_id, parent_tag_id, status ) VALUES ( ?, ?, ?, ? );', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_DELETED ) for ( child_tag_id, parent_tag_id ) in pairs ) )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_CURRENT]} WHERE child_tag_id = ? AND parent_tag_id = ?;', pairs )
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[HC.CONTENT_STATUS_PETITIONED]} WHERE child_tag_id = ? AND parent_tag_id = ?;', pairs )
+        
+        self._ExecuteMany( f'INSERT OR IGNORE INTO {statuses_to_storage_table_names[HC.CONTENT_STATUS_DELETED]} ( child_tag_id, parent_tag_id ) VALUES ( ?, ? );', pairs )
         
     
     def Drop( self, tag_service_id ):
         
-        self._Execute( 'DELETE FROM tag_parents WHERE service_id = ?;', ( tag_service_id, ) )
-        self._Execute( 'DELETE FROM tag_parent_petitions WHERE service_id = ?;', ( tag_service_id, ) )
+        for table_name in GenerateTagParentsStorageTableNames( tag_service_id ).values():
+            
+            self.modules_db_maintenance.DeferredDropTable( table_name )
+            
         
         ( cache_ideal_tag_parents_lookup_table_name, cache_actual_tag_parents_lookup_table_name ) = GenerateTagParentsLookupCacheTableNames( tag_service_id )
         
@@ -386,13 +434,15 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
                 
                 ( ideal_tag_id, ) = next_search_tag_ids
                 
-                round_of_tag_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} WHERE ancestor_tag_id = ? UNION ALL SELECT ancestor_tag_id FROM {} WHERE child_tag_id = ?;'.format( cache_tag_parents_lookup_table_name, cache_tag_parents_lookup_table_name ), ( ideal_tag_id, ideal_tag_id ) ) )
+                round_of_tag_ids = self._STS( self._Execute( f'SELECT child_tag_id FROM {cache_tag_parents_lookup_table_name} WHERE ancestor_tag_id = ?;', ( ideal_tag_id, ) ) )
+                round_of_tag_ids.update( self._STI( self._Execute( f'SELECT ancestor_tag_id FROM {cache_tag_parents_lookup_table_name} WHERE child_tag_id = ?;', ( ideal_tag_id, ) ) ) )
                 
             else:
                 
                 with self._MakeTemporaryIntegerTable( next_search_tag_ids, 'tag_id' ) as temp_next_search_tag_ids_table_name:
                     
-                    round_of_tag_ids = self._STS( self._Execute( 'SELECT child_tag_id FROM {} CROSS JOIN {} ON ( ancestor_tag_id = tag_id ) UNION ALL SELECT ancestor_tag_id FROM {} CROSS JOIN {} ON ( child_tag_id = tag_id );'.format( temp_next_search_tag_ids_table_name, cache_tag_parents_lookup_table_name, temp_next_search_tag_ids_table_name, cache_tag_parents_lookup_table_name ) ) )
+                    round_of_tag_ids = self._STS( self._Execute( f'SELECT child_tag_id FROM {temp_next_search_tag_ids_table_name} CROSS JOIN {cache_tag_parents_lookup_table_name} ON ( ancestor_tag_id = tag_id );' ) )
+                    round_of_tag_ids.update( self._STI( self._Execute( f' SELECT ancestor_tag_id FROM {temp_next_search_tag_ids_table_name} CROSS JOIN {cache_tag_parents_lookup_table_name} ON ( child_tag_id = tag_id );' ) ) )
                     
                 
             
@@ -411,6 +461,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         raise NotImplementedError()
         
         # if it isn't crazy, I should write this whole lad to be one or two recursive queries
+        # also ditch the UNION if we get that far
         
         cache_tag_parents_lookup_table_name = GenerateTagParentsLookupCacheTableName( display_type, tag_service_id )
         
@@ -472,31 +523,40 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     def GetPendingParentsCount( self, service_id: int ):
         
-        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PENDING ) ).fetchone()
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+        
+        ( info, ) = self._Execute( f'SELECT COUNT( * ) FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]};' ).fetchone()
         
         return info
         
     
     def GetPetitionedParentsCount( self, service_id: int ):
         
-        ( info, ) = self._Execute( 'SELECT COUNT( * ) FROM tag_parent_petitions WHERE service_id = ? AND status = ?;', ( service_id, HC.CONTENT_STATUS_PETITIONED ) ).fetchone()
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+        
+        ( info, ) = self._Execute( f'SELECT COUNT( * ) FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]};' ).fetchone()
         
         return info
         
     
     def GetTablesAndColumnsThatUseDefinitions( self, content_type: int ) -> typing.List[ typing.Tuple[ str, str ] ]:
         
+        tables_and_columns = []
+        
         if content_type == HC.CONTENT_TYPE_TAG:
             
-            return [
-                ( 'tag_parents', 'child_tag_id' ),
-                ( 'tag_parents', 'parent_tag_id' ),
-                ( 'tag_parent_petitions', 'child_tag_id' ),
-                ( 'tag_parent_petitions', 'parent_tag_id' )
-            ]
+            # don't are for actual/ideal, they feed off these guys
+            for service_id in self._GetServiceIdsWeGenerateDynamicTablesFor():
+                
+                for table_name in GenerateTagParentsStorageTableNames( service_id ):
+                    
+                    tables_and_columns.append( ( table_name, 'child_tag_id' ) )
+                    tables_and_columns.append( ( table_name, 'parent_tag_id' ) )
+                    
+                
             
         
-        return []
+        return tables_and_columns
         
     
     def GetTagParents( self, service_key, tags = None, where_chain_includes_pending_or_petitioned = False ):
@@ -513,10 +573,19 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
                 
                 tag_ids = set()
                 
-                for ( bad_tag_id, good_tag_id ) in self._Execute( 'SELECT child_tag_id, parent_tag_id FROM tag_parent_petitions WHERE service_id = ?', ( service_id, ) ):
+                statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+                
+                queries = [
+                    f'SELECT child_tag_id, parent_tag_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]};',
+                    f'SELECT child_tag_id, parent_tag_id FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]};'
+                ]
+                
+                for query in queries:
                     
-                    tag_ids.add( bad_tag_id )
-                    tag_ids.add( good_tag_id )
+                    for pair in self._Execute( query ):
+                        
+                        tag_ids.update( pair )
+                        
                     
                 
             else:
@@ -549,13 +618,14 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     def GetTagParentsIds( self, service_id ):
         
-        statuses_and_pair_ids = self._Execute( 'SELECT status, child_tag_id, parent_tag_id FROM tag_parents WHERE service_id = ? UNION SELECT status, child_tag_id, parent_tag_id FROM tag_parent_petitions WHERE service_id = ?;', ( service_id, service_id ) ).fetchall()
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( child_tag_id, parent_tag_id ) ) for ( status, child_tag_id, parent_tag_id ) in statuses_and_pair_ids )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
         
         statuses_to_pair_ids = collections.defaultdict( list )
         
-        statuses_to_pair_ids.update( { status : sorted( pair_ids ) for ( status, pair_ids ) in unsorted_statuses_to_pair_ids.items() } )
+        for ( status, table_name ) in statuses_to_storage_table_names.items():
+            
+            statuses_to_pair_ids[ status ] = sorted( self._Execute( f'SELECT child_tag_id, parent_tag_id FROM {table_name};' ).fetchall() )
+            
         
         return statuses_to_pair_ids
         
@@ -566,9 +636,12 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         # note that this has to do sibling lookup as well to fetch pairs that are only connected to our chain by sibling relationships, and we are assuming here that the sibling lookup cache is valid
         
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+        
         searched_tag_ids = set()
         next_tag_ids = set( tag_ids )
-        result_rows = set()
+        
+        unsorted_statuses_to_pair_ids = collections.defaultdict( set )
         
         while len( next_tag_ids ) > 0:
             
@@ -585,37 +658,35 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             
             with self._MakeTemporaryIntegerTable( this_loop_tag_ids, 'tag_id' ) as temp_this_loop_tag_ids_table_name:
                 
-                searched_tag_ids.update( this_loop_tag_ids )
-                
                 # keep these separate--older sqlite can't do cross join to an OR ON
                 # ALSO ditching UNION, which perhaps was not helping!
                 
-                # temp tag_ids to parents
-                queries = [
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( service_id = ? AND child_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parents ON ( service_id = ? AND parent_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( service_id = ? AND child_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name ),
-                    'SELECT status, child_tag_id, parent_tag_id FROM {} CROSS JOIN tag_parent_petitions ON ( service_id = ? AND parent_tag_id = tag_id );'.format( temp_this_loop_tag_ids_table_name )
-                ]
+                # just a note, this thing is inefficient--it fetches the same rows twice, looking from either direction
+                # there's probably a way to more carefully shape the iterations of search, remembering which direction we got things from or something, but it wouldn't be trivial I think!
                 
-                for query in queries:
+                for ( status, table_name ) in statuses_to_storage_table_names.items():
                     
-                    for row in self._Execute( query, ( service_id, ) ):
+                    queries = [
+                        f'SELECT child_tag_id, parent_tag_id FROM {temp_this_loop_tag_ids_table_name} CROSS JOIN {table_name} ON ( child_tag_id = tag_id );',
+                        f'SELECT child_tag_id, parent_tag_id FROM {temp_this_loop_tag_ids_table_name} CROSS JOIN {table_name} ON ( parent_tag_id = tag_id );'
+                    ]
+                    
+                    for query in queries:
                         
-                        result_rows.add( row )
-                        
-                        ( status, child_tag_id, parent_tag_id ) = row
-                        
-                        next_tag_ids.add( child_tag_id )
-                        next_tag_ids.add( parent_tag_id )
+                        for pair in self._Execute( query ):
+                            
+                            unsorted_statuses_to_pair_ids[ status ].add( pair )
+                            
+                            next_tag_ids.update( pair )
+                            
                         
                     
                 
+            
+            searched_tag_ids.update( this_loop_tag_ids )
             
             next_tag_ids.difference_update( searched_tag_ids )
             
-        
-        unsorted_statuses_to_pair_ids = HydrusData.BuildKeyToListDict( ( status, ( child_tag_id, parent_tag_id ) ) for ( status, child_tag_id, parent_tag_id ) in result_rows )
         
         statuses_to_pair_ids = collections.defaultdict( list )
         
@@ -745,26 +816,30 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
     
     def PendTagParents( self, service_id, triples ):
         
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ?;', ( ( service_id, child_tag_id, parent_tag_id ) for ( child_tag_id, parent_tag_id, reason_id ) in triples ) )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_tag_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, child_tag_id, parent_tag_id, reason_id, HC.CONTENT_STATUS_PENDING ) for ( child_tag_id, parent_tag_id, reason_id ) in triples ) )
+        self._ExecuteMany( f'REPLACE INTO {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]} ( child_tag_id, parent_tag_id, reason_id ) VALUES ( ?, ?, ? );', triples )
         
     
     def PetitionTagParents( self, service_id, triples ):
         
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ?;', ( ( service_id, child_tag_id, parent_tag_id ) for ( child_tag_id, parent_tag_id, reason_id ) in triples ) )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
         
-        self._ExecuteMany( 'INSERT OR IGNORE INTO tag_parent_petitions ( service_id, child_tag_id, parent_tag_id, reason_id, status ) VALUES ( ?, ?, ?, ?, ? );', ( ( service_id, child_tag_id, parent_tag_id, reason_id, HC.CONTENT_STATUS_PETITIONED ) for ( child_tag_id, parent_tag_id, reason_id ) in triples ) )
+        self._ExecuteMany( f'REPLACE INTO {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]} ( child_tag_id, parent_tag_id, reason_id ) VALUES ( ?, ?, ? );', triples )
         
     
     def RescindPendingTagParents( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ? AND status = ?;', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_PENDING ) for ( child_tag_id, parent_tag_id ) in pairs ) )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+        
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PENDING ]} WHERE child_tag_id = ? AND parent_tag_id = ?;', pairs )
         
     
     def RescindPetitionedTagParents( self, service_id, pairs ):
         
-        self._ExecuteMany( 'DELETE FROM tag_parent_petitions WHERE service_id = ? AND child_tag_id = ? AND parent_tag_id = ? AND status = ?;', ( ( service_id, child_tag_id, parent_tag_id, HC.CONTENT_STATUS_PETITIONED ) for ( child_tag_id, parent_tag_id ) in pairs ) )
+        statuses_to_storage_table_names = GenerateTagParentsStorageTableNames( service_id )
+        
+        self._ExecuteMany( f'DELETE FROM {statuses_to_storage_table_names[ HC.CONTENT_STATUS_PETITIONED ]} WHERE child_tag_id = ? AND parent_tag_id = ?;', pairs )
         
     
     def Regen( self, tag_service_ids ):

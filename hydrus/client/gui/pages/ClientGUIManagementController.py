@@ -142,14 +142,14 @@ def CreateManagementControllerImportMultipleWatcher( page_name = None, url = Non
     return management_controller
     
 
-def CreateManagementControllerImportURLs( page_name = None ):
+def CreateManagementControllerImportURLs( page_name = None, destination_location_context = None ):
     
     if page_name is None:
         
         page_name = 'url import'
         
     
-    urls_import = ClientImportSimpleURLs.URLsImport()
+    urls_import = ClientImportSimpleURLs.URLsImport( destination_location_context = destination_location_context )
     
     management_controller = CreateManagementController( page_name, MANAGEMENT_TYPE_IMPORT_URLS )
     

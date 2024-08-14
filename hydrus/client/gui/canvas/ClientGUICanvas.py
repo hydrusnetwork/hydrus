@@ -673,7 +673,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def BeginDrag( self ):
         
-        if self._media_container.HasAnimationbar() and CG.client_controller.new_options.GetBoolean( 'disallow_media_drags_on_duration_media' ):
+        if self._current_media is not None and self._current_media.HasDuration() and CG.client_controller.new_options.GetBoolean( 'disallow_media_drags_on_duration_media' ):
             
             return
             
@@ -2104,7 +2104,7 @@ class CanvasWithHovers( CanvasWithDetails ):
         
         self._my_shortcuts_handler.AddWindowToFilter( top_hover )
         
-        tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key )
+        tags_hover = ClientGUICanvasHoverFrames.CanvasHoverFrameTags( self, self, top_hover, self._canvas_key, self._location_context )
         
         tags_hover.sendApplicationCommand.connect( self.ProcessApplicationCommand )
         

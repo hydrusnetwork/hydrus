@@ -541,12 +541,9 @@ class TagPairActionContext( object ):
             
             self.InformTagsInterest( to_fetch )
             
-            CG.client_controller.CallToThread( wait_for_preload )
-            
-        else:
-            
-            do_it_qt_and_lock()
-            
+        
+        # don't call the qt directly; we may still need to wait for IsReady on stuff that was already fetching before we were called
+        CG.client_controller.CallToThread( wait_for_preload )
         
     
     def GetContentUpdates( self ) -> typing.List[ ClientContentUpdates.ContentUpdate ]:
@@ -889,6 +886,9 @@ class TagPairActionContext( object ):
             
         
     
+
+# TODO: ok a future version of ParentActionContext would fetch sibling data so it can join and filter sibling-disparate groups
+# probably saving tag->sibling data cache and then doing lookups based on that. OR storing double-pair copies with ideals
 
 class ParentActionContext( TagPairActionContext ):
     

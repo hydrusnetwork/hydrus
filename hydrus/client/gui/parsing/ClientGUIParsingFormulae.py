@@ -602,8 +602,8 @@ class EditHTMLTagRulePanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._tag_attributes = ClientGUIStringControls.StringToStringDictControl( self, tag_attributes, min_height = 4 )
         
-        self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 'index to fetch', none_phrase = 'get all', min = -65536, max = 65535 )
-        self._tag_index.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can make this negative to do negative indexing, i.e. "Select the second from last item".' ) )
+        self._tag_index = ClientGUICommon.NoneableSpinCtrl( self, 0, message = 'index to fetch', none_phrase = 'get all', min = -65536, max = 65535 )
+        self._tag_index.setToolTip( ClientGUIFunctions.WrapToolTip( 'You can make this negative to do negative indexing, e.g. -2 for "Select the second from last item".' ) )
         
         self._tag_depth = ClientGUICommon.BetterSpinBox( self, min=1, max=255 )
         
