@@ -907,6 +907,11 @@ class AnimationBar( QW.QWidget ):
     
     def _DoAnimationStatusUpdate( self ):
         
+        if self._CurrentMediaWindowIsBad():
+            
+            return
+            
+        
         # we must never call this method in the paintEvent
         current_animation_bar_status = self._media_window.GetAnimationBarStatus()
         
