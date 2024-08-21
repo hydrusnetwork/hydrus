@@ -517,6 +517,8 @@ class Page( QW.QWidget ):
         
         self._ConnectMediaPanelSignals()
         
+        self.SetSplitterPositions()
+        
     
     def _ConnectMediaPanelSignals( self ):
         
@@ -1053,6 +1055,11 @@ class Page( QW.QWidget ):
             
         
         total_sum = sum( self._search_preview_split.sizes() )
+        
+        if total_sum == 0:
+            
+            return
+            
         
         if vpos < 0:
             
