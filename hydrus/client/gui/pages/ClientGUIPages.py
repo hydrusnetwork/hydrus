@@ -471,19 +471,13 @@ class Page( QW.QWidget ):
         
         self._management_panel.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
-        self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
+        self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel( self._management_media_split )
         
         self._management_media_split.addWidget( self._search_preview_split )
         self._management_media_split.addWidget( self._media_panel )
         
         self._search_preview_split.addWidget( self._management_panel )
         self._search_preview_split.addWidget( self._preview_panel )
-        
-        vbox = QP.VBoxLayout( margin = 0 )
-        
-        QP.AddToLayout( vbox, self._management_media_split, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
-        
-        self.setLayout( vbox )
         
         vbox = QP.VBoxLayout( margin = 0 )
         
@@ -502,6 +496,12 @@ class Page( QW.QWidget ):
         
         self._search_preview_split.setStretchFactor( 0, 1 )
         self._search_preview_split.setStretchFactor( 1, 0 )
+        
+        vbox = QP.VBoxLayout( margin = 0 )
+        
+        QP.AddToLayout( vbox, self._management_media_split, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+        
+        self.setLayout( vbox )
         
         self._handle_event_filter = QP.WidgetEventFilter( self._management_media_split.handle( 1 ) )
         self._handle_event_filter.EVT_LEFT_DCLICK( self.EventUnsplit )

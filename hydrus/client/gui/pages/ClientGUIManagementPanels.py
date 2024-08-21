@@ -351,9 +351,9 @@ class ManagementPanel( QW.QScrollArea ):
         pass
         
     
-    def GetDefaultEmptyMediaPanel( self ) -> ClientGUIResults.MediaPanel:
+    def GetDefaultEmptyMediaPanel( self, win: QW.QWidget ) -> ClientGUIResults.MediaPanel:
         
-        panel = ClientGUIResults.MediaPanelThumbnails( self._page, self._page_key, self._management_controller, [] )
+        panel = ClientGUIResults.MediaPanelThumbnails( win, self._page_key, self._management_controller, [] )
         
         status = self._GetDefaultEmptyPageStatusOverride()
         
