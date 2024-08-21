@@ -935,35 +935,34 @@ def DeleteAllNotebookPages( notebook ):
         
     
 def SplitVertically( splitter: QW.QSplitter, w1, w2, hpos ):
-
-    splitter.setOrientation( QC.Qt.Horizontal )
-
+    
     if w1.parentWidget() != splitter:
         
         splitter.addWidget( w1 )
+        
 
     w1.setVisible( True )
 
     if w2.parentWidget() != splitter:
         
         splitter.addWidget( w2 )
+        
 
     w2.setVisible( True )
-
+    
     total_sum = sum( splitter.sizes() )
 
     if hpos < 0:
-
+        
         splitter.setSizes( [ total_sum + hpos, -hpos ] )
-
+        
     elif hpos > 0:
         
         splitter.setSizes( [ hpos, total_sum - hpos ] )
-
+        
+    
 
 def SplitHorizontally( splitter: QW.QSplitter, w1, w2, vpos ):
-    
-    splitter.setOrientation( QC.Qt.Vertical )
     
     if w1.parentWidget() != splitter:
         
@@ -974,6 +973,7 @@ def SplitHorizontally( splitter: QW.QSplitter, w1, w2, vpos ):
     if w2.parentWidget() != splitter:
         
         splitter.addWidget( w2 )
+        
 
     w2.setVisible( True )
     
@@ -986,6 +986,7 @@ def SplitHorizontally( splitter: QW.QSplitter, w1, w2, vpos ):
     elif vpos > 0:
         
         splitter.setSizes( [ vpos, total_sum - vpos ] )
+        
 
 class GridLayout( QW.QGridLayout ):
     

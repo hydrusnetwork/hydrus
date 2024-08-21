@@ -7,15 +7,28 @@ from qtpy import QtWidgets as QW
 from hydrus.client import ClientGlobals as CG
 
 def highlight_result_text( result_text: str, query_text: str ):
-
+    
     result_text = escape( result_text )
     
     if query_text:
-
+        
+        query_text = escape( query_text )
+        
+        if query_text not in result_text:
+            
+            query_text = query_text.casefold()
+            
+            if query_text not in result_text:
+                
+                result_text = result_text.casefold() # last ditch attempt
+                
+            
+        
         result_text = result_text.replace( escape( query_text ), '<b>' + escape( query_text ) + '</b>' )
+        
     
     return result_text
-
+    
 
 # Subclass for customizing icon paths
 class CalculatorSearchProvider( QCalculatorSearchProvider ):
@@ -77,6 +90,8 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
     # Should generate a list of QLocatorSearchResults
     def processQuery( self, query: str, context, jobID: int ):
         
+        query_casefold = query.casefold()
+        
         self.result_ids_to_pages = {}
         
         if not CG.client_controller.gui or not CG.client_controller.gui._notebook:
@@ -103,7 +118,7 @@ class PagesSearchProvider( QAbstractLocatorSearchProvider ):
                     
                     label = selectable_media_page.GetNameForMenu()
                     
-                    if query in label:
+                    if query_casefold in label.casefold():
                         
                         primary_text = highlight_result_text( label, query )
                         secondary_text = 'top level page' if not parent_name else  "child of '" + escape( parent_name ) + "'"
@@ -193,6 +208,8 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
 
     def processQuery( self, query: str, context, jobID: int ):
         
+        query_casefold = query.casefold()
+        
         if not CG.client_controller.new_options.GetBoolean( 'command_palette_show_main_menu' ):
             
             return
@@ -229,7 +246,7 @@ class MainMenuSearchProvider( QAbstractLocatorSearchProvider ):
                     
                 else:
                     
-                    if query not in action.text() and query not in actionText:
+                    if query_casefold not in action.text().casefold() and query_casefold not in actionText.casefold():
                         
                         continue
                         
@@ -314,6 +331,8 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
 
     def processQuery( self, query: str, context, jobID: int ):
         
+        query_casefold = query.casefold()
+        
         if not CG.client_controller.new_options.GetBoolean( 'command_palette_show_media_menu' ):
             
             return
@@ -337,6 +356,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
             
             return
             
+        
         self.menu = media_page._media_panel.ShowMenu( True )
         
         # helper function to traverse menu and generate entries
@@ -358,7 +378,7 @@ class MediaMenuSearchProvider( QAbstractLocatorSearchProvider ):
                     
                 else:
                     
-                    if query not in action.text() and query not in actionText:
+                    if query_casefold not in action.text().casefold() and query_casefold not in actionText.casefold():
                         
                         continue
                     

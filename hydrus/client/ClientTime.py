@@ -59,6 +59,13 @@ def ParseDate( date_string: str ):
     
     if dt is None:
         
+        # '7/18/2023 8:32:00AM' will not parse if the locale is 'pl', seems to be a 24-hour clock thing
+        # since most non-locale timestamps will be EN, let's do this as fallback
+        dt = dateparser.parse( date_string, languages = ['en'] )
+        
+    
+    if dt is None:
+        
         raise Exception( 'Sorry, could not parse that date!' )
         
     

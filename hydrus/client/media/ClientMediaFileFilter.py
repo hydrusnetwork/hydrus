@@ -1,4 +1,5 @@
 import itertools
+import traceback
 import typing
 
 from hydrus.core import HydrusConstants as HC
@@ -484,6 +485,10 @@ def FilterAndReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Me
     
 
 def ReportDeleteLockFailures( medias: typing.Collection[ ClientMedia.Media ] ):
+    
+    HydrusData.Print( 'Hey, we had a delete-lock problem, here is the stack, which hydev may care to see:' )
+    
+    traceback.print_stack()
     
     job_status = ClientThreading.JobStatus()
     

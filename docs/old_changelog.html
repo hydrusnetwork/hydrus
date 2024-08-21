@@ -35,6 +35,29 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_587"><a href="#version_587">version 587</a></h2>
+                    <ul>
+                        <li><h3>all misc this week</h3></li>
+                        <li>I made a second stupid typo last week. it raised an error when trying to open the 'manage tag display and search' dialog! it was fixed thanks to a user</li>
+                        <li>the current local file domains of a file (e.g. 'my files') are now simply listed in the top-right hover window, above any remote locations or URLs. I think I'm going to make these checkboxes or something in future so we can have one-click file migrations</li>
+                        <li>if you set up a _share-&gt;export files_ job and one of the internal files is actually missing, the error message now tells you to go check for missing files using the database file maintenance stuff</li>
+                        <li>if an export files job that is set to delete internal files breaks half way through, the routine now makes sure only to delete what was actually successful</li>
+                        <li>subscriptions now catch program shutdown signals better. previously, this was being handled as an unknown error and delay times and error texts were being set. it now just closes cleanly, no worries</li>
+                        <li>the command palette should now match case-insensitively</li>
+                        <li>I _may_ have fixed a false-positive delete-lock report ('could not delete files xyz because of delete lock') that can happen in the duplicate filter. also, the 'unable to delete file' popup that happens in this case now quietly prints the current stack to log, which I would be interested in seeing</li>
+                        <li>I believe I have fixed several of the false-positive 'hey it looks like you edited this parser, are you sure you want to cancel?' confirmations in the edit parser dialog</li>
+                        <li>the automatic datestring parsing routine should now be more resilient against english datestrings when the locale differs significantly (it seems if the locale requires a 24-hour clock, it may be a problem for AM/PM time strings)</li>
+                        <li>cleaned up some ancient-and-terrible sash-sizing code that manages the three resizable panels of each media results page. hopefully I fixed an issue in Docker and other places where the media page could spawn with a 0-pixel-wide thumbnail panel</li>
+                        <li>fixed a weird/stupid bug with the new scanbar that would sometimes start giving errors on media transitions because it couldn't find its media parent</li>
+                        <li>improved how a core UI job waits on the database to be free. it now uses just a little less CPU/fewer thread switches</li>
+                        <li>improved how that same UI job waits on the pubsub system to be free, same deal</li>
+                        <li>since they reversed the API click-through requirement, removed the 8chan TOS click-through login script from the defaults. existing users will see it set to non-active. 8chan thread watching should work out the box again</li>
+                        <li><h3>new list stuff</h3></li>
+                        <li>I worked on a new multi-column list class that uses a more intelligent data model. I basically finished it, but I will not launch it yet--it needs a bunch more testing and debugging</li>
+                        <li>as a side thing, a variety of list display update calls, even on the old list, are now a little faster</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_586"><a href="#version_586">version 586</a></h2>
                     <ul>
                         <li><h3>faster sibling/parent fetching</h3></li>

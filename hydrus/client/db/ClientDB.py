@@ -10641,6 +10641,30 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 586:
+            
+            try:
+                
+                login_manager: ClientNetworkingLogin.NetworkLoginManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_LOGIN_MANAGER )
+                
+                login_manager.Initialise()
+                
+                login_manager.SetActive( '8chan.moe', '8chan.moe TOS click-through', False )
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( login_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some login stuff failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

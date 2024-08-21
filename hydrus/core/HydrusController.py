@@ -926,21 +926,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
     
     def WaitUntilDBEmpty( self ) -> None:
         
-        while True:
-            
-            if HG.model_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            elif self.db.JobsQueueEmpty() and not self.db.CurrentlyDoingJob():
-                
-                return
-                
-            else:
-                
-                time.sleep( 0.00001 )
-                
-            
+        self.db.WaitUntilFree()
         
     
     def WaitUntilModelFree( self ) -> None:
@@ -952,17 +938,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
     
     def WaitUntilPubSubsEmpty( self ):
         
-        while self.CurrentlyPubSubbing():
-            
-            if HG.model_shutdown:
-                
-                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
-                
-            else:
-                
-                time.sleep( 0.00001 )
-                
-            
+        self._pubsub.WaitUntilFree()
         
     
     def WakeDaemon( self, name ):

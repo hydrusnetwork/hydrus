@@ -2251,7 +2251,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
                 
             else:
                 
-                sort_data_has_changed = self._gallery_importers_listctrl.UpdateDatas()
+                sort_data_has_changed = self._gallery_importers_listctrl.UpdateDatas( check_for_changed_sort_data = True )
                 
                 if sort_data_has_changed:
                     
@@ -3385,7 +3385,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
                 
             else:
                 
-                sort_data_has_changed = self._watchers_listctrl.UpdateDatas()
+                sort_data_has_changed = self._watchers_listctrl.UpdateDatas( check_for_changed_sort_data = True )
                 
                 if sort_data_has_changed:
                     

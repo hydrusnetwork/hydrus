@@ -1461,16 +1461,6 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
             
         
     
-    def Reset( self ):
-        
-        for query_header in self._query_headers:
-            
-            query_header.Reset()
-            
-        
-        self.ScrubDelay()
-        
-    
     def RetryFailed( self ):
         
         for query_header in self._query_headers:
@@ -1627,9 +1617,15 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 self._SyncQueryLogContainers()
                 
+            except HydrusExceptions.ShutdownException:
+                
+                HydrusData.Print( f'Exiting subscription "{self._name}" due to program shutdown.' )
+                
+                return
+                
             except Exception as e:
                 
-                HydrusData.ShowText( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
+                HydrusData.ShowText( f'The subscription "{self._name}" encountered an exception when trying to sync:' )
                 HydrusData.ShowException( e )
                 
                 self._paused = True
@@ -1672,7 +1668,7 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 delay = CG.client_controller.new_options.GetInteger( 'subscription_network_error_delay' )
                 
-                HydrusData.Print( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
+                HydrusData.Print( f'The subscription "{self._name}" encountered an exception when trying to sync:' )
                 
                 HydrusData.Print( e )
                 
@@ -1682,9 +1678,13 @@ class Subscription( HydrusSerialisable.SerialisableBaseNamed ):
                 
                 time.sleep( 5 )
                 
+            except HydrusExceptions.ShutdownException:
+                
+                HydrusData.Print( f'Exiting subscription "{self._name}" due to program shutdown.' )
+                
             except Exception as e:
                 
-                HydrusData.ShowText( 'The subscription ' + self._name + ' encountered an exception when trying to sync:' )
+                HydrusData.ShowText( f'The subscription "{self._name}" encountered an exception when trying to sync:' )
                 HydrusData.ShowException( e )
                 
                 delay = CG.client_controller.new_options.GetInteger( 'subscription_other_error_delay' )
@@ -1793,6 +1793,7 @@ class SubscriptionJob( object ):
             
         
     
+
 class SubscriptionsManager( object ):
     
     def __init__( self, controller, subscriptions: typing.List[ Subscription ] ):

@@ -31,10 +31,1398 @@ def SafeNoneInt( value ):
     
     return -1 if value is None else value
     
+
 def SafeNoneStr( value ):
     
     return '' if value is None else value
     
+
+# note that this AbstractItemModel can support nested folder stuff, with some work. we'd prob want to move to a data storage system that actuall was a tree, rather than this indices-to-data stuff
+class HydrusListItemModel( QC.QAbstractItemModel ):
+    
+    def __init__( self, parent: QW.QWidget, column_list_type, data_to_display_tuple_func: typing.Callable, data_to_sort_tuple_func: typing.Callable, column_types_to_name_overrides = None ):
+        
+        QC.QAbstractItemModel.__init__( self, parent )
+        
+        if column_types_to_name_overrides is None:
+            
+            column_types_to_name_overrides = {}
+            
+        
+        # an obvious extention here is to no longer use tuples for the main data/sort/display storage stuff, but dicts that do column_type->data, and then we can do dynamic column hiding and stuff and just do dict lookups
+        
+        self._column_list_type = column_list_type
+        self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        
+        self._column_types_to_name_overrides = column_types_to_name_overrides
+        
+        self._data_to_display_tuple_func = data_to_display_tuple_func
+        self._data_to_sort_tuple_func = data_to_sort_tuple_func
+        
+        self._indices_to_data = {}
+        self._data_to_indices = {}
+        self._data_to_display_tuples = {}
+        self._data_to_sort_tuples = {}
+        
+        self._sort_column_type = 0
+        
+    
+    def _ConvertCurrentColumnIntToColumnType( self, column: int ) -> int:
+        
+        # if and when this guy supports column hiding and rearranging, it'll all, fingers crossed, just work with minimal extra finagling
+        # yo actually it seems TreeView does columnHidden gubbins by itself, so the answer here is just to do a ton of testing
+        
+        return self._column_list_status.GetColumnTypeFromIndex( column )
+        
+    
+    def _RecalculateIndicesAfterDelete( self ):
+        
+        data_sorted = sorted( self._indices_to_data.items() )
+        
+        self._indices_to_data = {}
+        self._data_to_indices = {}
+        
+        for ( index, ( old_index, data ) ) in enumerate( data_sorted ):
+            
+            self._data_to_indices[ data ] = index
+            self._indices_to_data[ index ] = data
+            
+        
+    
+    def AddDatas( self, datas ):
+        
+        insert_index = len( self._indices_to_data )
+        
+        self.beginInsertRows( QC.QModelIndex(), insert_index, insert_index + ( len( datas ) - 1 ) )
+        
+        for data in datas:
+            
+            if data in self._data_to_indices:
+                
+                continue
+                
+            
+            self._indices_to_data[ insert_index ] = data
+            self._data_to_indices[ data ] = insert_index
+            
+            insert_index += 1
+            
+        
+        self.endInsertRows()
+        
+    
+    def columnCount( self, parent = QC.QModelIndex() ):
+        
+        return self._column_list_status.GetColumnCount()
+        
+    
+    def data( self, index: QC.QModelIndex, role = QC.Qt.DisplayRole ):
+        
+        if not index.isValid():
+            
+            return None
+            
+        
+        if role in ( QC.Qt.DisplayRole, QC.Qt.ToolTipRole ):
+            
+            column_type = self._ConvertCurrentColumnIntToColumnType( index.column() )
+            
+            data = self._indices_to_data[ index.row() ]
+            
+            if data not in self._data_to_display_tuples:
+                
+                display_tuple = self._data_to_display_tuple_func( data )
+                
+                display_tuple = tuple( ( HydrusText.GetFirstLine( t ) for t in display_tuple ) )
+                
+                self._data_to_display_tuples[ data ] = display_tuple
+                
+            
+            return self._data_to_display_tuples[ data ][ column_type ]
+            
+        elif role == QC.Qt.UserRole:
+            
+            return self._indices_to_data[ index.row() ] # same data no matter the column in this system!
+            
+        
+        return None
+        
+    
+    def DeleteDatas( self, deletee_datas ):
+        
+        deletee_indices = [ self._data_to_indices[ data ] for data in deletee_datas ]
+        
+        if len( deletee_indices ) == 0:
+            
+            return
+            
+        
+        start = min( deletee_indices )
+        end = max( deletee_indices )
+        
+        self.beginRemoveRows( QC.QModelIndex(), start, end )
+        
+        for data in deletee_datas:
+            
+            if data in self._data_to_indices:
+                
+                del self._data_to_indices[ data ]
+                
+            
+            if data in self._data_to_sort_tuples:
+                
+                del self._data_to_sort_tuples[ data ]
+                
+            
+            if data in self._data_to_display_tuples:
+                
+                del self._data_to_display_tuples[ data ]
+                
+            
+        
+        for index in deletee_indices:
+            
+            del self._indices_to_data[ index ]
+            
+        
+        self._RecalculateIndicesAfterDelete()
+        
+        self.endRemoveRows()
+        
+    
+    def flags( self, index: QC.QModelIndex ):
+        
+        if not index.isValid():
+            
+            return QC.Qt.NoItemFlags
+            
+        
+        return QC.Qt.ItemIsEnabled | QC.Qt.ItemIsSelectable
+        
+    
+    def GetData( self, indices: typing.Optional[ typing.Collection[ int ] ] = None ):
+        
+        if indices is None:
+            
+            return [ data for ( index, data ) in sorted( self._indices_to_data.items() ) ]
+            
+        else:
+            
+            return [ self._indices_to_data[ index ] for index in indices if index in self._indices_to_data ]
+            
+        
+    
+    def GetModelIndexFromData( self, data: object ):
+        
+        if data in self._data_to_indices:
+            
+            index = self._data_to_indices[ data ]
+            
+            return self.createIndex( index, 0, QC.QModelIndex() )
+            
+        else:
+            
+            return QC.QModelIndex()
+            
+        
+    
+    def HasData( self, data: object ):
+        
+        return data in self._data_to_indices
+        
+    
+    def headerData( self, section: int, orientation: QC.Qt.Orientation, role = QC.Qt.DisplayRole ):
+        
+        if orientation == QC.Qt.Vertical:
+            
+            return None
+            
+        
+        column_type = self._ConvertCurrentColumnIntToColumnType( section )
+        
+        if role in ( QC.Qt.DisplayRole, QC.Qt.ToolTipRole ):
+            
+            if column_type in self._column_types_to_name_overrides:
+                
+                name = self._column_types_to_name_overrides[ column_type ]
+                
+            else:
+                
+                name = CGLC.column_list_column_name_lookup[ self._column_list_type ][ column_type ]
+                
+            
+            return name
+            
+        elif role == QC.Qt.UserRole:
+            
+            return column_type
+            
+        else:
+            
+            return None
+            
+        
+    
+    def index( self, row: int, column: int, parent = QC.QModelIndex() ):
+        
+        if not self.hasIndex( row, column, parent ):
+            
+            return QC.QModelIndex()
+            
+        
+        return self.createIndex( row, column, parent )
+        
+    
+    def parent( self, index = QC.QModelIndex() ):
+        
+        # if we want clever nested stuff, we'll implement this, using stuff like QAbstractItemModel.createIndex
+        # otherwise everything is top layer flat list, so no extra dimension
+        return QC.QModelIndex()
+        
+    
+    def rowCount( self, parent = QC.QModelIndex() ):
+        
+        return len( self._indices_to_data )
+        
+    
+    def SetData( self, datas ):
+        
+        existing_datas = set( self._data_to_indices.keys() )
+        
+        # useful to preserve order here sometimes (e.g. export file path generation order)
+        datas_to_add = [ data for data in datas if data not in existing_datas ]
+        datas_to_update = [ data for data in datas if data in existing_datas ]
+        datas_to_delete = existing_datas.difference( datas )
+        
+        if len( datas_to_delete ) > 0:
+            
+            self.DeleteDatas( datas_to_delete )
+            
+        
+        if len( datas_to_update ) > 0:
+            
+            self.UpdateDatas( datas_to_update )
+            
+        
+        if len( datas_to_add ) > 0:
+            
+            self.AddDatas( datas_to_add )
+            
+        
+    
+    def sort( self, column: int, order: QC.Qt.SortOrder = QC.Qt.AscendingOrder ):
+        
+        self._sort_column_type = self._column_list_status.GetColumnTypeFromIndex( column )
+        
+        asc = order == QC.Qt.AscendingOrder
+        
+        # anything with busted None sort data gets appended to the end
+        no_sort_data_magic_reverso_index_failure = 1 if asc else -1
+        
+        def master_sort_key( data ):
+            
+            if data not in self._data_to_sort_tuples:
+                
+                sort_tuple = self._data_to_sort_tuple_func( data )
+                
+                self._data_to_sort_tuples[ data ] = sort_tuple
+                
+            
+            sort_tuple = self._data_to_sort_tuples[ data ]
+            
+            if sort_tuple is None:
+                
+                return ( no_sort_data_magic_reverso_index_failure, tuple(), tuple() )
+                
+            else:
+                
+                # TODO: when we do hidden/rearranged columns, there will be a question on how to arrange the fallback here. I guess a frozen tuple according to the current order, if that isn't too CPU crazy
+                # or just the first column or two!
+                return ( 0, sort_tuple[ column ], sort_tuple )
+                
+            
+        
+        try:
+            
+            datas_sorted = sorted( self._data_to_indices.keys(), key = master_sort_key, reverse = not asc )
+            
+        except Exception as e:
+            
+            datas_sorted = list( self._data_to_indices.keys() )
+            
+            HydrusData.ShowText( 'A multi-column list failed to sort! Please send hydrus dev the traceback!' )
+            HydrusData.ShowException( e )
+            
+        
+        self._indices_to_data = { index : data for ( index, data ) in enumerate( datas_sorted ) }
+        self._data_to_indices = { data : index for ( index, data ) in enumerate( datas_sorted ) }
+        
+        self.layoutChanged.emit()
+        
+    
+    def UpdateDatas( self, datas, check_for_changed_sort_data = False ):
+        
+        sort_data_has_changed = False
+        
+        try:
+            
+            existing_sort_index = self._column_list_status.GetColumnIndexFromType( self._sort_column_type )
+            
+        except:
+            
+            existing_sort_index = 0
+            
+        
+        for data in datas:
+            
+            index = self._data_to_indices[ data ]
+            
+            existing_data = self._indices_to_data[ index ]
+            
+            # catching an object that __eq__ with another but is actually a different lad--we want to swap the new one in
+            the_data_is_actually_a_different_object = data is not existing_data
+            
+            if the_data_is_actually_a_different_object:
+                
+                self._data_to_indices[ data ] = index
+                self._indices_to_data[ index ] = data
+                
+            
+            if data in self._data_to_display_tuples:
+                
+                del self._data_to_display_tuples[ data ]
+                
+            
+            if check_for_changed_sort_data and not sort_data_has_changed:
+                
+                if data in self._data_to_sort_tuples:
+                    
+                    existing_sort_tuple = self._data_to_sort_tuples[ data ]
+                    
+                    new_sort_tuple = self._data_to_sort_tuple_func( data )
+                    
+                    if existing_sort_tuple[ existing_sort_index ] != new_sort_tuple[ existing_sort_index ]:
+                        
+                        sort_data_has_changed = True
+                        
+                    
+                    self._data_to_sort_tuples[ data ] = new_sort_tuple
+                    
+                else:
+                    
+                    sort_data_has_changed = True
+                    
+                
+            else:
+                
+                if data in self._data_to_sort_tuples:
+                    
+                    del self._data_to_sort_tuples[ data ]
+                    
+                
+            
+            top_left = self.index( index, 0 )
+            bottom_right = self.index( index, self.columnCount() - 1 )
+            
+            self.dataChanged.emit( top_left, bottom_right, [ QC.Qt.DisplayRole, QC.Qt.ToolTipRole ] )
+            
+        
+        return sort_data_has_changed
+        
+    
+
+class BetterListCtrlTreeView( QW.QTreeView ):
+    
+    columnListContentsChanged = QC.Signal()
+    columnListStatusChanged = QC.Signal()
+    
+    def __init__( self, parent, column_list_type, height_num_chars, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, style = None, column_types_to_name_overrides = None ):
+        
+        QW.QTreeView.__init__( self, parent )
+        
+        self._have_shown_a_column_data_error = False
+        
+        self._creation_time = HydrusTime.GetNow()
+        
+        self._column_list_type = column_list_type
+        
+        self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        self._original_column_list_status = self._column_list_status
+        
+        self.setAlternatingRowColors( True )
+        self.setSortingEnabled( True )
+        self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        self.setRootIsDecorated( False )
+        
+        self._initial_height_num_chars = height_num_chars
+        self._forced_height_num_chars = None
+        
+        self._has_initialised_size = False
+        
+        self._use_simple_delete = use_simple_delete
+        self._has_done_deletes = False
+        self._can_delete_callback = can_delete_callback
+        
+        self._copy_rows_callable = None
+        
+        self._rows_menu_callable = None
+        
+        # DO NOT REARRANGE BRO
+        # This sets header data, so we can now do header-section-sizing gubbins
+        self.setModel( model )
+        
+        # old way
+        '''
+        #sizing_column_initial_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
+        total_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
+        
+        resize_column = 1
+        
+        for ( i, ( name, width_num_chars ) ) in enumerate( columns ):
+            
+            if width_num_chars == -1:
+                
+                width = -1
+                
+                resize_column = i + 1
+                
+            else:
+                
+                width = self.fontMetrics().boundingRect( 'x' * width_num_chars ).width()
+                
+                total_width += width
+                
+            
+            self.headerItem().setText( i, name )
+            
+            self.setColumnWidth( i, width )
+            
+        
+        # Technically this is the previous behavior, but the two commented lines might work better in some cases (?)
+        self.header().setStretchLastSection( False )
+        self.header().setSectionResizeMode( resize_column - 1 , QW.QHeaderView.Stretch )
+        #self.setColumnWidth( resize_column - 1, sizing_column_initial_width )
+        #self.header().setStretchLastSection( True )
+        
+        self.setMinimumWidth( total_width )
+        '''
+        
+        main_tlw = CG.client_controller.GetMainTLW()
+        
+        # if last section is set too low, for instance 3, the column seems unable to ever shrink from initial (expanded to fill space) size
+        #  _    _  ___  _    _    __     __   ___  
+        # ( \/\/ )(  _)( \/\/ )  (  )   (  ) (   \ 
+        #  \    /  ) _) \    /    )(__  /__\  ) ) )
+        #   \/\/  (___)  \/\/    (____)(_)(_)(___/ 
+        #
+        # I think this is because of mismatch between set size and min size! So ensuring we never set smaller than that initially should fix this???!?
+        
+        MIN_SECTION_SIZE_CHARS = 3
+        
+        self._min_section_width = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, MIN_SECTION_SIZE_CHARS )
+        
+        self.header().setMinimumSectionSize( self._min_section_width )
+        
+        last_column_index = self._column_list_status.GetColumnCount() - 1
+        
+        self.header().setStretchLastSection( True )
+        
+        for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
+            
+            self.headerItem().setData( i, QC.Qt.UserRole, column_type )
+            
+            if column_types_to_name_overrides is not None and column_type in column_types_to_name_overrides:
+                
+                name = column_types_to_name_overrides[ column_type ]
+                
+            else:
+                
+                name = CGLC.column_list_column_name_lookup[ self._column_list_type ][ column_type ]
+                
+            
+            self.headerItem().setText( i, name )
+            self.headerItem().setToolTip( i, ClientGUIFunctions.WrapToolTip( name ) )
+            
+            if i == last_column_index:
+                
+                width_chars = MIN_SECTION_SIZE_CHARS
+                
+            else:
+                
+                width_chars = self._column_list_status.GetColumnWidth( column_type )
+                
+            
+            width_chars = max( width_chars, MIN_SECTION_SIZE_CHARS )
+            
+            # ok this is a pain in the neck issue, but fontmetrics changes afte widget init. I guess font gets styled on top afterwards
+            # this means that if I use this window's fontmetrics here, in init, then it is different later on, and we get creeping growing columns lmao
+            # several other places in the client are likely affected in different ways by this also!
+            width_pixels = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, width_chars )
+            
+            self.setColumnWidth( i, width_pixels )
+            
+        
+        self._delete_key_callback = delete_key_callback
+        self._activation_callback = activation_callback
+        
+        self.Sort()
+        
+        self._widget_event_filter = QP.WidgetEventFilter( self )
+        self._widget_event_filter.EVT_KEY_DOWN( self.EventKeyDown )
+        
+        self.itemDoubleClicked.connect( self.ProcessActivateAction )
+        
+        self.header().setSectionsMovable( False ) # can only turn this on when we move from data/sort tuples
+        # self.header().setFirstSectionMovable( True ) # same
+        #self.header().setSectionsClickable( True )
+        #self.header().sectionClicked.connect( self.EventColumnClick )
+        
+        #self.header().sectionMoved.connect( self._DoStatusChanged ) # same
+        self.header().sectionResized.connect( self._SectionsResized )
+        
+        self.header().setContextMenuPolicy( QC.Qt.CustomContextMenu )
+        self.header().customContextMenuRequested.connect( self._ShowHeaderMenu )
+        
+        CG.client_controller.CallAfterQtSafe( self, 'initialising multi-column list widths', self._InitialiseColumnWidths )
+        
+        CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_all_listctrl_status' )
+        CG.client_controller.sub( self, 'NotifySettingsUpdated', 'reset_listctrl_status' )
+        
+    
+    def _InitialiseColumnWidths( self ):
+        
+        MIN_SECTION_SIZE_CHARS = 3
+        
+        main_tlw = CG.client_controller.GetMainTLW()
+        
+        last_column_index = self._column_list_status.GetColumnCount() - 1
+        
+        for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
+            
+            if i == last_column_index:
+                
+                width_chars = MIN_SECTION_SIZE_CHARS
+                
+            else:
+                
+                width_chars = self._column_list_status.GetColumnWidth( column_type )
+                
+            
+            width_chars = max( width_chars, MIN_SECTION_SIZE_CHARS )
+            
+            # ok this is a pain in the neck issue, but fontmetrics changes afte widget init. I guess font gets styled on top afterwards
+            # this means that if I use this window's fontmetrics here, in init, then it is different later on, and we get creeping growing columns lmao
+            # several other places in the client are likely affected in different ways by this also!
+            width_pixels = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, width_chars )
+            
+            self.setColumnWidth( i, width_pixels )
+            
+        
+        self._has_initialised_size = True
+        
+    
+    def _DoStatusChanged( self ):
+        
+        self._column_list_status = self._GenerateCurrentStatus()
+        
+        CG.client_controller.column_list_manager.SaveStatus( self._column_list_status )
+        
+    
+    def _GenerateCurrentStatus( self ) -> ClientGUIListStatus.ColumnListStatus:
+        
+        status = ClientGUIListStatus.ColumnListStatus()
+        
+        status.SetColumnListType( self._column_list_type )
+        
+        main_tlw = CG.client_controller.GetMainTLW()
+        
+        columns = []
+        
+        header = self.header()
+        
+        num_columns = header.count()
+        
+        last_column_index = num_columns - 1
+        
+        # ok, the big pain in the ass situation here is getting a precise last column size that is reproduced on next dialog launch
+        # ultimately, with fuzzy sizing, style padding, scrollbars appearing, and other weirdness, the more precisely we try to define it, the more we will get dialogs that grow/shrink by a pixel each time
+        # *therefore*, the actual solution here is to move to snapping with a decent snap distance. the user loses size setting precision, but we'll snap back to a decent size every time, compensating for fuzz
+        
+        LAST_COLUMN_SNAP_DISTANCE_CHARS = 5
+        
+        total_fixed_columns_width = 0
+        
+        for visual_index in range( num_columns ):
+            
+            logical_index = header.logicalIndex( visual_index )
+            
+            column_type = self.header().data( logical_index, QC.Qt.UserRole )
+            width_pixels = header.sectionSize( logical_index )
+            shown = not header.isSectionHidden( logical_index )
+            
+            if visual_index == last_column_index:
+                
+                # testing if scrollbar is visible is unreliable, since we don't know if it is laid out correct yet (we could be doing that now!)
+                # so let's just hack it
+                
+                width_pixels = self.width() - ( self.frameWidth() * 2 ) - total_fixed_columns_width
+                
+            else:
+                
+                total_fixed_columns_width += width_pixels
+                
+            
+            width_chars = ClientGUIFunctions.ConvertPixelsToTextWidth( main_tlw, width_pixels )
+            
+            if visual_index == last_column_index:
+                
+                # here's the snap magic. final width_chars is always a multiple of 5
+                width_chars = round( width_chars / LAST_COLUMN_SNAP_DISTANCE_CHARS ) * LAST_COLUMN_SNAP_DISTANCE_CHARS
+                
+            
+            columns.append( ( column_type, width_chars, shown ) )
+            
+        
+        status.SetColumns( columns )
+        
+        sort_column = self.header().sortIndicatorSection()
+        order = self.header().sortIndicatorOrder()
+        
+        sort_column_type = status.GetColumnTypeFromIndex( sort_column )
+        sort_asc = order == QC.Qt.AscendingOrder
+        
+        status.SetSort( sort_column_type, sort_asc )
+        
+        return status
+        
+    
+    def _GetDisplayAndSortTuples( self, data ):
+        
+        try:
+            
+            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            
+        except Exception as e:
+            
+            if not self._have_shown_a_column_data_error:
+                
+                HydrusData.ShowText( 'A multi-column list was unable to generate text or sort data for one or more rows! Please send hydrus dev the traceback!' )
+                HydrusData.ShowException( e )
+                
+                self._have_shown_a_column_data_error = True
+                
+            
+            error_display_tuple = [ 'unable to display' for i in range( self._column_list_status.GetColumnCount() ) ]
+            
+            return ( error_display_tuple, None )
+            
+        
+        better_sort = []
+        
+        for item in sort_tuple:
+            
+            if isinstance( item, str ):
+                
+                item = HydrusData.HumanTextSortKey( item )
+                
+            
+            better_sort.append( item )
+            
+        
+        sort_tuple = tuple( better_sort )
+        
+        return ( display_tuple, sort_tuple )
+        
+    
+    def _GetRowHeightEstimate( self ):
+        
+        if self.topLevelItemCount() > 0:
+            
+            height = self.rowHeight( self.indexFromItem( self.topLevelItem( 0 ) ) )
+            
+        else:
+            
+            ( width_gumpf, height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, 1 ) )
+            
+        
+        return height
+        
+    
+    def _GetSelectedIndices( self ) -> typing.List[ int ]:
+        
+        return sorted( ( index.row() for index in self.selectionModel().selectedIndexes() ) )
+        
+    
+    def _IterateTopLevelItems( self ) -> typing.Iterator[ QW.QTreeWidgetItem ]:
+        
+        for i in range( self.topLevelItemCount() ):
+            
+            yield self.topLevelItem( i )
+            
+        
+    
+    def _RecalculateIndicesAfterDelete( self ):
+        
+        indices_and_data_info = sorted( self._indices_to_data_info.items() )
+        
+        self._indices_to_data_info = {}
+        self._data_to_indices = {}
+        
+        for ( index, ( old_index, data_info ) ) in enumerate( indices_and_data_info ):
+            
+            ( data, display_tuple, sort_tuple ) = data_info
+            
+            self._data_to_indices[ data ] = index
+            self._indices_to_data_info[ index ] = data_info
+            
+        
+    
+    def _RefreshHeaderNames( self ):
+        
+        for i in range( self.header().count() ):
+            
+            column_type = self.headerItem().data( i, QC.Qt.UserRole )
+            
+            name = CGLC.column_list_column_name_lookup[ self._column_list_type ][ column_type ]
+            
+            if column_type == self._sort_column_type:
+                
+                char = '\u25B2' if self._sort_asc else '\u25BC'
+                
+                name_for_title = '{} {}'.format( name, char )
+                
+            else:
+                
+                name_for_title = name
+                
+            
+            self.headerItem().setText( i, name_for_title )
+            self.headerItem().setToolTip( i, ClientGUIFunctions.WrapToolTip( name ) )
+            
+        
+    
+    def _SectionsResized( self, logical_index, old_size, new_size ):
+        
+        if self._has_initialised_size:
+            
+            self._DoStatusChanged()
+            
+            self.updateGeometry()
+            
+        
+    
+    def _ShowHeaderMenu( self ):
+        
+        menu = ClientGUIMenus.GenerateMenu( self )
+        
+        name = CGLC.column_list_type_name_lookup[ self._column_list_type ]
+        
+        ClientGUIMenus.AppendMenuItem( menu, f'reset default column widths for "{name}" lists', 'Reset the column widths and other display settings for all lists of this type', CG.client_controller.column_list_manager.ResetToDefaults, self._column_list_type )
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
+    def _ShowRowsMenu( self ):
+        
+        if self._rows_menu_callable is None:
+            
+            return
+            
+        
+        try:
+            
+            menu = self._rows_menu_callable()
+            
+        except HydrusExceptions.DataMissing:
+            
+            return
+            
+        
+        CGC.core().PopupMenu( self, menu )
+        
+    
+    def _UpdateRow( self, index, display_tuple ):
+        
+        for ( column_index, value ) in enumerate( display_tuple ):
+            
+            tree_widget_item = self.topLevelItem( index )
+            
+            first_line = HydrusText.GetFirstLine( value )
+            existing_value = tree_widget_item.text( column_index )
+            
+            if existing_value != first_line:
+                
+                tree_widget_item.setText( column_index, first_line )
+                tree_widget_item.setToolTip( column_index, ClientGUIFunctions.WrapToolTip( value ) )
+                
+            
+        
+    
+    def AddDatas( self, datas: typing.Iterable[ object ], select_sort_and_scroll = False ):
+        
+        datas = list( datas )
+        
+        if len( datas ) == 0:
+            
+            return
+            
+        
+        datas = QP.ListsToTuples( datas )
+        
+        self.model().AddDatas( datas )
+        
+        if select_sort_and_scroll:
+            
+            self.SelectDatas( datas, deselect_others = True )
+            
+            self.Sort()
+            
+            first_data = sorted( ( ( self._data_to_indices[ data ], data ) for data in datas ) )[0][1]
+            
+            self.ScrollToData( first_data )
+            
+        
+        self.columnListContentsChanged.emit()
+        
+    
+    def AddRowsMenuCallable( self, menu_callable ):
+        
+        self._rows_menu_callable = menu_callable
+        
+        self.setContextMenuPolicy( QC.Qt.CustomContextMenu )
+        self.customContextMenuRequested.connect( self.EventShowMenu )
+        
+    
+    def DeleteDatas( self, deletee_datas: typing.Iterable[ object ] ):
+        
+        deletee_datas = [ QP.ListsToTuples( data ) for data in deletee_datas ]
+        
+        self.model().DeleteDatas( deletee_datas )
+        
+        self.columnListContentsChanged.emit()
+        
+        self._has_done_deletes = True
+        
+    
+    def DeleteSelected( self ):
+        
+        deletee_datas = self.GetData( only_selected = True )
+        
+        self.DeleteDatas( deletee_datas )
+        
+    
+    def EventItemActivated( self, item, column ):
+        
+        if self._activation_callback is not None:
+            
+            try:
+                
+                self._activation_callback()
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+            
+        
+    
+    def EventKeyDown( self, event ):
+        
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in ClientGUIShortcuts.DELETE_KEYS_QT:
+            
+            self.ProcessDeleteAction()
+            
+        elif key in ( QC.Qt.Key_Enter, QC.Qt.Key_Return ):
+            
+            self.ProcessActivateAction()
+            
+        elif key in ( ord( 'A' ), ord( 'a' ) ) and modifier == QC.Qt.ControlModifier:
+            
+            self.selectAll()
+            
+        elif key in ( ord( 'C' ), ord( 'c' ) ) and modifier == QC.Qt.ControlModifier:
+            
+            if self._copy_rows_callable is None:
+                
+                return True
+                
+            else:
+                
+                copyable_texts = self._copy_rows_callable()
+                
+                if len( copyable_texts ) == 0:
+                    
+                    return True
+                    
+                else:
+                    
+                    CG.client_controller.pub( 'clipboard', 'text', '\n'.join( copyable_texts ) )
+                    
+                
+            
+        else:
+            
+            return True # was: event.ignore()
+            
+        
+    
+    def EventShowMenu( self ):
+        
+        QP.CallAfter( self._ShowRowsMenu )
+        
+    
+    def ForceHeight( self, rows ):
+        
+        self._forced_height_num_chars = rows
+        
+        self.updateGeometry()
+        
+        # +2 for the header row and * 1.25 for magic rough text-to-rowheight conversion
+        
+        #existing_min_width = self.minimumWidth()
+        
+        #( width_gumpf, ideal_client_height ) = ClientGUIFunctions.ConvertTextToPixels( self, ( 20, int( ( ideal_rows + 2 ) * 1.25 ) ) )
+        
+        #QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
+        
+    
+    def GetData( self, only_selected = False ) -> list:
+        
+        if only_selected:
+            
+            indices = self._GetSelectedIndices()
+            
+            return self.model().GetData( indices = indices )
+            
+        else:
+            
+            return self.model().GetData()
+            
+        
+    
+    def GetTopSelectedData( self ) -> typing.Optional[ object ]:
+        
+        indices = self._GetSelectedIndices()
+        
+        if len( indices ) > 0:
+            
+            top_index = min( indices )
+            
+            result = self.model().GetData( ( top_index, ) )
+            
+            if len( result ) > 0:
+                
+                return result[ 0 ]
+                
+            
+        
+        return None
+        
+    
+    def HasData( self, data: object ):
+        
+        data = QP.ListsToTuples( data )
+        
+        return self.model().HasData( data )
+        
+    
+    def HasDoneDeletes( self ):
+        
+        return self._has_done_deletes
+        
+    
+    def HasOneSelected( self ):
+        
+        return len( self.selectionModel().selectedIndexes() ) == 1
+        
+    
+    def HasSelected( self ):
+        
+        return len( self.selectionModel().selectedIndexes() ) > 0
+        
+    
+    def NotifySettingsUpdated( self, column_list_type = None ):
+        
+        if column_list_type is not None and column_list_type != self._column_list_type:
+            
+            return
+            
+        
+        self.blockSignals( True )
+        self.header().blockSignals( True )
+        
+        self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
+        self._original_column_list_status = self._column_list_status
+        
+        #
+        
+        ( self._sort_column_type, self._sort_asc ) = self._column_list_status.GetSort()
+        
+        #
+        
+        main_tlw = CG.client_controller.GetMainTLW()
+        
+        MIN_SECTION_SIZE_CHARS = 3
+        
+        last_column_index = self._column_list_status.GetColumnCount() - 1
+        
+        for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
+            
+            if i == last_column_index:
+                
+                width_chars = MIN_SECTION_SIZE_CHARS
+                
+            else:
+                
+                width_chars = self._column_list_status.GetColumnWidth( column_type )
+                
+            
+            width_chars = max( width_chars, MIN_SECTION_SIZE_CHARS )
+            
+            width_pixels = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, width_chars )
+            
+            self.setColumnWidth( i, width_pixels )
+            
+        
+        self.header().blockSignals( False )
+        self.blockSignals( False )
+        
+        #
+        
+        self.Sort() # note this saves the current status, so don't do it until we resize stuff
+        
+    
+    def ProcessActivateAction( self ):
+        
+        if self._activation_callback is not None:
+            
+            try:
+                
+                self._activation_callback()
+                
+            except Exception as e:
+                
+                HydrusData.ShowException( e )
+                
+            
+        
+    
+    def ProcessDeleteAction( self ):
+        
+        if self._can_delete_callback is not None:
+            
+            if not self._can_delete_callback():
+                
+                return
+                
+            
+        
+        if self._use_simple_delete:
+            
+            self.ShowDeleteSelectedDialog()
+            
+        elif self._delete_key_callback is not None:
+            
+            self._delete_key_callback()
+            
+        
+    
+    def ScrollToData( self, data: object ):
+        
+        data = QP.ListsToTuples( data )
+        
+        model_index = self.model().GetModelIndexFromData( data )
+        
+        if model_index.isValid():
+            
+            self.scrollTo( model_index, hint = QW.QAbstractItemView.ScrollHint.PositionAtCenter )
+            
+            self.setFocus( QC.Qt.OtherFocusReason )
+            
+        
+    
+    def SelectDatas( self, datas: typing.Iterable[ object ], deselect_others = False ):
+        
+        selectee_datas = { QP.ListsToTuples( data ) for data in datas }
+        
+        current_selection = self.GetData( only_selected = True )
+        
+        model = self.model()
+        selection_model = self.selectionModel()
+        
+        if deselect_others:
+            
+            deselectee_datas = set( current_selection ).difference( selectee_datas )
+            
+            for data in deselectee_datas:
+                
+                model_index = model.GetModelIndexFromData( data )
+                
+                selection_model.select( model_index, QC.QItemSelectionModel.Clear | QC.QItemSelectionModel.Rows )
+                
+            
+        
+        selectee_datas.difference_update( current_selection )
+        
+        for data in selectee_datas:
+            
+            model_index = model.GetModelIndexFromData( data )
+            
+            selection_model.select( model_index, QC.QItemSelectionModel.Select | QC.QItemSelectionModel.Rows )
+            
+        
+    
+    def SetCopyRowsCallable( self, copy_rows_callable ):
+        
+        self._copy_rows_callable = copy_rows_callable
+        
+    
+    def SetData( self, datas: typing.Iterable[ object ] ):
+        
+        datas = [ QP.ListsToTuples( data ) for data in datas ]
+        
+        self.model().SetData( datas )
+        
+        self.Sort()
+        
+        self.columnListContentsChanged.emit()
+        
+    
+    def ShowDeleteSelectedDialog( self ):
+        
+        from hydrus.client.gui import ClientGUIDialogsQuick
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self.DeleteSelected()
+            
+        
+    
+    def minimumSizeHint( self ):
+        
+        width = 0
+        
+        for i in range( self.columnCount() - 1 ):
+            
+            width += self.columnWidth( i )
+            
+        
+        width += self._min_section_width # the last column
+        
+        width += self.frameWidth() * 2
+        
+        if self._forced_height_num_chars is None:
+            
+            min_num_rows = 4
+            
+        else:
+            
+            min_num_rows = self._forced_height_num_chars
+            
+        
+        header_size = self.header().sizeHint() # this is better than min size hint for some reason ?( 69, 69 )?
+        
+        data_area_height = self._GetRowHeightEstimate() * min_num_rows
+        
+        PADDING = 10
+        
+        min_size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
+        
+        return min_size_hint
+        
+    
+    def resizeEvent( self, event ):
+        
+        result = QW.QTreeWidget.resizeEvent( self, event )
+        
+        # do not touch this! weird hack that fixed a new bug in 6.6.1 where all columns would reset on load to 100px wide!
+        if self._has_initialised_size:
+            
+            self._DoStatusChanged()
+            
+        
+        return result
+        
+    
+    def sizeHint( self ):
+        
+        width = 0
+        
+        width += self.frameWidth() * 2
+        
+        # all but last column
+        
+        for i in range( self.model().columnCount() - 1 ):
+            
+            width += self.columnWidth( i )
+            
+        
+        #
+        
+        # ok, we are going full slippery dippery doo now
+        # the issue is: when we first boot up, we want to give a 'hey, it would be nice' size of the last actual recorded final column
+        # HOWEVER, after that: we want to use the current size of the last column
+        # so, if it is the first couple of seconds, lmao. after that, oaml
+        # I later updated this to use the columnWidth, rather than hickery dickery text-to-pixel-width, since it was juddering resize around text width phase
+        
+        last_column_type = self._column_list_status.GetColumnTypes()[-1]
+        
+        if HydrusTime.TimeHasPassed( self._creation_time + 2 ):
+            
+            width += self.columnWidth( self.model().columnCount() - 1 )
+            
+            # this is a hack to stop the thing suddenly growing to screen width in a weird resize loop
+            # I couldn't reproduce this error, so I assume it is a QSS or whatever font/style/scrollbar on some systems that caused inaccurate columnWidth result
+            width = min( width, self.width() )
+            
+        else:
+            
+            last_column_chars = self._original_column_list_status.GetColumnWidth( last_column_type )
+            
+            main_tlw = CG.client_controller.GetMainTLW()
+            
+            width += ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, last_column_chars )
+            
+        
+        #
+        
+        if self._forced_height_num_chars is None:
+            
+            num_rows = self._initial_height_num_chars
+            
+        else:
+            
+            num_rows = self._forced_height_num_chars
+            
+        
+        header_size = self.header().sizeHint()
+        
+        data_area_height = self._GetRowHeightEstimate() * num_rows
+        
+        PADDING = 10
+        
+        size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
+        
+        return size_hint
+        
+    
+    def sortByColumn( self, column: int, order: QC.Qt.SortOrder ):
+        
+        selected_data = self.GetData( only_selected = True )
+        
+        # probably don't have to do the clear here, but it feels neater to do it like this rather than let existing selections go bananas, even briefly
+        self.selectionModel().clearSelection()
+        
+        self.model().sort( column, order )
+        
+        self.SelectDatas( selected_data )
+        
+        self.columnListContentsChanged.emit()
+        
+        self._DoStatusChanged()
+        
+    
+    def Sort( self, sort_column_type = None, sort_asc = None ):
+        
+        ( default_sort_column_type, default_sort_asc ) = self._column_list_status.GetSort()
+        
+        if sort_column_type is not None:
+            
+            sort_column_type = default_sort_column_type
+            
+        
+        if sort_asc is not None:
+            
+            sort_asc = default_sort_asc
+            
+        
+        column = self._column_list_status.GetColumnIndexFromType( sort_column_type )
+        ord = QC.Qt.AscendingOrder if sort_asc else QC.Qt.DescendingOrder
+        
+        self.sortByColumn( column, ord )
+        
+        self.columnListContentsChanged.emit()
+        
+        self._DoStatusChanged()
+        
+    
+    def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None, check_for_changed_sort_data = False ):
+        
+        if datas is not None:
+            
+            datas = [ QP.ListsToTuples( data ) for data in datas ]
+            
+        else:
+            
+            datas = self.GetData()
+            
+        
+        sort_data_has_changed = self.model().UpdateDatas( datas, check_for_changed_sort_data = check_for_changed_sort_data )
+        
+        self.columnListContentsChanged.emit()
+        
+        return sort_data_has_changed
+        
+
+    def SetNonDupeName( self, obj: object ):
+        
+        current_names = { o.GetName() for o in self.GetData() if o is not obj }
+
+        HydrusSerialisable.SetNonDupeName( obj, current_names )
+        
+    
+    def ReplaceData( self, old_data: object, new_data: object, sort_and_scroll = False ):
+        
+        self.ReplaceDatas( [ ( old_data, new_data ) ], sort_and_scroll = sort_and_scroll )
+        
+    
+    def ReplaceDatas( self, replacement_tuples, sort_and_scroll = False ):
+        
+        if len( replacement_tuples ) == 0:
+            
+            return
+            
+        
+        first_new_data = None
+        
+        for ( old_data, new_data ) in replacement_tuples:
+            
+            old_data = QP.ListsToTuples( old_data )
+            new_data = QP.ListsToTuples( new_data )
+            
+            if first_new_data is None:
+                
+                first_new_data = new_data
+                
+            
+            data_index = self._data_to_indices[ old_data ]
+            
+            ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( new_data )
+            
+            data_info = ( new_data, display_tuple, sort_tuple )
+            
+            self._indices_to_data_info[ data_index ] = data_info
+            
+            del self._data_to_indices[ old_data ]
+            
+            self._data_to_indices[ new_data ] = data_index
+            
+            self._UpdateRow( data_index, display_tuple )
+            
+        
+        if sort_and_scroll and first_new_data is not None:
+            
+            self.Sort()
+            
+            self.ScrollToData( first_new_data )
+            
+        
+    
+
 class BetterListCtrl( QW.QTreeWidget ):
     
     columnListContentsChanged = QC.Signal()
@@ -1135,7 +2523,7 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._DoStatusChanged()
         
     
-    def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None ):
+    def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None, check_for_changed_sort_data = False ):
         
         if datas is None:
             
@@ -1173,7 +2561,7 @@ class BetterListCtrl( QW.QTreeWidget ):
             
             if data_info != existing_data_info or the_data_is_actually_a_different_object:
                 
-                if not sort_data_has_changed:
+                if check_for_changed_sort_data and not sort_data_has_changed:
                     
                     existing_sort_tuple = existing_data_info[2]
                     
@@ -1507,10 +2895,11 @@ class BetterListCtrlPanel( QW.QWidget ):
                 
                 qt_image = CG.client_controller.GetClipboardImage()
                 
-            except:
+            except Exception as e:
                 
-                # no image on clipboard obviously
-                do_text = True
+                ClientGUIDialogsMessage.ShowCritical( self, 'Problem loading!', f'Problem loading from clipboard: {e}' )
+                
+                return
                 
             
             try:

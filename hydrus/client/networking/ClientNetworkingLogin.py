@@ -599,6 +599,30 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
         self.SetLoginScripts( new_login_scripts, auto_link_these_names = login_script_names )
         
     
+    def SetActive( self, login_domain, name, new_active ):
+        
+        # used for hacky db updates
+        
+        with self._lock:
+            
+            if login_domain not in self._domains_to_login_info:
+                
+                return
+                
+            
+            ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason ) = self._domains_to_login_info[ login_domain ]
+            
+            if login_script_key_and_name[1] == name:
+                
+                active = new_active
+                
+                self._domains_to_login_info[ login_domain ] = ( login_script_key_and_name, credentials, login_access_type, login_access_text, active, validity, validity_error_text, no_work_until, no_work_until_reason )
+                
+                self._SetDirty()
+                
+            
+        
+    
     def SetClean( self ):
         
         with self._lock:

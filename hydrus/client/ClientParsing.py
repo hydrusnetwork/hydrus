@@ -2570,9 +2570,9 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
         serialisable_parser_key = self._parser_key.hex()
         serialisable_string_converter = self._string_converter.GetSerialisableTuple()
         
-        serialisable_sub_page_parsers = [ ( formula.GetSerialisableTuple(), page_parser.GetSerialisableTuple() ) for ( formula, page_parser ) in self._sub_page_parsers ]
+        serialisable_sub_page_parsers = [ ( formula.GetSerialisableTuple(), page_parser.GetSerialisableTuple() ) for ( formula, page_parser ) in sorted( self._sub_page_parsers, key = lambda p: p[1].GetName() ) ]
         
-        serialisable_content_parsers = HydrusSerialisable.SerialisableList( self._content_parsers ).GetSerialisableTuple()
+        serialisable_content_parsers = HydrusSerialisable.SerialisableList( sorted( self._content_parsers, key = lambda p: p.GetName() ) ).GetSerialisableTuple()
         
         return ( self._name, serialisable_parser_key, serialisable_string_converter, serialisable_sub_page_parsers, serialisable_content_parsers, self._example_urls, self._example_parsing_context )
         

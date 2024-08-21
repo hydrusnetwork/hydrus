@@ -2,6 +2,7 @@ import collections
 import os
 import queue
 import sqlite3
+import threading
 import traceback
 import time
 
@@ -149,6 +150,8 @@ class HydrusDB( HydrusDBBase.DBBase ):
         
         self._ssl_cert_path = os.path.join( self._db_dir, self._ssl_cert_filename )
         self._ssl_key_path = os.path.join( self._db_dir, self._ssl_key_filename )
+        
+        self._finished_job_event = threading.Event()
         
         main_db_filename = db_name
         
@@ -869,6 +872,8 @@ class HydrusDB( HydrusDBBase.DBBase ):
                 self._currently_doing_job = False
                 self._current_job_name = ''
                 
+                self._finished_job_event.set()
+                
                 self.publish_status_update()
                 
             except queue.Empty:
@@ -944,6 +949,27 @@ class HydrusDB( HydrusDBBase.DBBase ):
     def Shutdown( self ):
         
         self._local_shutdown = True
+        
+    
+    def WaitUntilFree( self ):
+        
+        while True:
+            
+            if HG.model_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
+                
+            elif self.JobsQueueEmpty() and not self.CurrentlyDoingJob():
+                
+                return
+                
+            else:
+                
+                self._finished_job_event.wait( 0.5 )
+                
+                self._finished_job_event.clear()
+                
+            
         
     
     def Write( self, action, synchronous, *args, **kwargs ):

@@ -454,7 +454,10 @@ class Page( QW.QWidget ):
         self._pretty_status = ''
         
         self._management_media_split = QW.QSplitter( self )
+        self._management_media_split.setOrientation( QC.Qt.Horizontal )
+        
         self._search_preview_split = QW.QSplitter( self._management_media_split )
+        self._search_preview_split.setOrientation( QC.Qt.Vertical )
         
         self._done_split_setups = False
         
@@ -470,7 +473,11 @@ class Page( QW.QWidget ):
         
         self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel()
         
+        self._management_media_split.addWidget( self._search_preview_split )
         self._management_media_split.addWidget( self._media_panel )
+        
+        self._search_preview_split.addWidget( self._management_panel )
+        self._search_preview_split.addWidget( self._preview_panel )
         
         vbox = QP.VBoxLayout( margin = 0 )
         
@@ -486,16 +493,18 @@ class Page( QW.QWidget ):
         
         self._management_media_split.widget( 0 ).setMinimumWidth( 120 )
         self._management_media_split.widget( 1 ).setMinimumWidth( 120 )
+        
         self._management_media_split.setStretchFactor( 0, 0 )
         self._management_media_split.setStretchFactor( 1, 1 )
         
-        self._handle_event_filter = QP.WidgetEventFilter( self._management_media_split.handle( 1 ) )
-        self._handle_event_filter.EVT_LEFT_DCLICK( self.EventUnsplit )
-        
         self._search_preview_split.widget( 0 ).setMinimumHeight( 180 )
         self._search_preview_split.widget( 1 ).setMinimumHeight( 180 )
+        
         self._search_preview_split.setStretchFactor( 0, 1 )
         self._search_preview_split.setStretchFactor( 1, 0 )
+        
+        self._handle_event_filter = QP.WidgetEventFilter( self._management_media_split.handle( 1 ) )
+        self._handle_event_filter.EVT_LEFT_DCLICK( self.EventUnsplit )
         
         self._search_preview_split._handle_event_filter = QP.WidgetEventFilter( self._search_preview_split.handle( 1 ) )
         self._search_preview_split._handle_event_filter.EVT_LEFT_DCLICK( self.EventPreviewUnsplit )
@@ -562,8 +571,6 @@ class Page( QW.QWidget ):
             new_panel.Sort( media_sort )
             
         
-        new_panel.setMinimumWidth( 120 )
-        
         old_panel = self._media_panel
         self._media_panel = new_panel
         
@@ -574,18 +581,30 @@ class Page( QW.QWidget ):
             
             # this takes ownership of new_panel
             self._management_media_split.insertWidget( 1, new_panel )
+            
+            old_panel.setParent( None )
             old_panel.setVisible( False )
             
         else:
             
-            # this sets parent of new panel to self and sets parent of old panel to None
-            # rumao, it doesn't work if new_panel is already our child
-            self._management_media_split.replaceWidget( 1, new_panel )
+            if new_panel.parentWidget() == self._management_media_split:
+                
+                old_panel.setParent( None )
+                old_panel.setVisible( False )
+                
+            else:
+                
+                # this sets parent of new panel to self and sets parent of old panel to None
+                # rumao, it doesn't work if new_panel is already our child
+                self._management_media_split.replaceWidget( 1, new_panel )
+                
             
         
-        self._management_media_split.setSizes( previous_sizes )
+        self._media_panel.setMinimumWidth( 120 )
         
         self._management_media_split.setStretchFactor( 1, 1 )
+        
+        self._management_media_split.setSizes( previous_sizes )
         
         self._ConnectMediaPanelSignals()
         
@@ -1019,6 +1038,10 @@ class Page( QW.QWidget ):
     
     def SetSplitterPositions( self, hpos = None, vpos = None ):
         
+        # this has some hacky old wx stuff going on, but I've sliced it down a good bit too
+        # I'm pretty sure vpos is always negative (we store the size of the preview panel), and the hpos positive (it is the management sidebar)
+        # ultimately, the solution is to finally move on from these hell variable names vpos and hpos
+        
         if hpos is None:
             
             hpos = HC.options[ 'hpos' ]
@@ -1029,9 +1052,27 @@ class Page( QW.QWidget ):
             vpos = HC.options[ 'vpos' ]
             
         
-        QP.SplitHorizontally( self._search_preview_split, self._management_panel, self._preview_panel, vpos )
+        total_sum = sum( self._search_preview_split.sizes() )
         
-        QP.SplitVertically( self._management_media_split, self._search_preview_split, self._media_panel, hpos )
+        if vpos < 0:
+            
+            self._search_preview_split.setSizes( [ total_sum + vpos, -vpos ] )
+            
+        elif vpos > 0:
+            
+            self._search_preview_split.setSizes( [ vpos, total_sum - vpos ] )
+            
+        
+        total_sum = sum( self._management_media_split.sizes() )
+        
+        if hpos < 0:
+            
+            self._management_media_split.setSizes( [ total_sum + hpos, -hpos ] )
+            
+        elif hpos > 0:
+            
+            self._management_media_split.setSizes( [ hpos, total_sum - hpos ] )
+            
         
         if HC.options[ 'hide_preview' ]:
             
@@ -1098,7 +1139,7 @@ class Page( QW.QWidget ):
             
             self._SetPrettyStatus( '' )
             
-            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, self._management_controller, media_results )
+            media_panel = ClientGUIResults.MediaPanelThumbnails( self._management_media_split, self._page_key, self._management_controller, media_results )
             
             self._SwapMediaPanel( media_panel )
             

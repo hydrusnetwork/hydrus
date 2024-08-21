@@ -34,7 +34,7 @@ The client is chiefly a file database. It stores your files inside its own folde
 
 [![](images/example_client.png "WELCOME TO INTERNET")](images/example_client.png)
 
-As well as the client, there is also a server that anyone can run to store files or tags for sharing between many users. This is advanced, and almost always confusing to new users, do not explore this until you know what you are doing. There is however, a user-run **public tag repository**, with more than a billion tags, that you can access and contribute to if you wish.
+As well as the client, there is also a server that anyone can run to store files or tags for sharing between many users. This is advanced, and almost always confusing to new users, so do not explore this until you know what you are doing. There is, however, a user-run **public tag repository**, with more than a billion tags, that you can access and contribute to if you wish.
 
 I have many plans to expand the client and the network.
 

@@ -955,39 +955,6 @@ class LocationsManager( object ):
         return self._petitioned
         
     
-    def GetRemoteLocationStrings( self ):
-        
-        remote_file_services = list( CG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
-        
-        remote_file_services.sort( key = lambda s: s.GetName() )
-        
-        remote_service_strings = []
-        
-        for remote_service in remote_file_services:
-            
-            name = remote_service.GetName()
-            service_key = remote_service.GetServiceKey()
-            
-            if service_key in self._pending:
-                
-                remote_service_strings.append( name + ' (+)' )
-                
-            elif service_key in self._current:
-                
-                if service_key in self._petitioned:
-                    
-                    remote_service_strings.append( name + ' (-)' )
-                    
-                else:
-                    
-                    remote_service_strings.append( name )
-                    
-                
-            
-        
-        return remote_service_strings
-        
-    
     def GetBestCurrentTimestamp( self, location_context: ClientLocation.LocationContext ):
         
         timestamps_ms = { self._times_manager.GetImportedTimestampMS( service_key ) for service_key in location_context.current_service_keys }
@@ -1014,6 +981,56 @@ class LocationsManager( object ):
             
             return self._local_file_deletion_reason
             
+        
+    
+    def GetLocationStrings( self ):
+        
+        # this whole method seems ass-backwards somehow!
+        
+        service_location_strings = []
+        
+        local_file_services = list( CG.client_controller.services_manager.GetServices( ( HC.LOCAL_FILE_DOMAIN, ) ) )
+        
+        local_file_services.sort( key = lambda s: s.GetName() )
+        
+        for local_service in local_file_services:
+            
+            name = local_service.GetName()
+            service_key = local_service.GetServiceKey()
+            
+            if service_key in self._current:
+                
+                service_location_strings.append( name )
+                
+            
+        
+        remote_file_services = list( CG.client_controller.services_manager.GetServices( ( HC.FILE_REPOSITORY, HC.IPFS ) ) )
+        
+        remote_file_services.sort( key = lambda s: s.GetName() )
+        
+        for remote_service in remote_file_services:
+            
+            name = remote_service.GetName()
+            service_key = remote_service.GetServiceKey()
+            
+            if service_key in self._pending:
+                
+                service_location_strings.append( name + ' (+)' )
+                
+            elif service_key in self._current:
+                
+                if service_key in self._petitioned:
+                    
+                    service_location_strings.append( name + ' (-)' )
+                    
+                else:
+                    
+                    service_location_strings.append( name )
+                    
+                
+            
+        
+        return service_location_strings
         
     
     def GetServiceFilename( self, service_key ) -> typing.Optional[ str ]:

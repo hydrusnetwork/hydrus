@@ -17,7 +17,8 @@ class HydrusPubSub( object ):
         
         self._pubsubs = []
         
-        self._pub_event = threading.Event()
+        self._received_job_event = threading.Event()
+        self._finished_job_event = threading.Event()
         
         self._lock = threading.Lock()
         
@@ -155,6 +156,8 @@ class HydrusPubSub( object ):
             
             self._doing_work = False
             
+            self._finished_job_event.set()
+            
         
     
     def pub( self, topic, *args, **kwargs ):
@@ -164,7 +167,7 @@ class HydrusPubSub( object ):
             self._pubsubs.append( ( topic, args, kwargs ) )
             
         
-        self._pub_event.set()
+        self._received_job_event.set()
         
     
     def pubimmediate( self, topic, *args, **kwargs ):
@@ -194,14 +197,34 @@ class HydrusPubSub( object ):
     
     def WaitOnPub( self ):
         
-        self._pub_event.wait( 3 )
+        self._received_job_event.wait( 0.5 )
         
-        self._pub_event.clear()
+        self._received_job_event.clear()
         
     
     def Wake( self ):
         
-        self._pub_event.set()
+        self._received_job_event.set()
+        
+    
+    def WaitUntilFree( self ):
+        
+        while True:
+            
+            if HG.model_shutdown:
+                
+                raise HydrusExceptions.ShutdownException( 'Application shutting down!' )
+                
+            elif not ( self.WorkToDo() or self.DoingWork() ):
+                
+                return
+                
+            else:
+                
+                self._finished_job_event.wait( 0.5 )
+                self._finished_job_event.clear()
+                
+            
         
     
     def WorkToDo( self ):
@@ -211,3 +234,4 @@ class HydrusPubSub( object ):
             return len( self._pubsubs ) > 0
             
         
+    

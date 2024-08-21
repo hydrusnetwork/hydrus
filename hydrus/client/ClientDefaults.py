@@ -155,6 +155,7 @@ def GetDefaultLoginScripts():
     
     return GetDefaultObjectsFromPNGs( dir_path, ( ClientNetworkingLogin.LoginScriptDomain, ) )
     
+
 def GetDefaultParsers():
     
     dir_path = os.path.join( HC.STATIC_DIR, 'default', 'parsers' )

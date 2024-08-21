@@ -2027,15 +2027,15 @@ class CanvasWithDetails( Canvas ):
         
         painter.setPen( QG.QPen( pen_colour ) )
         
-        # repo strings
+        # location strings
         
-        remote_strings = self._current_media.GetLocationsManager().GetRemoteLocationStrings()
+        location_strings = self._current_media.GetLocationsManager().GetLocationStrings()
         
-        for remote_string in remote_strings:
+        for location_string in location_strings:
             
-            ( text_size, remote_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, remote_string )
+            ( text_size, location_string ) = ClientGUIFunctions.GetTextSizeFromPainter( painter, location_string )
             
-            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, current_y, remote_string )
+            ClientGUIFunctions.DrawText( painter, my_width - text_size.width() - 3, current_y, location_string )
             
             current_y += text_size.height()
             

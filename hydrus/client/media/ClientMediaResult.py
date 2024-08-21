@@ -168,7 +168,7 @@ class MediaResult( object ):
         
         if delete_lock_for_archived_files:
             
-            if not self.GetInbox():
+            if self._locations_manager.IsLocal() and not self.GetInbox():
                 
                 return True
                 

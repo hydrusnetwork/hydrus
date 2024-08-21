@@ -1252,6 +1252,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         icon_hbox = QP.HBoxLayout( spacing = 0 )
         
         icon_hbox.addStretch( 1 )
+        
         QP.AddToLayout( icon_hbox, self._inbox_icon, CC.FLAGS_CENTER_PERPENDICULAR )
         QP.AddToLayout( icon_hbox, self._trash_icon, CC.FLAGS_CENTER_PERPENDICULAR )
         
@@ -1259,9 +1260,9 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         
         # repo strings
         
-        self._file_repos = ClientGUICommon.BetterStaticText( self, '' )
+        self._location_strings = ClientGUICommon.BetterStaticText( self, '' )
         
-        self._file_repos.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
+        self._location_strings.setAlignment( QC.Qt.AlignRight | QC.Qt.AlignVCenter )
         
         # urls
         
@@ -1330,7 +1331,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
         #
         
         QP.AddToLayout( vbox, self._icon_panel, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
-        QP.AddToLayout( vbox, self._file_repos, CC.FLAGS_EXPAND_PERPENDICULAR )
+        QP.AddToLayout( vbox, self._location_strings, CC.FLAGS_EXPAND_PERPENDICULAR )
         QP.AddToLayout( vbox, self._urls_vbox, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
         
         self.setLayout( vbox )
@@ -1437,19 +1438,19 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
                 self._icon_panel.setVisible( False )
                 
             
-            remote_strings = self._current_media.GetLocationsManager().GetRemoteLocationStrings()
+            location_strings = self._current_media.GetLocationsManager().GetLocationStrings()
             
-            if len( remote_strings ) == 0:
+            if len( location_strings ) == 0:
                 
-                self._file_repos.hide()
+                self._location_strings.hide()
                 
             else:
                 
-                remote_string = '\n'.join( remote_strings )
+                location_string = '\n'.join( location_strings )
                 
-                self._file_repos.setText( remote_string )
+                self._location_strings.setText( location_string )
                 
-                self._file_repos.show()
+                self._location_strings.show()
                 
             
             # urls

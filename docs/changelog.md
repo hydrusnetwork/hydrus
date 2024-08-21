@@ -7,6 +7,30 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 587](https://github.com/hydrusnetwork/hydrus/releases/tag/v587)
+
+### all misc this week
+
+* I made a second stupid typo last week. it raised an error when trying to open the 'manage tag display and search' dialog! it was fixed thanks to a user
+* the current local file domains of a file (e.g. 'my files') are now simply listed in the top-right hover window, above any remote locations or URLs. I think I'm going to make these checkboxes or something in future so we can have one-click file migrations
+* if you set up a _share-&gt;export files_ job and one of the internal files is actually missing, the error message now tells you to go check for missing files using the database file maintenance stuff
+* if an export files job that is set to delete internal files breaks half way through, the routine now makes sure only to delete what was actually successful
+* subscriptions now catch program shutdown signals better. previously, this was being handled as an unknown error and delay times and error texts were being set. it now just closes cleanly, no worries
+* the command palette should now match case-insensitively
+* I _may_ have fixed a false-positive delete-lock report ('could not delete files xyz because of delete lock') that can happen in the duplicate filter. also, the 'unable to delete file' popup that happens in this case now quietly prints the current stack to log, which I would be interested in seeing
+* I believe I have fixed several of the false-positive 'hey it looks like you edited this parser, are you sure you want to cancel?' confirmations in the edit parser dialog
+* the automatic datestring parsing routine should now be more resilient against english datestrings when the locale differs significantly (it seems if the locale requires a 24-hour clock, it may be a problem for AM/PM time strings)
+* cleaned up some ancient-and-terrible sash-sizing code that manages the three resizable panels of each media results page. hopefully I fixed an issue in Docker and other places where the media page could spawn with a 0-pixel-wide thumbnail panel
+* fixed a weird/stupid bug with the new scanbar that would sometimes start giving errors on media transitions because it couldn't find its media parent
+* improved how a core UI job waits on the database to be free. it now uses just a little less CPU/fewer thread switches
+* improved how that same UI job waits on the pubsub system to be free, same deal
+* since they reversed the API click-through requirement, removed the 8chan TOS click-through login script from the defaults. existing users will see it set to non-active. 8chan thread watching should work out the box again
+
+### new list stuff
+
+* I worked on a new multi-column list class that uses a more intelligent data model. I basically finished it, but I will not launch it yet--it needs a bunch more testing and debugging
+* as a side thing, a variety of list display update calls, even on the old list, are now a little faster
+
 ## [Version 586](https://github.com/hydrusnetwork/hydrus/releases/tag/v586)
 
 ### faster sibling/parent fetching
@@ -351,41 +375,3 @@ title: Changelog
 * refactored most of the 'scrolling panel' code to a new `gui.panels` module
 * broke up some of the bloated scrolling panel code into smaller files, moved Migrate Tags and Edit Timestamps to new files in `gui.metadata`, and replaced/deleted some old code
 * refactored `ClientGUITime` to `gui.metadata`, `ClientGUILogin` to `gui.networking`
-
-## [Version 577](https://github.com/hydrusnetwork/hydrus/releases/tag/v577)
-
-### explorer integration
-
-* thanks to a user, we have some new OS-file-explorer integration
-* two additional options are added to the "open" menu for Windows users, "in another program" opens the Windows dialog to select which program to use and "properties" opens the Windows file properties dialog for the file
-* the 'media' shortcut set gets the new 'open file properties' and 'open with...' commands to plug into these new features
-* the "open in file browser" media menu command now more reliably selects the file in Windows and is now available for most Linux file managers--full list [here](https://github.com/damonlynch/showinfilemanager#supported-file-managers).
-* the "open files' locations" file import log menu command is similarly more reliable, and can sometimes select multiple files when launched on a selection
-* this requires a new external library, so users who run from source will want to rebuild their venvs this week to get this functionality
-
-### misc
-
-* the manage times single-time edit dialog's paste button can now eat any datstring you can think of. try pasting 'yesterday 3am' into it, it'll work!
-* split the increasingly cluttered 'media' options panel into 'media playback' (options governing how media is rendered) and 'media viewer' (options governing the viewer itself like drags and slideshows)
-* added to the new 'media viewer' panel are five checkboxes to turn off the background text in the full media viewer--for the taglist, the top hover, the top-right hover, the notes hover, and the bottom-right index string. if you want, you can have a completely blank background now
-* gave the _help-&gt;about_ window a pass. I broke the cluttered first tab into two, and the layout all over is a bit clearer
-* the _help-&gt;advanced mode_ option is now available under a new _options-&gt;advanced_ tab. this thing covers several dozen things across the program, all insufficiently documented, so the plan is to blow it out into all its granular constituent components on this page!
-* fixed it so an invalid `ApplicationCommand` will still render a string. if you got some jank `ToString()` errors in a shortcuts dialog recently, please try again and let me know what you get. you'll probably want to go into the actual shortcut with the error string and try and see if you can fix what it has set--again, let me know the details please!
-* updated the 'installing and updating' help page to talk clearly about the different versions that have special update instructions, and generally gave the language a pass
-
-### some url encoding
-
-* fixed an issue in url encoding-normalisation where urls were not retaining their parameters if their names had certain decoded characters (particularly, this was stuff like the decoded square brackets in `fields[post]=123`). a new unit test will catch this in future
-* url classes and parsers are now careful to encode their example urls any time they are asked for (outside of their respective edit dialogs' "example url(s)" fields, so if you want to work with a human-looking URL in UI, that's fine). this ensures the automatic url-parser linking system works if the parser and url classes have a mish-mash of encoded and non-encoded example URLs. it also fixes some stuff like the multi-column list in the manage url classes dialog when the url class has a decoded example url. this was basically just an ingestion point that I missed in the previous work
-* the edit parser dialog makes sure to properly encode the URL when you do a test pull
-
-### orphan table tech
-
-* the _database-&gt;db maintenance-&gt;clear orphan tables_ command, which could previously only clear out the repository update/processing-tracking tables, can now nuke: the core file list tables in client.db; the core mappings tables in client.mappings.db; the display and storage mappings caches in client.caches.db; the display and storage autocomplete count caches; the ideal and actual tag parent lookup tables in client.caches.db; the ideal and actual tag sibling lookup tables in client.caches.db; and the various tag search tables (except the fts4 stuff) in client.caches.db
-* when this job fires, it now sends orphan tables to the deferred delete system (previously it dropped them immediately, which for a big mappings table is a no-go)
-
-### boring cleanup
-
-* cleaned a bunch of db table code for the new orphan table stuff
-* deleted the old 'yaml_dumps' table and all associated methods, which are all now unused
-* added a couple help labels to the "colours" and "style" pages to better explain what is actually going on here

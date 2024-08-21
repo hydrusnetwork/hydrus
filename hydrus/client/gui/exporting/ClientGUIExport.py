@@ -1,7 +1,6 @@
 import collections
 import os
 import time
-import traceback
 import typing
 
 from qtpy import QtCore as QC
@@ -868,6 +867,8 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             pauser = HydrusThreading.BigJobPauser()
             
+            actually_done_ok = []
+            
             for ( index, ( media, dest_path ) ) in enumerate( to_do ):
                 
                 number = media_to_number_indices[ media ]
@@ -905,7 +906,14 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         metadata_router.Work( media.GetMediaResult(), dest_path )
                         
                     
-                    source_path = client_files_manager.GetFilePath( hash, mime, check_file_exists = False )
+                    try:
+                        
+                        source_path = client_files_manager.GetFilePath( hash, mime )
+                        
+                    except HydrusExceptions.FileMissingException:
+                        
+                        raise Exception( f'When trying to export {hash.hex()}, I discovered that it was actually missing from your client! The export job should stop now. You should go to _database->file maintenance_ and set up a scan for missing files!' )
+                        
                     
                     if export_symlinks:
                         
@@ -931,7 +939,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         HydrusPaths.TryToGiveFileNicePermissionBits( dest_path )
                         
                     
-                except:
+                    actually_done_ok.append( media )
+                    
+                except Exception as e:
                     
                     if QP.isValid( self ):
                         
@@ -942,7 +952,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                         win = CG.client_controller.gui
                         
                     
-                    ClientGUIDialogsMessage.ShowCritical( win, 'Problem during file export!', f'Encountered a problem while attempting to export file #{HydrusNumbers.ToHumanInt( number )}:\n\n{traceback.format_exc()}' )
+                    HydrusData.PrintException( e, do_wait = False )
+                    
+                    ClientGUIDialogsMessage.ShowCritical( win, 'Problem during file export!', f'Encountered a problem while attempting to export file #{HydrusNumbers.ToHumanInt( number )}:\n\n{e}' )
                     
                     break
                     
@@ -954,9 +966,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
                 
                 QP.CallAfter( qt_update_label, 'deleting' )
                 
-                possible_deletee_medias = { media for ( media, path ) in to_do }
-                
-                deletee_medias = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( possible_deletee_medias )
+                deletee_medias = ClientMediaFileFilter.FilterAndReportDeleteLockFailures( actually_done_ok )
                 
                 local_file_service_keys = CG.client_controller.services_manager.GetServiceKeys( ( HC.LOCAL_FILE_DOMAIN, ) )
                 

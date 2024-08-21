@@ -1632,6 +1632,8 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         original_parser.NullifyTestData()
         current_parser.NullifyTestData()
         
+        # just a note, this thing was false-positiving a while ago because the content parsers were rearranging, I guess the UI was sorting them in the list in a diff way or whatever
+        # the solution was to change the serialisation routine to sort subsidiary parsers and content parsers by name, so keep this in mind bro
         if original_parser.GetSerialisableTuple() != current_parser.GetSerialisableTuple():
             
             text = 'It looks like you have made changes to the parser--are you sure you want to cancel?'
