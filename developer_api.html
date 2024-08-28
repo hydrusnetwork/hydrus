@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.32">
+      <meta name="generator" content="mkdocs-1.6.0, mkdocs-material-9.5.33">
     
     
       
@@ -5369,6 +5369,8 @@ Accept: application/json
 <li><code>tags</code>: (a list of tags you wish to search for)</li>
 <li><a href="#parameters_file_domain">file domain</a> (optional, defaults to <em>all my files</em>)</li>
 <li><code>tag_service_key</code>: (optional, hexadecimal, the tag domain on which to search, defaults to <em>all my files</em>)</li>
+<li><code>include_current_tags</code>: (optional, bool, whether to search 'current' tags, defaults to <code>true</code>)</li>
+<li><code>include_pending_tags</code>: (optional, bool, whether to search 'pending' tags, defaults to <code>true</code>)</li>
 <li><code>file_sort_type</code>: (optional, integer, the results sort method, defaults to <code>2</code> for <code>import time</code>)</li>
 <li><code>file_sort_asc</code>: true or false (optional, default <code>true</code>, the results sort order)</li>
 <li><code>return_file_ids</code>: true or false (optional, default <code>true</code>, returns file id results)</li>
@@ -5491,7 +5493,8 @@ Accept: application/json
 <li>samus aran OR lara croft</li>
 <li>system:height &gt; 1000</li>
 </ul>
-<p>The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'all my files' and 'all known tags'. </p>
+<p>The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'all my files' and 'all known tags'.</p>
+<p><code>include_current_tags</code> and <code>include_pending_tags</code> do the same as the buttons on the normal search interface. They alter the search of normal tags and tag-related system predicates like 'system:number of tags', including or discluding that type of tag from whatever the search is doing. If you set both of these to <code>false</code>, you'll often get no results.</p>
 <p>File searches occur in the <code>display</code> <code>tag_display_type</code>. If you want to pair autocomplete tag lookup from <a href="#add_tags_search_tags">/search_tags</a> to this file search (e.g. for making a standard booru search interface), then make sure you are searching <code>display</code> tags there.</p>
 <p>file_sort_asc is 'true' for ascending, and 'false' for descending. The default is descending.</p>
 <p>file_sort_type is by default <em>import time</em>. It is an integer according to the following enum, and I have written the semantic (asc/desc) meaning for each type after:</p>
@@ -7384,7 +7387,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1-2.1-2M12.5 7v5.2l4 2.4-1 1L11 13V7h1.5M11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2v1.8Z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 14, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">August 28, 2024</span>
   </span>
 
     
@@ -7511,7 +7514,7 @@ This request will also return any cookies for subdomains. The session system in 
     <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.b8dbb3d2.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="assets/javascripts/bundle.471ce7a9.min.js"></script>
+      <script src="assets/javascripts/bundle.af256bd8.min.js"></script>
       
     
   </body>
