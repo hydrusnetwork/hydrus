@@ -312,7 +312,9 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         conversions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._conversions = ClientGUIListCtrl.BetterListCtrl( conversions_panel, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, 7, self._ConvertConversionToListCtrlTuples, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, self._ConvertConversionToListCtrlTuples )
+        
+        self._conversions = ClientGUIListCtrl.BetterListCtrlTreeView( conversions_panel, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, 7, model, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
         
         conversions_panel.SetListCtrl( self._conversions )
         
@@ -402,7 +404,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if dlg.exec() == QW.QDialog.Accepted:
                 
-                number = self._conversions.topLevelItemCount() + 1
+                number = self._conversions.count() + 1
                 
                 ( conversion_type, data ) = panel.GetValue()
                 
@@ -427,7 +429,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             ( number, conversion_type, data ) = selected_data[0]
             
-            if number < self._conversions.topLevelItemCount():
+            if number < self._conversions.count():
                 
                 return True
                 
@@ -493,7 +495,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # now we need to shuffle up any missing numbers
         
-        num_rows = self._conversions.topLevelItemCount()
+        num_rows = self._conversions.count()
         
         i = 1
         search_i = i

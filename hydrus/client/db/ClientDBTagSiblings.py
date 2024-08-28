@@ -1050,8 +1050,6 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
             for applicable_tag_service_id in applicable_tag_service_ids:
                 
-                service_key = self.modules_services.GetService( applicable_tag_service_id ).GetServiceKey()
-                
                 statuses_to_pair_ids = self.GetTagSiblingsIdsChains( applicable_tag_service_id, tag_ids_to_clear_and_regen )
                 
                 petitioned_fast_lookup = set( statuses_to_pair_ids[ HC.CONTENT_STATUS_PETITIONED ] )

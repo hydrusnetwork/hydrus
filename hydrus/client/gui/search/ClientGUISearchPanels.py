@@ -177,7 +177,9 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._favourite_searches_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._favourite_searches = ClientGUIListCtrl.BetterListCtrl( self._favourite_searches_panel, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, 20, self._ConvertRowToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFavouriteSearch )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, self._ConvertRowToListCtrlTuples )
+        
+        self._favourite_searches = ClientGUIListCtrl.BetterListCtrlTreeView( self._favourite_searches_panel, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, 20, model, use_simple_delete = True, activation_callback = self._EditFavouriteSearch )
         
         self._favourite_searches_panel.SetListCtrl( self._favourite_searches )
         

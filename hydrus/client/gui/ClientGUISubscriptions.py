@@ -187,7 +187,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        self._query_headers = ClientGUIListCtrl.BetterListCtrl( queries_panel, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, 10, self._ConvertQueryHeaderToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditQuery )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, self._ConvertQueryHeaderToListCtrlTuples )
+        
+        self._query_headers = ClientGUIListCtrl.BetterListCtrlTreeView( queries_panel, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, 10, model, use_simple_delete = True, activation_callback = self._EditQuery )
         
         queries_panel.SetListCtrl( self._query_headers )
         
@@ -1322,7 +1324,9 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._subscriptions = ClientGUIListCtrl.BetterListCtrl( self._subscriptions_panel, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, 12, self._ConvertSubscriptionToListCtrlTuples, use_simple_delete = True, activation_callback = self.Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, self._ConvertSubscriptionToListCtrlTuples )
+        
+        self._subscriptions = ClientGUIListCtrl.BetterListCtrlTreeView( self._subscriptions_panel, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, 12, model, use_simple_delete = True, activation_callback = self.Edit )
         
         self._subscriptions_panel.SetListCtrl( self._subscriptions )
         

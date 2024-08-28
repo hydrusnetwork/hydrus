@@ -316,7 +316,9 @@ class EditNetworkContextCustomHeadersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, 15, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_NETWORK_CONTEXTS_CUSTOM_HEADERS.ID, 15, model, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -569,7 +571,9 @@ class ReviewAllBandwidthPanel( ClientGUIScrolledPanels.ReviewPanel ):
         self._history_time_delta_none = QW.QCheckBox( 'show all', self )
         self._history_time_delta_none.clicked.connect( self.EventTimeDeltaChanged )
         
-        self._bandwidths = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, 20, self._ConvertNetworkContextsToListCtrlTuples, activation_callback = self.ShowNetworkContext )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, self._ConvertNetworkContextsToListCtrlTuples )
+        
+        self._bandwidths = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_BANDWIDTH_REVIEW.ID, 20, model, activation_callback = self.ShowNetworkContext )
         
         self._edit_default_bandwidth_rules_button = ClientGUICommon.BetterButton( self, 'edit default bandwidth rules', self._EditDefaultBandwidthRules )
         
@@ -1102,7 +1106,9 @@ class ReviewNetworkJobs( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, 20, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_NETWORK_JOBS_REVIEW.ID, 20, model )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -1218,7 +1224,9 @@ class ReviewNetworkSessionsPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, 32, self._ConvertNetworkContextToListCtrlTuples, delete_key_callback = self._Clear, activation_callback = self._Review )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, self._ConvertNetworkContextToListCtrlTuples )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSIONS.ID, 32, model, delete_key_callback = self._Clear, activation_callback = self._Review )
         
         self._listctrl.Sort()
         
@@ -1446,7 +1454,9 @@ class ReviewNetworkSessionPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, 8, self._ConvertCookieToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, self._ConvertCookieToListCtrlTuples )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_REVIEW_NETWORK_SESSION.ID, 8, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._listctrl.Sort()
         

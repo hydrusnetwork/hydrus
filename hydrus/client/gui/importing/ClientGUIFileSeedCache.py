@@ -336,7 +336,9 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on file_seed add/remove
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, 30, self._ConvertFileSeedToListCtrlTuples, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, self._ConvertFileSeedToListCtrlTuples )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, 30, model, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
         
         #
         

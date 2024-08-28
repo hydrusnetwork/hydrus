@@ -64,14 +64,47 @@ class TagPairActionContext( object ):
             
         
     
-    def _AutoPetitionConflicts( self, widget, pairs ):
+    def _FetchStatusToPairs( self, tags = None, where_chain_includes_pending_or_petitioned = False ):
         
         raise NotImplementedError()
         
     
-    def _AutoPetitionLoops( self, widget, pairs ):
+    def _GetFixedPendSuggestions( self ) -> typing.Collection[ str ]:
         
-        current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+        raise NotImplementedError()
+        
+    
+    def _GetFixedPetitionSuggestions( self ) -> typing.Collection[ str ]:
+        
+        raise NotImplementedError()
+        
+    
+    def _GetMyContentType( self ) -> int:
+        
+        raise NotImplementedError()
+        
+    
+    def _GetTagsToFetch( self, tags: typing.Collection[ str ] ) -> typing.Set[ str ]:
+        
+        if self._have_fetched_all:
+            
+            return set()
+            
+        
+        return set( tags ).difference( self._tags_done_fetched ).difference( self._tags_being_fetched )
+        
+    
+    def AutoPetitionConflicts( self, widget, pairs ):
+        
+        raise NotImplementedError()
+        
+    
+    def AutoPetitionLoops( self, widget, pairs ):
+        
+        with self._lock:
+            
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            
         
         as_to_bs = HydrusData.BuildKeyToListDict( current_pairs )
         
@@ -110,9 +143,12 @@ class TagPairActionContext( object ):
                                 # so, let's repeal the final link that would cause a loop
                                 pairs_to_auto_petition = [ ( tag_we_are_checking, next_tag_from_this_tag_we_are_checking ) ]
                                 
-                                self._EnterCleanedPairs( widget, pairs_to_auto_petition, only_remove = True, forced_reason = AUTO_PETITION_REASON )
+                                self.EnterCleanedPairs( widget, pairs_to_auto_petition, only_remove = True, forced_reason = AUTO_PETITION_REASON )
                                 
-                                current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                                with self._lock:
+                                    
+                                    current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+                                    
                                 
                                 as_to_bs = HydrusData.BuildKeyToListDict( current_pairs )
                                 
@@ -141,8 +177,11 @@ class TagPairActionContext( object ):
             
         
     
-    def _EnterCleanedPairs( self, widget: QW.QWidget, pairs, only_add = False, only_remove = False, forced_reason = None ):
+    def EnterCleanedPairs( self, widget: QW.QWidget, pairs, only_add = False, only_remove = False, forced_reason = None ):
         """Can only call this guy when all the respective tags have been loaded and, when allowing adds, all conflicts and loops have been sorted."""
+        
+        # Note this dude now handles lockgubbins granularly. It used to have an atomic lock wrapped around it, along with other stuff, but the dialogs can cause new Qt events to fire, leading to deadlock hell!
+        # it isn't that big a deal since the threads and stuff don't _edit_ content, they pretty much just ever expand it
         
         all_tags = set()
         
@@ -152,9 +191,14 @@ class TagPairActionContext( object ):
             all_tags.add( b )
             
         
-        if not all_tags.issubset( self._tags_done_fetched ) and not self._have_fetched_all:
+        with self._lock:
+            
+            problem = not all_tags.issubset( self._tags_done_fetched ) and not self._have_fetched_all
             
             missing_tags = all_tags.difference( self._tags_done_fetched )
+            
+        
+        if problem:
             
             message = 'Hey, somehow the "Enter some Pairs" routine was called before the related underlying pairs\' groups were loaded. This should not happen! Please tell hydev about this.'
             message += '\n'
@@ -176,34 +220,37 @@ class TagPairActionContext( object ):
         pairs_to_petition_rescind = []
         pairs_to_pend_rescind = []
         
-        for pair in pairs:
+        with self._lock:
             
-            if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
+            for pair in pairs:
                 
-                if not only_add:
+                if pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ]:
                     
-                    pairs_to_pend_rescind.append( pair )
+                    if not only_add:
+                        
+                        pairs_to_pend_rescind.append( pair )
+                        
                     
-                
-            elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
-                
-                if not only_remove:
+                elif pair in self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ]:
                     
-                    pairs_to_petition_rescind.append( pair )
+                    if not only_remove:
+                        
+                        pairs_to_petition_rescind.append( pair )
+                        
                     
-                
-            elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
-                
-                if not only_add:
+                elif pair in self._original_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ]:
                     
-                    pairs_to_petition.append( pair )
+                    if not only_add:
+                        
+                        pairs_to_petition.append( pair )
+                        
                     
-                
-            else:
-                
-                if not only_remove:
+                else:
                     
-                    pairs_to_pend.append( pair )
+                    if not only_remove:
+                        
+                        pairs_to_pend.append( pair )
+                        
                     
                 
             
@@ -268,37 +315,40 @@ class TagPairActionContext( object ):
             
             if do_it:
                 
-                we_are_autopetitioning_somewhere = AUTO_PETITION_REASON in self._pairs_to_reasons.values()
-                
-                if we_are_autopetitioning_somewhere:
+                with self._lock:
                     
-                    if self._i_am_local_tag_service:
-                        
-                        reason = 'REPLACEMENT: by user'
-                        
-                    else:
-                        
-                        reason = 'REPLACEMENT: {}'.format( reason )
-                        
+                    we_are_autopetitioning_somewhere = AUTO_PETITION_REASON in self._pairs_to_reasons.values()
                     
-                
-                for pair in pairs_to_pend:
-                    
-                    self._pairs_to_reasons[ pair ] = reason
-                    
-                
-                if we_are_autopetitioning_somewhere:
-                    
-                    for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                    if we_are_autopetitioning_somewhere:
                         
-                        if r == AUTO_PETITION_REASON:
+                        if self._i_am_local_tag_service:
                             
-                            self._pairs_to_reasons[ p ] = reason
+                            reason = 'REPLACEMENT: by user'
+                            
+                        else:
+                            
+                            reason = 'REPLACEMENT: {}'.format( reason )
                             
                         
                     
-                
-                self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( pairs_to_pend )
+                    for pair in pairs_to_pend:
+                        
+                        self._pairs_to_reasons[ pair ] = reason
+                        
+                    
+                    if we_are_autopetitioning_somewhere:
+                        
+                        for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                            
+                            if r == AUTO_PETITION_REASON:
+                                
+                                self._pairs_to_reasons[ p ] = reason
+                                
+                            
+                        
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].update( pairs_to_pend )
+                    
                 
             
         
@@ -364,37 +414,40 @@ class TagPairActionContext( object ):
             
             if do_it:
                 
-                we_are_autopetitioning_somewhere = AUTO_PETITION_REASON in self._pairs_to_reasons.values()
-                
-                if we_are_autopetitioning_somewhere:
+                with self._lock:
                     
-                    if self._i_am_local_tag_service:
-                        
-                        reason = 'REPLACEMENT: by user'
-                        
-                    else:
-                        
-                        reason = 'REPLACEMENT: {}'.format( reason )
-                        
+                    we_are_autopetitioning_somewhere = AUTO_PETITION_REASON in self._pairs_to_reasons.values()
                     
-                
-                for pair in pairs_to_petition:
-                    
-                    self._pairs_to_reasons[ pair ] = reason
-                    
-                
-                if we_are_autopetitioning_somewhere:
-                    
-                    for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                    if we_are_autopetitioning_somewhere:
                         
-                        if r == AUTO_PETITION_REASON:
+                        if self._i_am_local_tag_service:
                             
-                            self._pairs_to_reasons[ p ] = reason
+                            reason = 'REPLACEMENT: by user'
+                            
+                        else:
+                            
+                            reason = 'REPLACEMENT: {}'.format( reason )
                             
                         
                     
-                
-                self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( pairs_to_petition )
+                    for pair in pairs_to_petition:
+                        
+                        self._pairs_to_reasons[ pair ] = reason
+                        
+                    
+                    if we_are_autopetitioning_somewhere:
+                        
+                        for ( p, r ) in list( self._pairs_to_reasons.items() ):
+                            
+                            if r == AUTO_PETITION_REASON:
+                                
+                                self._pairs_to_reasons[ p ] = reason
+                                
+                            
+                        
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].update( pairs_to_petition )
+                    
                 
             
         
@@ -422,7 +475,10 @@ class TagPairActionContext( object ):
             
             if result == QW.QDialog.Accepted:
                 
-                self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pairs_to_pend_rescind )
+                with self._lock:
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ].difference_update( pairs_to_pend_rescind )
+                    
                 
             
         
@@ -450,47 +506,22 @@ class TagPairActionContext( object ):
             
             if result == QW.QDialog.Accepted:
                 
-                self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( pairs_to_petition_rescind )
+                with self._lock:
+                    
+                    self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ].difference_update( pairs_to_petition_rescind )
+                    
                 
             
         
-        for ( win, c ) in self._notify_callables:
+        with self._lock:
             
-            CG.client_controller.CallAfterQtSafe( win, 'showing pair updates', c )
+            for ( win, c ) in self._notify_callables:
+                
+                CG.client_controller.CallAfterQtSafe( win, 'showing pair updates', c )
+                
             
-        
-        self._notify_new_tags_info.set()
-        
-        
-    
-    def _FetchStatusToPairs( self, tags = None, where_chain_includes_pending_or_petitioned = False ):
-        
-        raise NotImplementedError()
-        
-    
-    def _GetFixedPendSuggestions( self ) -> typing.Collection[ str ]:
-        
-        raise NotImplementedError()
-        
-    
-    def _GetFixedPetitionSuggestions( self ) -> typing.Collection[ str ]:
-        
-        raise NotImplementedError()
-        
-    
-    def _GetMyContentType( self ) -> int:
-        
-        raise NotImplementedError()
-        
-    
-    def _GetTagsToFetch( self, tags: typing.Collection[ str ] ) -> typing.Set[ str ]:
-        
-        if self._have_fetched_all:
+            self._notify_new_tags_info.set()
             
-            return set()
-            
-        
-        return set( tags ).difference( self._tags_done_fetched ).difference( self._tags_being_fetched )
         
     
     def EnterPairs( self, widget: QW.QWidget, pairs, only_add = False ):
@@ -509,19 +540,21 @@ class TagPairActionContext( object ):
                 self._notify_new_tags_info.clear()
                 
             
-            CG.client_controller.CallAfterQtSafe( widget, 'add tag pairs (after preload)', do_it_qt_and_lock )
+            CG.client_controller.CallAfterQtSafe( widget, 'add tag pairs (after preload)', do_it_qt )
             
         
-        def do_it_qt_and_lock():
+        def do_it_qt():
             
-            with self._lock:
-                
-                self._AutoPetitionConflicts( widget, pairs )
-                
-                self._AutoPetitionLoops( widget, pairs )
-                
-                self._EnterCleanedPairs( widget, pairs, only_add = only_add )
-                
+            # ok we used to wrap this guy in a big lock to make it atomic
+            # HOWEVER since EnterCleanedPairs can spawn a couple dialogs, which would then exit the Qt event loop and start processing other stuff, I'm pretty sure we could get an UI deadlock (e.g. some list row updating), hooray
+            # thus we need to promote these guys and do more granular locking and simply trust that the various fetchers and stuff around here aren't making any _edit_ changes to this stuff, only ever _additions_
+            # further, it shouldn't be possible to enterpairs twice at once, so the main guy who is editing stuff here doesn't care about atomicity--that _is_ enforced serialised, fingers-crossed
+            
+            self.AutoPetitionConflicts( widget, pairs )
+            
+            self.AutoPetitionLoops( widget, pairs )
+            
+            self.EnterCleanedPairs( widget, pairs, only_add = only_add )
             
         
         all_tags = set()
@@ -894,12 +927,6 @@ class TagPairActionContext( object ):
 
 class ParentActionContext( TagPairActionContext ):
     
-    def _AutoPetitionConflicts( self, widget, pairs ):
-        
-        # no conflicts for parents!
-        pass
-        
-    
     def _FetchStatusToPairs( self, tags = None, where_chain_includes_pending_or_petitioned = False ):
         
         try:
@@ -934,12 +961,21 @@ class ParentActionContext( TagPairActionContext ):
         return HC.CONTENT_TYPE_TAG_PARENTS
         
     
+    def AutoPetitionConflicts( self, widget, pairs ):
+        
+        # no conflicts for parents!
+        pass
+        
+    
 
 class SiblingActionContext( TagPairActionContext ):
     
-    def _AutoPetitionConflicts( self, widget, pairs ):
+    def AutoPetitionConflicts( self, widget, pairs ):
         
-        current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+        with self._lock:
+            
+            current_pairs = self._current_statuses_to_pairs[ HC.CONTENT_STATUS_CURRENT ].union( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PENDING ] ).difference( self._current_statuses_to_pairs[ HC.CONTENT_STATUS_PETITIONED ] )
+            
         
         current_olds_to_news = dict( current_pairs )
         
@@ -966,7 +1002,7 @@ class SiblingActionContext( TagPairActionContext ):
             
             pairs_to_auto_petition = list( pairs_to_auto_petition )
             
-            self._EnterCleanedPairs( widget, pairs_to_auto_petition, only_remove = True, forced_reason = AUTO_PETITION_REASON )
+            self.EnterCleanedPairs( widget, pairs_to_auto_petition, only_remove = True, forced_reason = AUTO_PETITION_REASON )
             
         
     

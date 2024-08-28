@@ -56,7 +56,9 @@ class ManageClientServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, 25, self._ConvertServiceToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit)
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, self._ConvertServiceToListCtrlTuples )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_MANAGE_SERVICES.ID, 25, model, delete_key_callback = self._Delete, activation_callback = self._Edit)
         
         menu_items = []
         
@@ -1891,7 +1893,9 @@ class ReviewServiceClientAPISubPanel( ClientGUICommon.StaticBox ):
         
         permissions_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._permissions_list = ClientGUIListCtrl.BetterListCtrl( permissions_list_panel, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, 10, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._permissions_list = ClientGUIListCtrl.BetterListCtrlTreeView( permissions_list_panel, CGLC.COLUMN_LIST_CLIENT_API_PERMISSIONS.ID, 10, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         permissions_list_panel.SetListCtrl( self._permissions_list )
         
@@ -3463,7 +3467,9 @@ class ReviewServiceIPFSSubPanel( ClientGUICommon.StaticBox ):
         
         self._ipfs_shares_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._ipfs_shares = ClientGUIListCtrl.BetterListCtrl( self._ipfs_shares_panel, CGLC.COLUMN_LIST_IPFS_SHARES.ID, 6, self._ConvertDataToListCtrlTuple, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_IPFS_SHARES.ID, self._ConvertDataToListCtrlTuple )
+        
+        self._ipfs_shares = ClientGUIListCtrl.BetterListCtrlTreeView( self._ipfs_shares_panel, CGLC.COLUMN_LIST_IPFS_SHARES.ID, 6, model, delete_key_callback = self._Unpin, activation_callback = self._SetNotes )
         
         self._ipfs_shares_panel.SetListCtrl( self._ipfs_shares )
         

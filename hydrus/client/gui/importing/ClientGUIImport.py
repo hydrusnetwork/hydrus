@@ -251,7 +251,9 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             
             quick_namespaces_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._quick_namespaces_panel )
             
-            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrl( quick_namespaces_listctrl_panel, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, 4, self._ConvertQuickRegexDataToListCtrlTuples, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, self._ConvertQuickRegexDataToListCtrlTuples )
+            
+            self._quick_namespaces_list = ClientGUIListCtrl.BetterListCtrlTreeView( quick_namespaces_listctrl_panel, CGLC.COLUMN_LIST_QUICK_NAMESPACES.ID, 4, model, use_simple_delete = True, activation_callback = self.EditQuickNamespaces )
             
             quick_namespaces_listctrl_panel.SetListCtrl( self._quick_namespaces_list )
             
@@ -959,9 +961,11 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._service_key = service_key
             self._paths = paths
             
-            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, self._ConvertDataToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToListCtrlTuples )
             
-            self._paths_list.itemSelectionChanged.connect( self.EventItemSelected )
+            self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, model )
+            
+            self._paths_list.selectionModel().selectionChanged.connect( self.EventItemSelected )
             
             #
             
@@ -1069,7 +1073,9 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             self._paths = paths
             
-            self._paths_list = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, self._ConvertDataToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToListCtrlTuples )
+            
+            self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, model )
             
             allowed_importer_classes = [ ClientMetadataMigrationImporters.SingleFileMetadataImporterTXT, ClientMetadataMigrationImporters.SingleFileMetadataImporterJSON ]
             allowed_exporter_classes = [ ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTags, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaNotes, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaURLs, ClientMetadataMigrationExporters.SingleFileMetadataExporterMediaTimestamps ]

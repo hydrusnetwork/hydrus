@@ -1289,7 +1289,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._gallery_downloader_panel )
         
-        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._gallery_importers_listctrl_panel, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, 4, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gallery_importers_listctrl_panel, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, 4, model, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
         
         self._gallery_importers_listctrl_panel.SetListCtrl( self._gallery_importers_listctrl )
         
@@ -2344,7 +2346,9 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
         
-        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrl( self._watchers_listctrl_panel, CGLC.COLUMN_LIST_WATCHERS.ID, 4, self._ConvertDataToListCtrlTuples, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_WATCHERS.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._watchers_listctrl_panel, CGLC.COLUMN_LIST_WATCHERS.ID, 4, model, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
         
         self._watchers_listctrl_panel.SetListCtrl( self._watchers_listctrl )
         
@@ -4237,7 +4241,9 @@ class ManagementPanelPetitions( ManagementPanel ):
         
         self._petitions_summary_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._petitions_panel )
         
-        self._petitions_summary_list = ClientGUIListCtrl.BetterListCtrl( self._petitions_summary_list_panel, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, 12, self._ConvertDataToListCtrlTuples, activation_callback = self._ActivateToHighlightPetition )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._petitions_summary_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._petitions_summary_list_panel, CGLC.COLUMN_LIST_PETITIONS_SUMMARY.ID, 12, model, activation_callback = self._ActivateToHighlightPetition )
         
         self._petitions_summary_list_panel.SetListCtrl( self._petitions_summary_list )
         

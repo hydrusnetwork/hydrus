@@ -258,7 +258,9 @@ class ManageServerServicesPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         self._deletee_service_keys = []
         
-        self._services_listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_SERVICES.ID, 20, data_to_tuples_func = self._ConvertServiceToTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SERVICES.ID, self._ConvertServiceToTuples )
+        
+        self._services_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_SERVICES.ID, 20, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         menu_items = []
         

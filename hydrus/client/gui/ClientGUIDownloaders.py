@@ -2,6 +2,7 @@ import os
 import typing
 import urllib.parse
 
+from qtpy import QtCore as QC
 from qtpy import QtWidgets as QW
 from qtpy import QtGui as QG
 
@@ -57,7 +58,9 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        self._gug_display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_display_list_ctrl_panel, CGLC.COLUMN_LIST_GUG_KEYS_TO_DISPLAY.ID, 15, self._ConvertGUGDisplayDataToListCtrlTuples, activation_callback = self._EditGUGDisplay )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GUG_KEYS_TO_DISPLAY.ID, self._ConvertGUGDisplayDataToListCtrlTuples )
+        
+        self._gug_display_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_display_list_ctrl_panel, CGLC.COLUMN_LIST_GUG_KEYS_TO_DISPLAY.ID, 15, model, activation_callback = self._EditGUGDisplay )
         
         self._gug_display_list_ctrl_panel.SetListCtrl( self._gug_display_list_ctrl )
         
@@ -69,7 +72,9 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( media_viewer_urls_panel )
         
-        self._url_display_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._url_display_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_DISPLAY.ID, 15, self._ConvertURLDisplayDataToListCtrlTuples, activation_callback = self._EditURLDisplay )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_DISPLAY.ID, self._ConvertURLDisplayDataToListCtrlTuples )
+        
+        self._url_display_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._url_display_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_DISPLAY.ID, 15, model, activation_callback = self._EditURLDisplay )
         
         self._url_display_list_ctrl_panel.SetListCtrl( self._url_display_list_ctrl )
         
@@ -440,7 +445,9 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUG_GUGS.ID, 30, self._ConvertGUGDataToListCtrlTuples, use_simple_delete = True )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NGUG_GUGS.ID, self._ConvertGUGDataToListCtrlTuples )
+        
+        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUG_GUGS.ID, 30, model, use_simple_delete = True )
         
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
@@ -580,7 +587,9 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_GUGS.ID, 30, self._ConvertGUGToListCtrlTuples, delete_key_callback = self._DeleteGUG, activation_callback = self._EditGUG )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GUGS.ID, self._ConvertGUGToListCtrlTuples )
+        
+        self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_GUGS.ID, 30, model, delete_key_callback = self._DeleteGUG, activation_callback = self._EditGUG )
         
         self._gug_list_ctrl_panel.SetListCtrl( self._gug_list_ctrl )
         
@@ -596,7 +605,9 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._ngug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        self._ngug_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._ngug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUGS.ID, 20, self._ConvertNGUGToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditNGUG )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NGUGS.ID, self._ConvertNGUGToListCtrlTuples )
+        
+        self._ngug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._ngug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUGS.ID, 20, model, use_simple_delete = True, activation_callback = self._EditNGUG )
         
         self._ngug_list_ctrl_panel.SetListCtrl( self._ngug_list_ctrl )
         
@@ -1339,7 +1350,9 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( parameters_panel )
         
-        self._parameters = ClientGUIListCtrl.BetterListCtrl( parameters_listctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.ID, 5, self._ConvertParameterToListCtrlTuples, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, self._ConvertParameterToListCtrlTuples )
+        
+        self._parameters = ClientGUIListCtrl.BetterListCtrlTreeView( parameters_listctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, 5, model, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
         
         parameters_listctrl_panel.SetListCtrl( self._parameters )
         
@@ -2286,7 +2299,9 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASSES.ID, 15, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASSES.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASSES.ID, 15, model, use_simple_delete = True, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -2300,9 +2315,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._list_ctrl.AddDatas( url_classes )
-        
-        self._list_ctrl.Sort()
+        self._list_ctrl.SetData( url_classes )
         
         #
         
@@ -2519,13 +2532,17 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._notebook, CGLC.COLUMN_LIST_URL_CLASS_API_PAIRS.ID, 10, self._ConvertAPIPairDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_API_PAIRS.ID, self._ConvertAPIPairDataToListCtrlTuples )
+        
+        self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._notebook, CGLC.COLUMN_LIST_URL_CLASS_API_PAIRS.ID, 10, model )
         
         #
         
         self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._parser_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_PARSER_KEYS.ID, 24, self._ConvertParserDataToListCtrlTuples, activation_callback = self._EditParser )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_PARSER_KEYS.ID, self._ConvertParserDataToListCtrlTuples )
+        
+        self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._parser_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_PARSER_KEYS.ID, 24, model, activation_callback = self._EditParser )
         
         self._parser_list_ctrl_panel.SetListCtrl( self._parser_list_ctrl )
         

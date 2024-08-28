@@ -1466,6 +1466,8 @@ Arguments (in percent-encoded JSON):
     *   `tags`: (a list of tags you wish to search for)
     *   [file domain](#parameters_file_domain) (optional, defaults to _all my files_)
     *   `tag_service_key`: (optional, hexadecimal, the tag domain on which to search, defaults to _all my files_)
+    *   `include_current_tags`: (optional, bool, whether to search 'current' tags, defaults to `true`)
+    *   `include_pending_tags`: (optional, bool, whether to search 'pending' tags, defaults to `true`)
     *   `file_sort_type`: (optional, integer, the results sort method, defaults to `2` for `import time`)
     *   `file_sort_asc`: true or false (optional, default `true`, the results sort order)
     *   `return_file_ids`: true or false (optional, default `true`, returns file id results)
@@ -1590,7 +1592,9 @@ Makes:
 *   samus aran OR lara croft
 *   system:height > 1000
 
-The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'all my files' and 'all known tags'. 
+The file and tag services are for search domain selection, just like clicking the buttons in the client. They are optional--default is 'all my files' and 'all known tags'.
+
+`include_current_tags` and `include_pending_tags` do the same as the buttons on the normal search interface. They alter the search of normal tags and tag-related system predicates like 'system:number of tags', including or discluding that type of tag from whatever the search is doing. If you set both of these to `false`, you'll often get no results.
 
 File searches occur in the `display` `tag_display_type`. If you want to pair autocomplete tag lookup from [/search_tags](#add_tags_search_tags) to this file search (e.g. for making a standard booru search interface), then make sure you are searching `display` tags there.
 

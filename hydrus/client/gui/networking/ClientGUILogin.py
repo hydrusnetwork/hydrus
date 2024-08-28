@@ -261,7 +261,9 @@ class EditLoginsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._domains_and_login_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrl( self._domains_and_login_info_panel, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, 16, self._ConvertDomainAndLoginInfoListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentials )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, self._ConvertDomainAndLoginInfoListCtrlTuples )
+        
+        self._domains_and_login_info = ClientGUIListCtrl.BetterListCtrlTreeView( self._domains_and_login_info_panel, CGLC.COLUMN_LIST_DOMAINS_TO_LOGIN_INFO.ID, 16, model, use_simple_delete = True, activation_callback = self._EditCredentials )
         
         self._domains_and_login_info_panel.SetListCtrl( self._domains_and_login_info )
         
@@ -1306,7 +1308,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         credential_definitions_panel = ClientGUIListCtrl.BetterListCtrlPanel( credential_definitions_box_panel )
         
-        self._credential_definitions = ClientGUIListCtrl.BetterListCtrl( credential_definitions_panel, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, 4, self._ConvertCredentialDefinitionToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, self._ConvertCredentialDefinitionToListCtrlTuples )
+        
+        self._credential_definitions = ClientGUIListCtrl.BetterListCtrlTreeView( credential_definitions_panel, CGLC.COLUMN_LIST_CREDENTIAL_DEFINITIONS.ID, 4, model, use_simple_delete = True, activation_callback = self._EditCredentialDefinitions )
         
         credential_definitions_panel.SetListCtrl( self._credential_definitions )
         
@@ -1332,7 +1336,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         example_domains_info_panel = ClientGUIListCtrl.BetterListCtrlPanel( example_domains_info_box_panel )
         
-        self._example_domains_info = ClientGUIListCtrl.BetterListCtrl( example_domains_info_panel, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, 6, self._ConvertExampleDomainInfoToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, self._ConvertExampleDomainInfoToListCtrlTuples )
+        
+        self._example_domains_info = ClientGUIListCtrl.BetterListCtrlTreeView( example_domains_info_panel, CGLC.COLUMN_LIST_EXAMPLE_DOMAINS_INFO.ID, 6, model, use_simple_delete = True, activation_callback = self._EditExampleDomainsInfo )
         
         example_domains_info_panel.SetListCtrl( self._example_domains_info )
         
@@ -1350,7 +1356,9 @@ class EditLoginScriptPanel( ClientGUIScrolledPanels.EditPanel ):
         
         test_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( test_panel )
         
-        self._test_listctrl = ClientGUIListCtrl.BetterListCtrl( test_listctrl_panel, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, 6, self._ConvertTestResultToListCtrlTuples, activation_callback = self._ReviewTestResult )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, self._ConvertTestResultToListCtrlTuples )
+        
+        self._test_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( test_listctrl_panel, CGLC.COLUMN_LIST_LOGIN_SCRIPT_TEST_RESULTS.ID, 6, model, activation_callback = self._ReviewTestResult )
         
         test_listctrl_panel.SetListCtrl( self._test_listctrl )
         
@@ -1897,7 +1905,9 @@ class EditLoginScriptsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         login_scripts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._login_scripts = ClientGUIListCtrl.BetterListCtrl( login_scripts_panel, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, 20, self._ConvertLoginScriptToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, self._ConvertLoginScriptToListCtrlTuples )
+        
+        self._login_scripts = ClientGUIListCtrl.BetterListCtrlTreeView( login_scripts_panel, CGLC.COLUMN_LIST_LOGIN_SCRIPTS.ID, 20, model, use_simple_delete = True, activation_callback = self._Edit )
         
         login_scripts_panel.SetListCtrl( self._login_scripts )
         

@@ -202,8 +202,9 @@ class EditSingleFileMetadataRouterPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if self._test_notebook.count() < i + 1:
                 
-                # make this our new listctrl
-                list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._test_notebook, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, 11, self._ConvertTestRowToListCtrlTuples )
+                model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, self._ConvertTestRowToListCtrlTuples )
+                
+                list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._test_notebook, CGLC.COLUMN_LIST_METADATA_ROUTER_TEST_RESULTS.ID, 11, model )
                 
                 self._test_notebook.addTab( list_ctrl, 'init' )
                 

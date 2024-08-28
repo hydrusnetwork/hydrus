@@ -3573,7 +3573,9 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_parents = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 6, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_PARENTS.ID, self._ConvertPairToListCtrlTuples )
+            
+            self._tag_parents = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 6, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_parents )
             
@@ -3656,7 +3658,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             QP.AddToLayout( vbox, ClientGUICommon.WrapInText( self._pursue_whole_chain, self, 'show whole chains' ), CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, workspace_hbox, CC.FLAGS_EXPAND_PERPENDICULAR )
             QP.AddToLayout( vbox, self._listctrl_panel, CC.FLAGS_EXPAND_BOTH_WAYS )
-            QP.AddToLayout( vbox, tags_box, CC.FLAGS_EXPAND_SIZER_BOTH_WAYS )
+            QP.AddToLayout( vbox, tags_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             QP.AddToLayout( vbox, input_box, CC.FLAGS_EXPAND_SIZER_PERPENDICULAR )
             
             self.setLayout( vbox )
@@ -4319,7 +4321,9 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            self._tag_siblings = ClientGUIListCtrl.BetterListCtrl( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 14, self._ConvertPairToListCtrlTuples, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, self._ConvertPairToListCtrlTuples )
+            
+            self._tag_siblings = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 14, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
             self._listctrl_panel.SetListCtrl( self._tag_siblings )
             

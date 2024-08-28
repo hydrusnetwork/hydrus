@@ -7,6 +7,36 @@ title: Changelog
 !!! note
     This is the new changelog, only the most recent builds. For all versions, see the [old changelog](old_changelog.html).
 
+## [Version 588](https://github.com/hydrusnetwork/hydrus/releases/tag/v588)
+
+### fast new lists
+
+* tl;dr: big lists faster now. you do not need to do anything
+* every multi-column list in the program (there's about 75 of them) now works on a more sophisticated model (specifically, we are updating from QTreeWidget to QTreeView). instead of the list storing and regenerating display labels for every single row of a table, only the rows that are currently in view are generally consulted. sort events are similarly extremely fast, with off-screen updates virtualised and deferred
+* in my tests, a list with 170,000 rows now sorts in about four seconds. my code is still connected to a non-optimised part of the old system, so I hope to improve gains with background cleanup work in coming months. I believe I can make it work at least twice as fast in places, particularly in initialisation
+* multi-column lists are much better about initialising/migrating the selection 'focus' (the little, usually dotted-line-border box that says where keyboard focus is) through programmatic insertions and deletes and sorts
+* column headers now show the up/down 'sort' arrows using native style. everything is a bit more Qt-native and closer to C++ instead of my old custom garbage
+* none of this changes anything to do with single-column lists across the program, which are still using somewhat jank old code. my taglist in particular is an entirely custom object that is neat in some ways but stuck in place by my brittle design. the above rewrite was tricky in a couple of annoying ways but overall very worth doing, so I expect to replicate it elsewhere. another open choice is rewriting the similarly entirely custom thumbnail canvas to a proper Qt widget with a QLayout and such. we'll see how future work goes
+
+### misc
+
+* fixed the 'show' part of 'pages-&gt;sidebar and preview panels-&gt;show/hide sidebar and preview panel', which was busted last week in the page relayout cleanup
+* I think I fixed the frame of flicker (usually a moment of page-wide autocomplete input) you would sometimes get when clicking a 'show these files' popup message files button
+* fixed the new shimmie parser (by adding a simpler dupe and wangling the example urls around) to correctly parse r34h tags
+* I think I may have fixed some deadlocks and/or mega-pauses in the manage tag parents/siblings dialogs when entering pairs causes a dialog (a yes/no confirmation, or the 'enter a reason' input) to pop up
+* I think I have fixed the 'switch between fullscreen borderless and regular framed window' command when set to the 'media_viewer' shortcut set. some command-processing stuff wasn't wired up fully after I cleared out some old hacks a while ago
+* the manage tag parents dialog has some less janky layout as it is expanded/shrunk
+* if similar files search tree maintenance fails to regenerate a branch, the user is now told to try running the full regen
+* the full similar files search tree regen now filters out nodes with invalid phashes (i.e. due to database damage), deleting those nodes fully and printing all pertinent info to the log, and tells the user what to do next
+* you can now regen the similar files search tree on an empty database without error, lol
+* while I was poking around lists, I fixed a bit of bad error handling when you try to import a broken serialised data png to a multi-column list
+
+### client api
+
+* the `/get_files/search_files` command now supports `include_current_tags` and `include_pending_tags`, mirroring the buttons on the normal search interface (issue #1577)
+* updated the help and unit tests to check these new params
+* client api version is now 69
+
 ## [Version 587](https://github.com/hydrusnetwork/hydrus/releases/tag/v587)
 
 ### all misc this week
@@ -348,30 +378,3 @@ title: Changelog
 * cleaned up some regex ui code
 * cleaned up some garbage in the string panel ui code
 * fixed some weird vertical stretch in some single-control dialogs
-
-## [Version 578](https://github.com/hydrusnetwork/hydrus/releases/tag/v578)
-
-### animated webp
-
-* we now have animated webp support! despite many libraries having trouble with this, it turns out that modern PIL can decode and render them. I have figured out a solution using my old native gif renderer, so webps will now play in the program
-* I'm going the same route as gifs and (a)pngs--the program now tracks 'webp' vs 'animated webp' as different filetypes. all your image webps will be queued for a scan on update, and any with animation will become the new type, with num frames and duration, and will be fully viewable in the media viewer
-* I don't know when PIL added this tech, so if you are a source user and haven't rebuilt your venv in a while, this is probably a good time!
-
-### misc
-
-* the five new 'draw hover-window text in the background of media viewer' options are now copied to the media viewer itself, under a new 'eye' icon menu button. I'll be hanging more stuff off here, like 'always on top' in future!
-* the 'known urls' media submenu is now just 'urls', and it now has A) the 'manage' command, moved from the manage menu and B) 'open in a new page' for the focused file's specific URLs or 'any of them' (i.e. it opens a new search page with 'system:known url=blah', so if you need to find which files share a URL, it is now just one click
-* fixed the gelbooru 0.2.5 post parser's fetching of multiple source urls. it was not splitting them correctly due to a (recent?) change on gelbooru's end and adding unhelpful `https://gelbooru.com/%7C` gumpf as an additional source url
-* added a 'network report mode (silent)' to the `help-&gt;debug` menu, which does everything the network report mode does but with silent logging rather than a million popups. should help with longer-term debugging
-* fixed an issue with fetching gif variable framerate timings in the native renderer
-* added variable framerate tech to the native renderer for all animation types PIL can figure out except apng (previously it could only do it for gif)
-* tightened up some of the file metadata checks. apng is now scanned for exif data, the HEIF types are now scanned for transparency. these jobs are also queued up on update
-* the media viewer's top hover's center buttons (usually inbox/delete stuff) are finally centered correctly, aligned with the text below. apologies for the delay; it took several years of under-waterfall mediation to gather enough chi, but I finally have a beginner's understanding of `QSizePolicy.Expanding`
-
-### boring cleanup
-
-* fixed some more long tooltips to wrap into nice newlines
-* converted the 'manage urls' dialog to the decoupled 'edit' paradigm
-* refactored most of the 'scrolling panel' code to a new `gui.panels` module
-* broke up some of the bloated scrolling panel code into smaller files, moved Migrate Tags and Edit Timestamps to new files in `gui.metadata`, and replaced/deleted some old code
-* refactored `ClientGUITime` to `gui.metadata`, `ClientGUILogin` to `gui.networking`

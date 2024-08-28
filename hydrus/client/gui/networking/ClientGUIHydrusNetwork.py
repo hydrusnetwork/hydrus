@@ -219,7 +219,9 @@ class EditAccountTypesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._deletee_account_type_keys_to_new_account_type_keys = {}
         
-        self._account_types_listctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, 20, self._ConvertAccountTypeToTuples, delete_key_callback = self._Delete, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, self._ConvertAccountTypeToTuples )
+        
+        self._account_types_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_ACCOUNT_TYPES.ID, 20, model, delete_key_callback = self._Delete, activation_callback = self._Edit )
         
         self._add_button = ClientGUICommon.BetterButton( self, 'add', self._Add )
         self._edit_button = ClientGUICommon.BetterButton( self, 'edit', self._Edit )

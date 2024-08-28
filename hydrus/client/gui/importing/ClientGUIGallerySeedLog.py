@@ -258,7 +258,9 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on gallery_seed add/remove
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, 30, self._ConvertGallerySeedToListCtrlTuples, delete_key_callback = self._DeleteSelected )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, self._ConvertGallerySeedToListCtrlTuples )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, 30, model, delete_key_callback = self._DeleteSelected )
         
         #
         

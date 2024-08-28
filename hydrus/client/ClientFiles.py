@@ -2760,7 +2760,7 @@ class FilesMaintenanceManager( object ):
             
             self._controller.WriteSynchronous( 'file_maintenance_add_jobs_hashes', { hash }, REGENERATE_FILE_DATA_JOB_CHECK_SIMILAR_FILES_MEMBERSHIP )
             
-            return None
+            return []
             
         
         try:

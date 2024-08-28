@@ -5249,7 +5249,7 @@ class DB( HydrusDB.HydrusDB ):
         
         #
         
-        self.modules_similar_files = ClientDBSimilarFiles.ClientDBSimilarFiles( self._c, self.modules_services, self.modules_files_storage )
+        self.modules_similar_files = ClientDBSimilarFiles.ClientDBSimilarFiles( self._c, self.modules_services, self.modules_hashes, self.modules_files_storage )
         
         self._modules.append( self.modules_similar_files )
         
@@ -10660,6 +10660,40 @@ class DB( HydrusDB.HydrusDB ):
                 HydrusData.PrintException( e )
                 
                 message = 'Trying to update some login stuff failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
+        if version == 587:
+            
+            try:
+                
+                domain_manager: ClientNetworkingDomain.NetworkDomainManager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                # new example urls suggest new links, this should force the detach and re-link we want
+                domain_manager.DeleteParsers( 'shimmie file page parser' )
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'shimmie file page parser',
+                    'shimmie file page parser - simple tags'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloaders failed! Please let hydrus dev know!'
                 
                 self.pub_initial_message( message )
                 

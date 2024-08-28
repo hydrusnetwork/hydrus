@@ -2,6 +2,7 @@ import os
 import typing
 
 from qtpy import QtCore as QC
+from qtpy import QtGui as QG
 from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
@@ -40,7 +41,7 @@ def SafeNoneStr( value ):
 # note that this AbstractItemModel can support nested folder stuff, with some work. we'd prob want to move to a data storage system that actuall was a tree, rather than this indices-to-data stuff
 class HydrusListItemModel( QC.QAbstractItemModel ):
     
-    def __init__( self, parent: QW.QWidget, column_list_type, data_to_display_tuple_func: typing.Callable, data_to_sort_tuple_func: typing.Callable, column_types_to_name_overrides = None ):
+    def __init__( self, parent: QW.QWidget, column_list_type: int, data_to_display_tuple_func: typing.Callable, data_to_sort_tuple_func: typing.Callable, column_types_to_name_overrides = None ):
         
         QC.QAbstractItemModel.__init__( self, parent )
         
@@ -138,7 +139,17 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
                 self._data_to_display_tuples[ data ] = display_tuple
                 
             
-            return self._data_to_display_tuples[ data ][ column_type ]
+            text = self._data_to_display_tuples[ data ][ column_type ]
+            
+            if role == QC.Qt.ToolTipRole:
+                
+                return ClientGUIFunctions.WrapToolTip( text )
+                
+            else:
+                
+                return text
+                
+            
             
         elif role == QC.Qt.UserRole:
             
@@ -197,7 +208,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             return QC.Qt.NoItemFlags
             
         
-        return QC.Qt.ItemIsEnabled | QC.Qt.ItemIsSelectable
+        return QC.Qt.ItemIsEnabled | QC.Qt.ItemIsSelectable | QC.Qt.ItemNeverHasChildren
         
     
     def GetData( self, indices: typing.Optional[ typing.Collection[ int ] ] = None ):
@@ -212,13 +223,29 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
         
     
+    def GetEarliestData( self, datas ):
+        
+        if len( datas ) == 0:
+            
+            return None
+            
+        
+        matching_tuples = sorted( ( ( self._data_to_indices[ data ], data ) for data in datas if data in self._data_to_indices ) )
+        
+        if len( matching_tuples ) == 0:
+            
+            return None
+            
+        
+        return matching_tuples[0][1]
+        
     def GetModelIndexFromData( self, data: object ):
         
         if data in self._data_to_indices:
             
             index = self._data_to_indices[ data ]
             
-            return self.createIndex( index, 0, QC.QModelIndex() )
+            return self.createIndex( index, 0 )
             
         else:
             
@@ -233,7 +260,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
     
     def headerData( self, section: int, orientation: QC.Qt.Orientation, role = QC.Qt.DisplayRole ):
         
-        if orientation == QC.Qt.Vertical:
+        if orientation != QC.Qt.Orientation.Horizontal:
             
             return None
             
@@ -259,7 +286,7 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             
         else:
             
-            return None
+            return QC.QAbstractItemModel.headerData( self, section, orientation, role = role )
             
         
     
@@ -270,7 +297,11 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
             return QC.QModelIndex()
             
         
-        return self.createIndex( row, column, parent )
+        # WOOP WOOP, TWO MAN-HOURS DIED HERE
+        # do not return self.createIndex( row, column, parent ), it causes the >0 columns to not repaint or respond to mouse clicks
+        # I guess somehow the default parent here was like the 0, 0 index or -1, -1 or something crazy since I'm not setting up a root 'properly' or something
+        # anyway it broke the whole thing. just doing row, column fixes the selection and repaint issues
+        return self.createIndex( row, column )
         
     
     def parent( self, index = QC.QModelIndex() ):
@@ -311,6 +342,13 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         
     
     def sort( self, column: int, order: QC.Qt.SortOrder = QC.Qt.AscendingOrder ):
+        
+        self.layoutAboutToBeChanged.emit()
+        
+        # TODO: OK, so I understand we can upgrade this and extend to allowing filter behaviour by inserting a QSortFilterProxyModel
+        # that dude would handle sort, which I guess means it would do the data_to_sort_tuples stuff too, and would do so by overriding a 'lessThan' method in a subclass
+        # it would also allow quick filtering
+        # note, important, however, that you need to be careful in the view or whatever to do mapFromSource and mapToSource when handling indices since they'll jump around via the proxy's sort/filtering
         
         self._sort_column_type = self._column_list_status.GetColumnTypeFromIndex( column )
         
@@ -358,6 +396,24 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         self._data_to_indices = { data : index for ( index, data ) in enumerate( datas_sorted ) }
         
         self.layoutChanged.emit()
+        
+    
+    def ReplaceDatas( self, replacement_tuples ):
+        
+        for ( old_data, new_data ) in replacement_tuples:
+            
+            index = self._data_to_indices[ old_data ]
+            
+            del self._data_to_indices[ old_data ]
+            
+            self._data_to_indices[ new_data ] = index
+            self._indices_to_data[ index ] = new_data
+            
+        
+        new_datas = [ new_data for ( old_data, new_data ) in replacement_tuples ]
+        
+        # tell the View the display strings have updated
+        self.UpdateDatas( new_datas )
         
     
     def UpdateDatas( self, datas, check_for_changed_sort_data = False ):
@@ -431,12 +487,38 @@ class HydrusListItemModel( QC.QAbstractItemModel ):
         
     
 
+class HydrusListItemModelBridge( HydrusListItemModel ):
+    """
+    This guy is the 'temporary' bridge between the old model, which spits out both display and sort tuples in one go, and the future view, which intends to do this separately.
+    It is inefficient, but it is easy to deploy.
+    """
+    def __init__( self, parent: QW.QWidget, column_list_type: int, data_to_tuples_func: typing.Callable, column_types_to_name_overrides = None ):
+        
+        self._data_to_tuples_func = data_to_tuples_func
+        
+        def data_to_display_tuple_func( data ):
+            
+            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            
+            return display_tuple
+            
+        
+        def data_to_sort_tuple_func( data ):
+            
+            ( display_tuple, sort_tuple ) = self._data_to_tuples_func( data )
+            
+            return sort_tuple
+            
+        
+        HydrusListItemModel.__init__( self, parent, column_list_type, data_to_display_tuple_func, data_to_sort_tuple_func, column_types_to_name_overrides = column_types_to_name_overrides )
+        
+    
+
 class BetterListCtrlTreeView( QW.QTreeView ):
     
     columnListContentsChanged = QC.Signal()
-    columnListStatusChanged = QC.Signal()
     
-    def __init__( self, parent, column_list_type, height_num_chars, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, style = None, column_types_to_name_overrides = None ):
+    def __init__( self, parent, column_list_type, height_num_chars, model: HydrusListItemModel, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None ):
         
         QW.QTreeView.__init__( self, parent )
         
@@ -444,15 +526,21 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         self._creation_time = HydrusTime.GetNow()
         
+        # TODO: pull this from the model m8
         self._column_list_type = column_list_type
         
         self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
         self._original_column_list_status = self._column_list_status
         
+        self._temp_selected_data_record = []
+        
+        self.setUniformRowHeights( True )
         self.setAlternatingRowColors( True )
         self.setSortingEnabled( True )
         self.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
+        self.setSelectionBehavior( QW.QTreeView.SelectRows )
         self.setRootIsDecorated( False )
+        self.setEditTriggers( QW.QTreeView.NoEditTriggers )
         
         self._initial_height_num_chars = height_num_chars
         self._forced_height_num_chars = None
@@ -471,44 +559,9 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         # This sets header data, so we can now do header-section-sizing gubbins
         self.setModel( model )
         
-        # old way
-        '''
-        #sizing_column_initial_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
-        total_width = self.fontMetrics().boundingRect( 'x' * sizing_column_initial_width_num_chars ).width()
-        
-        resize_column = 1
-        
-        for ( i, ( name, width_num_chars ) ) in enumerate( columns ):
-            
-            if width_num_chars == -1:
-                
-                width = -1
-                
-                resize_column = i + 1
-                
-            else:
-                
-                width = self.fontMetrics().boundingRect( 'x' * width_num_chars ).width()
-                
-                total_width += width
-                
-            
-            self.headerItem().setText( i, name )
-            
-            self.setColumnWidth( i, width )
-            
-        
-        # Technically this is the previous behavior, but the two commented lines might work better in some cases (?)
-        self.header().setStretchLastSection( False )
-        self.header().setSectionResizeMode( resize_column - 1 , QW.QHeaderView.Stretch )
-        #self.setColumnWidth( resize_column - 1, sizing_column_initial_width )
-        #self.header().setStretchLastSection( True )
-        
-        self.setMinimumWidth( total_width )
-        '''
-        
         main_tlw = CG.client_controller.GetMainTLW()
         
+        # Note: now (2024-08) we moved to TreeView, I have no idea what the status of this stuff is
         # if last section is set too low, for instance 3, the column seems unable to ever shrink from initial (expanded to fill space) size
         #  _    _  ___  _    _    __     __   ___  
         # ( \/\/ )(  _)( \/\/ )  (  )   (  ) (   \ 
@@ -529,20 +582,6 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         for ( i, column_type ) in enumerate( self._column_list_status.GetColumnTypes() ):
             
-            self.headerItem().setData( i, QC.Qt.UserRole, column_type )
-            
-            if column_types_to_name_overrides is not None and column_type in column_types_to_name_overrides:
-                
-                name = column_types_to_name_overrides[ column_type ]
-                
-            else:
-                
-                name = CGLC.column_list_column_name_lookup[ self._column_list_type ][ column_type ]
-                
-            
-            self.headerItem().setText( i, name )
-            self.headerItem().setToolTip( i, ClientGUIFunctions.WrapToolTip( name ) )
-            
             if i == last_column_index:
                 
                 width_chars = MIN_SECTION_SIZE_CHARS
@@ -554,7 +593,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
             width_chars = max( width_chars, MIN_SECTION_SIZE_CHARS )
             
-            # ok this is a pain in the neck issue, but fontmetrics changes afte widget init. I guess font gets styled on top afterwards
+            # ok this is a pain in the neck issue, but fontmetrics changes after widget init. I guess font gets styled on top afterwards
             # this means that if I use this window's fontmetrics here, in init, then it is different later on, and we get creeping growing columns lmao
             # several other places in the client are likely affected in different ways by this also!
             width_pixels = ClientGUIFunctions.ConvertTextToPixelWidth( main_tlw, width_chars )
@@ -570,15 +609,19 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         self._widget_event_filter = QP.WidgetEventFilter( self )
         self._widget_event_filter.EVT_KEY_DOWN( self.EventKeyDown )
         
-        self.itemDoubleClicked.connect( self.ProcessActivateAction )
-        
         self.header().setSectionsMovable( False ) # can only turn this on when we move from data/sort tuples
         # self.header().setFirstSectionMovable( True ) # same
-        #self.header().setSectionsClickable( True )
-        #self.header().sectionClicked.connect( self.EventColumnClick )
+        self.header().setSectionsClickable( True )
         
         #self.header().sectionMoved.connect( self._DoStatusChanged ) # same
         self.header().sectionResized.connect( self._SectionsResized )
+        
+        self.model().layoutAboutToBeChanged.connect( self._PreserveSelectionStore )
+        self.model().rowsAboutToBeInserted.connect( self._PreserveSelectionStore )
+        self.model().rowsAboutToBeRemoved.connect( self._PreserveSelectionStore )
+        self.model().layoutChanged.connect( self._PreserveSelectionRestoreFromSort )
+        self.model().rowsInserted.connect( self._PreserveSelectionRestore )
+        self.model().rowsRemoved.connect( self._PreserveSelectionRestore )
         
         self.header().setContextMenuPolicy( QC.Qt.CustomContextMenu )
         self.header().customContextMenuRequested.connect( self._ShowHeaderMenu )
@@ -656,7 +699,8 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
             logical_index = header.logicalIndex( visual_index )
             
-            column_type = self.header().data( logical_index, QC.Qt.UserRole )
+            column_type = self.model().headerData( logical_index, QC.Qt.Orientation.Horizontal, QC.Qt.UserRole )
+            
             width_pixels = header.sectionSize( logical_index )
             shown = not header.isSectionHidden( logical_index )
             
@@ -736,9 +780,12 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def _GetRowHeightEstimate( self ):
         
-        if self.topLevelItemCount() > 0:
+        # this straight-up returns 0 during dialog init wew, I guess when I ask during init the text isn't initialised or whatever
+        if self.model().rowCount() > 0 and False:
             
-            height = self.rowHeight( self.indexFromItem( self.topLevelItem( 0 ) ) )
+            model_index = self.model().index( 0, 0 )
+            
+            height = self.rowHeight( model_index )
             
         else:
             
@@ -750,55 +797,27 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def _GetSelectedIndices( self ) -> typing.List[ int ]:
         
-        return sorted( ( index.row() for index in self.selectionModel().selectedIndexes() ) )
+        return sorted( ( index.row() for index in self.selectionModel().selectedRows() ) )
         
     
-    def _IterateTopLevelItems( self ) -> typing.Iterator[ QW.QTreeWidgetItem ]:
+    def _PreserveSelectionRestore( self ):
         
-        for i in range( self.topLevelItemCount() ):
-            
-            yield self.topLevelItem( i )
-            
+        self.SelectDatas( self._temp_selected_data_record, deselect_others = True )
         
-    
-    def _RecalculateIndicesAfterDelete( self ):
-        
-        indices_and_data_info = sorted( self._indices_to_data_info.items() )
-        
-        self._indices_to_data_info = {}
-        self._data_to_indices = {}
-        
-        for ( index, ( old_index, data_info ) ) in enumerate( indices_and_data_info ):
-            
-            ( data, display_tuple, sort_tuple ) = data_info
-            
-            self._data_to_indices[ data ] = index
-            self._indices_to_data_info[ index ] = data_info
-            
+        self._temp_selected_data_record = []
         
     
-    def _RefreshHeaderNames( self ):
+    def _PreserveSelectionRestoreFromSort( self ):
         
-        for i in range( self.header().count() ):
-            
-            column_type = self.headerItem().data( i, QC.Qt.UserRole )
-            
-            name = CGLC.column_list_column_name_lookup[ self._column_list_type ][ column_type ]
-            
-            if column_type == self._sort_column_type:
-                
-                char = '\u25B2' if self._sort_asc else '\u25BC'
-                
-                name_for_title = '{} {}'.format( name, char )
-                
-            else:
-                
-                name_for_title = name
-                
-            
-            self.headerItem().setText( i, name_for_title )
-            self.headerItem().setToolTip( i, ClientGUIFunctions.WrapToolTip( name ) )
-            
+        self._PreserveSelectionRestore()
+        
+        # save that a sort just happened
+        self._DoStatusChanged()
+        
+    
+    def _PreserveSelectionStore( self ):
+        
+        self._temp_selected_data_record = self.GetData( only_selected = True )
         
     
     def _SectionsResized( self, logical_index, old_size, new_size ):
@@ -841,23 +860,6 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         CGC.core().PopupMenu( self, menu )
         
     
-    def _UpdateRow( self, index, display_tuple ):
-        
-        for ( column_index, value ) in enumerate( display_tuple ):
-            
-            tree_widget_item = self.topLevelItem( index )
-            
-            first_line = HydrusText.GetFirstLine( value )
-            existing_value = tree_widget_item.text( column_index )
-            
-            if existing_value != first_line:
-                
-                tree_widget_item.setText( column_index, first_line )
-                tree_widget_item.setToolTip( column_index, ClientGUIFunctions.WrapToolTip( value ) )
-                
-            
-        
-    
     def AddDatas( self, datas: typing.Iterable[ object ], select_sort_and_scroll = False ):
         
         datas = list( datas )
@@ -877,7 +879,7 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
             self.Sort()
             
-            first_data = sorted( ( ( self._data_to_indices[ data ], data ) for data in datas ) )[0][1]
+            first_data = self.model().GetEarliestData( datas )
             
             self.ScrollToData( first_data )
             
@@ -909,21 +911,6 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         deletee_datas = self.GetData( only_selected = True )
         
         self.DeleteDatas( deletee_datas )
-        
-    
-    def EventItemActivated( self, item, column ):
-        
-        if self._activation_callback is not None:
-            
-            try:
-                
-                self._activation_callback()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-            
         
     
     def EventKeyDown( self, event ):
@@ -988,6 +975,11 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         #QP.SetMinClientSize( self, ( existing_min_width, ideal_client_height ) )
         
     
+    def count( self ):
+        
+        return self.model().rowCount()
+        
+    
     def GetData( self, only_selected = False ) -> list:
         
         if only_selected:
@@ -1035,12 +1027,64 @@ class BetterListCtrlTreeView( QW.QTreeView ):
     
     def HasOneSelected( self ):
         
-        return len( self.selectionModel().selectedIndexes() ) == 1
+        return len( self.selectionModel().selectedRows() ) == 1
         
     
     def HasSelected( self ):
         
-        return len( self.selectionModel().selectedIndexes() ) > 0
+        return len( self.selectionModel().selectedRows() ) > 0
+        
+    
+    def minimumSizeHint( self ):
+        
+        width = 0
+        
+        for i in range( self.model().columnCount() - 1 ):
+            
+            width += self.columnWidth( i )
+            
+        
+        width += self._min_section_width # the last column
+        
+        width += self.frameWidth() * 2
+        
+        if self._forced_height_num_chars is None:
+            
+            min_num_rows = 4
+            
+        else:
+            
+            min_num_rows = self._forced_height_num_chars
+            
+        
+        header_size = self.header().sizeHint() # this is better than min size hint for some reason ?( 69, 69 )?
+        
+        data_area_height = self._GetRowHeightEstimate() * min_num_rows
+        
+        PADDING = 10
+        
+        min_size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
+        
+        return min_size_hint
+        
+    
+    def mouseDoubleClickEvent( self, event: QG.QMouseEvent ):
+        
+        if event.button() == QC.Qt.LeftButton:
+            
+            index = self.indexAt(event.pos())  # Get the index of the item clicked
+            
+            if index.isValid():
+                
+                self.ProcessActivateAction()
+                
+                event.accept()
+                
+                return
+                
+            
+        
+        QW.QTreeView.mouseDoubleClickEvent( self, event )
         
     
     def NotifySettingsUpdated( self, column_list_type = None ):
@@ -1055,10 +1099,6 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         self._column_list_status: ClientGUIListStatus.ColumnListStatus = CG.client_controller.column_list_manager.GetStatus( self._column_list_type )
         self._original_column_list_status = self._column_list_status
-        
-        #
-        
-        ( self._sort_column_type, self._sort_asc ) = self._column_list_status.GetSort()
         
         #
         
@@ -1129,115 +1169,37 @@ class BetterListCtrlTreeView( QW.QTreeView ):
             
         
     
-    def ScrollToData( self, data: object ):
+    def ReplaceData( self, old_data: object, new_data: object, sort_and_scroll = False ):
         
-        data = QP.ListsToTuples( data )
-        
-        model_index = self.model().GetModelIndexFromData( data )
-        
-        if model_index.isValid():
-            
-            self.scrollTo( model_index, hint = QW.QAbstractItemView.ScrollHint.PositionAtCenter )
-            
-            self.setFocus( QC.Qt.OtherFocusReason )
-            
+        self.ReplaceDatas( [ ( old_data, new_data ) ], sort_and_scroll = sort_and_scroll )
         
     
-    def SelectDatas( self, datas: typing.Iterable[ object ], deselect_others = False ):
+    def ReplaceDatas( self, replacement_tuples, sort_and_scroll = False ):
         
-        selectee_datas = { QP.ListsToTuples( data ) for data in datas }
-        
-        current_selection = self.GetData( only_selected = True )
-        
-        model = self.model()
-        selection_model = self.selectionModel()
-        
-        if deselect_others:
+        if len( replacement_tuples ) == 0:
             
-            deselectee_datas = set( current_selection ).difference( selectee_datas )
-            
-            for data in deselectee_datas:
-                
-                model_index = model.GetModelIndexFromData( data )
-                
-                selection_model.select( model_index, QC.QItemSelectionModel.Clear | QC.QItemSelectionModel.Rows )
-                
+            return
             
         
-        selectee_datas.difference_update( current_selection )
+        replacement_tuples = [ ( QP.ListsToTuples( old_data ), QP.ListsToTuples( new_data ) ) for ( old_data, new_data ) in replacement_tuples ]
         
-        for data in selectee_datas:
+        self.model().ReplaceDatas( replacement_tuples )
+        
+        if sort_and_scroll:
             
-            model_index = model.GetModelIndexFromData( data )
+            self.Sort()
             
-            selection_model.select( model_index, QC.QItemSelectionModel.Select | QC.QItemSelectionModel.Rows )
+            first_new_data = self.model().GetEarliestData( [ new_data for ( old_data, new_data ) in replacement_tuples ] )
             
-        
-    
-    def SetCopyRowsCallable( self, copy_rows_callable ):
-        
-        self._copy_rows_callable = copy_rows_callable
-        
-    
-    def SetData( self, datas: typing.Iterable[ object ] ):
-        
-        datas = [ QP.ListsToTuples( data ) for data in datas ]
-        
-        self.model().SetData( datas )
-        
-        self.Sort()
+            self.ScrollToData( first_new_data )
+            
         
         self.columnListContentsChanged.emit()
         
     
-    def ShowDeleteSelectedDialog( self ):
-        
-        from hydrus.client.gui import ClientGUIDialogsQuick
-        
-        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
-        
-        if result == QW.QDialog.Accepted:
-            
-            self.DeleteSelected()
-            
-        
-    
-    def minimumSizeHint( self ):
-        
-        width = 0
-        
-        for i in range( self.columnCount() - 1 ):
-            
-            width += self.columnWidth( i )
-            
-        
-        width += self._min_section_width # the last column
-        
-        width += self.frameWidth() * 2
-        
-        if self._forced_height_num_chars is None:
-            
-            min_num_rows = 4
-            
-        else:
-            
-            min_num_rows = self._forced_height_num_chars
-            
-        
-        header_size = self.header().sizeHint() # this is better than min size hint for some reason ?( 69, 69 )?
-        
-        data_area_height = self._GetRowHeightEstimate() * min_num_rows
-        
-        PADDING = 10
-        
-        min_size_hint = QC.QSize( width, header_size.height() + data_area_height + PADDING )
-        
-        return min_size_hint
-        
-    
     def resizeEvent( self, event ):
         
-        result = QW.QTreeWidget.resizeEvent( self, event )
+        result = QW.QTreeView.resizeEvent( self, event )
         
         # do not touch this! weird hack that fixed a new bug in 6.6.1 where all columns would reset on load to 100px wide!
         if self._has_initialised_size:
@@ -1310,32 +1272,105 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         return size_hint
         
     
-    def sortByColumn( self, column: int, order: QC.Qt.SortOrder ):
+    def ScrollToData( self, data: object ):
         
-        selected_data = self.GetData( only_selected = True )
+        data = QP.ListsToTuples( data )
         
-        # probably don't have to do the clear here, but it feels neater to do it like this rather than let existing selections go bananas, even briefly
-        self.selectionModel().clearSelection()
+        model_index = self.model().GetModelIndexFromData( data )
         
-        self.model().sort( column, order )
+        if model_index.isValid():
+            
+            self.scrollTo( model_index, hint = QW.QAbstractItemView.ScrollHint.PositionAtCenter )
+            
+            self.setFocus( QC.Qt.OtherFocusReason )
+            
         
-        self.SelectDatas( selected_data )
+    
+    def SelectDatas( self, datas: typing.Iterable[ object ], deselect_others = False ):
+        
+        selectee_datas = { QP.ListsToTuples( data ) for data in datas }
+        
+        current_selection = self.GetData( only_selected = True )
+        
+        model = self.model()
+        selection_model = self.selectionModel()
+        
+        if deselect_others:
+            
+            deselectee_datas = set( current_selection ).difference( selectee_datas )
+            
+            for data in deselectee_datas:
+                
+                model_index = model.GetModelIndexFromData( data )
+                
+                selection_model.select( model_index, QC.QItemSelectionModel.Deselect | QC.QItemSelectionModel.Rows )
+                
+            
+        
+        selectee_datas.difference_update( current_selection )
+        
+        for data in selectee_datas:
+            
+            model_index = model.GetModelIndexFromData( data )
+            
+            selection_model.select( model_index, QC.QItemSelectionModel.Select | QC.QItemSelectionModel.Rows )
+            
+        
+        if len( selectee_datas ) > 0:
+            
+            data = model.GetEarliestData( selectee_datas )
+            
+            model_index = model.GetModelIndexFromData( data )
+            
+            selection_model.setCurrentIndex( model_index, QC.QItemSelectionModel.Current )
+            
+        
+    
+    def SetCopyRowsCallable( self, copy_rows_callable ):
+        
+        self._copy_rows_callable = copy_rows_callable
+        
+    
+    def SetData( self, datas: typing.Iterable[ object ] ):
+        
+        datas = [ QP.ListsToTuples( data ) for data in datas ]
+        
+        self.model().SetData( datas )
+        
+        self.Sort()
         
         self.columnListContentsChanged.emit()
         
-        self._DoStatusChanged()
+    
+    def SetNonDupeName( self, obj: object ):
+        
+        current_names = { o.GetName() for o in self.GetData() if o is not obj }
+
+        HydrusSerialisable.SetNonDupeName( obj, current_names )
+        
+    
+    def ShowDeleteSelectedDialog( self ):
+        
+        from hydrus.client.gui import ClientGUIDialogsQuick
+        
+        result = ClientGUIDialogsQuick.GetYesNo( self, 'Remove all selected?' )
+        
+        if result == QW.QDialog.Accepted:
+            
+            self.DeleteSelected()
+            
         
     
     def Sort( self, sort_column_type = None, sort_asc = None ):
         
         ( default_sort_column_type, default_sort_asc ) = self._column_list_status.GetSort()
         
-        if sort_column_type is not None:
+        if sort_column_type is None:
             
             sort_column_type = default_sort_column_type
             
         
-        if sort_asc is not None:
+        if sort_asc is None:
             
             sort_asc = default_sort_asc
             
@@ -1343,11 +1378,8 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         column = self._column_list_status.GetColumnIndexFromType( sort_column_type )
         ord = QC.Qt.AscendingOrder if sort_asc else QC.Qt.DescendingOrder
         
+        # do not call model().sort directly, it does not update the header arrow gubbins
         self.sortByColumn( column, ord )
-        
-        self.columnListContentsChanged.emit()
-        
-        self._DoStatusChanged()
         
     
     def UpdateDatas( self, datas: typing.Optional[ typing.Iterable[ object ] ] = None, check_for_changed_sort_data = False ):
@@ -1367,68 +1399,13 @@ class BetterListCtrlTreeView( QW.QTreeView ):
         
         return sort_data_has_changed
         
-
-    def SetNonDupeName( self, obj: object ):
-        
-        current_names = { o.GetName() for o in self.GetData() if o is not obj }
-
-        HydrusSerialisable.SetNonDupeName( obj, current_names )
-        
-    
-    def ReplaceData( self, old_data: object, new_data: object, sort_and_scroll = False ):
-        
-        self.ReplaceDatas( [ ( old_data, new_data ) ], sort_and_scroll = sort_and_scroll )
-        
-    
-    def ReplaceDatas( self, replacement_tuples, sort_and_scroll = False ):
-        
-        if len( replacement_tuples ) == 0:
-            
-            return
-            
-        
-        first_new_data = None
-        
-        for ( old_data, new_data ) in replacement_tuples:
-            
-            old_data = QP.ListsToTuples( old_data )
-            new_data = QP.ListsToTuples( new_data )
-            
-            if first_new_data is None:
-                
-                first_new_data = new_data
-                
-            
-            data_index = self._data_to_indices[ old_data ]
-            
-            ( display_tuple, sort_tuple ) = self._GetDisplayAndSortTuples( new_data )
-            
-            data_info = ( new_data, display_tuple, sort_tuple )
-            
-            self._indices_to_data_info[ data_index ] = data_info
-            
-            del self._data_to_indices[ old_data ]
-            
-            self._data_to_indices[ new_data ] = data_index
-            
-            self._UpdateRow( data_index, display_tuple )
-            
-        
-        if sort_and_scroll and first_new_data is not None:
-            
-            self.Sort()
-            
-            self.ScrollToData( first_new_data )
-            
-        
     
 
 class BetterListCtrl( QW.QTreeWidget ):
     
     columnListContentsChanged = QC.Signal()
-    columnListStatusChanged = QC.Signal()
     
-    def __init__( self, parent, column_list_type, height_num_chars, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, style = None, column_types_to_name_overrides = None ):
+    def __init__( self, parent, column_list_type, height_num_chars, data_to_tuples_func, use_simple_delete = False, delete_key_callback = None, can_delete_callback = None, activation_callback = None, column_types_to_name_overrides = None ):
         
         QW.QTreeWidget.__init__( self, parent )
         
@@ -2058,21 +2035,6 @@ class BetterListCtrl( QW.QTreeWidget ):
         self._SortAndRefreshRows()
         
         self._DoStatusChanged()
-        
-    
-    def EventItemActivated( self, item, column ):
-        
-        if self._activation_callback is not None:
-            
-            try:
-                
-                self._activation_callback()
-                
-            except Exception as e:
-                
-                HydrusData.ShowException( e )
-                
-            
         
     
     def EventKeyDown( self, event ):
@@ -3148,7 +3110,7 @@ class BetterListCtrlPanel( QW.QWidget ):
                     have_shown_load_error = True
                     
                 
-            except:
+            except Exception as e:
                 
                 HydrusData.PrintException( e )
                 
@@ -3350,7 +3312,7 @@ class BetterListCtrlPanel( QW.QWidget ):
         
         self.setLayout( self._vbox )
         
-        self._listctrl.itemSelectionChanged.connect( self.EventSelectionChanged )
+        self._listctrl.selectionModel().selectionChanged.connect( self.EventSelectionChanged )
         
         self._listctrl.model().rowsInserted.connect( self.EventContentChanged )
         self._listctrl.model().rowsRemoved.connect( self.EventContentChanged )

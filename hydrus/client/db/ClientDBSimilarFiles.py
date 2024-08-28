@@ -15,13 +15,15 @@ from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientThreading
 from hydrus.client.db import ClientDBFilesStorage
 from hydrus.client.db import ClientDBModule
+from hydrus.client.db import ClientDBMaster
 from hydrus.client.db import ClientDBServices
 
 class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
     
-    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage ):
+    def __init__( self, cursor: sqlite3.Cursor, modules_services: ClientDBServices.ClientDBMasterServices, modules_hashes: ClientDBMaster.ClientDBMasterHashes, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage ):
         
         self.modules_services = modules_services
+        self.modules_hashes = modules_hashes
         self.modules_files_storage = modules_files_storage
         
         self._reported_on_a_broken_branch = False
@@ -733,7 +735,16 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                         
                     
                 
-                self._RegenerateBranch( job_status, biggest_perceptual_hash_id )
+                try:
+                    
+                    self._RegenerateBranch( job_status, biggest_perceptual_hash_id )
+                    
+                except:
+                    
+                    HydrusData.ShowText( 'It looks like similar files maintenance had trouble regenerating a branch of the search tree! You should try _database->regenerate->similar files search tree_, and if that still produces errors, let hydev know.' )
+                    
+                    raise
+                    
                 
                 rebalance_perceptual_hash_ids = self._STL( self._Execute( 'SELECT phash_id FROM shape_maintenance_branch_regen;' ) )
                 
@@ -792,6 +803,75 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
             self._root_node_perceptual_hash_id = None
             
             all_nodes = self._Execute( 'SELECT phash_id, phash FROM shape_perceptual_hashes;' ).fetchall()
+            
+            good_nodes = []
+            bad_nodes = []
+            
+            for ( phash_id, phash ) in all_nodes:
+                
+                if isinstance( phash, bytes ) and len( phash ) == 8:
+                    
+                    good_nodes.append( ( phash_id, phash ) )
+                    
+                else:
+                    
+                    bad_nodes.append( ( phash_id, phash ) )
+                    
+                
+            
+            all_nodes = good_nodes
+            
+            if len( all_nodes ) == 0:
+                
+                return
+                
+            
+            if len( bad_nodes ) > 0:
+                
+                bad_phash_ids = { phash_id for ( phash_id, phash ) in bad_nodes }
+                
+                self._ExecuteMany( 'DELETE FROM shape_perceptual_hashes WHERE phash_id = ?;', ( ( phash_id, ) for phash_id in bad_phash_ids ) )
+                
+                with self._MakeTemporaryIntegerTable( bad_phash_ids, 'phash_id' ) as temp_table_name:
+                    
+                    affected_hash_ids = self._STS( self._Execute( f'SELECT hash_id FROM {temp_table_name} CROSS JOIN shape_perceptual_hash_map USING ( phash_id );' ) )
+                    
+                
+                self._ExecuteMany( 'DELETE FROM shape_perceptual_hash_map WHERE phash_id = ?;', ( ( phash_id, ) for phash_id in bad_phash_ids ) )
+                
+                message = 'Discovered some bad nodes in your similar files search tree! The nodes have been deleted.'
+                message += '\n'
+                message += 'More details have been written to log, including the file list for affected hashes. You may wish to manually schedule a "similar files regen" job for all the affected file hashes. You should also check out "help my db is broke.txt" in your install_dir/db folder, since there are no clean ways these bad nodes got into your database.'
+                
+                HydrusData.ShowText( message )
+                
+                HydrusData.Print( 'The bad nodes:' )
+                
+                for ( phash_id, phash ) in bad_nodes:
+                    
+                    if isinstance( phash, bytes ):
+                        
+                        HydrusData.Print( f'phash_id: {phash_id}, presumably incorrect-length phash: "{phash.hex()}"' )
+                        
+                    else:
+                        
+                        HydrusData.Print( f'phash_id: {phash_id}, presumably corrupt phash: "{phash}"' )
+                        
+                    
+                
+                HydrusData.Print( 'The affected hashes:' )
+                
+                try:
+                    
+                    hash_ids_to_hashes = self.modules_hashes.GetHashIdsToHashes( hash_ids = affected_hash_ids )
+                    
+                    HydrusData.Print( '\n'.join( ( hash.hex() for hash in hash_ids_to_hashes.values() ) ) )
+                    
+                except:
+                    
+                    HydrusData.Print( 'Could not print affected hashes (might be your regular hashes are busted too)' )
+                    
+                
             
             job_status.SetStatusText( HydrusNumbers.ToHumanInt( len( all_nodes ) ) + ' leaves found, now regenerating' )
             

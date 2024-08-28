@@ -1,5 +1,6 @@
 import collections
 import os
+import time
 import typing
 
 from qtpy import QtCore as QC
@@ -471,6 +472,7 @@ class Page( QW.QWidget ):
         
         self._management_panel.locationChanged.connect( self._preview_canvas.SetLocationContext )
         
+        # this is the only place we _do_ want to set the split as the parent of the thumbnail panel. doing it on init avoids init flicker
         self._media_panel = self._management_panel.GetDefaultEmptyMediaPanel( self._management_media_split )
         
         self._management_media_split.addWidget( self._search_preview_split )
@@ -555,6 +557,10 @@ class Page( QW.QWidget ):
         
     
     def _SwapMediaPanel( self, new_panel: ClientGUIResults.MediaPanel ):
+        """
+        Yo, it is important that the new_panel here starts with a parent _other_ than the splitter! The page itself is usually fine.
+        If we give it the splitter as parent, you can get a frame of unusual layout flicker, usually a page-wide autocomplete input. Re-parent it here and we are fine.
+        """
         
         previous_sizes = self._management_media_split.sizes()
         
@@ -590,6 +596,8 @@ class Page( QW.QWidget ):
         else:
             
             if new_panel.parentWidget() == self._management_media_split:
+                
+                # ideally, this does not occur. we always want to replace and reduce flicker
                 
                 old_panel.setParent( None )
                 old_panel.setVisible( False )
@@ -1061,14 +1069,8 @@ class Page( QW.QWidget ):
             return
             
         
-        if vpos < 0:
-            
-            self._search_preview_split.setSizes( [ total_sum + vpos, -vpos ] )
-            
-        elif vpos > 0:
-            
-            self._search_preview_split.setSizes( [ vpos, total_sum - vpos ] )
-            
+        # handle if it was hidden before
+        self._search_preview_split.setVisible( True )
         
         total_sum = sum( self._management_media_split.sizes() )
         
@@ -1079,6 +1081,18 @@ class Page( QW.QWidget ):
         elif hpos > 0:
             
             self._management_media_split.setSizes( [ hpos, total_sum - hpos ] )
+            
+        
+        # handle if it was hidden before
+        self._preview_panel.setVisible( True )
+        
+        if vpos < 0:
+            
+            self._search_preview_split.setSizes( [ total_sum + vpos, -vpos ] )
+            
+        elif vpos > 0:
+            
+            self._search_preview_split.setSizes( [ vpos, total_sum - vpos ] )
             
         
         if HC.options[ 'hide_preview' ]:
@@ -1146,7 +1160,7 @@ class Page( QW.QWidget ):
             
             self._SetPrettyStatus( '' )
             
-            media_panel = ClientGUIResults.MediaPanelThumbnails( self._management_media_split, self._page_key, self._management_controller, media_results )
+            media_panel = ClientGUIResults.MediaPanelThumbnails( self, self._page_key, self._management_controller, media_results )
             
             self._SwapMediaPanel( media_panel )
             

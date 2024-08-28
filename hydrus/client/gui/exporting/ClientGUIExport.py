@@ -51,7 +51,9 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._export_folders = ClientGUIListCtrl.BetterListCtrl( self._export_folders_panel, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, 6, self._ConvertExportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, self._ConvertExportFolderToListCtrlTuples )
+        
+        self._export_folders = ClientGUIListCtrl.BetterListCtrlTreeView( self._export_folders_panel, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, 6, model, use_simple_delete = True, activation_callback = self._Edit )
         
         self._export_folders_panel.SetListCtrl( self._export_folders )
         
@@ -587,7 +589,9 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.setMinimumSize( QC.QSize( 220, 300 ) )
         
-        self._paths = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, 24, self._ConvertDataToListCtrlTuples, delete_key_callback = self._DeletePaths )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._paths = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, 24, model, delete_key_callback = self._DeletePaths )
         
         self._paths.Sort()
         
@@ -688,7 +692,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         ClientGUIFunctions.SetFocusLater( self._export )
         
-        self._paths.itemSelectionChanged.connect( self._RefreshTags )
+        self._paths.selectionModel().selectionChanged.connect( self._RefreshTags )
         self._metadata_routers_button.valueChanged.connect( self._MetadataRoutersUpdated )
         
         if do_export_and_then_quit:

@@ -38,7 +38,9 @@ class EditImportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         import_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._import_folders = ClientGUIListCtrl.BetterListCtrl( import_folders_panel, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, 8, self._ConvertImportFolderToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, self._ConvertImportFolderToListCtrlTuples )
+        
+        self._import_folders = ClientGUIListCtrl.BetterListCtrlTreeView( import_folders_panel, CGLC.COLUMN_LIST_IMPORT_FOLDERS.ID, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
         import_folders_panel.SetListCtrl( self._import_folders )
         
@@ -249,7 +251,9 @@ class EditImportFolderPanel( ClientGUIScrolledPanels.EditPanel ):
         
         filename_tagging_options_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._filename_tagging_options_box )
         
-        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrl( filename_tagging_options_panel, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, 5, self._ConvertFilenameTaggingOptionsToListCtrlTuples, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, self._ConvertFilenameTaggingOptionsToListCtrlTuples )
+        
+        self._filename_tagging_options = ClientGUIListCtrl.BetterListCtrlTreeView( filename_tagging_options_panel, CGLC.COLUMN_LIST_FILENAME_TAGGING_OPTIONS.ID, 5, model, use_simple_delete = True, activation_callback = self._EditFilenameTaggingOptions )
         
         filename_tagging_options_panel.SetListCtrl( self._filename_tagging_options )
         

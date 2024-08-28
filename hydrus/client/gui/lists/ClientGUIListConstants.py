@@ -827,19 +827,19 @@ default_column_list_sort_lookup[ COLUMN_LIST_REGEX_FAVOURITES.ID ] = ( COLUMN_LI
 
 #
 
-class COLUMN_LIST_URL_CLASS_PATH_COMPONENTS( COLUMN_LIST_DEFINITION ):
+class COLUMN_LIST_URL_CLASS_PARAMETERS( COLUMN_LIST_DEFINITION ):
     
     ID = 36
     
     KEY = 0
     VALUE = 1
 
-column_list_type_name_lookup[ COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.ID ] = 'url class path components'
+column_list_type_name_lookup[ COLUMN_LIST_URL_CLASS_PARAMETERS.ID ] = 'url class parameters'
 
-register_column_type( COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.ID, COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.KEY, 'name', False, 14, True )
-register_column_type( COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.ID, COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.VALUE, 'value', False, 45, True )
+register_column_type( COLUMN_LIST_URL_CLASS_PARAMETERS.ID, COLUMN_LIST_URL_CLASS_PARAMETERS.KEY, 'name', False, 14, True )
+register_column_type( COLUMN_LIST_URL_CLASS_PARAMETERS.ID, COLUMN_LIST_URL_CLASS_PARAMETERS.VALUE, 'value', False, 45, True )
 
-default_column_list_sort_lookup[ COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.ID ] = ( COLUMN_LIST_URL_CLASS_PATH_COMPONENTS.KEY, True )
+default_column_list_sort_lookup[ COLUMN_LIST_URL_CLASS_PARAMETERS.ID ] = ( COLUMN_LIST_URL_CLASS_PARAMETERS.KEY, True )
 
 #
 

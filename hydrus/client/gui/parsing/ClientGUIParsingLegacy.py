@@ -44,7 +44,9 @@ class EditNodes( QW.QWidget ):
         self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
         
-        self._nodes = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_NODES.ID, 20, self._ConvertNodeToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NODES.ID, self._ConvertNodeToTuples )
+        
+        self._nodes = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_NODES.ID, 20, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         
@@ -870,7 +872,9 @@ class ManageParsingScriptsPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
         
-        self._scripts = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, 20, self._ConvertScriptToTuples, delete_key_callback = self.Delete, activation_callback = self.Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, self._ConvertScriptToTuples )
+        
+        self._scripts = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_PARSING_SCRIPTS.ID, 20, model, delete_key_callback = self.Delete, activation_callback = self.Edit )
         
         menu_items = []
         

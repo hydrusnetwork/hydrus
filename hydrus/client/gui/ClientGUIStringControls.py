@@ -212,7 +212,9 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         
         column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.KEY : self._key_name }
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, model, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         
@@ -399,7 +401,9 @@ class StringToStringDictControl( QW.QWidget ):
         
         column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_VALUE.KEY : self._key_name, CGLC.COLUMN_LIST_KEY_TO_VALUE.VALUE : self._value_name }
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, min_height, self._ConvertDataToListCtrlTuples, use_simple_delete = use_simple_delete, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, min_height, model, use_simple_delete = use_simple_delete, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         self._listctrl.columnListContentsChanged.connect( self.columnListContentsChanged )
         
         listctrl_panel.SetListCtrl( self._listctrl )
@@ -552,6 +556,7 @@ class StringToStringDictControl( QW.QWidget ):
         self._SetValue( str_to_str_dict )
         
     
+
 class StringToStringMatchDictControl( QW.QWidget ):
     
     def __init__( self, parent, initial_dict: typing.Dict[ str, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):
@@ -564,7 +569,9 @@ class StringToStringMatchDictControl( QW.QWidget ):
         
         column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.KEY : self._key_name }
         
-        self._listctrl = ClientGUIListCtrl.BetterListCtrl( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, model, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         
         listctrl_panel.SetListCtrl( self._listctrl )
         

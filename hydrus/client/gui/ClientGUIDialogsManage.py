@@ -607,7 +607,9 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._mappings_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._mappings_list = ClientGUIListCtrl.BetterListCtrl( self._mappings_listctrl_panel, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, 12, self._ConvertDataToListCtrlTuples, delete_key_callback = self._Remove, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._mappings_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._mappings_listctrl_panel, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, 12, model, delete_key_callback = self._Remove, activation_callback = self._Edit )
         
         self._mappings_listctrl_panel.SetListCtrl( self._mappings_list )
         

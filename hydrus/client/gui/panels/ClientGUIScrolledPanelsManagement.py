@@ -923,7 +923,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             mime_panel = ClientGUICommon.StaticBox( self, '\'open externally\' launch paths' )
             
-            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrl( mime_panel, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, 15, self._ConvertMimeToListCtrlTuples, activation_callback = self._EditMimeLaunch )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, self._ConvertMimeToListCtrlTuples )
+            
+            self._mime_launch_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( mime_panel, CGLC.COLUMN_LIST_EXTERNAL_PROGRAMS.ID, 15, model, activation_callback = self._EditMimeLaunch )
             
             for mime in HC.SEARCHABLE_MIMES:
                 
@@ -1472,7 +1474,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             self._disable_get_safe_position_test = QW.QCheckBox( self._misc_panel )
             self._disable_get_safe_position_test.setToolTip( ClientGUIFunctions.WrapToolTip( 'If your windows keep getting \'rescued\' despite being in a good location, try this.' ) )
             
-            self._frame_locations = ClientGUIListCtrl.BetterListCtrl( frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, data_to_tuples_func = lambda x: (self._GetPrettyFrameLocationInfo( x ), self._GetPrettyFrameLocationInfo( x )), activation_callback = self.EditFrameLocations )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, self._GetPrettyFrameLocationInfo, self._GetPrettyFrameLocationInfo )
+            
+            self._frame_locations = ClientGUIListCtrl.BetterListCtrlTreeView( frame_locations_panel, CGLC.COLUMN_LIST_FRAME_LOCATIONS.ID, 15, model, activation_callback = self.EditFrameLocations )
             
             self._frame_locations_edit_button = QW.QPushButton( 'edit', frame_locations_panel )
             self._frame_locations_edit_button.clicked.connect( self.EditFrameLocations )
@@ -2828,7 +2832,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             media_viewer_list_panel = ClientGUIListCtrl.BetterListCtrlPanel( filetype_handling_panel )
             
-            self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrl( media_viewer_list_panel, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, 20, data_to_tuples_func = self._GetListCtrlData, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, self._GetListCtrlData )
+            
+            self._filetype_handling_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( media_viewer_list_panel, CGLC.COLUMN_LIST_MEDIA_VIEWER_OPTIONS.ID, 20, model, activation_callback = self.EditMediaViewerOptions, use_simple_delete = True )
             
             media_viewer_list_panel.SetListCtrl( self._filetype_handling_listctrl )
             
@@ -4799,7 +4805,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             search_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( search_tag_slices_weight_box )
             
-            self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrl( search_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, self._ConvertTagSliceAndWeightToListCtrlTuples, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToListCtrlTuples )
+            
+            self._search_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( search_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, model, activation_callback = self._EditSearchTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteSearchTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by the tag type that searched for them. Set to 0 to not search with that type of tag.'
             self._search_tag_slices_weights.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -4815,7 +4823,9 @@ class ManageOptionsPanel( ClientGUIScrolledPanels.ManagePanel ):
             
             result_tag_slices_weight_panel = ClientGUIListCtrl.BetterListCtrlPanel( result_tag_slices_weight_box )
             
-            self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrl( result_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, self._ConvertTagSliceAndWeightToListCtrlTuples, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
+            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, self._ConvertTagSliceAndWeightToListCtrlTuples )
+            
+            self._result_tag_slices_weights = ClientGUIListCtrl.BetterListCtrlTreeView( result_tag_slices_weight_panel, CGLC.COLUMN_LIST_TAG_SLICE_WEIGHT.ID, 8, model, activation_callback = self._EditResultTagSliceWeight, use_simple_delete = True, can_delete_callback = self._CanDeleteResultTagSliceWeight )
             tt = 'ADVANCED! These weights adjust the ranking scores of suggested tags by their tag type. Set to 0 to not suggest that type of tag at all.'
             self._result_tag_slices_weights.setToolTip( ClientGUIFunctions.WrapToolTip( tt ) )
             
@@ -5462,7 +5472,9 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         st = ClientGUICommon.BetterStaticText( self, text )
         st.setWordWrap( True )
         
-        self._locations = ClientGUIListCtrl.BetterListCtrl( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, 12, self._ConvertPrefixToListCtrlTuples, activation_callback = self._SetLocations )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, self._ConvertPrefixToListCtrlTuples )
+        
+        self._locations = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_REPAIR_LOCATIONS.ID, 12, model, activation_callback = self._SetLocations )
         
         self._set_button = ClientGUICommon.BetterButton( self, 'set correct location', self._SetLocations )
         self._add_button = ClientGUICommon.BetterButton( self, 'add a possibly correct location (let the client figure out what it contains)', self._AddLocation )
@@ -5471,9 +5483,7 @@ class RepairFileSystemPanel( ClientGUIScrolledPanels.ManagePanel ):
         
         #
         
-        self._locations.AddDatas( missing_subfolders )
-        
-        self._locations.Sort()
+        self._locations.SetData( missing_subfolders )
         
         #
         

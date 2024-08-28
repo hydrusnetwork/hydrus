@@ -35,6 +35,33 @@
             <h1 id="changelog"><a href="#changelog">changelog</a></h1>
             <ul>
                 <li>
+                    <h2 id="version_588"><a href="#version_588">version 588</a></h2>
+                    <ul>
+                        <li><h3>fast new lists</h3></li>
+                        <li>tl;dr: big lists faster now. you do not need to do anything</li>
+                        <li>every multi-column list in the program (there's about 75 of them) now works on a more sophisticated model (specifically, we are updating from QTreeWidget to QTreeView). instead of the list storing and regenerating display labels for every single row of a table, only the rows that are currently in view are generally consulted. sort events are similarly extremely fast, with off-screen updates virtualised and deferred</li>
+                        <li>in my tests, a list with 170,000 rows now sorts in about four seconds. my code is still connected to a non-optimised part of the old system, so I hope to improve gains with background cleanup work in coming months. I believe I can make it work at least twice as fast in places, particularly in initialisation</li>
+                        <li>multi-column lists are much better about initialising/migrating the selection 'focus' (the little, usually dotted-line-border box that says where keyboard focus is) through programmatic insertions and deletes and sorts</li>
+                        <li>column headers now show the up/down 'sort' arrows using native style. everything is a bit more Qt-native and closer to C++ instead of my old custom garbage</li>
+                        <li>none of this changes anything to do with single-column lists across the program, which are still using somewhat jank old code. my taglist in particular is an entirely custom object that is neat in some ways but stuck in place by my brittle design. the above rewrite was tricky in a couple of annoying ways but overall very worth doing, so I expect to replicate it elsewhere. another open choice is rewriting the similarly entirely custom thumbnail canvas to a proper Qt widget with a QLayout and such. we'll see how future work goes</li>
+                        <li><h3>misc</h3></li>
+                        <li>fixed the 'show' part of 'pages-&gt;sidebar and preview panels-&gt;show/hide sidebar and preview panel', which was busted last week in the page relayout cleanup</li>
+                        <li>I think I fixed the frame of flicker (usually a moment of page-wide autocomplete input) you would sometimes get when clicking a 'show these files' popup message files button</li>
+                        <li>fixed the new shimmie parser (by adding a simpler dupe and wangling the example urls around) to correctly parse r34h tags</li>
+                        <li>I think I may have fixed some deadlocks and/or mega-pauses in the manage tag parents/siblings dialogs when entering pairs causes a dialog (a yes/no confirmation, or the 'enter a reason' input) to pop up</li>
+                        <li>I think I have fixed the 'switch between fullscreen borderless and regular framed window' command when set to the 'media_viewer' shortcut set. some command-processing stuff wasn't wired up fully after I cleared out some old hacks a while ago</li>
+                        <li>the manage tag parents dialog has some less janky layout as it is expanded/shrunk</li>
+                        <li>if similar files search tree maintenance fails to regenerate a branch, the user is now told to try running the full regen</li>
+                        <li>the full similar files search tree regen now filters out nodes with invalid phashes (i.e. due to database damage), deleting those nodes fully and printing all pertinent info to the log, and tells the user what to do next</li>
+                        <li>you can now regen the similar files search tree on an empty database without error, lol</li>
+                        <li>while I was poking around lists, I fixed a bit of bad error handling when you try to import a broken serialised data png to a multi-column list</li>
+                        <li><h3>client api</h3></li>
+                        <li>the `/get_files/search_files` command now supports `include_current_tags` and `include_pending_tags`, mirroring the buttons on the normal search interface (issue #1577)</li>
+                        <li>updated the help and unit tests to check these new params</li>
+                        <li>client api version is now 69</li>
+                    </ul>
+                </li>
+                <li>
                     <h2 id="version_587"><a href="#version_587">version 587</a></h2>
                     <ul>
                         <li><h3>all misc this week</h3></li>

@@ -88,7 +88,9 @@ class EditDefaultImportOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._list_ctrl = ClientGUIListCtrl.BetterListCtrl( self._list_ctrl_panel, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, 15, self._ConvertDataToListCtrlTuples, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_DEFAULT_TAG_IMPORT_OPTIONS.ID, 15, model, activation_callback = self._Edit )
         
         self._list_ctrl_panel.SetListCtrl( self._list_ctrl )
         
@@ -1183,7 +1185,9 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         tag_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( tag_services_panel )
         
-        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrl( tag_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, 5, self._ConvertTagDataToListCtrlTuple, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, self._ConvertTagDataToListCtrlTuple )
+        
+        self._tag_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( tag_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_TAG_SERVICES.ID, 5, model, delete_key_callback = self._DeleteTag, activation_callback = self._EditTag )
         
         tag_services_listctrl_panel.SetListCtrl( self._tag_service_actions )
         
@@ -1197,7 +1201,9 @@ class EditDuplicateContentMergeOptionsPanel( ClientGUIScrolledPanels.EditPanel )
         
         rating_services_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( rating_services_panel )
         
-        self._rating_service_actions = ClientGUIListCtrl.BetterListCtrl( rating_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, 5, self._ConvertRatingDataToListCtrlTuple, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, self._ConvertRatingDataToListCtrlTuple )
+        
+        self._rating_service_actions = ClientGUIListCtrl.BetterListCtrlTreeView( rating_services_listctrl_panel, CGLC.COLUMN_LIST_DUPLICATE_CONTENT_MERGE_OPTIONS_RATING_SERVICES.ID, 5, model, delete_key_callback = self._DeleteRating, activation_callback = self._EditRating )
         
         rating_services_listctrl_panel.SetListCtrl( self._rating_service_actions )
         
@@ -2621,7 +2627,9 @@ class EditRegexFavourites( ClientGUIScrolledPanels.EditPanel ):
         
         regex_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        self._regexes = ClientGUIListCtrl.BetterListCtrl( regex_listctrl_panel, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, 8, self._ConvertDataToListCtrlTuples, use_simple_delete = True, activation_callback = self._Edit )
+        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, self._ConvertDataToListCtrlTuples )
+        
+        self._regexes = ClientGUIListCtrl.BetterListCtrlTreeView( regex_listctrl_panel, CGLC.COLUMN_LIST_REGEX_FAVOURITES.ID, 8, model, use_simple_delete = True, activation_callback = self._Edit )
         
         regex_listctrl_panel.SetListCtrl( self._regexes )
         

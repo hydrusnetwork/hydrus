@@ -1601,6 +1601,18 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         job_status = ClientThreading.JobStatus()
         
+        job_status.SetStatusText( 'client api test file popup' )
+        
+        hashes = [ bytes.fromhex( '78f92ba4a786225ee2a1236efa6b7dc81dd729faf4af99f96f3e20bad6d8b538' ) ]
+        
+        job_status.SetFiles( hashes, 'go' )
+        
+        self._controller.pub( 'message', job_status )
+        
+        #
+        
+        job_status = ClientThreading.JobStatus()
+        
         job_status.SetStatusTitle( 'Popup file merge test' )
         
         job_status.SetStatusText( 'hey I should have five files' )

@@ -2354,6 +2354,10 @@ class CanvasWithHovers( CanvasWithDetails ):
                 
                 self._TryToCloseWindow()
                 
+            elif action == CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW:
+                
+                self.parentWidget().FullscreenSwitch()
+                
             else:
                 
                 command_processed = False
@@ -3640,7 +3644,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     def EventFullscreenSwitch( self, event ):
         
-        self.parentWidget().FullscreenSwitch()
+        self.ProcessApplicationCommand( CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW ) )
         
     
     def ProcessContentUpdatePackage( self, content_update_package: ClientContentUpdates.ContentUpdatePackage ):
@@ -4588,11 +4592,11 @@ class CanvasMediaListBrowser( CanvasMediaListNavigable ):
             
             if self.parentWidget().isFullScreen():
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.parentWidget().FullscreenSwitch )
+                ClientGUIMenus.AppendMenuItem( menu, 'exit fullscreen', 'Make this media viewer a regular window with borders.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW ) )
                 
             else:
                 
-                ClientGUIMenus.AppendMenuItem( menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.parentWidget().FullscreenSwitch )
+                ClientGUIMenus.AppendMenuItem( menu, 'go fullscreen', 'Make this media viewer a fullscreen window without borders.', self.ProcessApplicationCommand, CAC.ApplicationCommand.STATICCreateSimpleCommand( CAC.SIMPLE_SWITCH_BETWEEN_FULLSCREEN_BORDERLESS_AND_REGULAR_FRAMED_WINDOW ) )
                 
             
             slideshow = ClientGUIMenus.GenerateMenu( menu )

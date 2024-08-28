@@ -5168,6 +5168,8 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( file_search_context.GetLocationContext().current_service_keys, { CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY } )
         self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().include_current_tags, True )
+        self.assertEqual( file_search_context.GetTagContext().include_pending_tags, True )
         self.assertEqual( set( file_search_context.GetPredicates() ), { ClientSearch.Predicate( ClientSearch.PREDICATE_TYPE_TAG, tag ) for tag in tags } )
         
         self.assertIn( 'sort_by', kwargs )
@@ -5180,6 +5182,72 @@ class TestClientAPI( unittest.TestCase ):
         self.assertIn( 'apply_implicit_limit', kwargs )
         
         self.assertEqual( kwargs[ 'apply_implicit_limit' ], False )
+        
+        # include current/pending
+        
+        HG.test_controller.ClearReads( 'file_query_ids' )
+        
+        sample_hash_ids = set( random.sample( list( hash_ids ), 3 ) )
+        
+        HG.test_controller.SetRead( 'file_query_ids', set( sample_hash_ids ) )
+        
+        tags = [ 'kino', 'green' ]
+        
+        path = '/get_files/search_files?tags={}&include_current_tags=false'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = { 'file_ids' : list( sample_hash_ids ) }
+        
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().include_current_tags, False )
+        self.assertEqual( file_search_context.GetTagContext().include_pending_tags, True )
+        
+        path = '/get_files/search_files?tags={}&include_pending_tags=false'.format( urllib.parse.quote( json.dumps( tags ) ) )
+        
+        connection.request( 'GET', path, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        d = json.loads( text )
+        
+        expected_result = { 'file_ids' : list( sample_hash_ids ) }
+        
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( d, expected_result )
+        
+        [ ( args, kwargs ) ] = HG.test_controller.GetRead( 'file_query_ids' )
+        
+        ( file_search_context, ) = args
+        
+        self.assertEqual( file_search_context.GetTagContext().service_key, CC.COMBINED_TAG_SERVICE_KEY )
+        self.assertEqual( file_search_context.GetTagContext().include_current_tags, True )
+        self.assertEqual( file_search_context.GetTagContext().include_pending_tags, False )
         
         # search files and get hashes
         
