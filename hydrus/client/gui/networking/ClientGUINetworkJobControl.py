@@ -5,6 +5,7 @@ from qtpy import QtWidgets as QW
 
 from hydrus.core import HydrusData
 from hydrus.core import HydrusGlobals as HG
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -254,7 +255,7 @@ class NetworkJobControl( QW.QFrame ):
             
             ( status_text, current_speed, bytes_read, bytes_to_read ) = self._network_job.GetStatus()
             
-            self._left_text.setText( status_text )
+            self._left_text.setText( HydrusText.GetFirstLine( status_text ) )
             
             speed_text = ''
             

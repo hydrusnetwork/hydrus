@@ -93,11 +93,14 @@ default_column_list_columns_lookup = collections.defaultdict( list )
 
 default_column_list_sort_lookup = {}
 
+column_list_column_type_logical_position_lookup = collections.defaultdict( dict )
+
 def register_column_type( column_list_type: int, column_type: int, name: str, hideable: bool, default_width: int, initially_shown: bool ):
     
     column_list_column_name_lookup[ column_list_type ][ column_type ] = name
     column_list_column_hideable_lookup[ column_list_type ][ column_type ] = hideable
     default_column_list_columns_lookup[ column_list_type ].append( ( column_type, default_width, initially_shown ) )
+    column_list_column_type_logical_position_lookup[ column_list_type ][ column_type ] = len( column_list_column_type_logical_position_lookup[ column_list_type ] )
     
 
 class COLUMN_LIST_DEFINITION( object ):

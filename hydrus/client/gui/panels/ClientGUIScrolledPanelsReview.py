@@ -3413,7 +3413,7 @@ class JobSchedulerPanel( QW.QWidget ):
         self._controller = controller
         self._scheduler_name = scheduler_name
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
@@ -3471,7 +3471,7 @@ class ThreadsPanel( QW.QWidget ):
         
         self._controller = controller
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         

@@ -22,7 +22,7 @@ class ClientDBMappingsCacheCombinedFilesStorage( ClientDBModule.ClientDBModule )
         self.modules_mappings_counts_update = modules_mappings_counts_update
         self.modules_mappings_cache_combined_files_display = modules_mappings_cache_combined_files_display
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client combined files storage mappings cache', cursor )
+        super().__init__( 'client combined files storage mappings cache', cursor )
         
     
     def Clear( self, tag_service_id, keep_pending = False ):

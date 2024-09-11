@@ -27,7 +27,7 @@ class ClientDBMappingsCacheCombinedFilesDisplay( ClientDBModule.ClientDBModule )
         self.modules_tag_display = modules_tag_display
         self.modules_files_storage = modules_files_storage
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client combined files display mappings cache', cursor )
+        super().__init__( 'client combined files display mappings cache', cursor )
         
     
     def AddImplications( self, tag_service_id, implication_tag_ids, tag_id, status_hook = None ):

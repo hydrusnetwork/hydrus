@@ -19,7 +19,7 @@ class ClientDBFilesViewingStats( ClientDBModule.ClientDBModule ):
         cursor: sqlite3.Cursor
     ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files viewing stats', cursor )
+        super().__init__( 'client files viewing stats', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:

@@ -10,11 +10,6 @@ from hydrus.client.search import ClientSearch
 
 class ListBoxItem( object ):
     
-    def __init__( self ):
-        
-        pass
-        
-    
     def __eq__( self, other ):
         
         if isinstance( other, ListBoxItem ):
@@ -79,7 +74,7 @@ class ListBoxItemTagSlice( ListBoxItem ):
     
     def __init__( self, tag_slice: str ):
         
-        ListBoxItem.__init__( self )
+        super().__init__()
         
         self._tag_slice = tag_slice
         
@@ -130,7 +125,7 @@ class ListBoxItemNamespaceColour( ListBoxItem ):
     
     def __init__( self, namespace: str, colour: typing.Tuple[ int, int, int ] ):
         
-        ListBoxItem.__init__( self )
+        super().__init__()
         
         self._namespace = namespace
         self._colour = colour
@@ -186,7 +181,7 @@ class ListBoxItemTextTag( ListBoxItem ):
     
     def __init__( self, tag: str ):
         
-        ListBoxItem.__init__( self )
+        super().__init__()
         
         self._tag = tag
         self._ideal_tag = None
@@ -339,7 +334,7 @@ class ListBoxItemTextTagWithCounts( ListBoxItemTextTag ):
         
         # some have deleted and petitioned as well, so think about this
         
-        ListBoxItemTextTag.__init__( self, tag )
+        super().__init__( tag )
         
         self._current_count = current_count
         self._deleted_count = deleted_count
@@ -470,7 +465,7 @@ class ListBoxItemPredicate( ListBoxItem ):
     
     def __init__( self, predicate: ClientSearch.Predicate ):
         
-        ListBoxItem.__init__( self )
+        super().__init__()
         
         self._predicate = predicate
         self._i_am_an_or_under_construction = False

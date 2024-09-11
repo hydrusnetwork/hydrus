@@ -836,7 +836,7 @@ class DuplicateContentMergeOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._tag_service_actions = []
         self._rating_service_actions = []

@@ -42,8 +42,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
             self._hashes.update( m.GetHashes() )
             
         
-        ClientGUIDialogs.Dialog.__init__( self, parent, 'manage ratings for ' + HydrusNumbers.ToHumanInt( len( self._hashes ) ) + ' files', position = 'topleft' )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent, 'manage ratings for ' + HydrusNumbers.ToHumanInt( len( self._hashes ) ) + ' files', position = 'topleft' )
         
         #
         
@@ -213,7 +212,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         
         def __init__( self, parent, services, media ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._services = services
             
@@ -330,7 +329,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         
         def __init__( self, parent, services, media ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._services = services
             
@@ -470,7 +469,7 @@ class DialogManageRatings( CAC.ApplicationCommandProcessorMixin, ClientGUIDialog
         
         def __init__( self, parent, services, media ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._services = services
             
@@ -607,7 +606,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
         
         self._mappings_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._mappings_list = ClientGUIListCtrl.BetterListCtrlTreeView( self._mappings_listctrl_panel, CGLC.COLUMN_LIST_MANAGE_UPNP_MAPPINGS.ID, 12, model, delete_key_callback = self._Remove, activation_callback = self._Edit )
         
@@ -710,7 +709,7 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             
         
     
-    def _ConvertDataToListCtrlTuples( self, mapping ):
+    def _ConvertDataToDisplayTuple( self, mapping ):
         
         ( description, internal_ip, internal_port, external_port, protocol, duration ) = mapping
         
@@ -723,10 +722,12 @@ class DialogManageUPnP( ClientGUIDialogs.Dialog ):
             pretty_duration = HydrusTime.TimeDeltaToPrettyTimeDelta( duration )
             
         
-        display_tuple = ( description, internal_ip, str( internal_port ), str( external_port ), protocol, pretty_duration )
-        sort_tuple = mapping
+        return ( description, internal_ip, str( internal_port ), str( external_port ), protocol, pretty_duration )
         
-        return ( display_tuple, sort_tuple )
+    
+    def _ConvertDataToSortTuple( self, mapping ):
+        
+        return mapping
         
     
     def _Edit( self ):

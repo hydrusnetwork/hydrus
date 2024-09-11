@@ -32,7 +32,7 @@ class TestPanel( QW.QWidget ):
     
     def __init__( self, parent, object_callable, test_data: typing.Optional[ ClientParsing.ParsingTestData ] = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         if test_data is None:
             

@@ -61,9 +61,11 @@ def GenerateFilesTableName( service_id: int, status: int ) -> str:
 
 class DBLocationContext( object ):
     
-    def __init__( self, location_context: ClientLocation.LocationContext ):
+    def __init__( self, location_context: ClientLocation.LocationContext, *args, **kwargs ):
         
         self.location_context = location_context
+        
+        super().__init__( *args, **kwargs )
         
     
     def GetLocationContext( self ) -> ClientLocation.LocationContext:
@@ -152,8 +154,7 @@ class DBLocationContextBranch( DBLocationContext, ClientDBModule.ClientDBModule 
     
     def __init__( self, cursor: sqlite3.Cursor, location_context: ClientLocation.LocationContext, files_table_names: typing.Collection[ str ] ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'db location (branch)', cursor )
-        DBLocationContext.__init__( self, location_context )
+        super().__init__( location_context, 'db location (branch)', cursor )
         
         self._files_table_names = files_table_names
         self._single_table_initialised = False
@@ -251,7 +252,7 @@ class ClientDBFilesStorage( ClientDBModule.ClientDBModule ):
         self.modules_hashes = modules_hashes
         self.modules_texts = modules_texts
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client file locations', cursor )
+        super().__init__( 'client file locations', cursor )
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:

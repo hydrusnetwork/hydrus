@@ -33,7 +33,7 @@ class PresentationImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._location_context = ClientLocation.LocationContext.STATICCreateSimple( CC.COMBINED_LOCAL_MEDIA_SERVICE_KEY )
         self._presentation_status = PRESENTATION_STATUS_ANY_GOOD

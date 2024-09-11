@@ -863,7 +863,7 @@ class Shortcut( HydrusSerialisable.SerialisableBase ):
         
         modifiers = sorted( modifiers )
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.shortcut_type = shortcut_type
         self.shortcut_key = shortcut_key
@@ -1363,7 +1363,7 @@ class ShortcutsHandler( QC.QObject ):
     
     def __init__( self, parent: QW.QWidget, initial_shortcuts_names: typing.Collection[ str ], alternate_filter_target = None, catch_mouse = False, ignore_activating_mouse_click = False ):
         
-        QC.QObject.__init__( self, parent )
+        super().__init__( parent )
         
         self._catch_mouse = catch_mouse
         
@@ -1732,7 +1732,7 @@ class ShortcutsManager( QC.QObject ):
         
         parent = CGC.core()
         
-        QC.QObject.__init__( self, parent )
+        super().__init__( parent )
         
         self._names_to_shortcut_sets = {}
         

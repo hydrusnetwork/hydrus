@@ -804,8 +804,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             CC.COLOUR_AUTOCOMPLETE_BACKGROUND : QG.QColor( 235, 248, 255 )
         }
         
-        QW.QWidget.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self.setObjectName( 'HydrusTagAutocomplete' )
         
@@ -832,11 +831,7 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
         self._last_attempted_dropdown_width = 0
         
-        self._text_ctrl_widget_event_filter = QP.WidgetEventFilter( self._text_ctrl )
-        
         self._text_ctrl.textChanged.connect( self.EventText )
-        
-        self._text_ctrl_widget_event_filter.EVT_KEY_DOWN( self.keyPressFilter )
         
         self._text_ctrl.installEventFilter( self )
         
@@ -958,6 +953,11 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
     
     def _BroadcastChoices( self, predicates, shift_down ):
+        
+        raise NotImplementedError()
+        
+    
+    def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
         
         raise NotImplementedError()
         
@@ -1102,6 +1102,11 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._time_results_last_set = HydrusTime.GetNow()
         
     
+    def _ShouldBroadcastCurrentInputOnEnterKey( self ):
+        
+        raise NotImplementedError()
+        
+    
     def _ShouldShow( self ):
         
         if self._force_dropdown_hide:
@@ -1116,11 +1121,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         visible = self.isVisible()
         
         return i_am_active_and_focused and visible
-        
-    
-    def _ShouldTakeResponsibilityForEnter( self ):
-        
-        raise NotImplementedError()
         
     
     def _ShowDropdown( self ):
@@ -1161,11 +1161,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         
     
     def _StartSearchResultsFetchJob( self, job_status ):
-        
-        raise NotImplementedError()
-        
-    
-    def _TakeResponsibilityForEnter( self, shift_down ):
         
         raise NotImplementedError()
         
@@ -1212,55 +1207,6 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._DropdownHideShow()
         
     
-    def keyPressFilter( self, event ):
-        
-        CG.client_controller.ResetIdleTimer()
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if self._can_intercept_unusual_key_events:
-            
-            send_input_to_current_list = False
-            
-            current_results_list = self._dropdown_notebook.currentWidget()
-            
-            if key in ( ord( 'A' ), ord( 'a' ) ) and modifier == QC.Qt.ControlModifier:
-                
-                return True # was: event.ignore()
-                
-            elif key in ( QC.Qt.Key_Return, QC.Qt.Key_Enter ) and self._ShouldTakeResponsibilityForEnter():
-                
-                shift_down = modifier == QC.Qt.ShiftModifier
-                
-                self._TakeResponsibilityForEnter( shift_down )
-                
-            elif key == QC.Qt.Key_Escape:
-                
-                escape_caught = self._HandleEscape()
-                
-                if not escape_caught:
-                    
-                    send_input_to_current_list = True
-                    
-                
-            else:
-                
-                send_input_to_current_list = True
-                
-            
-            if send_input_to_current_list:
-                
-                current_results_list.keyPressEvent( event ) # ultimately, this typically ignores the event, letting the text ctrl take it
-                
-                return not event.isAccepted()
-                
-            
-        else:
-            
-            return True # was: event.ignore()
-            
-        
-    
     def EventCloseDropdown( self, event ):
         
         CG.client_controller.gui.close()
@@ -1274,7 +1220,69 @@ class AutoCompleteDropdown( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             
             if watched == self._text_ctrl:
                 
-                if event.type() == QC.QEvent.Wheel:
+                if event.type() == QC.QEvent.KeyPress and self._can_intercept_unusual_key_events:
+                    
+                    # ok for a while this thing was a mis-mash of logical tests and basically sending anything not explicitly caught to the list
+                    # this resulted in annoying miss-cases where ctrl+c et al were being passed to the list and so you couldn't copy text from the text input
+                    # THUS we are moving to a strict whitelist. a handful of events will pass down to the list, everything else we jealously keep
+                    
+                    CG.client_controller.ResetIdleTimer()
+                    
+                    ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+                    
+                    send_input_to_current_list = False
+                    
+                    ctrl = event.modifiers() & QC.Qt.ControlModifier
+                    # previous/next hardcoded shortcuts, should obviously be migrated to a user-customised shortcut set in future!
+                    crazy_n_p_hardcodes = ctrl and key in ( ord( 'P' ), ord( 'p' ), ord( 'N' ), ord( 'n' ) )
+                    
+                    if key in ( QC.Qt.Key_Up, QC.Qt.Key_Down, QC.Qt.Key_PageDown, QC.Qt.Key_PageUp, QC.Qt.Key_Home, QC.Qt.Key_End ) or crazy_n_p_hardcodes:
+                        
+                        send_input_to_current_list = True
+                        
+                    elif key in ( QC.Qt.Key_Return, QC.Qt.Key_Enter ):
+                        
+                        if self._ShouldBroadcastCurrentInputOnEnterKey():
+                            
+                            shift_down = modifier == QC.Qt.ShiftModifier
+                            
+                            self._BroadcastCurrentInputFromEnterKey( shift_down )
+                            
+                            event.accept()
+                            
+                            return True
+                            
+                        else:
+                            
+                            send_input_to_current_list = True
+                            
+                        
+                    elif key == QC.Qt.Key_Escape:
+                        
+                        escape_caught = self._HandleEscape()
+                        
+                        if escape_caught:
+                            
+                            event.accept()
+                            
+                            return True
+                            
+                        else:
+                            
+                            send_input_to_current_list = True
+                            
+                        
+                    
+                    if send_input_to_current_list:
+                        
+                        current_results_list = self._dropdown_notebook.currentWidget()
+                        
+                        current_results_list.keyPressEvent( event )
+                        
+                        return event.isAccepted()
+                        
+                    
+                elif event.type() == QC.QEvent.Wheel:
                     
                     current_results_list = self._dropdown_notebook.currentWidget()
                     
@@ -1776,6 +1784,11 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         raise NotImplementedError()
         
     
+    def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
+        
+        raise NotImplementedError()
+        
+    
     def _GetParsedAutocompleteText( self ) -> ClientSearchAutocomplete.ParsedAutocompleteText:
         
         collapse_search_characters = True
@@ -1882,7 +1895,7 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         return True
         
     
-    def _ShouldTakeResponsibilityForEnter( self ):
+    def _ShouldBroadcastCurrentInputOnEnterKey( self ):
         
         raise NotImplementedError()
         
@@ -1928,11 +1941,6 @@ class AutoCompleteDropdownTags( AutoCompleteDropdown ):
         self._SetListDirty()
         
         return True
-        
-    
-    def _TakeResponsibilityForEnter( self, shift_down ):
-        
-        raise NotImplementedError()
         
     
     def _UpdateChildrenListIfNeeded( self ):
@@ -2226,6 +2234,16 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._UpdateORButtons()
         
         self._ClearInput()
+        
+    
+    def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
+        
+        current_broadcast_predicate = self._GetCurrentBroadcastTextPredicate()
+        
+        if current_broadcast_predicate is not None:
+            
+            self._BroadcastChoices( { current_broadcast_predicate }, shift_down )
+            
         
     
     def _CancelORConstruction( self ):
@@ -2601,24 +2619,28 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         self._SignalNewSearchState()
         
     
+    def _ShouldBroadcastCurrentInputOnEnterKey( self ):
+        
+        looking_at_search_results = self._dropdown_notebook.currentWidget() == self._search_results_list
+        
+        something_to_broadcast = self._GetCurrentBroadcastTextPredicate() is not None
+        
+        parsed_autocomplete_text = self._GetParsedAutocompleteText()
+        
+        # the list has results, but they are out of sync with what we have currently entered
+        # when the user has quickly typed something in and the results are not yet in
+        results_desynced_with_text = parsed_autocomplete_text != self._current_list_parsed_autocomplete_text
+        
+        p1 = looking_at_search_results and something_to_broadcast and results_desynced_with_text
+        
+        return p1
+        
+    
     def _SignalNewSearchState( self ):
         
         file_search_context = self._file_search_context.Duplicate()
         
         self.searchChanged.emit( file_search_context )
-        
-    
-    def _SynchronisedChanged( self, value ):
-        
-        self._SignalNewSearchState()
-        
-        self._RestoreTextCtrlFocus()
-        
-        if not self._search_pause_play.IsOn() and not self._file_search_context.GetSystemPredicates().HasSystemLimit():
-            
-            # update if user goes from sync to non-sync
-            self._SetListDirty()
-            
         
     
     def _StartSearchResultsFetchJob( self, job_status ):
@@ -2639,21 +2661,17 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
         CG.client_controller.CallToThread( ReadFetch, self, job_status, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, self._media_callable, fsc, self._search_pause_play.IsOn(), self._include_unusual_predicate_types, self._results_cache, under_construction_or_predicate, self._force_system_everything )
         
     
-    def _ShouldTakeResponsibilityForEnter( self ):
+    def _SynchronisedChanged( self, value ):
         
-        looking_at_search_results = self._dropdown_notebook.currentWidget() == self._search_results_list
+        self._SignalNewSearchState()
         
-        something_to_broadcast = self._GetCurrentBroadcastTextPredicate() is not None
+        self._RestoreTextCtrlFocus()
         
-        parsed_autocomplete_text = self._GetParsedAutocompleteText()
-        
-        # the list has results, but they are out of sync with what we have currently entered
-        # when the user has quickly typed something in and the results are not yet in
-        results_desynced_with_text = parsed_autocomplete_text != self._current_list_parsed_autocomplete_text
-        
-        p1 = looking_at_search_results and something_to_broadcast and results_desynced_with_text
-        
-        return p1
+        if not self._search_pause_play.IsOn() and not self._file_search_context.GetSystemPredicates().HasSystemLimit():
+            
+            # update if user goes from sync to non-sync
+            self._SetListDirty()
+            
         
     
     def _TagContextJustChanged( self, tag_context: ClientSearch.TagContext ):
@@ -2665,16 +2683,6 @@ class AutoCompleteDropdownTagsRead( AutoCompleteDropdownTags ):
             self._file_search_context.SetTagServiceKey( self._tag_service_key )
             
             self._SignalNewSearchState()
-            
-        
-    
-    def _TakeResponsibilityForEnter( self, shift_down ):
-        
-        current_broadcast_predicate = self._GetCurrentBroadcastTextPredicate()
-        
-        if current_broadcast_predicate is not None:
-            
-            self._BroadcastChoices( { current_broadcast_predicate }, shift_down )
             
         
     
@@ -3146,6 +3154,25 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         self._ClearInput()
         
     
+    def _BroadcastCurrentInputFromEnterKey( self, shift_down ):
+        
+        parsed_autocomplete_text = self._GetParsedAutocompleteText()
+        
+        if parsed_autocomplete_text.IsEmpty() and self._dropdown_notebook.currentWidget() == self._search_results_list:
+            
+            self.nullEntered.emit()
+            
+        else:
+            
+            current_broadcast_predicate = self._GetCurrentBroadcastTextPredicate()
+            
+            if current_broadcast_predicate is not None:
+                
+                self._BroadcastChoices( { current_broadcast_predicate }, shift_down )
+                
+            
+        
+    
     def _GetCurrentBroadcastTextPredicate( self ) -> typing.Optional[ ClientSearch.Predicate ]:
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
@@ -3228,7 +3255,7 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
             
         
     
-    def _ShouldTakeResponsibilityForEnter( self ):
+    def _ShouldBroadcastCurrentInputOnEnterKey( self ):
         
         parsed_autocomplete_text = self._GetParsedAutocompleteText()
         
@@ -3259,25 +3286,6 @@ class AutoCompleteDropdownTagsWrite( AutoCompleteDropdownTags ):
         file_search_context = ClientSearch.FileSearchContext( location_context = self._location_context_button.GetValue(), tag_context = tag_context )
         
         CG.client_controller.CallToThread( WriteFetch, self, job_status, self.SetPrefetchResults, self.SetFetchedResults, parsed_autocomplete_text, file_search_context, self._results_cache )
-        
-    
-    def _TakeResponsibilityForEnter( self, shift_down ):
-        
-        parsed_autocomplete_text = self._GetParsedAutocompleteText()
-        
-        if parsed_autocomplete_text.IsEmpty() and self._dropdown_notebook.currentWidget() == self._search_results_list:
-            
-            self.nullEntered.emit()
-            
-        else:
-            
-            current_broadcast_predicate = self._GetCurrentBroadcastTextPredicate()
-            
-            if current_broadcast_predicate is not None:
-                
-                self._BroadcastChoices( { current_broadcast_predicate }, shift_down )
-                
-            
         
     
     def RefreshFavouriteTags( self ):

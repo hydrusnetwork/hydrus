@@ -639,7 +639,7 @@ class Frame( QW.QWidget ):
     
     def __init__( self, parent, title ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self.setWindowTitle( title )
         

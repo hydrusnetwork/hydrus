@@ -18,7 +18,7 @@ class ClientDBFilesPhysicalStorage( ClientDBModule.ClientDBModule ):
         db_dir: str
     ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files physical storage', cursor )
+        super().__init__( 'client files physical storage', cursor )
         
         self._db_dir = db_dir
         

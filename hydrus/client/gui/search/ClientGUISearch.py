@@ -921,7 +921,7 @@ class FleshOutPredicatePanel( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent, predicate_panel_class, predicate ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._defaults_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().star, self._DefaultsMenu )
             self._defaults_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set a new default.' ) )

@@ -263,7 +263,7 @@ class RatingIncDec( QW.QWidget ):
     
     def __init__( self, parent, service_key ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         
@@ -455,7 +455,7 @@ class RatingLike( QW.QWidget ):
     
     def __init__( self, parent, service_key ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         
@@ -606,7 +606,7 @@ class RatingNumerical( QW.QWidget ):
     
     def __init__( self, parent, service_key ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         

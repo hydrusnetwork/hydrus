@@ -82,7 +82,7 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         self._service_ids_to_applicable_service_ids = None
         self._service_ids_to_interested_service_ids = None
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client tag parents', cursor )
+        super().__init__( 'client tag parents', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:
@@ -404,15 +404,12 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             parent_rows_to_remove = actual_parent_rows.difference( ideal_parent_rows )
             parent_rows_to_add = ideal_parent_rows.difference( actual_parent_rows )
             
-            num_actual_rows = len( actual_parent_rows )
-            num_ideal_rows = len( ideal_parent_rows )
-            
-            self._service_ids_to_display_application_status[ service_id ] = ( parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ service_id ] = ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove )
             
         
-        ( parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ service_id ]
+        ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove ) = self._service_ids_to_display_application_status[ service_id ]
         
-        return ( parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
+        return ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove )
         
     
     def GetChainsMembers( self, display_type: int, tag_service_id: int, ideal_tag_ids: typing.Collection[ int ] ):
@@ -790,13 +787,12 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         if tag_service_id in self._service_ids_to_display_application_status:
             
-            ( parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ tag_service_id ]
+            ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove ) = self._service_ids_to_display_application_status[ tag_service_id ]
             
+            actual_parent_rows.add( row )
             parent_rows_to_add.discard( row )
             
-            num_actual_rows += 1
-            
-            self._service_ids_to_display_application_status[ tag_service_id ] = ( parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ tag_service_id ] = ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove )
             
         
     
@@ -804,13 +800,12 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
         
         if tag_service_id in self._service_ids_to_display_application_status:
             
-            ( parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ tag_service_id ]
+            ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove ) = self._service_ids_to_display_application_status[ tag_service_id ]
             
+            actual_parent_rows.discard( row )
             parent_rows_to_remove.discard( row )
             
-            num_actual_rows -= 1
-            
-            self._service_ids_to_display_application_status[ tag_service_id ] = ( parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ tag_service_id ] = ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove )
             
         
     
@@ -917,6 +912,19 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             
             # this should now contain all possible tag_ids that could be in tag parents right now related to what we were given
             
+            if tag_service_id in self._service_ids_to_applicable_service_ids:
+                
+                with self._MakeTemporaryIntegerTable( tag_ids_to_clear_and_regen, 'tag_id' ) as temp_tag_ids_table_name:
+                    
+                    stuff_deleted = set( self._Execute( f'SELECT child_tag_id, ancestor_tag_id FROM {temp_tag_ids_table_name} CROSS JOIN {cache_tag_parents_lookup_table_name} ON ( child_tag_id = tag_id );' ) )
+                    stuff_deleted.update( self._Execute( f'SELECT child_tag_id, ancestor_tag_id FROM {temp_tag_ids_table_name} CROSS JOIN {cache_tag_parents_lookup_table_name} ON ( ancestor_tag_id = tag_id );' ) )
+                    
+                
+            else:
+                
+                stuff_deleted = set()
+                
+            
             self._ExecuteMany( 'DELETE FROM {} WHERE child_tag_id = ? OR ancestor_tag_id = ?;'.format( cache_tag_parents_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_clear_and_regen ) )
             
             # we wipe them
@@ -926,8 +934,6 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
             tps = ClientTagsHandling.TagParentsStructure()
             
             for applicable_tag_service_id in applicable_tag_service_ids:
-                
-                service_key = self.modules_services.GetService( applicable_tag_service_id ).GetServiceKey()
                 
                 unideal_statuses_to_pair_ids = self.GetTagParentsIdsChains( applicable_tag_service_id, tag_ids_to_clear_and_regen )
                 
@@ -953,11 +959,25 @@ class ClientDBTagParents( ClientDBModule.ClientDBModule ):
                     
                 
             
-            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( child_tag_id, ancestor_tag_id ) VALUES ( ?, ? );'.format( cache_tag_parents_lookup_table_name ), tps.IterateDescendantAncestorPairs() )
+            stuff_added = set( tps.IterateDescendantAncestorPairs() )
+            
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( child_tag_id, ancestor_tag_id ) VALUES ( ?, ? );'.format( cache_tag_parents_lookup_table_name ), stuff_added )
             
             if tag_service_id in self._service_ids_to_display_application_status:
                 
-                del self._service_ids_to_display_application_status[ tag_service_id ]
+                stuff_no_changes = stuff_deleted.intersection( stuff_added )
+                stuff_deleted.difference_update( stuff_no_changes )
+                stuff_added.difference_update( stuff_no_changes )
+                
+                ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove ) = self._service_ids_to_display_application_status[ tag_service_id ]
+                
+                ideal_parent_rows.difference_update( stuff_deleted )
+                parent_rows_to_add.difference_update( stuff_deleted )
+                parent_rows_to_remove.update( actual_parent_rows.intersection( stuff_deleted ) )
+                
+                ideal_parent_rows.update( stuff_added )
+                parent_rows_to_add.update( stuff_added.difference( actual_parent_rows ) )
+                parent_rows_to_remove.difference_update( stuff_added )
                 
             
         

@@ -41,14 +41,12 @@ from hydrus.client.gui import ClientGUITopLevelWindowsPanels
 from hydrus.client.gui import QtPorting as QP
 from hydrus.client.gui.canvas import ClientGUICanvas
 from hydrus.client.gui.canvas import ClientGUICanvasFrame
-from hydrus.client.gui.exporting import ClientGUIExport
 from hydrus.client.gui.media import ClientGUIMediaSimpleActions
 from hydrus.client.gui.media import ClientGUIMediaModalActions
 from hydrus.client.gui.media import ClientGUIMediaMenus
 from hydrus.client.gui.networking import ClientGUIHydrusNetwork
 from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
 from hydrus.client.media import ClientMedia
 from hydrus.client.media import ClientMediaFileFilter
 from hydrus.client.metadata import ClientContentUpdates
@@ -170,8 +168,6 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
     
     def __init__( self, parent, page_key, management_controller: ClientGUIManagementController.ManagementController, media_results ):
         
-        QW.QScrollArea.__init__( self, parent )
-        
         self._qss_colours = {
             CC.COLOUR_THUMBGRID_BACKGROUND : QG.QColor( 255, 255, 255 ),
             CC.COLOUR_THUMB_BACKGROUND : QG.QColor( 255, 255, 255 ),
@@ -184,6 +180,14 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
             CC.COLOUR_THUMB_BORDER_REMOTE_SELECTED : QG.QColor( 227, 66, 52 )
         }
         
+        self._page_key = page_key
+        self._management_controller = management_controller
+        
+        # TODO: BRUH REWRITE THIS GARBAGE
+        # we don't really want to be messing around with *args, **kwargs in __init__/super() gubbins, and this is highlighted as we move to super() and see this is all a mess!!
+        # obviously decouple the list from the panel here so we aren't trying to do everything in one class
+        super().__init__( self._management_controller.GetLocationContext(), media_results, parent )
+        
         self.setObjectName( 'HydrusMediaList' )
         
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Sunken )
@@ -192,12 +196,6 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         self.resize( QC.QSize( 20, 20 ) )
         self.setWidget( QW.QWidget( self ) )
         self.setWidgetResizable( True )
-        
-        self._page_key = page_key
-        self._management_controller = management_controller
-        
-        ClientMedia.ListeningMediaList.__init__( self, self._management_controller.GetLocationContext(), media_results )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
         
         self._UpdateBackgroundColour()
         
@@ -2655,7 +2653,7 @@ class MediaPanel( CAC.ApplicationCommandProcessorMixin, ClientMedia.ListeningMed
         
         def __init__( self, parent ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._parent = parent
             
@@ -2747,7 +2745,7 @@ class MediaPanelThumbnails( MediaPanel ):
         self._hashes_to_thumbnails_waiting_to_be_drawn: typing.Dict[ bytes, ThumbnailWaitingToBeDrawn ] = {}
         self._hashes_faded = set()
         
-        MediaPanel.__init__( self, parent, page_key, management_controller, media_results )
+        super().__init__( parent, page_key, management_controller, media_results )
         
         self._last_device_pixel_ratio = self.devicePixelRatio()
         
@@ -4544,7 +4542,7 @@ class MediaPanelThumbnails( MediaPanel ):
         
         def __init__( self, parent ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._parent = parent
             
@@ -4902,7 +4900,12 @@ def AddSelectMenu( win: MediaPanel, menu, filter_counts, all_specific_file_domai
     
 class Selectable( object ):
     
-    def __init__( self ): self._selected = False
+    def __init__( self, *args, **kwargs ):
+        
+        self._selected = False
+        
+        super().__init__( *args, **kwargs )
+        
     
     def Deselect( self ): self._selected = False
     
@@ -4912,9 +4915,9 @@ class Selectable( object ):
     
 class Thumbnail( Selectable ):
     
-    def __init__( self ):
+    def __init__( self, *args, **kwargs ):
         
-        Selectable.__init__( self )
+        super().__init__( *args, **kwargs )
         
         self._last_tags = None
         
@@ -5338,19 +5341,19 @@ class Thumbnail( Selectable ):
         return qt_image
         
     
+
+# TODO: This is another area of OOD inheritance garbage. just rewrite the whole damn thing, stop trying to do everything in one class, decouple and you'll lose the linter freakout over GetQtImage's references and related __init__ headaches
 class ThumbnailMediaCollection( Thumbnail, ClientMedia.MediaCollection ):
     
     def __init__( self, location_context, media_results ):
         
-        ClientMedia.MediaCollection.__init__( self, location_context, media_results )
-        Thumbnail.__init__( self )
+        super().__init__( location_context, media_results )
         
     
 class ThumbnailMediaSingleton( Thumbnail, ClientMedia.MediaSingleton ):
     
     def __init__( self, media_result ):
         
-        ClientMedia.MediaSingleton.__init__( self, media_result )
-        Thumbnail.__init__( self )
+        super().__init__( media_result )
         
     

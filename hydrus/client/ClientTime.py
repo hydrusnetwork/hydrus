@@ -55,6 +55,12 @@ def ParseDate( date_string: str ):
         raise Exception( 'Sorry, you need the dateparse library for this, please try reinstalling your venv!' )
         
     
+    # as a weird note, this function appears, in one case, to raise the sorry Exception, after several seconds of delay, if the boot locale is ru_RU
+    # it works on the same machine if locale is set to en_US. this suggests some environment variable locale-forcing or similar, or a bug in dateparser, that is causing the delay (and then?) failing the 'en' fallback 
+    
+    # dateparser does not have ru-RU in its internal locale mappings, nor en-US. it has a whole bunch like 'en-PH', which will parse "19 October 2024, 3:45 PM", but not the more common ones
+    # it'll raise an error if you ask for en-US but not if you ask for locales = [ 'en' ], where 'en' _seems_ to be a proxy for 'en-US', so there's some weird locale init going on, idk
+    
     dt = dateparser.parse( date_string )
     
     if dt is None:
@@ -160,7 +166,7 @@ class TimestampData( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, timestamp_type = None, location = None, timestamp_ms: typing.Optional[ typing.Union[ int, float ] ] = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.timestamp_type = timestamp_type
         self.location = location

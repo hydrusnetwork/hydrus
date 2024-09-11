@@ -32,7 +32,7 @@ class SimpleDownloaderImport( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._pending_jobs = []
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
@@ -839,7 +839,7 @@ class URLsImport( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, destination_location_context = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._gallery_seed_log = ClientImportGallerySeeds.GallerySeedLog()
         self._file_seed_cache = ClientImportFileSeeds.FileSeedCache()

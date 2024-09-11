@@ -69,7 +69,7 @@ class MigrationDestinationHTA( MigrationDestination ):
         
         name = os.path.basename( path )
         
-        MigrationDestination.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._path = path
         self._desired_hash_type = desired_hash_type
@@ -130,7 +130,7 @@ class MigrationDestinationHTPA( MigrationDestination ):
         
         name = os.path.basename( path )
         
-        MigrationDestination.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._path = path
         self._content_type = content_type
@@ -186,7 +186,7 @@ class MigrationDestinationList( MigrationDestination ):
         
         name = 'simple list destination'
         
-        MigrationDestination.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._data_received = []
         
@@ -244,7 +244,7 @@ class MigrationDestinationTagService( MigrationDestination ):
         
         name = controller.services_manager.GetName( tag_service_key )
         
-        MigrationDestination.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._tag_service_key = tag_service_key
         
@@ -263,7 +263,7 @@ class MigrationDestinationTagServiceMappings( MigrationDestinationTagService ):
     
     def __init__( self, controller, tag_service_key, content_action ):
         
-        MigrationDestinationTagService.__init__( self, controller, tag_service_key, content_action )
+        super().__init__( controller, tag_service_key, content_action )
         
         self._reason = 'Mass Migration Job'
         
@@ -318,7 +318,7 @@ class MigrationDestinationTagServicePairs( MigrationDestinationTagService ):
     
     def __init__( self, controller, tag_service_key, content_action, content_type ):
         
-        MigrationDestinationTagService.__init__( self, controller, tag_service_key, content_action )
+        super().__init__( controller, tag_service_key, content_action )
         
         self._content_type = content_type
         
@@ -452,7 +452,7 @@ class MigrationSourceHTA( MigrationSource ):
         
         name = os.path.basename( path )
         
-        MigrationSource.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._path = path
         self._location_context = location_context
@@ -618,7 +618,7 @@ class MigrationSourceHTPA( MigrationSource ):
         
         name = os.path.basename( path )
         
-        MigrationSource.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._path = path
         self._left_tag_filter = left_tag_filter
@@ -672,7 +672,7 @@ class MigrationSourceList( MigrationSource ):
         
         name = 'simple list source'
         
-        MigrationSource.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._data = data
         self._iterator = None
@@ -701,7 +701,7 @@ class MigrationSourceTagServiceMappings( MigrationSource ):
         
         name = controller.services_manager.GetName( tag_service_key )
         
-        MigrationSource.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._location_context = location_context
         self._tag_service_key = tag_service_key
@@ -743,7 +743,7 @@ class MigrationSourceTagServicePairs( MigrationSource ):
         
         name = controller.services_manager.GetName( tag_service_key )
         
-        MigrationSource.__init__( self, controller, name )
+        super().__init__( controller, name )
         
         self._tag_service_key = tag_service_key
         self._content_type = content_type

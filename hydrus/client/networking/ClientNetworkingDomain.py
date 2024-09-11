@@ -39,7 +39,7 @@ class NetworkDomainManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._gugs = HydrusSerialisable.SerialisableList()
         self._url_classes = HydrusSerialisable.SerialisableList()
@@ -2243,7 +2243,7 @@ class DomainMetadataPackage( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, domain = None, headers_list = None, bandwidth_rules = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if domain is None:
             

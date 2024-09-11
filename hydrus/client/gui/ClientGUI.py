@@ -87,9 +87,9 @@ from hydrus.client.gui.networking import ClientGUINetwork
 from hydrus.client.gui.pages import ClientGUIManagementController
 from hydrus.client.gui.pages import ClientGUIPages
 from hydrus.client.gui.pages import ClientGUISession
+from hydrus.client.gui.panels import ClientGUIManageOptionsPanel
 from hydrus.client.gui.panels import ClientGUIScrolledPanels
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsEdit
-from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
 from hydrus.client.gui.panels import ClientGUIScrolledPanelsReview
 from hydrus.client.gui.parsing import ClientGUIParsing
 from hydrus.client.gui.parsing import ClientGUIParsingLegacy
@@ -472,8 +472,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         
         self._controller = controller
         
-        ClientGUITopLevelWindows.MainFrameThatResizes.__init__( self, None, 'main', 'main_gui' )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( None, 'main', 'main_gui' )
         
         self._currently_minimised_to_system_tray = False
         
@@ -525,8 +524,6 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
         self._message_manager = ClientGUIPopupMessages.PopupMessageManager( self, self._controller.job_status_popup_queue )
         
         self._pending_modal_job_statuses = set()
-        
-        self._widget_event_filter = QP.WidgetEventFilter( self )
         
         self._controller.sub( self, 'AddModalMessage', 'modal_message' )
         self._controller.sub( self, 'CreateNewSubscriptionGapDownloader', 'make_new_subscription_gap_downloader' )
@@ -1546,7 +1543,7 @@ class FrameGUI( CAC.ApplicationCommandProcessorMixin, ClientGUITopLevelWindows.M
             HydrusData.ShowText( 'This is a test popup message -- ' + str( i ) )
             
         
-        brother_classem_pinniped = '''++++What the fuck did you just fucking say about me, you worthless heretic? I'll have you know I graduated top of my aspirant tournament in the Heralds of Ultramar, and I've led an endless crusade of secret raids against the forces of The Great Enemy, and I have over 30 million confirmed purgings. I am trained in armored warfare and I'm the top brother in all the thousand Divine Chapters of the Adeptus Astartes. You are nothing to me but just another heretic. I will wipe you the fuck out with precision the likes of which has never been seen before in this universe, mark my fucking words. You think you can get away with saying that shit to me over the Warp? Think again, traitor. As we speak I am contacting my secret network of inquisitors across the galaxy and your malign powers are being traced right now so you better prepare for the holy storm, maggot. The storm that wipes out the pathetic little thing you call your soul. You're fucking dead, kid. I can warp anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my bolter. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Departmento Munitorum and I will use it to its full extent to wipe your miserable ass off the face of the galaxy, you little shit. If only you could have known what holy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking impure tongue. But you couldn't, you didn't, and now you're paying the price, you Emperor-damned heretic.++++\n\n++++Better crippled in body than corrupt in mind++++\n\n++++The Emperor Protects++++'''
+        brother_classem_pinniped = '''++++What the fuck did you just fucking say about me, you worthless heretic? I'll have you know I graduated top of my aspirant tournament in the Heralds of Ultramar, and I've led an endless crusade of secret raids against the forces of The Great Enemy, and I have over 30 million confirmed purgings. I am trained in armored warfare and I'm the top brother in all the 8th Company. You are nothing to me but just another heretic. I will wipe you the fuck out with precision the likes of which has never been seen before in this Galaxy, mark my fucking words. You think you can get away with saying that shit to me over the Divine Astropathic Network? Think again, traitor. As we speak I am contacting my secret network of inquisitors across the galaxy and your malign powers are being traced right now so you better prepare for the holy storm, maggot. The storm that wipes out the pathetic little thing you call your soul. You're fucking dead, kid. I can transit the immaterium to anywhere, anytime, and I can kill you in over seven hundred ways, and that's just with my purity seals. Not only am I extensively trained in unarmed combat, but I have access to the entire arsenal of the Departmento Munitorum and I will use it to its full extent to wipe your miserable ass off the face of the galaxy, you little shit. If only you could have known what holy retribution your little "clever" comment was about to bring down upon you, maybe you would have held your fucking impure mutant tongue. But you couldn't, you didn't, and now you're paying the price, you Emperor-damned heretic.++++\n\n++++Better crippled in body than corrupt in mind++++\n\n++++The Emperor Protects++++'''
         
         HydrusData.ShowText( 'This is a very long message:  \n\n' + brother_classem_pinniped )
         
@@ -3837,6 +3834,11 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         tag_display_maintenance_menu = ClientGUIMenus.GenerateMenu( menu )
         
         ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'review current sync', 'See how siblings and parents are currently applied.', self._ReviewTagDisplayMaintenance )
+        
+        ClientGUIMenus.AppendSeparator( tag_display_maintenance_menu )
+        
+        ClientGUIMenus.AppendMenuItem( tag_display_maintenance_menu, 'sync now', 'Start up any outstanding work now.', self._SyncTagDisplayMaintenanceNow )
+        
         ClientGUIMenus.AppendSeparator( tag_display_maintenance_menu )
         
         check_manager = ClientGUICommon.CheckboxManagerOptions( 'tag_display_maintenance_during_idle' )
@@ -4425,7 +4427,7 @@ QMenuBar::item { padding: 2px 8px; margin: 0px; }'''
         
         with ClientGUITopLevelWindowsPanels.DialogManage( self, title, frame_key ) as dlg:
             
-            panel = ClientGUIScrolledPanelsManagement.ManageOptionsPanel( dlg )
+            panel = ClientGUIManageOptionsPanel.ManageOptionsPanel( dlg )
             
             dlg.SetPanel( panel )
             
@@ -6878,6 +6880,22 @@ The password is cleartext here but obscured in the entry dialog. Enter a blank p
             self._controller.pub( 'wake_idle_workers' )
             self.SetStatusBarDirty()
             
+        
+    
+    def _SyncTagDisplayMaintenanceNow( self ):
+        
+        def do_it():
+            
+            # this guy can block for db access, so do it off Qt
+            there_was_work_to_do = CG.client_controller.tag_display_maintenance_manager.SyncFasterNow()
+            
+            if not there_was_work_to_do:
+                
+                HydrusData.ShowText( 'Seems like we are all synced already!' )
+                
+            
+        
+        self._controller.CallToThread( do_it )
         
     
     def _TestServerBusy( self, service_key ):

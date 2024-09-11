@@ -42,6 +42,7 @@ from hydrus.client import ClientOptions
 from hydrus.client import ClientConstants as CC
 from hydrus.client import ClientGlobals as CG
 from hydrus.client import ClientLocation
+from hydrus.client import ClientPaths
 from hydrus.client import ClientThreading
 from hydrus.client import ClientTime
 from hydrus.client import ClientRendering
@@ -1454,7 +1455,12 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
     
     def _threadDoPOSTJob( self, request: HydrusServerRequest.HydrusRequest ):
         
+        path = None
+        delete_after_successful_import = False
+        
         if not hasattr( request, 'temp_file_info' ):
+            
+            # ok the caller has not sent us a file in the POST content, we have a 'path'
             
             path = request.parsed_request_args.GetValue( 'path', str )
             
@@ -1467,6 +1473,8 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
                 
                 raise HydrusExceptions.BadRequestException( 'Path "{}" is not a file!'.format( path ) )
                 
+            
+            delete_after_successful_import = request.parsed_request_args.GetValue( 'delete_after_successful_import', bool, default_value = False )
             
             ( os_file_handle, temp_path ) = HydrusTemp.GetTempPath()
             
@@ -1508,6 +1516,14 @@ class HydrusResourceClientAPIRestrictedAddFilesAddFile( HydrusResourceClientAPIR
             file_import_status = ClientImportFiles.FileImportStatus( CC.STATUS_ERROR, file_import_job.GetHash(), note = note )
             
             body_dict[ 'traceback' ] = traceback.format_exc()
+            
+        
+        if path is not None:
+            
+            if delete_after_successful_import and file_import_status.status in CC.SUCCESSFUL_IMPORT_STATES:
+                
+                ClientPaths.DeletePath( path )
+                
             
         
         body_dict[ 'status' ] = file_import_status.status

@@ -177,7 +177,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._favourite_searches_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, self._ConvertRowToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, self._ConvertRowToDisplayTuple, self._ConvertRowToSortTuple )
         
         self._favourite_searches = ClientGUIListCtrl.BetterListCtrlTreeView( self._favourite_searches_panel, CGLC.COLUMN_LIST_FAVOURITE_SEARCHES.ID, 20, model, use_simple_delete = True, activation_callback = self._EditFavouriteSearch )
         
@@ -252,7 +252,7 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertRowToListCtrlTuples( self, row ):
+    def _ConvertRowToDisplayTuple( self, row ):
         
         ( foldername, name, file_search_context, synchronised, media_sort, media_collect ) = row
         
@@ -286,11 +286,10 @@ class EditFavouriteSearchesPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_media_collect = media_collect.ToString()
             
         
-        display_tuple = ( pretty_foldername, pretty_name, pretty_file_search_context, pretty_media_sort, pretty_media_collect )
-        sort_tuple = ( pretty_foldername, pretty_name, pretty_file_search_context, pretty_media_sort, pretty_media_collect )
+        return ( pretty_foldername, pretty_name, pretty_file_search_context, pretty_media_sort, pretty_media_collect )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertRowToSortTuple = _ConvertRowToDisplayTuple
     
     def _DeleteRow( self, foldername, name ):
         

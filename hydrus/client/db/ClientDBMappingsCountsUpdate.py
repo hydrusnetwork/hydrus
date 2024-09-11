@@ -21,7 +21,7 @@ class ClientDBMappingsCountsUpdate( ClientDBModule.ClientDBModule ):
         self.modules_tag_display = modules_tag_display
         self.modules_tag_search = modules_tag_search
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client mappings counts update', cursor )
+        super().__init__( 'client mappings counts update', cursor )
         
     
     def AddCounts( self, tag_display_type, file_service_id, tag_service_id, ac_cache_changes ):

@@ -258,7 +258,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on gallery_seed add/remove
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, self._ConvertGallerySeedToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, self._ConvertGallerySeedToDisplayTuple, self._ConvertGallerySeedToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_GALLERY_SEED_LOG.ID, 30, model, delete_key_callback = self._DeleteSelected )
         
@@ -285,7 +285,7 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         QP.CallAfter( self._UpdateText )
         
     
-    def _ConvertGallerySeedToListCtrlTuples( self, gallery_seed ):
+    def _ConvertGallerySeedToDisplayTuple( self, gallery_seed ):
         
         try:
             
@@ -310,10 +310,29 @@ class EditGallerySeedLogPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_note = HydrusText.GetFirstLine( note )
         
-        display_tuple = ( pretty_gallery_seed_index, pretty_url, pretty_status, pretty_added, pretty_modified, pretty_note )
-        sort_tuple = ( gallery_seed_index, pretty_url, status, added, modified, note )
+        return ( pretty_gallery_seed_index, pretty_url, pretty_status, pretty_added, pretty_modified, pretty_note )
         
-        return ( display_tuple, sort_tuple )
+    
+    def _ConvertGallerySeedToSortTuple( self, gallery_seed ):
+        
+        try:
+            
+            gallery_seed_index = self._gallery_seed_log.GetGallerySeedIndex( gallery_seed )
+            
+        except:
+            
+            gallery_seed_index = '--'
+            
+        
+        url = gallery_seed.url
+        status = gallery_seed.status
+        added = gallery_seed.created
+        modified = gallery_seed.modified
+        note = gallery_seed.note
+        
+        pretty_url = ClientNetworkingFunctions.ConvertURLToHumanString( url )
+        
+        return ( gallery_seed_index, pretty_url, status, added, modified, note )
         
     
     def _CopySelectedGalleryURLs( self ):

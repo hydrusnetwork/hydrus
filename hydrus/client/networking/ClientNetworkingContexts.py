@@ -13,7 +13,7 @@ class NetworkContext( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, context_type = None, context_data = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.context_type = context_type
         self.context_data = context_data

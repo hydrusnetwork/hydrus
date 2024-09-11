@@ -19,7 +19,7 @@ class FrameSplashPanel( QW.QWidget ):
     
     def __init__( self, parent, controller, frame_splash_status ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._controller = controller
         

@@ -28,7 +28,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         self._reported_on_a_broken_branch = False
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client similar files', cursor )
+        super().__init__( 'client similar files', cursor )
         
         self._perceptual_hash_id_to_vp_tree_node_cache = {}
         self._non_vp_treed_perceptual_hash_ids = set()
@@ -116,12 +116,14 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
                         
                     
                 
-                if not an_ancestor_is_unbalanced and ancestor_inner_population + ancestor_outer_population > 16:
+                is_decent_sized_branch = ancestor_inner_population + ancestor_outer_population > 16
+                
+                if not an_ancestor_is_unbalanced and is_decent_sized_branch:
                     
                     larger = max( ancestor_inner_population, ancestor_outer_population )
                     smaller = min( ancestor_inner_population, ancestor_outer_population )
                     
-                    if smaller / larger < 0.5:
+                    if smaller / larger < 0.33:
                         
                         self._Execute( 'INSERT OR IGNORE INTO shape_maintenance_branch_regen ( phash_id ) VALUES ( ? );', ( ancestor_id, ) )
                         
@@ -435,14 +437,7 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         ( parent_id, ) = self._Execute( 'SELECT parent_id FROM shape_vptree WHERE phash_id = ?;', ( perceptual_hash_id, ) ).fetchone()
         
-        if parent_id is None:
-            
-            # this is the root node! we can't rebalance since there is no parent to spread across!
-            
-            self._Execute( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( perceptual_hash_id, ) )
-            
-            return
-            
+        # if parent_id here is None, we've got the root node and we are doing the whole tree
         
         cte_table_name = 'branch ( branch_phash_id )'
         initial_select = 'SELECT ?'
@@ -450,11 +445,11 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         query_on_cte_table_name = 'SELECT branch_phash_id, phash FROM branch, shape_perceptual_hashes ON phash_id = branch_phash_id'
         
         # use UNION (large memory, set), not UNION ALL (small memory, inifinite loop on damaged cyclic graph causing 200GB journal file and disk full error, jesus)
-        query = 'WITH RECURSIVE {} AS ( {} UNION {} ) {};'.format( cte_table_name, initial_select, recursive_select, query_on_cte_table_name )
+        query = f'WITH RECURSIVE {cte_table_name} AS ( {initial_select} UNION {recursive_select} ) {query_on_cte_table_name};'
         
         unbalanced_nodes = self._Execute( query, ( perceptual_hash_id, ) ).fetchall()
         
-        # removal of old branch, maintenance schedule, and orphan perceptual_hashes
+        # removal of old branch and maintenance schedule
         
         job_status.SetStatusText( HydrusNumbers.ToHumanInt( len( unbalanced_nodes ) ) + ' leaves found--now clearing out old branch', 2 )
         
@@ -466,6 +461,8 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         self._ExecuteMany( 'DELETE FROM shape_maintenance_branch_regen WHERE phash_id = ?;', ( ( p_id, ) for p_id in unbalanced_perceptual_hash_ids ) )
         
+        # let's take this chance to clear out any nodes that don't actually map to any files
+        
         with self._MakeTemporaryIntegerTable( unbalanced_perceptual_hash_ids, 'phash_id' ) as temp_perceptual_hash_ids_table_name:
             
             useful_perceptual_hash_ids = self._STS( self._Execute( 'SELECT phash_id FROM {} CROSS JOIN shape_perceptual_hash_map USING ( phash_id );'.format( temp_perceptual_hash_ids_table_name ) ) )
@@ -473,54 +470,67 @@ class ClientDBSimilarFiles( ClientDBModule.ClientDBModule ):
         
         orphan_perceptual_hash_ids = unbalanced_perceptual_hash_ids.difference( useful_perceptual_hash_ids )
         
-        self._ExecuteMany( 'DELETE FROM shape_perceptual_hashes WHERE phash_id = ?;', ( ( p_id, ) for p_id in orphan_perceptual_hash_ids ) )
+        if len( orphan_perceptual_hash_ids ) > 0:
+            
+            self._ExecuteMany( 'DELETE FROM shape_perceptual_hashes WHERE phash_id = ?;', ( ( p_id, ) for p_id in orphan_perceptual_hash_ids ) )
+            
         
         useful_nodes = [ row for row in unbalanced_nodes if row[0] in useful_perceptual_hash_ids ]
         
-        useful_population = len( useful_nodes )
+        num_useful_population = len( useful_nodes )
         
         # now create the new branch, starting by choosing a new root and updating the parent's left/right reference to that
         
-        if useful_population > 0:
+        if num_useful_population > 0:
             
             ( new_perceptual_hash_id, new_perceptual_hash ) = self._PopBestRootNode( useful_nodes )
             
         else:
             
+            # the correct regen in this case is to cut the stem here. reset to None/0
+            
             new_perceptual_hash_id = None
             new_perceptual_hash = None
             
         
-        result = self._Execute( 'SELECT inner_id FROM shape_vptree WHERE phash_id = ?;', ( parent_id, ) ).fetchone()
+        # ok we have removed the old branch and now picked a better root node for the new one
+        # now we need to construct and insert this branch back into the database
         
-        if result is None:
+        if parent_id is not None:
             
-            # expected parent is not in the tree!
-            # somehow some stuff got borked
+            # let's first update the pre-existing parent with its new child and perhaps let it know it has lost some orphans
             
-            self._Execute( 'DELETE FROM shape_maintenance_branch_regen;' )
+            result = self._Execute( 'SELECT inner_id FROM shape_vptree WHERE phash_id = ?;', ( parent_id, ) ).fetchone()
             
-            HydrusData.ShowText( 'Your similar files search tree seemed to be damaged. Please regenerate it under the _database_ menu!' )
+            if result is None:
+                
+                # expected parent is not in the tree!
+                # somehow some stuff got borked
+                
+                self._Execute( 'DELETE FROM shape_maintenance_branch_regen;' )
+                
+                HydrusData.ShowText( 'Your similar files search tree seemed to be damaged. Please regenerate it under the _database_ menu!' )
+                
+                return
+                
             
-            return
+            ( parent_inner_id, ) = result
+            
+            if parent_inner_id == perceptual_hash_id:
+                
+                query = 'UPDATE shape_vptree SET inner_id = ?, inner_population = ? WHERE phash_id = ?;'
+                
+            else:
+                
+                query = 'UPDATE shape_vptree SET outer_id = ?, outer_population = ? WHERE phash_id = ?;'
+                
+            
+            self._Execute( query, ( new_perceptual_hash_id, num_useful_population, parent_id ) )
+            
+            self._ClearPerceptualHashesFromVPTreeNodeCache( ( parent_id, ) )
             
         
-        ( parent_inner_id, ) = result
-        
-        if parent_inner_id == perceptual_hash_id:
-            
-            query = 'UPDATE shape_vptree SET inner_id = ?, inner_population = ? WHERE phash_id = ?;'
-            
-        else:
-            
-            query = 'UPDATE shape_vptree SET outer_id = ?, outer_population = ? WHERE phash_id = ?;'
-            
-        
-        self._Execute( query, ( new_perceptual_hash_id, useful_population, parent_id ) )
-        
-        self._ClearPerceptualHashesFromVPTreeNodeCache( ( parent_id, ) )
-        
-        if useful_population > 0:
+        if num_useful_population > 0:
             
             self._GenerateBranch( job_status, parent_id, new_perceptual_hash_id, new_perceptual_hash, useful_nodes )
             

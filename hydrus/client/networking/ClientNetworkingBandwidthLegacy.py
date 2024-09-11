@@ -16,7 +16,7 @@ class NetworkBandwidthManagerLegacy( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._network_contexts_to_bandwidth_trackers = collections.defaultdict( HydrusNetworking.BandwidthTracker )
         self._network_contexts_to_bandwidth_rules = collections.defaultdict( HydrusNetworking.BandwidthRules )

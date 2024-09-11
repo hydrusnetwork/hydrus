@@ -15,7 +15,7 @@ class ClientDBFileDeleteLock( ClientDBModule.ClientDBModule ):
         self.modules_services = modules_services
         self.modules_files_inbox = modules_files_inbox
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client file delete lock', cursor )
+        super().__init__( 'client file delete lock', cursor )
         
     
     def FilterForFileDeleteLock( self, service_id, hash_ids ):

@@ -21,7 +21,7 @@ class TextAndPasteCtrl( QW.QWidget ):
         self._add_callable = add_callable
         self._allow_empty_input = allow_empty_input
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._text_input = QW.QLineEdit( self )
         self._text_input.installEventFilter( ClientGUICommon.TextCatchEnterEventFilter( self._text_input, self.EnterText ) )

@@ -16,7 +16,7 @@ class ClientDBMasterHashes( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client hashes master', cursor )
+        super().__init__( 'client hashes master', cursor )
         
         self._hash_ids_to_hashes_cache = {}
         
@@ -351,7 +351,7 @@ class ClientDBMasterTexts( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client texts master', cursor )
+        super().__init__( 'client texts master', cursor )
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:
@@ -451,7 +451,7 @@ class ClientDBMasterTags( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client tags master', cursor )
+        super().__init__( 'client tags master', cursor )
         
         self.null_namespace_id = None
         
@@ -765,7 +765,7 @@ class ClientDBMasterURLs( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client urls master', cursor )
+        super().__init__( 'client urls master', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:

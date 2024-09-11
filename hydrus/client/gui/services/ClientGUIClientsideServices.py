@@ -1624,7 +1624,7 @@ class ReviewServicePanel( QW.QWidget ):
     
     def __init__( self, parent, service ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service = service
         
@@ -2710,7 +2710,7 @@ class ReviewServiceRepositorySubPanel( QW.QWidget ):
     
     def __init__( self, parent, service ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service = service
         

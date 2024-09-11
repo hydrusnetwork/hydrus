@@ -33,7 +33,7 @@ class SubscriptionQueryLegacy( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, query = 'query text' ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._query = query
         self._display_name = None

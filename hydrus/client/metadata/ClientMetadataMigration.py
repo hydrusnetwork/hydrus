@@ -36,7 +36,7 @@ class SingleFileMetadataRouter( HydrusSerialisable.SerialisableBase ):
             exporter = ClientMetadataMigrationExporters.SingleFileMetadataExporterTXT()
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._importers = HydrusSerialisable.SerialisableList( importers )
         self._string_processor = string_processor

@@ -7,11 +7,14 @@ from hydrus.client.gui import ClientGUICore as CGC
 from hydrus.client.gui import ClientGUIMenus
 from hydrus.client.gui.widgets import ClientGUICommon
 
+# TODO: if I am feeling clever, I'm pretty sure this guy can inherit from QW.QWidget and do the DoMenu stuff itself, and super() now resolves the diamon inheritance problem
 class MenuMixin( object ):
     
-    def __init__( self, menu_items ):
+    def __init__( self, *args, **kwargs ):
         
-        self._menu_items = menu_items
+        self._menu_items = []
+        
+        super().__init__( *args, **kwargs )
         
     
     def _PopulateMenu( self, menu, menu_items ):
@@ -60,15 +63,22 @@ class MenuMixin( object ):
         self._menu_items = menu_items
         
     
+
 class MenuBitmapButton( MenuMixin, ClientGUICommon.BetterBitmapButton ):
     
     def __init__( self, parent, bitmap, menu_items ):
         
-        ClientGUICommon.BetterBitmapButton.__init__( self, parent, bitmap, self.DoMenu )
-        MenuMixin.__init__( self, menu_items )
+        super().__init__( parent, bitmap, self.DoMenu )
+        
+        self._SetMenuItems( menu_items )
         
     
     def DoMenu( self ):
+        
+        if len( self._menu_items ) == 0:
+            
+            return
+            
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
@@ -79,18 +89,25 @@ class MenuBitmapButton( MenuMixin, ClientGUICommon.BetterBitmapButton ):
     
     def SetMenuItems( self, menu_items ):
         
-        MenuMixin._SetMenuItems( self, menu_items )
+        self._SetMenuItems( menu_items )
         
     
+
 class MenuButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, label, menu_items ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, label, self.DoMenu )
-        MenuMixin.__init__( self, menu_items )
+        super().__init__( parent, label, self.DoMenu )
+        
+        self._SetMenuItems( menu_items )
         
     
     def DoMenu( self ):
+        
+        if len( self._menu_items ) == 0:
+            
+            return
+            
         
         menu = ClientGUIMenus.GenerateMenu( self )
         
@@ -101,9 +118,10 @@ class MenuButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     def SetMenuItems( self, menu_items ):
         
-        MenuMixin._SetMenuItems( self, menu_items )
+        self._SetMenuItems( menu_items )
         
     
+
 class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     valueChanged = QC.Signal()
@@ -115,10 +133,11 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
         
         label = self._GetCurrentDisplayString()
         
+        super().__init__( parent, label, self.DoMenu )
+        
         menu_items = self._GenerateMenuItems()
         
-        ClientGUICommon.BetterButton.__init__( self, parent, label, self.DoMenu )
-        MenuMixin.__init__( self, menu_items )
+        self._SetMenuItems( menu_items )
         
     
     def _GenerateMenuItems( self ):
@@ -169,6 +188,11 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
     
     def DoMenu( self ):
         
+        if len( self._menu_items ) == 0:
+            
+            return
+            
+        
         menu = ClientGUIMenus.GenerateMenu( self )
         
         self._PopulateMenu( menu, self._menu_items )
@@ -197,7 +221,7 @@ class MenuChoiceButton( MenuMixin, ClientGUICommon.BetterButton ):
         
         menu_items = self._GenerateMenuItems()
         
-        MenuMixin._SetMenuItems( self, menu_items )
+        self._SetMenuItems( menu_items )
         
         if len( menu_items ) == 0:
             

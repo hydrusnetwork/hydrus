@@ -30,7 +30,7 @@ class NoteImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._get_notes = True
         self._extend_existing_note_if_possible = True

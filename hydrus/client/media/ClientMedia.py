@@ -541,7 +541,9 @@ HydrusSerialisable.SERIALISABLE_TYPES_TO_OBJECT_TYPES[ HydrusSerialisable.SERIAL
 
 class MediaList( object ):
     
-    def __init__( self, location_context: ClientLocation.LocationContext, media_results ):
+    def __init__( self, location_context: ClientLocation.LocationContext, media_results, *args, **kwargs ):
+        
+        super().__init__( *args, **kwargs )
         
         hashes_seen = set()
         
@@ -1352,9 +1354,9 @@ class MediaList( object ):
 
 class ListeningMediaList( MediaList ):
     
-    def __init__( self, location_context: ClientLocation.LocationContext, media_results ):
+    def __init__( self, location_context: ClientLocation.LocationContext, media_results, *args, **kwargs ):
         
-        MediaList.__init__( self, location_context, media_results )
+        super().__init__( location_context, media_results, *args, **kwargs )
         
         CG.client_controller.sub( self, 'ProcessContentUpdatePackage', 'content_updates_gui' )
         CG.client_controller.sub( self, 'ProcessServiceUpdates', 'service_updates_gui' )
@@ -1367,8 +1369,7 @@ class MediaCollection( MediaList, Media ):
         
         # note for later: ideal here is to stop this multiple inheritance mess and instead have this be a media that *has* a list, not *is* a list
         
-        Media.__init__( self )
-        MediaList.__init__( self, location_context, media_results )
+        super().__init__( location_context, media_results )
         
         self._archive = True
         self._inbox = False
@@ -1816,7 +1817,7 @@ class MediaSingleton( Media ):
     
     def __init__( self, media_result: ClientMediaResult.MediaResult ):
         
-        Media.__init__( self )
+        super().__init__()
         
         self._media_result = media_result
         

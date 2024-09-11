@@ -494,7 +494,8 @@ Required Headers:
 Arguments (in JSON):
 :   
     * `path`: (the path you want to import)
-    * [file domain](#parameters_file_domain) (optional, defaults to your "quiet" file import options's destination)
+    * `delete_after_successful_import`: (optional, defaults to `false`, sets to delete the source file on a 'successful' or 'already in db' result)
+    * [file domain](#parameters_file_domain) (optional, local file domain(s) only, defaults to your "quiet" file import options's destination)
 
 ```json title="Example request body"
 {
@@ -502,11 +503,11 @@ Arguments (in JSON):
 }
 ```
 
-If you include a [file domain](#parameters_file_domain), it can only include 'local' file domains (by default this would be "my files"), but you can send multiple to import to more than one location at once. Sending 'all local files', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.
+If you include a [file domain](#parameters_file_domain), it can only include 'local' file domains (by default on a new client this would just be "my files"), but you can send multiple to import to more than one location at once. Asking to import to 'all local files', 'all my files', 'trash', 'repository updates', or a file repository/ipfs will give you 400.
 
 Arguments (as bytes): 
 :   
-    You can alternately just send the file's bytes as the POST body.
+    You can alternately just send the file's raw bytes as the entire POST body. In this case, you cannot send any other parameters, so you will be left with the default import file domain.
 
 Response: 
 :   Some JSON with the import result. Please note that file imports for large files may take several seconds, and longer if the client is busy doing other db work, so make sure your request is willing to wait that long for the response.

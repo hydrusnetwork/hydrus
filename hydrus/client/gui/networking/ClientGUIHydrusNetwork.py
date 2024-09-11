@@ -494,7 +494,7 @@ class ReviewAccountsPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, account_identifiers: typing.Collection[ HydrusNetwork.AccountIdentifier ] ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._service = CG.client_controller.services_manager.GetService( self._service_key )

@@ -199,7 +199,7 @@ class ManagementController( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, page_name = 'page' ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._page_name = page_name
         

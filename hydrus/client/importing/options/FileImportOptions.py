@@ -48,7 +48,7 @@ class FileImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._exclude_deleted = True
         self._preimport_hash_check_type = DO_CHECK_AND_MATCHES_ARE_DISPOSITIVE

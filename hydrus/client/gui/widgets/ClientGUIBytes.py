@@ -14,7 +14,7 @@ class BytesControl( QW.QWidget ):
     
     def __init__( self, parent, initial_value = 65536 ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._spin = ClientGUICommon.BetterSpinBox( self, min=0, max=1048576 )
         
@@ -91,7 +91,7 @@ class NoneableBytesControl( QW.QWidget ):
     
     def __init__( self, parent, default_bytes: int, none_label = 'no limit' ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._bytes = BytesControl( self )
         self._bytes.SetValue( default_bytes )

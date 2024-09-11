@@ -11,7 +11,7 @@ class ColumnListManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._column_list_types_to_statuses = HydrusSerialisable.SerialisableDictionary()
         

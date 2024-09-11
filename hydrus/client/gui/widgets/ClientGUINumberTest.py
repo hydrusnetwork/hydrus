@@ -13,7 +13,7 @@ class NumberTestWidget( QW.QWidget ):
     
     def __init__( self, parent, allowed_operators = None, max = 200000, unit_string = None, appropriate_absolute_plus_or_minus_default = 1, appropriate_percentage_plus_or_minus_default = 15 ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         choice_tuples = []
         

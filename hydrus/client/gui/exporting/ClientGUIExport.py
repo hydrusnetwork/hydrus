@@ -51,7 +51,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._export_folders_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, self._ConvertExportFolderToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, self._ConvertExportFolderToDisplayTuple, self._ConvertExportFolderToSortTuple )
         
         self._export_folders = ClientGUIListCtrl.BetterListCtrlTreeView( self._export_folders_panel, CGLC.COLUMN_LIST_EXPORT_FOLDERS.ID, 6, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -145,7 +145,7 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertExportFolderToListCtrlTuples( self, export_folder: ClientExportingFiles.ExportFolder ):
+    def _ConvertExportFolderToDisplayTuple( self, export_folder: ClientExportingFiles.ExportFolder ):
         
         ( name, path, export_type, delete_from_client_after_export, export_symlinks, file_search_context, run_regularly, period, phrase, last_checked, run_now ) = export_folder.ToTuple()
         
@@ -177,16 +177,12 @@ class EditExportFoldersPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_period += ' (running after dialog ok)'
             
         
-        pretty_phrase = phrase
-        
         last_error = export_folder.GetLastError()
         
-        display_tuple = ( name, path, pretty_export_type, pretty_file_search_context, pretty_period, pretty_phrase, last_error )
+        return ( name, path, pretty_export_type, pretty_file_search_context, pretty_period, phrase, last_error )
         
-        sort_tuple = ( name, path, pretty_export_type, pretty_file_search_context, period, phrase, last_error )
-        
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertExportFolderToSortTuple = _ConvertExportFolderToDisplayTuple
     
     def _Edit( self ):
         
@@ -589,7 +585,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         self._tags_box.setMinimumSize( QC.QSize( 220, 300 ) )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._paths = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_EXPORT_FILES.ID, 24, model, delete_key_callback = self._DeletePaths )
         
@@ -701,7 +697,7 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             
         
     
-    def _ConvertDataToListCtrlTuples( self, media ):
+    def _ConvertDataToDisplayTuple( self, media ):
         
         directory = self._directory_picker.GetPath()
         
@@ -727,10 +723,28 @@ class ReviewExportFilesPanel( ClientGUIScrolledPanels.ReviewPanel ):
             pretty_path = 'INVALID, above destination directory: ' + path
             
         
-        display_tuple = ( pretty_number, pretty_mime, pretty_path )
-        sort_tuple = ( number, pretty_mime, path )
+        return ( pretty_number, pretty_mime, pretty_path )
         
-        return ( display_tuple, sort_tuple )
+    
+    def _ConvertDataToSortTuple( self, media ):
+        
+        directory = self._directory_picker.GetPath()
+        
+        number = self._media_to_number_indices[ media ]
+        mime = media.GetMime()
+        
+        try:
+            
+            path = self._GetPath( media )
+            
+        except Exception as e:
+            
+            path = str( e )
+            
+        
+        pretty_mime = HC.mime_string_lookup[ mime ]
+        
+        return ( number, pretty_mime, path )
         
     
     def _DeletePaths( self ):

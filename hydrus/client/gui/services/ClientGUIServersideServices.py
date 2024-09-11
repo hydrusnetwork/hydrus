@@ -142,7 +142,7 @@ class EditServersideService( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent: QW.QWidget, dictionary ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             bandwidth_rules = dictionary[ 'bandwidth_rules' ]
             

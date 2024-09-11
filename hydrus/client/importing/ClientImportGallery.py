@@ -48,7 +48,7 @@ class GalleryImport( HydrusSerialisable.SerialisableBase ):
         
         initial_search_urls = HydrusData.DedupeList( initial_search_urls )
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._creation_time = HydrusTime.GetNow()
         self._gallery_import_key = HydrusData.GenerateKey()
@@ -1072,7 +1072,7 @@ class MultipleGalleryImport( HydrusSerialisable.SerialisableBase ):
             gug_key_and_name = ( HydrusData.GenerateKey(), 'unknown source' )
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._lock = threading.Lock()
         

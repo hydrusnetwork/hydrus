@@ -52,7 +52,7 @@ class FileFilter( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, filter_type = None, filter_data = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.filter_type = filter_type
         self.filter_data = filter_data

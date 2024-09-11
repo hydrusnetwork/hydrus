@@ -883,7 +883,7 @@ class ParseFormulaCompound( ParseFormula ):
     
     def __init__( self, formulae = None, sub_phrase = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_processor )
+        super().__init__( string_processor )
         
         if formulae is None:
             
@@ -1040,7 +1040,7 @@ class ParseFormulaContextVariable( ParseFormula ):
     
     def __init__( self, variable_name = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_processor )
+        super().__init__( string_processor )
         
         if variable_name is None:
             
@@ -1136,7 +1136,7 @@ class ParseFormulaHTML( ParseFormula ):
     
     def __init__( self, tag_rules = None, content_to_fetch = None, attribute_to_fetch = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_processor )
+        super().__init__( string_processor )
         
         if tag_rules is None:
             
@@ -1491,7 +1491,7 @@ class ParseRuleHTML( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, rule_type = None, tag_name = None, tag_attributes = None, tag_index = None, tag_depth = None, should_test_tag_string = False, tag_string_string_match = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if rule_type is None:
             
@@ -1757,7 +1757,7 @@ class ParseFormulaJSON( ParseFormula ):
     
     def __init__( self, parse_rules = None, content_to_fetch = None, string_processor = None ):
         
-        ParseFormula.__init__( self, string_processor )
+        super().__init__( string_processor )
         
         if parse_rules is None:
             
@@ -2086,7 +2086,7 @@ class SimpleDownloaderParsingFormula( HydrusSerialisable.SerialisableBaseNamed )
             formula = ParseFormulaHTML()
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._formula = formula
         
@@ -2555,7 +2555,7 @@ class PageParser( HydrusSerialisable.SerialisableBaseNamed ):
             example_parsing_context[ 'url' ] = 'https://example.com/posts/index.php?id=123456'
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._parser_key = parser_key
         self._string_converter = string_converter
@@ -3059,7 +3059,7 @@ class ParseRootFileLookup( HydrusSerialisable.SerialisableBaseNamed ):
     
     def __init__( self, name, url = None, query_type = None, file_identifier_type = None, file_identifier_string_converter = None, file_identifier_arg_name = None, static_args = None, children = None ):
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._url = url
         self._query_type = query_type

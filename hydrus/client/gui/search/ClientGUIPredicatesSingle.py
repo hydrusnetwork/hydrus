@@ -33,7 +33,7 @@ class StaticSystemPredicateButton( QW.QWidget ):
     
     def __init__( self, parent, predicates, forced_label = None, show_remove_button = True ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._predicates = predicates
         self._forced_label = forced_label
@@ -203,7 +203,7 @@ class PanelPredicateSimpleTagTypes( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         if predicate.GetType() not in ( ClientSearch.PREDICATE_TYPE_TAG, ClientSearch.PREDICATE_TYPE_NAMESPACE, ClientSearch.PREDICATE_TYPE_WILDCARD ):
             
@@ -265,7 +265,7 @@ class PanelPredicateSystem( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
     
     def CheckValid( self ):

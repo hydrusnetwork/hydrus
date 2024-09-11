@@ -678,7 +678,7 @@ class DateTimesCtrl( QW.QWidget ):
     
     def __init__( self, parent, time_allowed = True, seconds_allowed = False, milliseconds_allowed = False, none_allowed = False, only_past_dates = False ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._time_allowed = time_allowed
         self._seconds_allowed = seconds_allowed
@@ -1090,7 +1090,7 @@ class TimeDeltaCtrl( QW.QWidget ):
     
     def __init__( self, parent, min = 1, days = False, hours = False, minutes = False, seconds = False, milliseconds = False, monthly_allowed = False, monthly_label = 'monthly', negative_allowed = False ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._min = min
         self._show_days = days
@@ -1373,7 +1373,7 @@ class TimestampDataStubCtrl( QW.QWidget ):
     
     def __init__( self, parent, timestamp_data_stub = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         if timestamp_data_stub is None:
             
@@ -1602,7 +1602,7 @@ class VelocityCtrl( QW.QWidget ):
     
     def __init__( self, parent, min_unit_value, max_unit_value, min_time_delta, days = False, hours = False, minutes = False, seconds = False, per_phrase = 'per', unit = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._num = ClientGUICommon.BetterSpinBox( self, min=min_unit_value, max=max_unit_value, width = 60 )
         

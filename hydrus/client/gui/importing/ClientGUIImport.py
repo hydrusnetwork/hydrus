@@ -106,7 +106,7 @@ class CheckBoxLineEdit( QW.QWidget ):
     
     def __init__( self, parent, placeholder_text ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._checkbox = QW.QCheckBox( self )
         
@@ -128,10 +128,13 @@ class CheckBoxLineEdit( QW.QWidget ):
     
     def _LineEditChanged( self ):
         
-        if self.IsChecked():
+        # if the user unchecks and then clears the text, we won't re-check, but otherwise check on text change
+        if self._lineedit.text() != '' and not self._checkbox.isChecked():
             
-            self.valueChanged.emit()
+            self._checkbox.setChecked( True )
             
+        
+        self.valueChanged.emit()
         
     
     def GetValue( self ):
@@ -170,7 +173,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
             filename_tagging_options = TagImportOptions.FilenameTaggingOptions()
             
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         
@@ -240,7 +243,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def __init__( self, parent, service_key, filename_tagging_options, present_for_accompanying_file_list ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._service_key = service_key
             self._present_for_accompanying_file_list = present_for_accompanying_file_list
@@ -487,7 +490,7 @@ class FilenameTaggingOptionsPanel( QW.QWidget ):
         
         def __init__( self, parent, service_key, filename_tagging_options, present_for_accompanying_file_list ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._service_key = service_key
             self._present_for_accompanying_file_list = present_for_accompanying_file_list
@@ -956,12 +959,12 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent, service_key, paths ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._service_key = service_key
             self._paths = paths
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
             
             self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, model )
             
@@ -993,7 +996,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._filename_tagging_panel.tagsChanged.connect( self.ScheduleRefreshFileList )
             
         
-        def _ConvertDataToListCtrlTuples( self, data ):
+        def _ConvertDataToDisplayTuple( self, data ):
             
             ( index, path ) = data
             
@@ -1001,13 +1004,16 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             
             pretty_index = HydrusNumbers.ToHumanInt( index + 1 )
             
-            pretty_path = path
             pretty_tags = ', '.join( tags )
             
-            display_tuple = ( pretty_index, pretty_path, pretty_tags )
-            sort_tuple = ( index, path, tags )
+            return ( pretty_index, path, pretty_tags )
             
-            return ( display_tuple, sort_tuple )
+        
+        def _ConvertDataToSortTuple( self, data ):
+            
+            ( index, path ) = data
+            
+            return ( index, path, index )
             
         
         def _GetTags( self, index, path ):
@@ -1069,11 +1075,11 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent, metadata_routers, paths ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._paths = paths
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
             
             self._paths_list = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_PATHS_TO_TAGS.ID, 10, model )
             
@@ -1114,7 +1120,7 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             self._metadata_routers_control.listBoxChanged.connect( self.ScheduleRefreshFileList )
             
         
-        def _ConvertDataToListCtrlTuples( self, data ):
+        def _ConvertDataToDisplayTuple( self, data ):
             
             ( index, path ) = data
             
@@ -1125,10 +1131,14 @@ class EditLocalImportFilenameTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_path = path
             pretty_strings = ', '.join( strings )
             
-            display_tuple = ( pretty_index, pretty_path, pretty_strings )
-            sort_tuple = ( index, path, strings )
+            return ( pretty_index, pretty_path, pretty_strings )
             
-            return ( display_tuple, sort_tuple )
+        
+        def _ConvertDataToSortTuple( self, data ):
+            
+            ( index, path ) = data
+            
+            return ( index, path, index )
             
         
         def _GetStrings( self, path ):

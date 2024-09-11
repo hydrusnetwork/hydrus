@@ -112,8 +112,7 @@ class ServiceKeysToTags( HydrusSerialisable.SerialisableBase, collections.defaul
     
     def __init__( self, *args, **kwargs ):
         
-        collections.defaultdict.__init__( self, set, *args, **kwargs )
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__( set, *args, **kwargs )
         
     
     def _GetSerialisableInfo( self ):

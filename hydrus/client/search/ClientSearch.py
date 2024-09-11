@@ -312,7 +312,7 @@ class NumberTest( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, operator = NUMBER_TEST_OPERATOR_EQUAL, value = 1, extra_value = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if operator == NUMBER_TEST_OPERATOR_APPROXIMATE_PERCENT and value == 0:
             
@@ -1445,7 +1445,7 @@ class FavouriteSearchManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._favourite_search_rows = []
         

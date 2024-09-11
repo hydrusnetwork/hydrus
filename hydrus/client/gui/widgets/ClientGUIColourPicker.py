@@ -22,7 +22,7 @@ class AlphaColourControl( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._colour_picker = ColourPickerButton( self )
         

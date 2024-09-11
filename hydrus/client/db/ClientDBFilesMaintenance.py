@@ -34,7 +34,7 @@ class ClientDBFilesMaintenance( ClientDBModule.ClientDBModule ):
         weakref_media_result_cache: ClientMediaResultCache.MediaResultCache
         ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files maintenance', cursor )
+        super().__init__( 'client files maintenance', cursor )
         
         self.modules_files_maintenance_queue = modules_files_maintenance_queue
         self.modules_hashes = modules_hashes

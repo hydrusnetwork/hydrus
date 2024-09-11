@@ -116,7 +116,7 @@ class MPVShutdownEvent( QC.QEvent ):
     
     def __init__( self ):
         
-        QC.QEvent.__init__( self, MPVShutdownEventType )
+        super().__init__( MPVShutdownEventType )
         
     
 
@@ -126,7 +126,7 @@ class MPVFileLoadedEvent( QC.QEvent ):
     
     def __init__( self ):
         
-        QC.QEvent.__init__( self, MPVFileLoadedEventType )
+        super().__init__( MPVFileLoadedEventType )
         
     
 '''
@@ -136,7 +136,7 @@ class MPVLogEvent( QC.QEvent ):
     
     def __init__( self, player, event ):
         
-        QC.QEvent.__init__( self, MPVLogEventType )
+        super().__init__( MPVLogEventType )
         
         self.player = player
         self.event = event
@@ -149,7 +149,7 @@ class MPVFileSeekedEvent( QC.QEvent ):
     
     def __init__( self ):
         
-        QC.QEvent.__init__( self, MPVFileSeekedEventType )
+        super().__init__( MPVFileSeekedEventType )
         
     
 
@@ -187,8 +187,7 @@ class MPVWidget( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self._canvas_type = CC.CANVAS_PREVIEW
         

@@ -18,7 +18,7 @@ class ClientDBRatings( ClientDBModule.ClientDBModule ):
         
         self.modules_services = modules_services
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client ratings', cursor )
+        super().__init__( 'client ratings', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:

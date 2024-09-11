@@ -44,6 +44,13 @@ from hydrus.client.search import ClientSearch
 
 class BetterQListWidget( QW.QListWidget ):
     
+    def __init__( self, parent, delete_callable = None ):
+        
+        self._delete_callable = delete_callable
+        
+        super().__init__( parent )
+        
+    
     def _DeleteIndices( self, indices: typing.Iterable[ int ] ):
         
         indices = sorted( indices, reverse = True )
@@ -191,7 +198,15 @@ class BetterQListWidget( QW.QListWidget ):
     
     def keyPressEvent( self, event: QG.QKeyEvent ):
         
-        if event.modifiers() & QC.Qt.ControlModifier and event.key() in ( QC.Qt.Key_C, QC.Qt.Key_Insert ):
+        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
+        
+        if key in ClientGUIShortcuts.DELETE_KEYS_QT and self._delete_callable is not None:
+            
+            event.accept()
+            
+            self._delete_callable()
+            
+        elif event.modifiers() & QC.Qt.ControlModifier and event.key() in ( QC.Qt.Key_C, QC.Qt.Key_Insert ):
             
             event.accept()
             
@@ -295,7 +310,7 @@ class AddEditDeleteListBox( QW.QWidget ):
         self._add_callable = add_callable
         self._edit_callable = edit_callable
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._listbox = BetterQListWidget( self )
         self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
@@ -845,7 +860,7 @@ class QueueListBox( QW.QWidget ):
         self._add_callable = add_callable
         self._edit_callable = edit_callable
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._listbox = BetterQListWidget( self )
         self._listbox.setSelectionMode( QW.QListWidget.ExtendedSelection )
@@ -2294,7 +2309,7 @@ class ListBox( QW.QScrollArea ):
         
         def __init__( self, parent ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._parent = parent
             

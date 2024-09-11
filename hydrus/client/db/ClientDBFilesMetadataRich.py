@@ -42,7 +42,7 @@ class ClientDBFilesMetadataRich( ClientDBModule.ClientDBModule ):
         self.modules_hashes_local_cache = modules_hashes_local_cache
         self.modules_url_map = modules_url_map
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files rich metadata', cursor )
+        super().__init__( 'client files rich metadata', cursor )
         
     
     def FilterHashesByService( self, location_context: ClientLocation.LocationContext, hashes: typing.Sequence[ bytes ] ) -> typing.List[ bytes ]:

@@ -20,9 +20,11 @@ from hydrus.client.metadata import ClientTags
 
 class SingleFileMetadataImporter( ClientMetadataMigrationCore.ImporterExporterNode ):
     
-    def __init__( self, string_processor: ClientStrings.StringProcessor ):
+    def __init__( self, string_processor: ClientStrings.StringProcessor, *args, **kwargs ):
         
         self._string_processor = string_processor
+        
+        super().__init__( *args, **kwargs )
         
     
     def GetStringProcessor( self ) -> ClientStrings.StringProcessor:
@@ -67,8 +69,7 @@ class SingleFileMetadataImporterMediaNotes( SingleFileMetadataImporterMedia, Hyd
             string_processor = ClientStrings.StringProcessor()
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataImporterMedia.__init__( self, string_processor )
+        super().__init__( string_processor )
         
     
     def _GetSerialisableInfo( self ):
@@ -139,8 +140,7 @@ class SingleFileMetadataImporterMediaTags( SingleFileMetadataImporterMedia, Hydr
             string_processor = ClientStrings.StringProcessor()
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataImporterMedia.__init__( self, string_processor )
+        super().__init__( string_processor )
         
         if service_key is None:
             
@@ -286,8 +286,7 @@ class SingleFileMetadataImporterMediaTimestamps( SingleFileMetadataImporterMedia
             string_processor = ClientStrings.StringProcessor()
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataImporterMedia.__init__( self, string_processor )
+        super().__init__( string_processor )
         
         if timestamp_data_stub is None:
             
@@ -381,8 +380,7 @@ class SingleFileMetadataImporterMediaURLs( SingleFileMetadataImporterMedia, Hydr
             string_processor = ClientStrings.StringProcessor()
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataImporterMedia.__init__( self, string_processor )
+        super().__init__( string_processor )
         
     
     def _GetSerialisableInfo( self ):
@@ -458,8 +456,7 @@ class SingleFileMetadataImporterSidecar( SingleFileMetadataImporter, ClientMetad
     
     def __init__( self, string_processor: ClientStrings.StringProcessor, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter ):
         
-        ClientMetadataMigrationCore.SidecarNode.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
-        SingleFileMetadataImporter.__init__( self, string_processor )
+        super().__init__( string_processor, remove_actual_filename_ext, suffix, filename_string_converter )
         
     
     def GetPossibleSidecarPaths( self, path: str ) -> typing.Collection[ str ]:
@@ -521,8 +518,7 @@ class SingleFileMetadataImporterJSON( SingleFileMetadataImporterSidecar, HydrusS
             string_processor = ClientStrings.StringProcessor()
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataImporterSidecar.__init__( self, string_processor, remove_actual_filename_ext, suffix, filename_string_converter )
+        super().__init__( string_processor, remove_actual_filename_ext, suffix, filename_string_converter )
         
         if json_parsing_formula is None:
             
@@ -684,10 +680,9 @@ class SingleFileMetadataImporterTXT( SingleFileMetadataImporterSidecar, HydrusSe
             separator = '\n'
             
         
-        self._separator = separator
+        super().__init__( string_processor, remove_actual_filename_ext, suffix, filename_string_converter )
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataImporterSidecar.__init__( self, string_processor, remove_actual_filename_ext, suffix, filename_string_converter )
+        self._separator = separator
         
     
     def _GetSerialisableInfo( self ):

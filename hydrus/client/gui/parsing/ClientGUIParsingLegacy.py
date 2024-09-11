@@ -39,7 +39,7 @@ class EditNodes( QW.QWidget ):
     
     def __init__( self, parent, nodes, referral_url_callable, example_data_callable ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._referral_url_callable = referral_url_callable
         self._example_data_callable = example_data_callable
@@ -1200,7 +1200,7 @@ class ScriptManagementControl( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._job_status = None
         

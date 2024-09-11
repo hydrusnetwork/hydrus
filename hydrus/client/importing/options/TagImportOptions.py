@@ -25,7 +25,7 @@ class FilenameTaggingOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._tags_for_all = set()
         
@@ -252,7 +252,7 @@ class TagImportOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, fetch_tags_even_if_url_recognised_and_file_already_in_db = False, fetch_tags_even_if_hash_recognised_and_file_already_in_db = False, tag_blacklist = None, tag_whitelist = None, service_keys_to_service_tag_import_options = None, is_default = False ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if tag_blacklist is None:
             
@@ -701,7 +701,7 @@ class ServiceTagImportOptions( HydrusSerialisable.SerialisableBase ):
             only_add_existing_tags_filter = HydrusTags.TagFilter()
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._get_tags = get_tags
         self._get_tags_filter = get_tags_filter

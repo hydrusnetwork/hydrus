@@ -41,7 +41,7 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
         self.modules_tag_parents = modules_tag_parents
         self.modules_tag_siblings = modules_tag_siblings
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client tag display', cursor )
+        super().__init__( 'client tag display', cursor )
         
     
     def FilterChained( self, display_type, tag_service_id, tag_ids ) -> typing.Set[ int ]:
@@ -224,11 +224,11 @@ class ClientDBTagDisplay( ClientDBModule.ClientDBModule ):
     
     def GetApplicationStatus( self, service_id ):
         
-        ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_sibling_rows, num_ideal_sibling_rows ) = self.modules_tag_siblings.GetApplicationStatus( service_id )
-        ( parent_rows_to_add, parent_rows_to_remove, num_actual_parent_rows, num_ideal_parent_rows ) = self.modules_tag_parents.GetApplicationStatus( service_id )
+        ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove ) = self.modules_tag_siblings.GetApplicationStatus( service_id )
+        ( actual_parent_rows, ideal_parent_rows, parent_rows_to_add, parent_rows_to_remove ) = self.modules_tag_parents.GetApplicationStatus( service_id )
         
-        num_actual_rows = num_actual_sibling_rows + num_actual_parent_rows
-        num_ideal_rows = num_ideal_sibling_rows + num_ideal_parent_rows
+        num_actual_rows = len( actual_sibling_rows ) + len( actual_parent_rows )
+        num_ideal_rows = len( ideal_sibling_rows ) + len( ideal_parent_rows )
         
         return ( sibling_rows_to_add, sibling_rows_to_remove, parent_rows_to_add, parent_rows_to_remove, num_actual_rows, num_ideal_rows )
         

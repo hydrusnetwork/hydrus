@@ -349,7 +349,7 @@ class TagFilter( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         # TODO: update this guy to more carefully navigate how it does advanced filters
         # we want to support both:

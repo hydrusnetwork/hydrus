@@ -170,7 +170,7 @@ class RegexInput( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, show_group_menu = False ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._allow_enter_key_to_propagate_outside = True
         

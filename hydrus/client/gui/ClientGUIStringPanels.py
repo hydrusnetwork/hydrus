@@ -33,7 +33,7 @@ class MultilineStringConversionTestPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._string_processor = string_processor
         
@@ -162,7 +162,7 @@ class SingleStringConversionTestPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, string_processor: ClientStrings.StringProcessor ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._string_processor = string_processor
         
@@ -308,11 +308,11 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, string_converter: ClientStrings.StringConverter, example_string_override = None ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         conversions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, self._ConvertConversionToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, self._ConvertConversionToDisplayTuple, self._ConvertConversionToSortTuple )
         
         self._conversions = ClientGUIListCtrl.BetterListCtrlTreeView( conversions_panel, CGLC.COLUMN_LIST_STRING_CONVERTER_CONVERSIONS.ID, 7, model, delete_key_callback = self._DeleteConversion, activation_callback = self._EditConversion )
         
@@ -455,7 +455,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
-    def _ConvertConversionToListCtrlTuples( self, conversion ):
+    def _ConvertConversionToDisplayTuple( self, conversion ):
         
         ( number, conversion_type, data ) = conversion
         
@@ -473,10 +473,14 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_result = str( e )
             
         
-        display_tuple = ( pretty_number, pretty_conversion, pretty_result )
-        sort_tuple = ( number, number, number )
+        return ( pretty_number, pretty_conversion, pretty_result )
         
-        return ( display_tuple, sort_tuple )
+    
+    def _ConvertConversionToSortTuple( self, conversion ):
+        
+        ( number, conversion_type, data ) = conversion
+        
+        return ( number, number, number )
         
     
     def _DeleteConversion( self ):
@@ -666,7 +670,7 @@ class EditStringConverterPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent, conversion_type, data, example_text ):
             
-            ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+            super().__init__( parent )
             
             self._control_panel = ClientGUICommon.StaticBox( self, 'string conversion step' )
             
@@ -1185,7 +1189,7 @@ class EditStringJoinerPanel( ClientGUIScrolledPanels.EditPanel ):
             test_data = []
             
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -1312,7 +1316,7 @@ class EditStringMatchPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._match_type = ClientGUICommon.BetterChoice( self )
         
@@ -1565,7 +1569,7 @@ class EditStringSlicerPanel( ClientGUIScrolledPanels.EditPanel ):
             test_data = []
             
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -1761,7 +1765,7 @@ class EditStringSorterPanel( ClientGUIScrolledPanels.EditPanel ):
             test_data = []
             
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -1917,7 +1921,7 @@ class EditStringSplitterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, string_splitter: ClientStrings.StringSplitter, example_string: str = '' ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -2054,7 +2058,7 @@ class EditStringTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, string_tag_filter: ClientStrings.StringTagFilter, test_data = typing.Optional[ ClientParsing.ParsingTestData ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         message = 'This works the same as any tag filter elsewhere in the program. Note that it converts your texts to valid hydrus tags, so everything is coming out lowercase with trimmed whitespace, and invalid tags will never pass.'
         
@@ -2154,7 +2158,7 @@ class EditStringProcessorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, string_processor: ClientStrings.StringProcessor, test_data: ClientParsing.ParsingTestData ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         

@@ -72,7 +72,7 @@ class APIManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._dirty = False
         
@@ -253,7 +253,7 @@ class APIPermissions( HydrusSerialisable.SerialisableBaseNamed ):
             search_tag_filter = HydrusTags.TagFilter()
             
         
-        HydrusSerialisable.SerialisableBaseNamed.__init__( self, name )
+        super().__init__( name )
         
         self._access_key = access_key
         

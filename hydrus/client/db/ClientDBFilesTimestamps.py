@@ -36,7 +36,7 @@ class ClientDBFilesTimestamps( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, modules_urls: ClientDBMaster.ClientDBMasterURLs, modules_files_viewing_stats: ClientDBFilesViewingStats.ClientDBFilesViewingStats, modules_files_storage: ClientDBFilesStorage.ClientDBFilesStorage ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files timestamps', cursor )
+        super().__init__( 'client files timestamps', cursor )
         
         self.modules_urls = modules_urls
         self.modules_files_viewing_stats = modules_files_viewing_stats

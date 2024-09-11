@@ -263,7 +263,7 @@ class Credentials( HydrusData.HydrusYAMLBase ):
     
     def __init__( self, host, port, access_key = None ):
         
-        HydrusData.HydrusYAMLBase.__init__( self )
+        super().__init__()
         
         if host == 'localhost':
             

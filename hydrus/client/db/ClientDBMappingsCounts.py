@@ -61,7 +61,7 @@ class ClientDBMappingsCounts( ClientDBModule.ClientDBModule ):
         self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client mappings counts', cursor )
+        super().__init__( 'client mappings counts', cursor )
         
         self._missing_storage_tag_service_pairs = set()
         self._missing_display_tag_service_pairs = set()

@@ -22,7 +22,7 @@ class HydrusController( HydrusControllerInterface.HydrusControllerInterface ):
     
     def __init__( self, db_dir ):
         
-        HydrusControllerInterface.HydrusControllerInterface.__init__( self )
+        super().__init__()
         
         HG.controller = self
         

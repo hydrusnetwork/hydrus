@@ -62,7 +62,7 @@ class EditShortcutAndCommandPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, shortcut, command, shortcuts_name ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         #
         
@@ -105,13 +105,13 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, shortcuts: ClientGUIShortcuts.ShortcutSet ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._name = QW.QLineEdit( self )
         
         self._shortcuts_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SHORTCUTS.ID, self._ConvertSortTupleToPrettyTuple )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUTS.ID, self._ConvertShortcutTupleToDisplayTuple, self._ConvertShortcutTupleToSortTuple )
         
         self._shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( self._shortcuts_panel, CGLC.COLUMN_LIST_SHORTCUTS.ID, 20, model, delete_key_callback = self.RemoveShortcuts, activation_callback = self.EditShortcuts )
         
@@ -190,15 +190,14 @@ class EditShortcutSetPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertSortTupleToPrettyTuple( self, shortcut_tuple ):
+    def _ConvertShortcutTupleToDisplayTuple( self, shortcut_tuple ):
         
         ( shortcut, command ) = shortcut_tuple
         
-        display_tuple = ( shortcut.ToString(), command.ToString() )
-        sort_tuple = display_tuple
+        return ( shortcut.ToString(), command.ToString() )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertShortcutTupleToSortTuple = _ConvertShortcutTupleToDisplayTuple
     
     def _AddShortcutSet( self, shortcut_set: ClientGUIShortcuts.ShortcutSet ):
         
@@ -373,7 +372,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, call_mouse_buttons_primary_secondary, shortcuts_merge_non_number_numpad, all_shortcuts ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         help_button = ClientGUICommon.BetterBitmapButton( self, CC.global_pixmaps().help, self._ShowHelp )
         help_button.setToolTip( ClientGUIFunctions.WrapToolTip( 'Show help regarding editing shortcuts.' ) )
@@ -386,7 +385,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         reserved_panel = ClientGUICommon.StaticBox( self, 'built-in hydrus shortcut sets' )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
         self._reserved_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( reserved_panel, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, 6, model, activation_callback = self._EditReserved )
         
@@ -399,7 +398,7 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         custom_panel = ClientGUICommon.StaticBox( self, 'custom user sets' )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, self._GetDisplayTuple, self._GetSortTuple )
         
         self._custom_shortcuts = ClientGUIListCtrl.BetterListCtrlTreeView( custom_panel, CGLC.COLUMN_LIST_SHORTCUT_SETS.ID, 6, model, delete_key_callback = self._Delete, activation_callback = self._EditCustom )
         
@@ -567,28 +566,40 @@ class EditShortcutsPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    
-    def _GetTuples( self, shortcuts ):
+    def _GetDisplayTuple( self, shortcuts ):
         
         name = shortcuts.GetName()
         
         if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
             
             pretty_name = ClientGUIShortcuts.shortcut_names_to_pretty_names[ name ]
-            sort_name = ClientGUIShortcuts.shortcut_names_sorted.index( name )
             
         else:
             
             pretty_name = name
+            
+        
+        size = len( shortcuts )
+        
+        return ( pretty_name, HydrusNumbers.ToHumanInt( size ) )
+        
+    
+    def _GetSortTuple( self, shortcuts ):
+        
+        name = shortcuts.GetName()
+        
+        if name in ClientGUIShortcuts.shortcut_names_to_descriptions:
+            
+            sort_name = ClientGUIShortcuts.shortcut_names_sorted.index( name )
+            
+        else:
+            
             sort_name = name
             
         
         size = len( shortcuts )
         
-        display_tuple = ( pretty_name, HydrusNumbers.ToHumanInt( size ) )
-        sort_tuple = ( sort_name, size )
-        
-        return ( display_tuple, sort_tuple )
+        return ( sort_name, size )
         
     
     def _RestoreDefaults( self ):
@@ -695,7 +706,7 @@ class ShortcutWidget( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._mouse_radio = QW.QRadioButton( 'mouse', self )
         self._mouse_shortcut = MouseShortcutWidget( self )
@@ -760,7 +771,7 @@ class KeyboardShortcutWidget( QW.QLineEdit ):
         
         self._shortcut = ClientGUIShortcuts.Shortcut()
         
-        QW.QLineEdit.__init__( self, parent )
+        super().__init__( parent )
         
         self._SetShortcutString()
         
@@ -804,7 +815,7 @@ class MouseShortcutWidget( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._button = MouseShortcutButton( self )
         
@@ -868,7 +879,7 @@ class MouseShortcutButton( QW.QPushButton ):
         
         self._press_instead_of_release = True
         
-        QW.QPushButton.__init__( self, parent )
+        super().__init__( parent )
         
         self._SetShortcutString()
         

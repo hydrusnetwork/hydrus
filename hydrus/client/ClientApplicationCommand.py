@@ -520,7 +520,7 @@ class ApplicationCommand( HydrusSerialisable.SerialisableBase ):
             data = ( SIMPLE_ARCHIVE_FILE, None )
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._command_type = command_type
         self._data = data

@@ -49,8 +49,7 @@ class SingleFileMetadataExporterSidecar( SingleFileMetadataExporter, ClientMetad
     
     def __init__( self, remove_actual_filename_ext: bool, suffix: str, filename_string_converter: ClientStrings.StringConverter ):
         
-        ClientMetadataMigrationCore.SidecarNode.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
-        SingleFileMetadataExporter.__init__( self )
+        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter )
         
     
     def Export( self, actual_file_path: str, rows: typing.Collection[ str ] ):
@@ -72,8 +71,7 @@ class SingleFileMetadataExporterMediaNotes( SingleFileMetadataExporterMedia, Hyd
     
     def __init__( self, forced_name = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterMedia.__init__( self )
+        super().__init__()
         
         self._forced_name = forced_name
         
@@ -190,8 +188,7 @@ class SingleFileMetadataExporterMediaTags( SingleFileMetadataExporterMedia, Hydr
     
     def __init__( self, service_key = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterMedia.__init__( self )
+        super().__init__()
         
         if service_key is None:
             
@@ -290,8 +287,7 @@ class SingleFileMetadataExporterMediaTimestamps( SingleFileMetadataExporterMedia
     
     def __init__( self, timestamp_data_stub: typing.Optional[ ClientTime.TimestampData ] = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterMedia.__init__( self )
+        super().__init__()
         
         if timestamp_data_stub is None:
             
@@ -380,8 +376,7 @@ class SingleFileMetadataExporterMediaURLs( SingleFileMetadataExporterMedia, Hydr
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterMedia.__init__( self )
+        super().__init__()
         
     
     def _GetSerialisableInfo( self ):
@@ -471,8 +466,7 @@ class SingleFileMetadataExporterJSON( SingleFileMetadataExporterSidecar, HydrusS
             filename_string_converter = ClientStrings.StringConverter( example_string = '0123456789abcdef.jpg.json' )
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterSidecar.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
+        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter )
         
         if nested_object_names is None:
             
@@ -635,8 +629,7 @@ class SingleFileMetadataExporterTXT( SingleFileMetadataExporterSidecar, HydrusSe
             separator = '\n'
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
-        SingleFileMetadataExporterSidecar.__init__( self, remove_actual_filename_ext, suffix, filename_string_converter )
+        super().__init__( remove_actual_filename_ext, suffix, filename_string_converter )
         
         self._separator = separator
         

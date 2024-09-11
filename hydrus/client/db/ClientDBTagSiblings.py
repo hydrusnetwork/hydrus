@@ -77,7 +77,7 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         self._service_ids_to_applicable_service_ids = None
         self._service_ids_to_interested_service_ids = None
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client tag siblings', cursor )
+        super().__init__( 'client tag siblings', cursor )
         
     
     def _GenerateApplicationDicts( self ):
@@ -416,15 +416,12 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             sibling_rows_to_remove = actual_sibling_rows.difference( ideal_sibling_rows )
             sibling_rows_to_add = ideal_sibling_rows.difference( actual_sibling_rows )
             
-            num_actual_rows = len( actual_sibling_rows )
-            num_ideal_rows = len( ideal_sibling_rows )
-            
-            self._service_ids_to_display_application_status[ service_id ] = ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ service_id ] = ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove )
             
         
-        ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ service_id ]
+        ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove ) = self._service_ids_to_display_application_status[ service_id ]
         
-        return ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_rows, num_ideal_rows )
+        return ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove )
         
     
     def GetChainMembersFromIdeal( self, display_type, tag_service_id, ideal_tag_id ) -> typing.Set[ int ]:
@@ -928,13 +925,12 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         if tag_service_id in self._service_ids_to_display_application_status:
             
-            ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ tag_service_id ]
+            ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove ) = self._service_ids_to_display_application_status[ tag_service_id ]
             
+            actual_sibling_rows.add( row )
             sibling_rows_to_add.discard( row )
             
-            num_actual_rows += 1
-            
-            self._service_ids_to_display_application_status[ tag_service_id ] = ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ tag_service_id ] = ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove )
             
         
     
@@ -942,13 +938,12 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
         
         if tag_service_id in self._service_ids_to_display_application_status:
             
-            ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_rows, num_ideal_rows ) = self._service_ids_to_display_application_status[ tag_service_id ]
+            ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove ) = self._service_ids_to_display_application_status[ tag_service_id ]
             
+            actual_sibling_rows.discard( row )
             sibling_rows_to_remove.discard( row )
             
-            num_actual_rows -= 1
-            
-            self._service_ids_to_display_application_status[ tag_service_id ] = ( sibling_rows_to_add, sibling_rows_to_remove, num_actual_rows, num_ideal_rows )
+            self._service_ids_to_display_application_status[ tag_service_id ] = ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove )
             
         
     
@@ -1042,6 +1037,19 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
             
             tag_ids_to_clear_and_regen.update( self.GetChainsMembersFromIdeals( ClientTags.TAG_DISPLAY_DISPLAY_IDEAL, tag_service_id, ideal_tag_ids ) )
             
+            if tag_service_id in self._service_ids_to_applicable_service_ids:
+                
+                with self._MakeTemporaryIntegerTable( tag_ids_to_clear_and_regen, 'tag_id' ) as temp_tag_ids_table_name:
+                    
+                    stuff_deleted = set( self._Execute( f'SELECT bad_tag_id, ideal_tag_id FROM {temp_tag_ids_table_name} CROSS JOIN {cache_tag_siblings_lookup_table_name} ON ( bad_tag_id = tag_id );' ) )
+                    stuff_deleted.update( self._Execute( f'SELECT bad_tag_id, ideal_tag_id FROM {temp_tag_ids_table_name} CROSS JOIN {cache_tag_siblings_lookup_table_name} ON ( ideal_tag_id = tag_id );' ) )
+                    
+                
+            else:
+                
+                stuff_deleted = set()
+                
+            
             self._ExecuteMany( 'DELETE FROM {} WHERE bad_tag_id = ? OR ideal_tag_id = ?;'.format( cache_tag_siblings_lookup_table_name ), ( ( tag_id, tag_id ) for tag_id in tag_ids_to_clear_and_regen ) )
             
             applicable_tag_service_ids = self.GetApplicableServiceIds( tag_service_id )
@@ -1070,11 +1078,25 @@ class ClientDBTagSiblings( ClientDBModule.ClientDBModule ):
                     
                 
             
-            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) VALUES ( ?, ? );'.format( cache_tag_siblings_lookup_table_name ), tss.GetBadTagsToIdealTags().items() )
+            stuff_added = set( tss.GetBadTagsToIdealTags().items() )
+            
+            self._ExecuteMany( 'INSERT OR IGNORE INTO {} ( bad_tag_id, ideal_tag_id ) VALUES ( ?, ? );'.format( cache_tag_siblings_lookup_table_name ), stuff_added )
             
             if tag_service_id in self._service_ids_to_display_application_status:
                 
-                del self._service_ids_to_display_application_status[ tag_service_id ]
+                stuff_no_changes = stuff_deleted.intersection( stuff_added )
+                stuff_deleted.difference_update( stuff_no_changes )
+                stuff_added.difference_update( stuff_no_changes )
+                
+                ( actual_sibling_rows, ideal_sibling_rows, sibling_rows_to_add, sibling_rows_to_remove ) = self._service_ids_to_display_application_status[ tag_service_id ]
+                
+                ideal_sibling_rows.difference_update( stuff_deleted )
+                sibling_rows_to_add.difference_update( stuff_deleted )
+                sibling_rows_to_remove.update( actual_sibling_rows.intersection( stuff_deleted ) )
+                
+                ideal_sibling_rows.update( stuff_added )
+                sibling_rows_to_add.update( stuff_added.difference( actual_sibling_rows ) )
+                sibling_rows_to_remove.difference_update( stuff_added )
                 
             
         

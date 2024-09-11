@@ -15,7 +15,7 @@ class ClientDBURLMap( ClientDBModule.ClientDBModule ):
         
         self.modules_urls = modules_urls
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client urls mapping', cursor )
+        super().__init__( 'client urls mapping', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:

@@ -237,7 +237,7 @@ class ClientDBFilesSearchTags( ClientDBModule.ClientDBModule ):
         self.modules_mappings_counts = modules_mappings_counts
         self.modules_tag_search = modules_tag_search
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client file search using tags', cursor )
+        super().__init__( 'client file search using tags', cursor )
         
     
     def GetHashIdsAndNonZeroTagCounts( self, tag_display_type: int, location_context: ClientLocation.LocationContext, tag_context: ClientSearch.TagContext, hash_ids, namespace_wildcard = '*', job_status = None ):
@@ -899,7 +899,7 @@ class ClientDBFilesQuery( ClientDBModule.ClientDBModule ):
         self.modules_files_duplicates = modules_files_duplicates
         self.modules_files_search_tags = modules_files_search_tags
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client file query', cursor )
+        super().__init__( 'client file query', cursor )
         
     
     def _DoNotePreds( self, system_predicates: ClientSearch.FileSystemPredicates, query_hash_ids: typing.Optional[ typing.Set[ int ] ], job_status: typing.Optional[ ClientThreading.JobStatus ] = None ) -> typing.Optional[ typing.Set[ int ] ]:

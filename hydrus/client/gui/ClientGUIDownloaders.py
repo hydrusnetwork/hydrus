@@ -40,7 +40,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, network_engine, gugs, gug_keys_to_display, url_classes, url_class_keys_to_display, show_unmatched_urls_in_media_viewer ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._gugs = gugs
         self._gug_keys_to_gugs: typing.Dict[ bytes, ClientNetworkingGUG.GalleryURLGenerator ] = { gug.GetGUGKey() : gug for gug in self._gugs }
@@ -58,7 +58,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GUG_KEYS_TO_DISPLAY.ID, self._ConvertGUGDisplayDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GUG_KEYS_TO_DISPLAY.ID, self._ConvertGUGDisplayDataToDisplayTuple, self._ConvertGUGDisplayDataToSortTuple )
         
         self._gug_display_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_display_list_ctrl_panel, CGLC.COLUMN_LIST_GUG_KEYS_TO_DISPLAY.ID, 15, model, activation_callback = self._EditGUGDisplay )
         
@@ -72,7 +72,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._url_display_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( media_viewer_urls_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_DISPLAY.ID, self._ConvertURLDisplayDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_DISPLAY.ID, self._ConvertURLDisplayDataToDisplayTuple, self._ConvertURLDisplayDataToSortTuple )
         
         self._url_display_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._url_display_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_DISPLAY.ID, 15, model, activation_callback = self._EditURLDisplay )
         
@@ -144,7 +144,7 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
         self.widget().setLayout( vbox )
         
     
-    def _ConvertGUGDisplayDataToListCtrlTuples( self, data ):
+    def _ConvertGUGDisplayDataToDisplayTuple( self, data ):
         
         ( gug_key, display ) = data
         
@@ -163,13 +163,21 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_display = 'no'
             
         
-        display_tuple = ( pretty_name, pretty_display )
-        sort_tuple = ( name, display )
-        
-        return ( display_tuple, sort_tuple )
+        return ( pretty_name, pretty_display )
         
     
-    def _ConvertURLDisplayDataToListCtrlTuples( self, data ):
+    def _ConvertGUGDisplayDataToSortTuple( self, data ):
+        
+        ( gug_key, display ) = data
+        
+        gug = self._gug_keys_to_gugs[ gug_key ]
+        
+        name = gug.GetName()
+        
+        return ( name, display )
+        
+    
+    def _ConvertURLDisplayDataToDisplayTuple( self, data ):
         
         ( url_class_key, display ) = data
         
@@ -190,10 +198,21 @@ class EditDownloaderDisplayPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_display = 'no'
             
         
-        display_tuple = ( pretty_name, pretty_url_type, pretty_display )
-        sort_tuple = ( url_class_name, pretty_url_type, display )
+        return ( pretty_name, pretty_url_type, pretty_display )
         
-        return ( display_tuple, sort_tuple )
+    
+    def _ConvertURLDisplayDataToSortTuple( self, data ):
+        
+        ( url_class_key, display ) = data
+        
+        url_class = self._url_class_keys_to_url_classes[ url_class_key ]
+        
+        url_class_name = url_class.GetName()
+        url_type = url_class.GetURLType()
+        
+        pretty_url_type = HC.url_type_string_lookup[ url_type ]
+        
+        return ( url_class_name, pretty_url_type, display )
         
     
     def _EditGUGDisplay( self ):
@@ -278,7 +297,7 @@ class EditGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, gug: ClientNetworkingGUG.GalleryURLGenerator ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_gug = gug
         
@@ -432,7 +451,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, ngug: ClientNetworkingGUG.NestedGalleryURLGenerator, available_gugs: typing.Iterable[ ClientNetworkingGUG.GalleryURLGenerator ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_ngug = ngug
         self._available_gugs = list( available_gugs )
@@ -445,7 +464,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NGUG_GUGS.ID, self._ConvertGUGDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NGUG_GUGS.ID, self._ConvertGUGDataToDisplayTuple, self._ConvertGUGDataToSortTuple )
         
         self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUG_GUGS.ID, 30, model, use_simple_delete = True )
         
@@ -524,7 +543,7 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertGUGDataToListCtrlTuples( self, gug_key_and_name ):
+    def _ConvertGUGDataToDisplayTuple( self, gug_key_and_name ):
         
         ( gug_key, gug_name ) = gug_key_and_name
         
@@ -542,10 +561,18 @@ class EditNGUGPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_available = 'no'
             
         
-        display_tuple = ( pretty_name, pretty_available )
-        sort_tuple = ( name, available )
+        return ( pretty_name, pretty_available )
         
-        return ( display_tuple, sort_tuple )
+    
+    def _ConvertGUGDataToSortTuple( self, gug_key_and_name ):
+        
+        ( gug_key, gug_name ) = gug_key_and_name
+        
+        name = gug_name
+        
+        available = gug_key in ( gug.GetGUGKey() for gug in self._available_gugs ) or gug_name in ( gug.GetName() for gug in self._available_gugs )
+        
+        return ( name, available )
         
     
     def GetValue( self ) -> ClientNetworkingGUG.NestedGalleryURLGenerator:
@@ -567,7 +594,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, gugs ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         menu_items = []
         
@@ -587,7 +614,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._gug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GUGS.ID, self._ConvertGUGToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GUGS.ID, self._ConvertGUGToDisplayTuple, self._ConvertGUGToSortTuple )
         
         self._gug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gug_list_ctrl_panel, CGLC.COLUMN_LIST_GUGS.ID, 30, model, delete_key_callback = self._DeleteGUG, activation_callback = self._EditGUG )
         
@@ -605,7 +632,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._ngug_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_NGUGS.ID, self._ConvertNGUGToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_NGUGS.ID, self._ConvertNGUGToDisplayTuple, self._ConvertNGUGToSortTuple )
         
         self._ngug_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._ngug_list_ctrl_panel, CGLC.COLUMN_LIST_NGUGS.ID, 20, model, use_simple_delete = True, activation_callback = self._EditNGUG )
         
@@ -707,7 +734,7 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         self._ngug_list_ctrl.AddDatas( ( ngug, ), select_sort_and_scroll = select_sort_and_scroll )
         
     
-    def _ConvertGUGToListCtrlTuples( self, gug ):
+    def _ConvertGUGToDisplayTuple( self, gug ):
         
         name = gug.GetName()
         example_url = gug.GetExampleURL()
@@ -726,25 +753,22 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         if url_class is None:
             
-            gallery_url_class = False
             pretty_gallery_url_class = ''
             
         else:
             
-            gallery_url_class = True
             pretty_gallery_url_class = url_class.GetName()
             
         
         pretty_name = name
         pretty_example_url = example_url
         
-        display_tuple = ( pretty_name, pretty_example_url, pretty_gallery_url_class )
-        sort_tuple = ( name, example_url, gallery_url_class )
-        
-        return ( display_tuple, sort_tuple )
+        return ( pretty_name, pretty_example_url, pretty_gallery_url_class )
         
     
-    def _ConvertNGUGToListCtrlTuples( self, ngug ):
+    _ConvertGUGToSortTuple = _ConvertGUGToDisplayTuple
+    
+    def _ConvertNGUGToDisplayTuple( self, ngug ):
         
         existing_names = { gug.GetName() for gug in self._gug_list_ctrl.GetData() }
         
@@ -764,12 +788,20 @@ class EditGUGsPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_missing = ''
             
         
+        return ( pretty_name, pretty_gugs, pretty_missing )
+        
+    
+    def _ConvertNGUGToSortTuple( self, ngug ):
+        
+        existing_names = { gug.GetName() for gug in self._gug_list_ctrl.GetData() }
+        
+        name = ngug.GetName()
+        gugs = ngug.GetGUGNames()
+        missing = len( set( gugs ).difference( existing_names ) ) > 0
+        
         sort_gugs = len( gugs )
         
-        display_tuple = ( pretty_name, pretty_gugs, pretty_missing )
-        sort_tuple = ( name, sort_gugs, missing )
-        
-        return ( display_tuple, sort_tuple )
+        return ( name, sort_gugs, missing )
         
     
     def _DeleteGUG( self ):
@@ -916,7 +948,7 @@ class EditURLClassComponentPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, string_match: ClientStrings.StringMatch, default_value: typing.Optional[ str ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         from hydrus.client.gui import ClientGUIStringPanels
         
@@ -1041,7 +1073,7 @@ class EditURLClassParameterFixedNamePanel( ClientGUIScrolledPanels.EditPanel ):
         
         # maybe graduate this guy to a 'any type of parameter' panel and have a dropdown and show/hide fixed name etc..
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._dupe_names = dupe_names
         
@@ -1287,7 +1319,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, url_class: ClientNetworkingURLClass.URLClass ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._update_already_in_progress = False # Used to avoid infinite recursion on control updates.
         
@@ -1350,7 +1382,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         
         parameters_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( parameters_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, self._ConvertParameterToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, self._ConvertParameterToDisplayTuple, self._ConvertParameterToSortTuple )
         
         self._parameters = ClientGUIListCtrl.BetterListCtrlTreeView( parameters_listctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_PARAMETERS.ID, 5, model, delete_key_callback = self._DeleteParameters, activation_callback = self._EditParameters )
         
@@ -1761,7 +1793,7 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         return self._EditPathComponent( ( string_match, default ) )
         
     
-    def _ConvertParameterToListCtrlTuples( self, parameter: ClientNetworkingURLClass.URLClassParameterFixedName ):
+    def _ConvertParameterToDisplayTuple( self, parameter: ClientNetworkingURLClass.URLClassParameterFixedName ):
         
         name = parameter.GetName()
         value_string_match = parameter.GetValueStringMatch()
@@ -1779,14 +1811,10 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_value_string_match += ' (is ephemeral)'
             
         
-        sort_name = pretty_name
-        sort_string_match = pretty_value_string_match
+        return ( pretty_name, pretty_value_string_match )
         
-        display_tuple = ( pretty_name, pretty_value_string_match )
-        sort_tuple = ( sort_name, sort_string_match )
-        
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertParameterToSortTuple = _ConvertParameterToDisplayTuple
     
     def _ConvertPathComponentRowToString( self, row ):
         
@@ -2276,11 +2304,12 @@ class EditURLClassPanel( ClientGUIScrolledPanels.EditPanel ):
         return True
         
     
+
 class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, url_classes: typing.Iterable[ ClientNetworkingURLClass.URLClass ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         menu_items = []
         
@@ -2299,7 +2328,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASSES.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASSES.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASSES.ID, 15, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -2371,7 +2400,7 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         self._changes_made = True
         
     
-    def _ConvertDataToListCtrlTuples( self, url_class ):
+    def _ConvertDataToDisplayTuple( self, url_class ):
         
         name = url_class.GetName()
         url_type = url_class.GetURLType()
@@ -2389,11 +2418,10 @@ class EditURLClassesPanel( ClientGUIScrolledPanels.EditPanel ):
         pretty_url_type = HC.url_type_string_lookup[ url_type ]
         pretty_example_url = example_url
         
-        display_tuple = ( pretty_name, pretty_url_type, pretty_example_url )
-        sort_tuple = ( name, url_type, example_url )
+        return ( pretty_name, pretty_url_type, pretty_example_url )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertDataToSortTuple = _ConvertDataToDisplayTuple
     
     def _Edit( self ):
         
@@ -2516,7 +2544,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, network_engine, url_classes, parsers, url_class_keys_to_parser_keys ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._url_classes = url_classes
         self._url_class_keys_to_url_classes = { url_class.GetClassKey() : url_class for url_class in self._url_classes }
@@ -2532,7 +2560,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         #
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_API_PAIRS.ID, self._ConvertAPIPairDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_API_PAIRS.ID, self._ConvertAPIPairDataToDisplayTuple, self._ConvertAPIPairDataToSortTuple )
         
         self._api_pairs_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._notebook, CGLC.COLUMN_LIST_URL_CLASS_API_PAIRS.ID, 10, model )
         
@@ -2540,7 +2568,7 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._parser_list_ctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._notebook )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_PARSER_KEYS.ID, self._ConvertParserDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_PARSER_KEYS.ID, self._ConvertParserDataToDisplayTuple, self._ConvertParserDataToSortTuple )
         
         self._parser_list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._parser_list_ctrl_panel, CGLC.COLUMN_LIST_URL_CLASS_KEYS_TO_PARSER_KEYS.ID, 24, model, activation_callback = self._EditParser )
         
@@ -2630,23 +2658,19 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertAPIPairDataToListCtrlTuples( self, data ):
+    def _ConvertAPIPairDataToDisplayTuple( self, data ):
         
         ( a, b ) = data
         
         a_name = a.GetName()
         b_name = b.GetName()
         
-        pretty_a_name = a_name
-        pretty_b_name = b_name
-        
-        display_tuple = ( pretty_a_name, pretty_b_name )
-        sort_tuple = ( a_name, b_name )
-        
-        return ( display_tuple, sort_tuple )
+        return ( a_name, b_name )
         
     
-    def _ConvertParserDataToListCtrlTuples( self, data ):
+    _ConvertAPIPairDataToSortTuple = _ConvertAPIPairDataToDisplayTuple
+    
+    def _ConvertParserDataToDisplayTuple( self, data ):
         
         ( url_class_key, parser_key ) = data
         
@@ -2673,11 +2697,10 @@ class EditURLClassLinksPanel( ClientGUIScrolledPanels.EditPanel ):
         
         pretty_parser_name = parser_name
         
-        display_tuple = ( pretty_url_class_name, pretty_url_type, pretty_parser_name )
-        sort_tuple = ( url_class_name, pretty_url_type, parser_name )
+        return ( pretty_url_class_name, pretty_url_type, pretty_parser_name )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertParserDataToSortTuple = _ConvertParserDataToDisplayTuple
     
     def _EditParser( self ):
         

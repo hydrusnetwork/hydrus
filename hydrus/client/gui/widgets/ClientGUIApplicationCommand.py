@@ -22,7 +22,7 @@ class LocalFilesSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._add_or_move_action = ClientGUICommon.BetterChoice( self )
         
@@ -84,7 +84,7 @@ class RatingLikeSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._flip_or_set_action = ClientGUICommon.BetterChoice( self )
         
@@ -193,7 +193,7 @@ class RatingNumericalSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._current_ratings_numerical_service = None
         
@@ -338,7 +338,7 @@ class RatingIncDecSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_keys = ClientGUICommon.BetterChoice( self )
         
@@ -404,7 +404,7 @@ class SimpleSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, shortcuts_name: str ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         if shortcuts_name in ClientGUIShortcuts.SHORTCUTS_RESERVED_NAMES:
             
@@ -870,7 +870,7 @@ class TagSubPanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._flip_or_set_action = ClientGUICommon.BetterChoice( self )
         

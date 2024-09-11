@@ -157,7 +157,7 @@ class ClientDBTagSearch( ClientDBModule.ClientDBModule ):
         self.modules_tag_siblings = modules_tag_siblings
         self.modules_mappings_counts = modules_mappings_counts
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client tag search', cursor )
+        super().__init__( 'client tag search', cursor )
         
         self._missing_tag_search_service_pairs = set()
         

@@ -150,7 +150,7 @@ class ClientDBSerialisable( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, db_dir, cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules_services: ClientDBServices.ClientDBMasterServices ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client serialisable', cursor )
+        super().__init__( 'client serialisable', cursor )
         
         self._db_dir = db_dir
         self._cursor_transaction_wrapper = cursor_transaction_wrapper

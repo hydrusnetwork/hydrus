@@ -323,8 +323,7 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
             CC.COLOUR_MEDIA_TEXT : QG.QColor( 0, 0, 0 )
         }
         
-        QW.QWidget.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self.setObjectName( 'HydrusMediaViewer' )
         
@@ -365,8 +364,6 @@ class Canvas( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
         self._last_drag_pos = None
         self._current_drag_is_touch = False
         self._last_motion_pos = QC.QPoint( 0, 0 )
-        
-        self._widget_event_filter = QP.WidgetEventFilter( self )
         
         self._media_container.readyForNeighbourPrefetch.connect( self._PrefetchNeighbours )
         
@@ -3464,8 +3461,7 @@ class CanvasMediaList( ClientMedia.ListeningMediaList, CanvasWithHovers ):
     
     def __init__( self, parent, page_key, location_context: ClientLocation.LocationContext, media_results ):
         
-        CanvasWithHovers.__init__( self, parent, location_context )
-        ClientMedia.ListeningMediaList.__init__( self, location_context, media_results )
+        super().__init__( location_context, media_results, parent, location_context )
         
         self._page_key = page_key
         

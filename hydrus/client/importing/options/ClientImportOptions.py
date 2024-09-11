@@ -40,7 +40,7 @@ class CheckerOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, intended_files_per_check = 8, never_faster_than = 300, never_slower_than = 86400, death_file_velocity = ( 1, 86400 ) ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._intended_files_per_check = intended_files_per_check
         self._never_faster_than = never_faster_than

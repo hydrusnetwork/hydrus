@@ -16,7 +16,7 @@ class ClientDBNotesMap( ClientDBModule.ClientDBModule ):
         
         self.modules_texts = modules_texts
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client notes mapping', cursor )
+        super().__init__( 'client notes mapping', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:

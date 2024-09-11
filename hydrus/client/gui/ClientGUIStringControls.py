@@ -26,7 +26,7 @@ class StringConverterButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, string_converter: ClientStrings.StringConverter ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string converter', self._Edit )
+        super().__init__( parent, 'edit string converter', self._Edit )
         
         self._string_converter = string_converter
         
@@ -90,7 +90,7 @@ class StringMatchButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, string_match: ClientStrings.StringMatch ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string match', self._Edit )
+        super().__init__( parent, 'edit string match', self._Edit )
         
         self._string_match = string_match
         
@@ -141,7 +141,7 @@ class StringProcessorButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, string_processor: ClientStrings.StringProcessor, test_data_callable: typing.Callable[ [], ClientParsing.ParsingTestData ] ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, 'edit string processor', self._Edit )
+        super().__init__( parent, 'edit string processor', self._Edit )
         
         self._string_processor = string_processor
         self._test_data_callable = test_data_callable
@@ -204,7 +204,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
     
     def __init__( self, parent, initial_dict: typing.Dict[ ClientStrings.StringMatch, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._key_name = key_name
         
@@ -212,7 +212,7 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         
         column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.KEY : self._key_name }
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, model, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         
@@ -237,18 +237,17 @@ class StringMatchToStringMatchDictControl( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertDataToListCtrlTuples( self, data ):
+    def _ConvertDataToDisplayTuple( self, data ):
         
         ( key_string_match, value_string_match ) = data
         
         pretty_key = key_string_match.ToString()
         pretty_value = value_string_match.ToString()
         
-        display_tuple = ( pretty_key, pretty_value )
-        sort_tuple = ( pretty_key, pretty_value )
+        return ( pretty_key, pretty_value )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertDataToSortTuple = _ConvertDataToDisplayTuple
     
     def _Add( self ):
         
@@ -348,7 +347,7 @@ class StringToStringDictButton( ClientGUICommon.BetterButton ):
     
     def __init__( self, parent, label ):
         
-        ClientGUICommon.BetterButton.__init__( self, parent, label, self._Edit )
+        super().__init__( parent, label, self._Edit )
         
         self._value = {}
         
@@ -388,7 +387,7 @@ class StringToStringDictControl( QW.QWidget ):
     
     def __init__( self, parent, initial_dict: typing.Dict[ str, str ], min_height = 10, key_name = 'key', value_name = 'value', allow_add_delete = True, edit_keys = True ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._key_name = key_name
         self._value_name = value_name
@@ -401,7 +400,7 @@ class StringToStringDictControl( QW.QWidget ):
         
         column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_VALUE.KEY : self._key_name, CGLC.COLUMN_LIST_KEY_TO_VALUE.VALUE : self._value_name }
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_VALUE.ID, min_height, model, use_simple_delete = use_simple_delete, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         self._listctrl.columnListContentsChanged.connect( self.columnListContentsChanged )
@@ -433,15 +432,14 @@ class StringToStringDictControl( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertDataToListCtrlTuples( self, data ):
+    def _ConvertDataToDisplayTuple( self, data ):
         
         ( key, value ) = data
         
-        display_tuple = ( key, value )
-        sort_tuple = ( key, value )
+        return ( key, value )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertDataToSortTuple = _ConvertDataToDisplayTuple
     
     def _Add( self ):
         
@@ -561,7 +559,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
     
     def __init__( self, parent, initial_dict: typing.Dict[ str, ClientStrings.StringMatch ], min_height = 10, key_name = 'key' ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._key_name = key_name
         
@@ -569,7 +567,7 @@ class StringToStringMatchDictControl( QW.QWidget ):
         
         column_types_to_name_overrides = { CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.KEY : self._key_name }
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_KEY_TO_STRING_MATCH.ID, min_height, model, use_simple_delete = True, activation_callback = self._Edit, column_types_to_name_overrides = column_types_to_name_overrides )
         
@@ -594,17 +592,16 @@ class StringToStringMatchDictControl( QW.QWidget ):
         self.setLayout( vbox )
         
     
-    def _ConvertDataToListCtrlTuples( self, data ):
+    def _ConvertDataToDisplayTuple( self, data ):
         
         ( key, string_match ) = data
         
         pretty_string_match = string_match.ToString()
         
-        display_tuple = ( key, pretty_string_match )
-        sort_tuple = ( key, pretty_string_match )
+        return ( key, pretty_string_match )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertDataToSortTuple = _ConvertDataToDisplayTuple
     
     def _Add( self ):
         

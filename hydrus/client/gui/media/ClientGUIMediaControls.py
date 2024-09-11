@@ -87,7 +87,7 @@ class VolumeControl( QW.QWidget ):
     
     def __init__( self, parent, canvas_type, direction = 'down' ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._canvas_type = canvas_type
         

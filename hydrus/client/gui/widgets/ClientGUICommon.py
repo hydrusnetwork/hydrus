@@ -159,12 +159,14 @@ def WrapInText( control, parent, text, object_name = None ):
     
 class ShortcutAwareToolTipMixin( object ):
     
-    def __init__( self, tt_callable ):
+    def __init__( self, *args, **kwargs ):
         
-        self._tt_callable = tt_callable
+        self._tt_callable = None
         
         self._tt = ''
         self._simple_shortcut_command = None
+        
+        super().__init__( *args, **kwargs )
         
         if ClientGUIShortcuts.shortcuts_manager_initialised():
             
@@ -174,49 +176,51 @@ class ShortcutAwareToolTipMixin( object ):
     
     def _RefreshToolTip( self ):
         
+        if self._tt_callable is None or self._simple_shortcut_command is None:
+            
+            return
+            
+        
         tt = self._tt
         
-        if self._simple_shortcut_command is not None:
+        tt += '\n' * 2
+        tt += '----------'
+        
+        names_to_shortcuts = ClientGUIShortcuts.shortcuts_manager().GetNamesToShortcuts( self._simple_shortcut_command )
+        
+        if len( names_to_shortcuts ) > 0:
             
-            tt += '\n' * 2
-            tt += '----------'
+            names = sorted( names_to_shortcuts.keys() )
             
-            names_to_shortcuts = ClientGUIShortcuts.shortcuts_manager().GetNamesToShortcuts( self._simple_shortcut_command )
-            
-            if len( names_to_shortcuts ) > 0:
+            for name in names:
                 
-                names = sorted( names_to_shortcuts.keys() )
+                shortcuts = names_to_shortcuts[ name ]
                 
-                for name in names:
-                    
-                    shortcuts = names_to_shortcuts[ name ]
-                    
-                    shortcut_strings = sorted( ( shortcut.ToString() for shortcut in shortcuts ) )
-                    
-                    if name in ClientGUIShortcuts.shortcut_names_to_pretty_names:
-                        
-                        pretty_name = ClientGUIShortcuts.shortcut_names_to_pretty_names[ name ]
-                        
-                    else:
-                        
-                        pretty_name = name
-                        
-                    
-                    tt += '\n' * 2
-                    
-                    tt += ', '.join( shortcut_strings )
-                    tt += '\n'
-                    tt += '({}->{})'.format( pretty_name, CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
-                    
+                shortcut_strings = sorted( ( shortcut.ToString() for shortcut in shortcuts ) )
                 
-            else:
+                if name in ClientGUIShortcuts.shortcut_names_to_pretty_names:
+                    
+                    pretty_name = ClientGUIShortcuts.shortcut_names_to_pretty_names[ name ]
+                    
+                else:
+                    
+                    pretty_name = name
+                    
                 
                 tt += '\n' * 2
                 
-                tt += 'no shortcuts set'
+                tt += ', '.join( shortcut_strings )
                 tt += '\n'
-                tt += '({})'.format( CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
+                tt += '({}->{})'.format( pretty_name, CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
                 
+            
+        else:
+            
+            tt += '\n' * 2
+            
+            tt += 'no shortcuts set'
+            tt += '\n'
+            tt += '({})'.format( CAC.simple_enum_to_str_lookup[ self._simple_shortcut_command ] )
             
         
         self._tt_callable( tt )
@@ -228,6 +232,13 @@ class ShortcutAwareToolTipMixin( object ):
             
             self._RefreshToolTip()
             
+        
+    
+    def SetToolTipCallable( self, c ):
+        
+        self._tt_callable = c
+        
+        self._RefreshToolTip()
         
     
     def SetToolTipWithShortcuts( self, tt: str, simple_shortcut_command: int ):
@@ -242,11 +253,13 @@ class BetterBitmapButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def __init__( self, parent, bitmap, func, *args, **kwargs ):
         
-        QW.QPushButton.__init__( self, parent )
+        super().__init__( parent )
+        
+        self.SetToolTipCallable( self.setToolTip )
+        
         self.setIcon( QG.QIcon( bitmap ) )
         self.setIconSize( bitmap.size() )
         self.setSizePolicy( QW.QSizePolicy.Maximum, QW.QSizePolicy.Maximum )
-        ShortcutAwareToolTipMixin.__init__( self, self.setToolTip )
         
         self._func = func
         self._args = args
@@ -264,8 +277,9 @@ class BetterButton( ShortcutAwareToolTipMixin, QW.QPushButton ):
     
     def __init__( self, parent, label, func, *args, **kwargs ):
         
-        QW.QPushButton.__init__( self, parent )
-        ShortcutAwareToolTipMixin.__init__( self, self.setToolTip )
+        super().__init__( parent )
+        
+        self.SetToolTipCallable( self.setToolTip )
         
         self.setText( label )
         
@@ -1159,7 +1173,7 @@ class NoneableSpinCtrl( QW.QWidget ):
     
     def __init__( self, parent, default_int: int, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1 ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._unit = unit
         self._multiplier = multiplier
@@ -1266,7 +1280,7 @@ class NoneableDoubleSpinCtrl( QW.QWidget ):
     
     def __init__( self, parent, default_ints, message = '', none_phrase = 'no limit', min = 0, max = 1000000, unit = None, multiplier = 1 ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._unit = unit
         self._multiplier = multiplier
@@ -1389,16 +1403,25 @@ class NoneableTextCtrl( QW.QWidget ):
 
     valueChanged = QC.Signal()
     
-    def __init__( self, parent, default_text, message = '', none_phrase = 'none' ):
+    def __init__( self, parent, default_text, message = '', placeholder_text = '', none_phrase = 'none' ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._checkbox = QW.QCheckBox( self )
         self._checkbox.stateChanged.connect( self.EventCheckBox )
         self._checkbox.setText( none_phrase )
         
         self._text = QW.QLineEdit( self )
-        self._text.setText( default_text )
+        
+        if default_text != '':
+            
+            self._text.setText( default_text )
+            
+        
+        if placeholder_text != '':
+            
+            self._text.setPlaceholderText( placeholder_text )
+            
         
         hbox = QP.HBoxLayout( margin = 0 )
         
@@ -1632,7 +1655,7 @@ class TextAndGauge( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._st = BetterStaticText( self )
         self._gauge = Gauge( self )

@@ -49,14 +49,15 @@ class PubSubEvent( QC.QEvent ):
     
     def __init__( self ):
         
-        QC.QEvent.__init__( self, PubSubEventType )
+        super().__init__( PubSubEventType )
         
     
+
 class PubSubEventCatcher( QC.QObject ):
     
     def __init__( self, parent, pubsub ):
         
-        QC.QObject.__init__( self, parent )
+        super().__init__( parent )
         
         self._pubsub = pubsub
         
@@ -89,6 +90,7 @@ class PubSubEventCatcher( QC.QObject ):
         return False
         
     
+
 def MessageHandler( msg_type, context, text ):
     
     if msg_type not in ( QC.QtMsgType.QtDebugMsg, QC.QtMsgType.QtInfoMsg ):
@@ -101,7 +103,7 @@ class App( QW.QApplication ):
     
     def __init__( self, pubsub, *args, **kwargs ):
         
-        QW.QApplication.__init__( self, *args, **kwargs )
+        super().__init__( *args, **kwargs )
         
         self._pubsub = pubsub
         
@@ -178,8 +180,7 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
         
         self.gui = None
         
-        HydrusController.HydrusController.__init__( self, db_dir )
-        ClientControllerInterface.ClientControllerInterface.__init__( self )
+        super().__init__( db_dir )
         
         self._name = 'client'
         
@@ -985,9 +986,9 @@ class Controller( ClientControllerInterface.ClientControllerInterface, HydrusCon
             
             with ClientGUITopLevelWindowsPanels.DialogManage( None, 'repair file system' ) as dlg:
                 
-                from hydrus.client.gui.panels import ClientGUIScrolledPanelsManagement
+                from hydrus.client.gui.panels import ClientGUIRepairFileSystemPanel
                 
-                panel = ClientGUIScrolledPanelsManagement.RepairFileSystemPanel( dlg, missing_subfolders )
+                panel = ClientGUIRepairFileSystemPanel.RepairFileSystemPanel( dlg, missing_subfolders )
                 
                 dlg.SetPanel( panel )
                 

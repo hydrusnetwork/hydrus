@@ -149,7 +149,7 @@ class Account( object ):
     
     def __init__( self, account_key: bytes, account_type: "AccountType", created: int, expires: typing.Optional[ int ] ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._lock = threading.Lock()
         
@@ -752,7 +752,7 @@ class AccountIdentifier( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, account_key = None, content = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if account_key is not None:
             
@@ -861,7 +861,7 @@ class AccountType( HydrusSerialisable.SerialisableBase ):
         auto_creation_history = None
         ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if account_type_key is None:
             
@@ -1168,7 +1168,7 @@ class ClientToServerUpdate( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._actions_to_contents_and_reasons = collections.defaultdict( list )
         
@@ -1289,7 +1289,7 @@ class Content( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, content_type = None, content_data = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._content_type = content_type
         self._content_data = content_data
@@ -1526,7 +1526,7 @@ class ContentUpdate( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._content_data = {}
         
@@ -1666,7 +1666,7 @@ class Credentials( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, host = None, port = None, access_key = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._host = host
         self._port = port
@@ -1876,7 +1876,7 @@ class DefinitionsUpdate( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._hash_ids_to_hashes = {}
         self._tag_ids_to_tags = {}
@@ -1963,7 +1963,7 @@ class Metadata( HydrusSerialisable.SerialisableBase ):
             next_update_due = 0
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._lock = threading.Lock()
         
@@ -2332,7 +2332,7 @@ class Petition( HydrusSerialisable.SerialisableBase ):
             actions_and_contents = []
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._petitioner_account = petitioner_account
         self._petition_header = petition_header
@@ -2605,7 +2605,7 @@ class PetitionHeader( HydrusSerialisable.SerialisableBase ):
             reason = ''
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.content_type = content_type
         self.status = status

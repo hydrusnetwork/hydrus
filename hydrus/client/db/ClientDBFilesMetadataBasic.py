@@ -10,7 +10,7 @@ class ClientDBFilesMetadataBasic( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files simple metadata', cursor )
+        super().__init__( 'client files simple metadata', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:

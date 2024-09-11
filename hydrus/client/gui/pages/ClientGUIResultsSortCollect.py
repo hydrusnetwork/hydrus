@@ -29,7 +29,7 @@ class CheckBoxDelegate( QW.QStyledItemDelegate ):
     
     def __init__( self, parent = None ):
         
-        super( CheckBoxDelegate, self ).__init__( parent )
+        super().__init__( parent )
         
 
     def createEditor( self, parent, op, idx ):
@@ -311,7 +311,7 @@ class MediaCollectControl( QW.QWidget ):
     
     def __init__( self, parent, media_collect = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         # this is trash, rewrite it to deal with the media_collect object, not the management controller
         
@@ -475,7 +475,7 @@ class MediaSortControl( QW.QWidget ):
     
     def __init__( self, parent, media_sort = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         if media_sort is None:
             

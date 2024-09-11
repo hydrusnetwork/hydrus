@@ -206,8 +206,7 @@ class EditSingleCtrlPanel( CAC.ApplicationCommandProcessorMixin, EditPanel ):
     
     def __init__( self, parent, ok_on_these_commands = None, message = None ):
         
-        EditPanel.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self._control = None
         

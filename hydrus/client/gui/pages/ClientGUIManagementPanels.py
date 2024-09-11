@@ -1289,7 +1289,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         self._gallery_importers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._gallery_downloader_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._gallery_importers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._gallery_importers_listctrl_panel, CGLC.COLUMN_LIST_GALLERY_IMPORTERS.ID, 4, model, delete_key_callback = self._RemoveGalleryImports, activation_callback = self._HighlightSelectedGalleryImport )
         
@@ -1486,7 +1486,7 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         self._gallery_importers_listctrl.UpdateDatas()
         
     
-    def _ConvertDataToListCtrlTuples( self, gallery_import ):
+    def _ConvertDataToDisplayTuple( self, gallery_import ):
         
         query_text = gallery_import.GetQueryText()
         
@@ -1517,19 +1517,13 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             pretty_files_paused = CG.client_controller.new_options.GetString( 'stop_character' )
             
-            sort_files_paused = -1
-            
         elif files_paused:
             
             pretty_files_paused = CG.client_controller.new_options.GetString( 'pause_character' )
             
-            sort_files_paused = 0
-            
         else:
             
             pretty_files_paused = ''
-            
-            sort_files_paused = 1
             
         
         gallery_finished = gallery_import.GalleryFinished()
@@ -1539,17 +1533,64 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
             
             pretty_gallery_paused = CG.client_controller.new_options.GetString( 'stop_character' )
             
-            sort_gallery_paused = -1
-            
         elif gallery_paused:
             
             pretty_gallery_paused = CG.client_controller.new_options.GetString( 'pause_character' )
             
-            sort_gallery_paused = 0
-            
         else:
             
             pretty_gallery_paused = ''
+            
+        
+        ( status_enum, pretty_status ) = gallery_import.GetSimpleStatus()
+        
+        file_seed_cache_status = gallery_import.GetFileSeedCache().GetStatus()
+        
+        pretty_progress = file_seed_cache_status.GetStatusText( simple = True )
+        
+        added = gallery_import.GetCreationTime()
+        
+        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        
+        return ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
+        
+    
+    def _ConvertDataToSortTuple( self, gallery_import ):
+        
+        query_text = gallery_import.GetQueryText()
+        
+        source = gallery_import.GetSourceName()
+        
+        pretty_source = source
+        
+        files_finished = gallery_import.FilesFinished()
+        files_paused = gallery_import.FilesPaused()
+        
+        if files_finished:
+            
+            sort_files_paused = -1
+            
+        elif files_paused:
+            
+            sort_files_paused = 0
+            
+        else:
+            
+            sort_files_paused = 1
+            
+        
+        gallery_finished = gallery_import.GalleryFinished()
+        gallery_paused = gallery_import.GalleryPaused()
+        
+        if gallery_finished:
+            
+            sort_gallery_paused = -1
+            
+        elif gallery_paused:
+            
+            sort_gallery_paused = 0
+            
+        else:
             
             sort_gallery_paused = 1
             
@@ -1564,16 +1605,9 @@ class ManagementPanelImporterMultipleGallery( ManagementPanelImporter ):
         
         progress = ( num_total, num_done )
         
-        pretty_progress = file_seed_cache_status.GetStatusText( simple = True )
-        
         added = gallery_import.GetCreationTime()
         
-        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
-        
-        display_tuple = ( pretty_query_text, pretty_source, pretty_files_paused, pretty_gallery_paused, pretty_status, pretty_progress, pretty_added )
-        sort_tuple = ( query_text, pretty_source, sort_files_paused, sort_gallery_paused, sort_status, progress, added )
-        
-        return ( display_tuple, sort_tuple )
+        return ( query_text, pretty_source, sort_files_paused, sort_gallery_paused, sort_status, progress, added )
         
     
     def _CopySelectedQueries( self ):
@@ -2346,7 +2380,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         self._watchers_listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._watchers_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_WATCHERS.ID, self._ConvertDataToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_WATCHERS.ID, self._ConvertDataToDisplayTuple, self._ConvertDataToSortTuple )
         
         self._watchers_listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self._watchers_listctrl_panel, CGLC.COLUMN_LIST_WATCHERS.ID, 4, model, delete_key_callback = self._RemoveWatchers, activation_callback = self._HighlightSelectedWatcher )
         
@@ -2567,7 +2601,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         self._watchers_listctrl.UpdateDatas()
         
     
-    def _ConvertDataToListCtrlTuples( self, watcher: ClientImportWatchers.WatcherImport ):
+    def _ConvertDataToDisplayTuple( self, watcher: ClientImportWatchers.WatcherImport ):
         
         subject = watcher.GetSubject()
         
@@ -2605,17 +2639,46 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             
             pretty_checking_paused = CG.client_controller.new_options.GetString( 'stop_character' )
             
-            sort_checking_paused = -1
-            
         elif checking_paused:
             
             pretty_checking_paused = CG.client_controller.new_options.GetString( 'pause_character' )
             
-            sort_checking_paused = 0
-            
         else:
             
             pretty_checking_paused = ''
+            
+        
+        file_seed_cache_status = watcher.GetFileSeedCache().GetStatus()
+        
+        pretty_progress = file_seed_cache_status.GetStatusText( simple = True )
+        
+        added = watcher.GetCreationTime()
+        
+        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
+        
+        ( status_enum, pretty_watcher_status ) = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
+        
+        return ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
+        
+    
+    def _ConvertDataToSortTuple( self, watcher: ClientImportWatchers.WatcherImport ):
+        
+        subject = watcher.GetSubject()
+        
+        files_paused = watcher.FilesPaused()
+        
+        checking_dead = watcher.IsDead()
+        checking_paused = watcher.CheckingPaused()
+        
+        if checking_dead:
+            
+            sort_checking_paused = -1
+            
+        elif checking_paused:
+            
+            sort_checking_paused = 0
+            
+        else:
             
             sort_checking_paused = 1
             
@@ -2626,11 +2689,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
         
         progress = ( num_total, num_done )
         
-        pretty_progress = file_seed_cache_status.GetStatusText( simple = True )
-        
         added = watcher.GetCreationTime()
-        
-        pretty_added = ClientTime.TimestampToPrettyTimeDelta( added, show_seconds = False )
         
         ( status_enum, pretty_watcher_status ) = self._multiple_watcher_import.GetWatcherSimpleStatus( watcher )
         
@@ -2654,10 +2713,7 @@ class ManagementPanelImporterMultipleWatcher( ManagementPanelImporter ):
             sort_watcher_status = ( ClientImporting.downloader_enum_sort_lookup[ status_enum ], checking_status )
             
         
-        display_tuple = ( pretty_subject, pretty_files_paused, pretty_checking_paused, pretty_watcher_status, pretty_progress, pretty_added )
-        sort_tuple = ( subject, files_paused, sort_checking_paused, sort_watcher_status, progress, added )
-        
-        return ( display_tuple, sort_tuple )
+        return ( subject, files_paused, sort_checking_paused, sort_watcher_status, progress, added )
         
     
     def _CopySelectedSubjects( self ):

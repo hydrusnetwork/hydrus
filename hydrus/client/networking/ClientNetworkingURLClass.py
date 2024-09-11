@@ -97,7 +97,7 @@ class URLClassParameterFixedName( HydrusSerialisable.SerialisableBase ):
             value_string_match = ClientStrings.StringMatch( match_type = ClientStrings.STRING_MATCH_FIXED, match_value = 'value', example_string = 'value' )
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._name = name
         self._value_string_match = value_string_match

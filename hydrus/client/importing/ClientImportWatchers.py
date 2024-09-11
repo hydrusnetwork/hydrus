@@ -34,7 +34,7 @@ class MultipleWatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, url = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._lock = threading.Lock()
         
@@ -694,7 +694,7 @@ class WatcherImport( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._page_key = b'initialising page key'
         self._publish_to_page = False

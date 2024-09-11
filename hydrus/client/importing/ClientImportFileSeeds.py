@@ -145,7 +145,7 @@ class FileSeed( HydrusSerialisable.SerialisableBase ):
             file_seed_data = 'https://big-guys.4u/monica_lewinsky_hott.tiff.exe.vbs'
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.file_seed_type = file_seed_type
         self.file_seed_data = file_seed_data
@@ -2170,7 +2170,7 @@ class FileSeedCache( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._file_seeds = HydrusSerialisable.SerialisableList()
         

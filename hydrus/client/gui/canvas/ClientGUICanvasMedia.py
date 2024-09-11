@@ -319,7 +319,7 @@ class Animation( QW.QWidget ):
     
     def __init__( self, parent, canvas_type, background_colour_generator ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._canvas_type = canvas_type
         self._background_colour_generator = background_colour_generator
@@ -878,7 +878,7 @@ class AnimationBar( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._qss_colours = {
             'hab_border' : QG.QColor( 0, 0, 0 ),
@@ -1341,7 +1341,7 @@ class MediaContainer( QW.QWidget ):
     
     def __init__( self, parent, canvas_type, background_colour_generator, additional_event_filter: QC.QObject ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._canvas_type = canvas_type
         
@@ -2668,7 +2668,7 @@ class EmbedButton( QW.QWidget ):
     
     def __init__( self, parent, background_colour_generator ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._background_colour_generator = background_colour_generator
         
@@ -2796,7 +2796,7 @@ class OpenExternallyPanel( QW.QWidget ):
     
     def __init__( self, parent, media ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._new_options = CG.client_controller.new_options
         
@@ -2873,7 +2873,7 @@ class QtMediaPlayer( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, canvas_type, background_colour_generator ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._canvas_type = canvas_type
         self._background_colour_generator = background_colour_generator
@@ -3179,8 +3179,7 @@ class StaticImage( CAC.ApplicationCommandProcessorMixin, QW.QWidget ):
     
     def __init__( self, parent, canvas_type, background_colour_generator ):
         
-        QW.QWidget.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self._canvas_type = canvas_type
         self._background_colour_generator = background_colour_generator

@@ -18,7 +18,7 @@ class ClientDBRecentTags( ClientDBModule.ClientDBModule ):
         self.modules_services = modules_services
         self.modules_tags_local_cache = modules_tags_local_cache
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client recent tags', cursor )
+        super().__init__( 'client recent tags', cursor )
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:

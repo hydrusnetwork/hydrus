@@ -435,8 +435,7 @@ class SerialisableDictionary( SerialisableBase, dict ):
     
     def __init__( self, *args, **kwargs ):
         
-        dict.__init__( self, *args, **kwargs )
-        SerialisableBase.__init__( self )
+        super().__init__( *args, **kwargs )
         
     
     def _GetSerialisableInfo( self ):
@@ -563,8 +562,7 @@ class SerialisableBytesDictionary( SerialisableBase, dict ):
     
     def __init__( self, *args, **kwargs ):
         
-        dict.__init__( self, *args, **kwargs )
-        SerialisableBase.__init__( self )
+        super().__init__( *args, **kwargs )
         
     
     def _GetSerialisableInfo( self ):
@@ -641,8 +639,7 @@ class SerialisableList( SerialisableBase, list ):
     
     def __init__( self, *args, **kwargs ):
         
-        list.__init__( self, *args, **kwargs )
-        SerialisableBase.__init__( self )
+        super().__init__( *args, **kwargs )
         
     
     def _GetSerialisableInfo( self ):

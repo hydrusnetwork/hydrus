@@ -68,7 +68,7 @@ class ClientDBMasterServices( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client services master', cursor )
+        super().__init__( 'client services master', cursor )
         
         self._service_ids_to_services = {}
         self._service_keys_to_service_ids = {}

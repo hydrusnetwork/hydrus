@@ -16,7 +16,7 @@ class NetworkSessionManagerLegacy( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._network_contexts_to_sessions = {}
         

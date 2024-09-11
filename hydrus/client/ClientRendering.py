@@ -86,7 +86,7 @@ class ImageRenderer( ClientCachesBase.CacheableObject ):
     
     def __init__( self, media, this_is_for_metadata_alone = False ):
         
-        ClientCachesBase.CacheableObject.__init__( self )
+        super().__init__()
         
         self._numpy_image = None
         self._render_failed = False
@@ -488,7 +488,7 @@ class ImageTile( ClientCachesBase.CacheableObject ):
     
     def __init__( self, hash: bytes, clip_rect: QC.QRect, qt_pixmap: QG.QPixmap ):
         
-        ClientCachesBase.CacheableObject.__init__( self )
+        super().__init__()
         
         self.hash = hash
         self.clip_rect = clip_rect
@@ -551,7 +551,7 @@ class RasterContainerVideo( RasterContainer ):
     
     def __init__( self, media, target_resolution = None, init_position = 0 ):
         
-        RasterContainer.__init__( self, media, target_resolution )
+        super().__init__( media, target_resolution )
         
         self._init_position = init_position
         
@@ -1067,7 +1067,7 @@ class HydrusBitmap( ClientCachesBase.CacheableObject ):
     
     def __init__( self, data, size, depth, compressed = True ):
         
-        ClientCachesBase.CacheableObject.__init__( self )
+        super().__init__()
         
         self._compressed = compressed
         

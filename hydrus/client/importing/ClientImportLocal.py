@@ -40,7 +40,7 @@ class HDDImport( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, paths = None, file_import_options = None, metadata_routers = None, paths_to_additional_service_keys_to_tags = None, delete_after_success = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if metadata_routers is None:
             

@@ -336,7 +336,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         
         # add index control row here, hide it if needed and hook into showing/hiding and postsizechangedevent on file_seed add/remove
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, self._ConvertFileSeedToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, self._ConvertFileSeedToDisplayTuple, self._ConvertFileSeedToSortTuple )
         
         self._list_ctrl = ClientGUIListCtrl.BetterListCtrlTreeView( self, CGLC.COLUMN_LIST_FILE_SEED_CACHE.ID, 30, model, activation_callback = self._ShowSelectionInNewPage, delete_key_callback = self._DeleteSelected )
         
@@ -363,7 +363,7 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
         QP.CallAfter( self._UpdateText )
         
     
-    def _ConvertFileSeedToListCtrlTuples( self, file_seed: ClientImportFileSeeds.FileSeed ):
+    def _ConvertFileSeedToDisplayTuple( self, file_seed: ClientImportFileSeeds.FileSeed ):
         
         try:
             
@@ -372,8 +372,6 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_file_seed_index = HydrusNumbers.ToHumanInt( file_seed_index )
             
         except:
-            
-            file_seed_index = '--'
             
             pretty_file_seed_index = '--'
             
@@ -407,14 +405,41 @@ class EditFileSeedCachePanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_source_time = ClientTime.TimestampToPrettyTimeDelta( source_time )
             
         
-        sort_source_time = ClientGUIListCtrl.SafeNoneInt( source_time )
-        
         pretty_note = HydrusText.GetFirstLine( note )
         
-        display_tuple = ( pretty_file_seed_index, pretty_file_seed_data, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
-        sort_tuple = ( file_seed_index, pretty_file_seed_data, status, added, modified, sort_source_time, note )
+        return ( pretty_file_seed_index, pretty_file_seed_data, pretty_status, pretty_added, pretty_modified, pretty_source_time, pretty_note )
         
-        return ( display_tuple, sort_tuple )
+    
+    def _ConvertFileSeedToSortTuple( self, file_seed: ClientImportFileSeeds.FileSeed ):
+        
+        try:
+            
+            file_seed_index = self._file_seed_cache.GetFileSeedIndex( file_seed )
+            
+        except:
+            
+            file_seed_index = -1
+            
+        
+        file_seed_data = file_seed.file_seed_data_for_comparison
+        status = file_seed.status
+        added = file_seed.created
+        modified = file_seed.modified
+        source_time = file_seed.source_time
+        note = file_seed.note
+        
+        if file_seed.file_seed_type == ClientImportFileSeeds.FILE_SEED_TYPE_URL:
+            
+            pretty_file_seed_data = ClientNetworkingFunctions.ConvertURLToHumanString( file_seed_data )
+            
+        else:
+            
+            pretty_file_seed_data = file_seed_data
+            
+        
+        sort_source_time = ClientGUIListCtrl.SafeNoneInt( source_time )
+        
+        return ( file_seed_index, pretty_file_seed_data, status, added, modified, sort_source_time, note )
         
     
     def _CopySelectedNotes( self ):

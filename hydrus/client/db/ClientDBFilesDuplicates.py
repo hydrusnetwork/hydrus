@@ -24,7 +24,7 @@ class ClientDBFilesDuplicates( ClientDBModule.ClientDBModule ):
         modules_similar_files: ClientDBSimilarFiles.ClientDBSimilarFiles
         ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client file duplicates', cursor )
+        super().__init__( 'client file duplicates', cursor )
         
         self.modules_files_storage = modules_files_storage
         self.modules_hashes_local_cache = modules_hashes_local_cache

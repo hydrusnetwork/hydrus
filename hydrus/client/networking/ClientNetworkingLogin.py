@@ -10,6 +10,7 @@ from hydrus.core import HydrusGlobals as HG
 from hydrus.core import HydrusData
 from hydrus.core import HydrusExceptions
 from hydrus.core import HydrusSerialisable
+from hydrus.core import HydrusText
 from hydrus.core import HydrusTime
 
 from hydrus.client import ClientConstants as CC
@@ -63,7 +64,7 @@ class NetworkLoginManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.engine = None
         
@@ -1465,7 +1466,18 @@ class LoginScriptDomain( HydrusSerialisable.SerialisableBaseNamed ):
                     HydrusData.ShowException( e )
                     
                 
-                message = str( e )
+                if isinstance( e, HydrusExceptions.InsufficientCredentialsException ):
+                    
+                    message = '403 - login script or credentials may be invalid'
+                    
+                elif isinstance( e, HydrusExceptions.MissingCredentialsException ):
+                    
+                    message = '401 - login script or credentials may be invalid'
+                    
+                else:
+                    
+                    message = HydrusText.GetFirstLine( str( e ) )
+                    
                 
                 engine.login_manager.DelayLoginScript( login_domain, self._login_script_key, message )
                 

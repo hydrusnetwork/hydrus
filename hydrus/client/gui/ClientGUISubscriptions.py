@@ -187,7 +187,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         queries_panel = ClientGUIListCtrl.BetterListCtrlPanel( self._query_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, self._ConvertQueryHeaderToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, self._ConvertQueryHeaderToDisplayTuple, self._ConvertQueryHeaderToSortTuple )
         
         self._query_headers = ClientGUIListCtrl.BetterListCtrlTreeView( queries_panel, CGLC.COLUMN_LIST_SUBSCRIPTION_QUERIES.ID, 10, model, use_simple_delete = True, activation_callback = self._EditQuery )
         
@@ -248,7 +248,7 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._publish_files_to_popup_button = QW.QCheckBox( self._file_presentation_panel )
         self._publish_files_to_page = QW.QCheckBox( self._file_presentation_panel )
-        self._publish_label_override = ClientGUICommon.NoneableTextCtrl( self._file_presentation_panel, 'subscription files', none_phrase = 'no, use subscription name' )
+        self._publish_label_override = ClientGUICommon.NoneableTextCtrl( self._file_presentation_panel, '', placeholder_text = 'subscription files', none_phrase = 'no, use subscription name' )
         self._merge_query_publish_events = QW.QCheckBox( self._file_presentation_panel )
         
         tt = 'This is great to merge multiple subs to a combined location!'
@@ -475,10 +475,9 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         self._UpdateDelayText()
         
     
-    def _ConvertQueryHeaderToListCtrlTuples( self, query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader ):
+    def _ConvertQueryHeaderToDisplayTuple( self, query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader ):
         
         last_check_time = query_header.GetLastCheckTime()
-        next_check_time = query_header.GetNextCheckTime()
         paused = query_header.IsPaused()
         checker_status = query_header.GetCheckerStatus()
         
@@ -529,6 +528,44 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         ( file_velocity, pretty_file_velocity ) = query_header.GetFileVelocityInfo()
         
+        try:
+            
+            estimate = query_header.GetBandwidthWaitingEstimate( CG.client_controller.network_engine.bandwidth_manager, self._original_subscription.GetName() )
+            
+            if estimate == 0:
+                
+                pretty_delay = ''
+                
+            else:
+                
+                pretty_delay = 'bandwidth: ' + HydrusTime.TimeDeltaToPrettyTimeDelta( estimate )
+                
+            
+        except:
+            
+            pretty_delay = 'could not determine bandwidth--there may be a problem with some of the urls in this query'
+            
+        
+        pretty_items = file_seed_cache_status.GetStatusText( simple = True )
+        
+        return ( pretty_name, pretty_paused, pretty_status, pretty_latest_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_items )
+        
+    
+    def _ConvertQueryHeaderToSortTuple( self, query_header: ClientImportSubscriptionQuery.SubscriptionQueryHeader ):
+        
+        last_check_time = query_header.GetLastCheckTime()
+        next_check_time = query_header.GetNextCheckTime()
+        paused = query_header.IsPaused()
+        checker_status = query_header.GetCheckerStatus()
+        
+        name = query_header.GetHumanName()
+        
+        file_seed_cache_status = query_header.GetFileSeedCacheStatus()
+        
+        latest_new_file_time = file_seed_cache_status.GetLatestAddedTime()
+        
+        ( file_velocity, pretty_file_velocity ) = query_header.GetFileVelocityInfo()
+        
         file_velocity = tuple( file_velocity ) # for sorting, list/tuple -> tuple
         
         try:
@@ -537,18 +574,15 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
             
             if estimate == 0:
                 
-                pretty_delay = ''
                 delay = 0
                 
             else:
                 
-                pretty_delay = 'bandwidth: ' + HydrusTime.TimeDeltaToPrettyTimeDelta( estimate )
                 delay = estimate
                 
             
         except:
             
-            pretty_delay = 'could not determine bandwidth--there may be a problem with some of the urls in this query'
             delay = 0
             
         
@@ -556,16 +590,11 @@ class EditSubscriptionPanel( ClientGUIScrolledPanels.EditPanel ):
         
         items = ( num_total, num_done )
         
-        pretty_items = file_seed_cache_status.GetStatusText( simple = True )
-        
         sort_latest_new_file_time = ClientGUIListCtrl.SafeNoneInt( latest_new_file_time )
         sort_last_check_time = ClientGUIListCtrl.SafeNoneInt( last_check_time )
         sort_next_check_time = ClientGUIListCtrl.SafeNoneInt( next_check_time )
         
-        display_tuple = ( pretty_name, pretty_paused, pretty_status, pretty_latest_new_file_time, pretty_last_check_time, pretty_next_check_time, pretty_file_velocity, pretty_delay, pretty_items )
-        sort_tuple = ( name, paused, checker_status, sort_latest_new_file_time, sort_last_check_time, sort_next_check_time, file_velocity, delay, items )
-        
-        return ( display_tuple, sort_tuple )
+        return ( name, paused, checker_status, sort_latest_new_file_time, sort_last_check_time, sort_next_check_time, file_velocity, delay, items )
         
     
     def _CopyQueries( self ):
@@ -1170,7 +1199,7 @@ class EditSubscriptionQueryPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._status_st.setMinimumWidth( st_width )
         
-        self._display_name = ClientGUICommon.NoneableTextCtrl( self, 'my subscription', none_phrase = 'use query text' )
+        self._display_name = ClientGUICommon.NoneableTextCtrl( self, '', placeholder_text = 'my subscription', none_phrase = 'use query text' )
         self._query_text = QW.QLineEdit( self )
         self._check_now = QW.QCheckBox( self )
         self._paused = QW.QCheckBox( self )
@@ -1324,7 +1353,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         self._subscriptions_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, self._ConvertSubscriptionToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, self._ConvertSubscriptionToDisplayTuple, self._ConvertSubscriptionToSortTuple )
         
         self._subscriptions = ClientGUIListCtrl.BetterListCtrlTreeView( self._subscriptions_panel, CGLC.COLUMN_LIST_SUBSCRIPTIONS.ID, 12, model, use_simple_delete = True, activation_callback = self.Edit )
         
@@ -1537,7 +1566,7 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         return False
         
     
-    def _ConvertSubscriptionToListCtrlTuples( self, subscription ):
+    def _ConvertSubscriptionToDisplayTuple( self, subscription ):
         
         ( name, gug_key_and_name, query_headers, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until, no_work_until_reason ) = subscription.ToTuple()
         
@@ -1594,8 +1623,6 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
         
         num_ok = num_queries - ( num_dead + num_paused )
         
-        status = ( num_queries, num_paused, num_dead )
-        
         if num_queries == 0:
             
             pretty_status = 'no queries'
@@ -1628,44 +1655,34 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
                 if max_estimate == 0: # don't seem to be any delays of any kind
                     
                     pretty_delay = ''
-                    delay = 0
                     
                 elif min_estimate == 0: # some are good to go, but there are delays
                     
                     pretty_delay = 'bandwidth: some ok, some up to ' + HydrusTime.TimeDeltaToPrettyTimeDelta( max_estimate )
-                    delay = max_estimate
                     
                 else:
                     
                     if min_estimate == max_estimate: # probably just one query, and it is delayed
                         
                         pretty_delay = 'bandwidth: up to ' + HydrusTime.TimeDeltaToPrettyTimeDelta( max_estimate )
-                        delay = max_estimate
                         
                     else:
                         
                         pretty_delay = 'bandwidth: from ' + HydrusTime.TimeDeltaToPrettyTimeDelta( min_estimate ) + ' to ' + HydrusTime.TimeDeltaToPrettyTimeDelta( max_estimate )
-                        delay = max_estimate
                         
                     
                 
             except:
                 
                 pretty_delay = 'could not determine bandwidth, there may be an error with the sub or its urls'
-                delay = 0
                 
             
         else:
             
             pretty_delay = 'delayed--retrying ' + ClientTime.TimestampToPrettyTimeDelta( no_work_until, just_now_threshold = 0 ) + ' - because: ' + no_work_until_reason
-            delay = HydrusTime.GetTimeDeltaUntilTime( no_work_until )
             
         
         file_seed_cache_status = ClientImportSubscriptionQuery.GenerateQueryHeadersStatus( query_headers )
-        
-        ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
-        
-        items = ( num_total, num_done )
         
         pretty_items = file_seed_cache_status.GetStatusText( simple = True )
         
@@ -1678,13 +1695,96 @@ class EditSubscriptionsPanel( ClientGUIScrolledPanels.EditPanel ):
             pretty_paused = ''
             
         
+        return ( name, pretty_site, pretty_status, pretty_latest_new_file_time, pretty_last_checked, pretty_delay, pretty_items, pretty_paused )
+        
+    
+    def _ConvertSubscriptionToSortTuple( self, subscription ):
+        
+        ( name, gug_key_and_name, query_headers, checker_options, initial_file_limit, periodic_file_limit, paused, file_import_options, tag_import_options, no_work_until, no_work_until_reason ) = subscription.ToTuple()
+        
+        pretty_site = gug_key_and_name[1]
+        
+        if len( query_headers ) > 0:
+            
+            latest_new_file_time = max( ( query_header.GetLatestAddedTime() for query_header in query_headers ) )
+            
+            last_checked = max( ( query_header.GetLastCheckTime() for query_header in query_headers ) )
+            
+        else:
+            
+            latest_new_file_time = 0
+            
+            last_checked = 0
+            
+        
+        #
+        
+        num_queries = len( query_headers )
+        num_dead = 0
+        num_paused = 0
+        
+        for query_header in query_headers:
+            
+            if query_header.IsDead():
+                
+                num_dead += 1
+                
+            elif query_header.IsPaused():
+                
+                num_paused += 1
+                
+            
+        
+        status = ( num_queries, num_paused, num_dead )
+        
+        #
+        
+        if HydrusTime.TimeHasPassed( no_work_until ):
+            
+            try:
+                
+                ( min_estimate, max_estimate ) = subscription.GetBandwidthWaitingEstimateMinMax( CG.client_controller.network_engine.bandwidth_manager )
+                
+                if max_estimate == 0: # don't seem to be any delays of any kind
+                    
+                    delay = 0
+                    
+                elif min_estimate == 0: # some are good to go, but there are delays
+                    
+                    delay = max_estimate
+                    
+                else:
+                    
+                    if min_estimate == max_estimate: # probably just one query, and it is delayed
+                        
+                        delay = max_estimate
+                        
+                    else:
+                        
+                        delay = max_estimate
+                        
+                    
+                
+            except:
+                
+                delay = 0
+                
+            
+        else:
+            
+            delay = HydrusTime.GetTimeDeltaUntilTime( no_work_until )
+            
+        
+        file_seed_cache_status = ClientImportSubscriptionQuery.GenerateQueryHeadersStatus( query_headers )
+        
+        ( num_done, num_total ) = file_seed_cache_status.GetValueRange()
+        
+        items = ( num_total, num_done )
+        
         sort_latest_new_file_time = ClientGUIListCtrl.SafeNoneInt( latest_new_file_time )
         sort_last_checked = ClientGUIListCtrl.SafeNoneInt( last_checked )
         
-        display_tuple = ( name, pretty_site, pretty_status, pretty_latest_new_file_time, pretty_last_checked, pretty_delay, pretty_items, pretty_paused )
-        sort_tuple = ( name, pretty_site, status, sort_latest_new_file_time, sort_last_checked, delay, items, paused )
-        
-        return ( display_tuple, sort_tuple )
+        return ( name, pretty_site, status, sort_latest_new_file_time, sort_last_checked, delay, items, paused )
         
     
     def _DoAsyncGetQueryLogContainers( self, query_headers: typing.Collection[ ClientImportSubscriptionQuery.SubscriptionQueryHeader ], call: HydrusData.Call ):

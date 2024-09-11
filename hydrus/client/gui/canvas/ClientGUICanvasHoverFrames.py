@@ -667,7 +667,7 @@ class CanvasHoverFrameTop( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, canvas_key ):
         
-        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        super().__init__( parent, my_canvas, canvas_key )
         
         self._current_zoom = 1.0
         self._current_index_string = ''
@@ -1238,7 +1238,7 @@ class CanvasHoverFrameTopRight( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key ):
         
-        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        super().__init__( parent, my_canvas, canvas_key )
         
         self._top_hover = top_hover
         
@@ -1527,7 +1527,7 @@ class NotePanel( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, name: str, note: str, note_visible: bool ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._name = name
         self._note_visible = note_visible
@@ -1647,7 +1647,7 @@ class CanvasHoverFrameRightNotes( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_right_hover: CanvasHoverFrameTopRight, canvas_key ):
         
-        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        super().__init__( parent, my_canvas, canvas_key )
         
         self._top_right_hover = top_right_hover
         
@@ -1846,7 +1846,7 @@ class CanvasHoverFrameRightDuplicates( CanvasHoverFrame ):
     
     def __init__( self, parent: QW.QWidget, my_canvas: QW.QWidget, canvas_key: bytes ):
         
-        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        super().__init__( parent, my_canvas, canvas_key )
         
         self._always_on_top = True
         
@@ -2164,7 +2164,7 @@ class CanvasHoverFrameTags( CanvasHoverFrame ):
     
     def __init__( self, parent, my_canvas, top_hover: CanvasHoverFrameTop, canvas_key, location_context: ClientLocation.LocationContext ):
         
-        CanvasHoverFrame.__init__( self, parent, my_canvas, canvas_key )
+        super().__init__( parent, my_canvas, canvas_key )
         
         self._top_hover = top_hover
         

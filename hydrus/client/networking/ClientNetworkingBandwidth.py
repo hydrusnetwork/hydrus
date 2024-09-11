@@ -63,7 +63,7 @@ class NetworkBandwidthManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._dirty = False
         

@@ -20,7 +20,7 @@ class ClientDBServicePaths( ClientDBModule.ClientDBModule ):
         self.modules_texts = modules_texts
         self.modules_hashes_local_cache = modules_hashes_local_cache
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client service paths', cursor )
+        super().__init__( 'client service paths', cursor )
         
     
     def _GetInitialIndexGenerationDict( self ) -> dict:

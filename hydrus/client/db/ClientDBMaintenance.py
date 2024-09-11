@@ -20,7 +20,7 @@ class ClientDBMaintenance( ClientDBModule.ClientDBModule ):
     
     def __init__( self, cursor: sqlite3.Cursor, db_dir: str, db_filenames: typing.Collection[ str ], cursor_transaction_wrapper: HydrusDBBase.DBCursorTransactionWrapper, modules: typing.List[ HydrusDBModule.HydrusDBModule ] ):
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client db maintenance', cursor )
+        super().__init__( 'client db maintenance', cursor )
         
         self._db_dir = db_dir
         self._db_filenames = db_filenames

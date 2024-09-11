@@ -1870,8 +1870,7 @@ class EditFileNotesPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolle
     
     def __init__( self, parent: QW.QWidget, names_to_notes: typing.Dict[ str, str ], name_to_start_on: typing.Optional[ str ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self._original_names = set()
         
@@ -2762,8 +2761,7 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
     
     def __init__( self, parent, medias: typing.Collection[ ClientMedia.MediaSingleton ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self._current_media = [ m.Duplicate() for m in medias ]
         
@@ -2775,13 +2773,10 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             self._multiple_files_warning.hide()
             
         
-        self._urls_listbox = ClientGUIListBoxes.BetterQListWidget( self )
+        self._urls_listbox = ClientGUIListBoxes.BetterQListWidget( self, delete_callable = self.DeleteSelected )
         self._urls_listbox.setSelectionMode( QW.QAbstractItemView.ExtendedSelection )
         self._urls_listbox.setSortingEnabled( False )
-        self._urls_listbox.itemDoubleClicked.connect( self.EventListDoubleClick )
-        
-        self._listbox_event_filter = QP.WidgetEventFilter( self._urls_listbox )
-        self._listbox_event_filter.EVT_KEY_DOWN( self.EventListKeyDown )
+        self._urls_listbox.itemDoubleClicked.connect( self.ListDoubleClicked )
         
         ( width, height ) = ClientGUIFunctions.ConvertTextToPixels( self._urls_listbox, ( 120, 10 ) )
         
@@ -3014,42 +3009,6 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             
         
     
-    def EventListDoubleClick( self, item ):
-        
-        urls = self._urls_listbox.GetData( only_selected = True )
-        
-        for url in urls:
-            
-            self._RemoveURL( url )
-            
-        
-        if len( urls ) == 1:
-            
-            url = urls[0]
-            
-            self._url_input.setText( url )
-            
-        
-    
-    def EventListKeyDown( self, event ):
-        
-        ( modifier, key ) = ClientGUIShortcuts.ConvertKeyEventToSimpleTuple( event )
-        
-        if key in ClientGUIShortcuts.DELETE_KEYS_QT:
-            
-            urls = self._urls_listbox.GetData( only_selected = True )
-            
-            for url in urls:
-                
-                self._RemoveURL( url )
-                
-            
-        else:
-            
-            return True # was: event.ignore()
-            
-        
-    
     def AddURL( self ):
         
         url = self._url_input.text()
@@ -3073,9 +3032,36 @@ class EditURLsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPane
             
         
     
+    def DeleteSelected( self ):
+        
+        urls = self._urls_listbox.GetData( only_selected = True )
+        
+        for url in urls:
+            
+            self._RemoveURL( url )
+            
+        
+    
     def GetValue( self ):
         
         return list( self._pending_content_updates )
+        
+    
+    def ListDoubleClicked( self, item ):
+        
+        urls = self._urls_listbox.GetData( only_selected = True )
+        
+        for url in urls:
+            
+            self._RemoveURL( url )
+            
+        
+        if len( urls ) == 1:
+            
+            url = urls[0]
+            
+            self._url_input.setText( url )
+            
         
     
     def ProcessApplicationCommand( self, command: CAC.ApplicationCommand ):

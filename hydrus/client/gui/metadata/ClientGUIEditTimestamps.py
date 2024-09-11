@@ -35,8 +35,7 @@ class EditFileTimestampsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUISc
     
     def __init__( self, parent: QW.QWidget, ordered_medias: typing.List[ ClientMedia.MediaSingleton ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self._ordered_medias = ordered_medias
         

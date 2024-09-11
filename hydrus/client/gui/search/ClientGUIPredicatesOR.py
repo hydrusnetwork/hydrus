@@ -22,7 +22,7 @@ class ORPredicateControl( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, predicate: ClientSearch.Predicate, empty_file_search_context: typing.Optional[ ClientSearch.FileSearchContext ] = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         from hydrus.client.gui.search import ClientGUIACDropdown
         

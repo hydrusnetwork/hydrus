@@ -215,7 +215,7 @@ class GUISessionPageData( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, management_controller = None, hashes = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         if management_controller is None:
             

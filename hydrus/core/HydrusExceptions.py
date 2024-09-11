@@ -42,9 +42,10 @@ class DBException( HydrusException ):
         
         self.db_e = e
         
-        HydrusException.__init__( self, first_line, db_traceback )
+        super().__init__( first_line, db_traceback )
         
     
+
 class DBAccessException( HydrusException ): pass
 class DBCredentialsException( HydrusException ): pass
 class DBVersionException( HydrusException ): pass

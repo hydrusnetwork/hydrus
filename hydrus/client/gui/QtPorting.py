@@ -76,7 +76,7 @@ class LabelledSlider( QW.QWidget ):
     
     def __init__( self, parent = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self.setLayout( VBoxLayout( spacing = 2 ) )
         
@@ -143,7 +143,7 @@ class DirPickerCtrl( QW.QWidget ):
     
     def __init__( self, parent ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         layout = HBoxLayout( spacing = 2 )
         
@@ -214,7 +214,7 @@ class FilePickerCtrl( QW.QWidget ):
 
     def __init__( self, parent = None, wildcard = None, starting_directory = None ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
 
         layout = HBoxLayout( spacing = 2 )
 
@@ -1012,8 +1012,9 @@ class GridLayout( QW.QGridLayout ):
         self.setContentsMargins( val, val, val, val )
         
     
-def AddToLayout( layout, item, flag = None, alignment = None ):
 
+def AddToLayout( layout, item, flag = None, alignment = None ):
+    
     if isinstance( layout, GridLayout ):
         
         row = layout.next_row
@@ -2006,8 +2007,6 @@ def ListsToTuples( potentially_nested_lists ):
 
 class WidgetEventFilter ( QC.QObject ):
     
-    _mouse_tracking_required = { 'EVT_MOUSE_EVENTS' }
-
     _strong_focus_required = { 'EVT_KEY_DOWN' }
 
     def __init__( self, parent_widget ):
@@ -2047,19 +2046,11 @@ class WidgetEventFilter ( QC.QObject ):
             
             event_killed = False
             
-            if type == QC.QEvent.KeyPress:
-                
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_KEY_DOWN', event )
-                
-            elif type == QC.QEvent.WindowStateChange:
+            if type == QC.QEvent.WindowStateChange:
                 
                 if isValid( self._parent_widget ):
                     
                     if self._parent_widget.isMaximized() or (event.oldState() & QC.Qt.WindowMaximized): event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MAXIMIZE', event )
-            
-            elif type == QC.QEvent.MouseMove:
-                
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
                 
             elif type == QC.QEvent.MouseButtonDblClick:
                 
@@ -2072,8 +2063,6 @@ class WidgetEventFilter ( QC.QObject ):
                     event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DCLICK', event )
                     
                 
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-                
             elif type == QC.QEvent.MouseButtonPress:
                 
                 if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_DOWN', event )
@@ -2082,23 +2071,9 @@ class WidgetEventFilter ( QC.QObject ):
                 
                 if event.buttons() & QC.Qt.RightButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_RIGHT_DOWN', event )
                 
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-                
             elif type == QC.QEvent.MouseButtonRelease:
                 
                 if event.buttons() & QC.Qt.LeftButton: event_killed = event_killed or self._ExecuteCallbacks( 'EVT_LEFT_UP', event )
-                
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-                
-            elif type == QC.QEvent.Wheel:
-                
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSEWHEEL', event )
-                
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_MOUSE_EVENTS', event )
-                
-            elif type == QC.QEvent.Scroll:
-                
-                event_killed = event_killed or self._ExecuteCallbacks( 'EVT_SCROLLWIN', event )
                 
             elif type == QC.QEvent.Move:
                 
@@ -2145,20 +2120,14 @@ class WidgetEventFilter ( QC.QObject ):
     
     def _AddCallback( self, evt_name, callback ):
         
-        if evt_name in self._mouse_tracking_required:
-            
-            self._parent_widget.setMouseTracking( True )
-            
         if evt_name in self._strong_focus_required:
             
             self._parent_widget.setFocusPolicy( QC.Qt.StrongFocus )
             
-        self._callback_map[ evt_name ].append( callback )
-
-    def EVT_KEY_DOWN( self, callback ):
         
-        self._AddCallback( 'EVT_KEY_DOWN', callback )
-
+        self._callback_map[ evt_name ].append( callback )
+        
+    
     def EVT_LEFT_DCLICK( self, callback ):
         
         self._AddCallback( 'EVT_LEFT_DCLICK', callback )
@@ -2183,14 +2152,6 @@ class WidgetEventFilter ( QC.QObject ):
         
         self._AddCallback( 'EVT_MIDDLE_DOWN', callback )
 
-    def EVT_MOUSE_EVENTS( self, callback ):
-        
-        self._AddCallback( 'EVT_MOUSE_EVENTS', callback )
-
-    def EVT_MOUSEWHEEL( self, callback ):
-        
-        self._AddCallback( 'EVT_MOUSEWHEEL', callback )
-
     def EVT_MOVE( self, callback ):
         
         self._AddCallback( 'EVT_MOVE', callback )
@@ -2202,10 +2163,6 @@ class WidgetEventFilter ( QC.QObject ):
     def EVT_RIGHT_DOWN( self, callback ):
         
         self._AddCallback( 'EVT_RIGHT_DOWN', callback )
-
-    def EVT_SCROLLWIN( self, callback ):
-        
-        self._AddCallback( 'EVT_SCROLLWIN', callback )
 
     def EVT_SIZE( self, callback ):
         

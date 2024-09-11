@@ -83,7 +83,7 @@ class ClientDBMappingsStorage( ClientDBModule.ClientDBModule ):
         self.modules_db_maintenance = modules_db_maintenance
         self.modules_services = modules_services
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client mappings storage', cursor )
+        super().__init__( 'client mappings storage', cursor )
         
     
     def _GetServiceIndexGenerationDict( self, service_id ) -> dict:

@@ -128,7 +128,7 @@ class GallerySeed( HydrusSerialisable.SerialisableBase ):
                 
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self.url = url
         self._can_generate_more_pages = can_generate_more_pages
@@ -752,7 +752,7 @@ class GallerySeedLog( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._gallery_seeds = HydrusSerialisable.SerialisableList()
         

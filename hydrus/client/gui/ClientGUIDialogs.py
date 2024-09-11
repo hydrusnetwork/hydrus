@@ -26,7 +26,7 @@ class Dialog( QP.Dialog ):
     
     def __init__( self, parent, title, style = QC.Qt.Dialog, position = 'topleft' ):
 
-        QP.Dialog.__init__( self, parent )
+        super().__init__( parent )
         
         self.setWindowFlags( style )
         
@@ -93,7 +93,7 @@ class DialogChooseNewServiceMethod( Dialog ):
     
     def __init__( self, parent ):
         
-        Dialog.__init__( self, parent, 'how to set up the account?', position = 'center' )
+        super().__init__( parent, 'how to set up the account?', position = 'center' )
         
         register_message = 'I want to initialise a new account with the server. I have a registration token (a hexadecimal key starting with \'r\').'
         
@@ -143,7 +143,7 @@ class DialogGenerateNewAccounts( Dialog ):
     
     def __init__( self, parent, service_key ):
         
-        Dialog.__init__( self, parent, 'configure new accounts' )
+        super().__init__( parent, 'configure new accounts' )
         
         self._service_key = service_key
         
@@ -260,7 +260,7 @@ class DialogInputNamespaceRegex( Dialog ):
     
     def __init__( self, parent, namespace = '', regex = '' ):
         
-        Dialog.__init__( self, parent, 'configure quick namespace' )
+        super().__init__( parent, 'configure quick namespace' )
         
         self._namespace = QW.QLineEdit( self )
         
@@ -351,7 +351,7 @@ class DialogInputTags( Dialog ):
     
     def __init__( self, parent, service_key, tag_display_type, tags, message = '' ):
         
-        Dialog.__init__( self, parent, 'input tags' )
+        super().__init__( parent, 'input tags' )
         
         self._service_key = service_key
         
@@ -445,7 +445,7 @@ class DialogInputUPnPMapping( Dialog ):
     
     def __init__( self, parent, external_port, protocol_type, internal_port, description, duration ):
         
-        Dialog.__init__( self, parent, 'configure upnp mapping' )
+        super().__init__( parent, 'configure upnp mapping' )
         
         self._external_port = ClientGUICommon.BetterSpinBox( self, min=0, max=65535 )
         
@@ -520,7 +520,7 @@ class DialogSelectFromURLTree( Dialog ):
     
     def __init__( self, parent, url_tree ):
         
-        Dialog.__init__( self, parent, 'select items' )
+        super().__init__( parent, 'select items' )
         
         self._tree = QP.TreeWidgetWithInheritedCheckState( self )
         
@@ -641,7 +641,7 @@ class DialogTextEntry( Dialog ):
             suggestions = []
             
         
-        Dialog.__init__( self, parent, 'enter text', position = 'center' )
+        super().__init__( parent, 'enter text', position = 'center' )
         
         self._chosen_suggestion = None
         self._allow_blank = allow_blank

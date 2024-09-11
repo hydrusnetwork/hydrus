@@ -1022,6 +1022,49 @@ class TestClientAPI( unittest.TestCase ):
         
         self.assertEqual( response_json, expected_result )
         
+        self.assertTrue( os.path.exists( hydrus_png_path ) )
+        
+        # do hydrus png as path, and delete it
+        
+        f = ClientImportFiles.FileImportStatus.STATICGetUnknownStatus()
+        
+        f.hash = hash
+        f.note = 'test note'
+        
+        HG.test_controller.SetRead( 'hash_status', f )
+        
+        headers = { 'Hydrus-Client-API-Access-Key' : access_key_hex, 'Content-Type' : HC.mime_mimetype_string_lookup[ HC.APPLICATION_JSON ] }
+        
+        path = '/add_files/add_file'
+        
+        temp_hydrus_png_path = os.path.join( HG.test_controller.db_dir, 'hydrus_png_client_api_import_test.wew' )
+        
+        HydrusPaths.MirrorFile( hydrus_png_path, temp_hydrus_png_path )
+        
+        body_dict = { 'path' : temp_hydrus_png_path, 'delete_after_successful_import' : True }
+        
+        body = json.dumps( body_dict )
+        
+        connection.request( 'POST', path, body = body, headers = headers )
+        
+        response = connection.getresponse()
+        
+        data = response.read()
+        
+        text = str( data, 'utf-8' )
+        
+        self.assertEqual( response.status, 200 )
+        
+        response_json = json.loads( text )
+        
+        expected_result = { 'status' : CC.STATUS_SUCCESSFUL_AND_NEW, 'hash' : hash.hex() , 'note' : 'test note' }
+        
+        wash_example_json_response( expected_result )
+        
+        self.assertEqual( response_json, expected_result )
+        
+        self.assertFalse( os.path.exists( temp_hydrus_png_path ) )
+        
     
     def _test_add_files_migrate_files( self, connection, set_up_permissions ):
         

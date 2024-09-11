@@ -78,7 +78,7 @@ class ClientDBRepositories( ClientDBModule.ClientDBModule ):
         
         # since we'll mostly be talking about hashes and tags we don't have locally, I think we shouldn't use the local caches
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client repositories', cursor )
+        super().__init__( 'client repositories', cursor )
         
         self._cursor_transaction_wrapper = cursor_transaction_wrapper
         self.modules_db_maintenance = modules_db_maintenance

@@ -175,7 +175,7 @@ class FavouritesTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, tag_presentation_location: int, activate_callable ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._tag_presentation_location = tag_presentation_location
@@ -228,7 +228,7 @@ class RecentTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, activate_callable ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._media = []
@@ -336,7 +336,7 @@ class RelatedTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, activate_callable ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._media = []
@@ -589,7 +589,7 @@ class FileLookupScriptTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, activate_callable ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._media = []
@@ -785,7 +785,7 @@ class SuggestedTagsPanel( QW.QWidget ):
     
     def __init__( self, parent, service_key, tag_presentation_location, handling_one_media, activate_callable ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._tag_presentation_location = tag_presentation_location

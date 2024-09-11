@@ -31,7 +31,7 @@ class ClientDBCacheLocalHashes( ClientDBModule.ClientDBModule ):
         
         self._hash_ids_to_hashes_cache = {}
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client hashes local cache', cursor )
+        super().__init__( 'client hashes local cache', cursor )
         
     
     def _DoLastShutdownWasBadWork( self ):
@@ -387,7 +387,7 @@ class ClientDBCacheLocalTags( ClientDBModule.ClientDBModule ):
         
         self._tag_ids_to_tags_cache = {}
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client tags local cache', cursor )
+        super().__init__( 'client tags local cache', cursor )
         
     
     def _GetInitialTableGenerationDict( self ) -> dict:

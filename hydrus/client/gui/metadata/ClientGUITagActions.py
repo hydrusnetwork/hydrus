@@ -110,7 +110,10 @@ class TagPairActionContext( object ):
         
         pre_existing_loop_strings = []
         
-        for ( potential_new_a, potential_new_b ) in pairs:
+        # we only want to auto-petition stuff (and give the user dialog warnings) if they are _adding_. if they are removing an existing pair from a loop, great!
+        addee_pairs = set( pairs ).difference( current_pairs )
+        
+        for ( potential_new_a, potential_new_b ) in addee_pairs:
             
             tags_to_check = [ ( potential_new_b, set(), [] ) ]
             

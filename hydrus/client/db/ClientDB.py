@@ -10699,6 +10699,76 @@ class DB( HydrusDB.HydrusDB ):
                 
             
         
+        if version == 588:
+            
+            try:
+                
+                domain_manager = self.modules_serialisable.GetJSONDump( HydrusSerialisable.SERIALISABLE_TYPE_NETWORK_DOMAIN_MANAGER )
+                
+                domain_manager.Initialise()
+                
+                #
+                
+                domain_manager.OverwriteDefaultParsers( [
+                    'catbox collection parser',
+                    'safebooru file page parser'
+                ] )
+                
+                domain_manager.OverwriteDefaultURLClasses( [
+                    'catbox collection'
+                ] )
+                
+                #
+                
+                domain_manager.TryToLinkURLClassesAndParsers()
+                
+                #
+                
+                self.modules_serialisable.SetJSONDump( domain_manager )
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to update some downloader objects failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+            try:
+                
+                result = self._Execute( 'SELECT phash_id, inner_population, outer_population FROM shape_vptree WHERE parent_id IS NULL;' ).fetchone()
+                
+                if result is not None: # if none, this client has no files
+                    
+                    ( root_phash_id, inner_population, outer_population ) = result
+                    
+                    is_decent_sized_branch = inner_population + outer_population > 16
+                    
+                    if is_decent_sized_branch:
+                        
+                        larger = max( inner_population, outer_population )
+                        smaller = min( inner_population, outer_population )
+                        
+                        if smaller / larger < 0.33:
+                            
+                            self._controller.frame_splash_status.SetSubtext( f'optimising similar files search' )
+                            
+                            self.modules_similar_files.RegenerateTree()
+                            
+                        
+                    
+                
+            except Exception as e:
+                
+                HydrusData.PrintException( e )
+                
+                message = 'Trying to check/regenerate your similar file search tree failed! Please let hydrus dev know!'
+                
+                self.pub_initial_message( message )
+                
+            
+        
         self._controller.frame_splash_status.SetTitleText( 'updated db to v{}'.format( HydrusNumbers.ToHumanInt( version + 1 ) ) )
         
         self._Execute( 'UPDATE version SET version = ?;', ( version + 1, ) )

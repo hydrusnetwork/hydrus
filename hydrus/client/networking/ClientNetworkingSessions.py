@@ -175,7 +175,7 @@ class NetworkSessionManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._dirty = False
         self._dirty_session_container_names = set()

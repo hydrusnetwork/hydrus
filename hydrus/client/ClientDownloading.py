@@ -108,7 +108,7 @@ class GalleryIdentifier( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self, site_type = None, additional_info = None ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._site_type = site_type
         self._additional_info = additional_info

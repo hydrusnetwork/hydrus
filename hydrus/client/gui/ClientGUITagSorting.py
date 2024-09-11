@@ -14,7 +14,7 @@ class TagSortControl( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, tag_sort: ClientTagSorting.TagSort, show_siblings = False ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         choice_tuples = [ ( ClientTagSorting.sort_type_str_lookup[ sort_type ], sort_type ) for sort_type in ( ClientTagSorting.SORT_BY_HUMAN_TAG, ClientTagSorting.SORT_BY_HUMAN_SUBTAG, ClientTagSorting.SORT_BY_COUNT ) ]
         

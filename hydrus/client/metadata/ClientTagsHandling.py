@@ -28,7 +28,7 @@ class TagAutocompleteOptions( HydrusSerialisable.SerialisableBase ):
             service_key = CC.COMBINED_TAG_SERVICE_KEY
             
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._service_key = service_key
         
@@ -650,6 +650,33 @@ class TagDisplayMaintenanceManager( object ):
         self._controller.CallToThreadLongRunning( self.MainLoop )
         
     
+    def SyncFasterNow( self ) -> bool:
+        
+        with self._lock:
+            
+            # this actually initialises the 'needs_work' structure, so it is important
+            if self._WorkToDo():
+                
+                outstanding = { service_key for ( service_key, needs_work ) in self._service_keys_to_needs_work.items() if needs_work }
+                
+                self._go_faster.update( outstanding )
+                
+            else:
+                
+                return False
+                
+            
+        
+        for service_key in outstanding:
+            
+            self._controller.pub( 'notify_new_tag_display_sync_status', service_key )
+            
+        
+        self.Wake()
+        
+        return True
+        
+    
     def Wake( self ):
         
         self._wake_event.set()
@@ -663,7 +690,7 @@ class TagDisplayManager( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         service_keys_to_tag_filters_defaultdict = lambda: collections.defaultdict( HydrusTags.TagFilter )
         

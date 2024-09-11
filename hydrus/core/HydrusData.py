@@ -91,23 +91,12 @@ def CleanRunningFile( db_path, instance ):
         
     
 
-def ConvertPrettyStringsToUglyNamespaces( pretty_strings ):
-    
-    result = { s for s in pretty_strings if s != 'no namespace' }
-    
-    if 'no namespace' in pretty_strings: result.add( '' )
-    
-    return result
-    
-
-def ConvertStatusToPrefix( status ):
-    
-    if status == HC.CONTENT_STATUS_CURRENT: return ''
-    elif status == HC.CONTENT_STATUS_PENDING: return '(+) '
-    elif status == HC.CONTENT_STATUS_PETITIONED: return '(-) '
-    elif status == HC.CONTENT_STATUS_DELETED: return '(X) '
-    else: return '(?)'
-    
+status_to_prefix = {
+    HC.CONTENT_STATUS_CURRENT : '',
+    HC.CONTENT_STATUS_PENDING : '(+) ',
+    HC.CONTENT_STATUS_PETITIONED : '(-) ',
+    HC.CONTENT_STATUS_DELETED : '(X) '
+}
 
 def ConvertValueRangeToBytes( value, range ):
     

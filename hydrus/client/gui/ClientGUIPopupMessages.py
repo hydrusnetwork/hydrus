@@ -35,7 +35,7 @@ class PopupWindow( QW.QFrame ):
     
     def __init__( self, parent ):
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
         
@@ -53,6 +53,7 @@ class PopupWindow( QW.QFrame ):
         self.TryToDismiss()
         
     
+
 class PopupMessage( PopupWindow ):
     
     TEXT_CUTOFF = 1024
@@ -806,7 +807,7 @@ class PopupMessageManager( QW.QFrame ):
     
     def __init__( self, parent, job_status_queue: JobStatusPopupQueue ):
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Panel | QW.QFrame.Raised )
         self.setLineWidth( 1 )
@@ -1281,7 +1282,7 @@ class PopupMessageDialogPanel( QW.QWidget ):
     
     def __init__( self, parent, job_status, hide_main_gui = False ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._yesno_open = False
         
@@ -1478,7 +1479,7 @@ class PopupMessageSummaryBar( QW.QFrame ):
     
     def __init__( self, parent ):
         
-        QW.QFrame.__init__( self, parent )
+        super().__init__( parent )
         
         self.setFrameStyle( QW.QFrame.Box | QW.QFrame.Plain )
         

@@ -20,7 +20,7 @@ class PredicateSystemRatingIncDecControl( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearch.Predicate ] ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         
@@ -108,7 +108,7 @@ class PredicateSystemRatingLikeControl( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearch.Predicate ] ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set "is" and leave rating null to search for "unrated".' ) )
         
@@ -244,7 +244,7 @@ class PredicateSystemRatingNumericalControl( QW.QWidget ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, predicate: typing.Optional[ ClientSearch.Predicate ] ):
         
-        QW.QWidget.__init__( self, parent )
+        super().__init__( parent )
         
         self.setToolTip( ClientGUIFunctions.WrapToolTip( 'Set "is" and leave rating null to search for "unrated".' ) )
         

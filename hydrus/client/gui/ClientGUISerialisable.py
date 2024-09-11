@@ -17,7 +17,7 @@ class PNGExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, payload_obj, title = None, description = None, payload_description = None ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._payload_obj = payload_obj
         
@@ -180,7 +180,7 @@ class PNGsExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
     
     def __init__( self, parent, payload_objs ):
         
-        ClientGUIScrolledPanels.ReviewPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._payload_objs = payload_objs
         

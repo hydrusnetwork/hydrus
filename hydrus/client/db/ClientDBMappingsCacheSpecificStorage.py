@@ -103,7 +103,7 @@ class ClientDBMappingsCacheSpecificStorage( ClientDBModule.ClientDBModule ):
         
         self._missing_tag_service_pairs = set()
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client specific display mappings cache', cursor )
+        super().__init__( 'client specific display mappings cache', cursor )
         
     
     def _GetServiceIndexGenerationDictSingle( self, file_service_id, tag_service_id ):

@@ -62,7 +62,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, self._ConvertContentToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, self._ConvertContentToDisplayTuple, self._ConvertContentToSortTuple )
         
         self._listctrl = ClientGUIListCtrl.BetterListCtrlTreeView( listctrl_panel, CGLC.COLUMN_LIST_DOWNLOADER_EXPORT.ID, 14, model, use_simple_delete = True )
         
@@ -222,7 +222,7 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         return len( self._listctrl.GetData() ) > 0
         
     
-    def _ConvertContentToListCtrlTuples( self, content ):
+    def _ConvertContentToDisplayTuple( self, content ):
         
         if isinstance( content, ClientNetworkingDomain.DomainMetadataPackage ):
             
@@ -235,14 +235,10 @@ class DownloaderExportPanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         t = content.SERIALISABLE_NAME
         
-        pretty_name = name
-        pretty_t = t
+        return ( name, t )
         
-        display_tuple = ( pretty_name, pretty_t )
-        sort_tuple = ( name, t )
-        
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertContentToSortTuple = _ConvertContentToDisplayTuple
     
     def _Export( self ):
         
@@ -1034,7 +1030,7 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         
         content_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, self._ConvertContentParserToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, self._ConvertContentParserToDisplayTuple, self._ConvertContentParserToSortTuple )
         
         self._content_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( content_parsers_panel, CGLC.COLUMN_LIST_CONTENT_PARSERS.ID, 6, model, use_simple_delete = True, activation_callback = self._Edit )
         
@@ -1092,23 +1088,20 @@ class EditContentParsersPanel( ClientGUICommon.StaticBox ):
         self._content_parsers.Sort()
         
     
-    def _ConvertContentParserToListCtrlTuples( self, content_parser ):
+    def _ConvertContentParserToDisplayTuple( self, content_parser ):
         
         name = content_parser.GetName()
         
         produces = list( content_parser.GetParsableContent() )
         
-        pretty_name = name
-        
         pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces, include_veto = True )
         
         # produces has some garbage stuff like StringMatch that doesn't sort nice, so sort on pretty produces
         
-        display_tuple = ( pretty_name, pretty_produces )
-        sort_tuple = ( name, pretty_produces )
+        return ( name, pretty_produces )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertContentParserToSortTuple = _ConvertContentParserToDisplayTuple
     
     def _Edit( self ):
         
@@ -1261,7 +1254,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         sub_page_parsers_panel = ClientGUIListCtrl.BetterListCtrlPanel( sub_page_parsers_notebook_panel )
         
-        model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_SUB_PAGE_PARSERS.ID, self._ConvertSubPageParserToListCtrlTuples )
+        model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_SUB_PAGE_PARSERS.ID, self._ConvertSubPageParserToDisplayTuple, self._ConvertSubPageParserToSortTuple )
         
         self._sub_page_parsers = ClientGUIListCtrl.BetterListCtrlTreeView( sub_page_parsers_panel, CGLC.COLUMN_LIST_SUB_PAGE_PARSERS.ID, 4, model, use_simple_delete = True, activation_callback = self._EditSubPageParser )
         
@@ -1441,7 +1434,7 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
             
         
     
-    def _ConvertSubPageParserToListCtrlTuples( self, sub_page_parser ):
+    def _ConvertSubPageParserToDisplayTuple( self, sub_page_parser ):
         
         ( formula, page_parser ) = sub_page_parser
         
@@ -1451,15 +1444,13 @@ class EditPageParserPanel( ClientGUIScrolledPanels.EditPanel ):
         
         produces = sorted( produces, key = lambda row: ( row[0], row[1] ) ) # ( name, content_type ), ignores potentially unsortable StringMatch etc.. in additional info in case of dupe
         
-        pretty_name = name
         pretty_formula = formula.ToPrettyString()
         pretty_produces = ClientParsing.ConvertParsableContentToPrettyString( produces )
         
-        display_tuple = ( pretty_name, pretty_formula, pretty_produces )
-        sort_tuple = ( name, pretty_formula, pretty_produces )
+        return ( name, pretty_formula, pretty_produces )
         
-        return ( display_tuple, sort_tuple )
-        
+    
+    _ConvertSubPageParserToSortTuple = _ConvertSubPageParserToDisplayTuple
     
     def _EditExampleURL( self, example_url ):
         

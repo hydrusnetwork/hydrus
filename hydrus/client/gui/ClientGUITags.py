@@ -123,7 +123,7 @@ class EditTagAutocompleteOptionsPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, tag_autocomplete_options: ClientTagsHandling.TagAutocompleteOptions ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_tag_autocomplete_options = tag_autocomplete_options
         services_manager = CG.client_controller.services_manager
@@ -327,7 +327,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         master_service_keys_to_sibling_applicable_service_keys = collections.defaultdict( list, master_service_keys_to_sibling_applicable_service_keys )
         master_service_keys_to_parent_applicable_service_keys = collections.defaultdict( list, master_service_keys_to_parent_applicable_service_keys )
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._tag_services_notebook = ClientGUICommon.BetterNotebook( self )
         
@@ -339,7 +339,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         services = list( CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
         
-        select_service_key = services[0].GetServiceKey()
+        default_tag_service_key = CG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         for service in services:
             
@@ -353,7 +353,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             
             self._tag_services_notebook.addTab( page, name )
             
-            if master_service_key == select_service_key:
+            if master_service_key == default_tag_service_key:
                 
                 # Py 3.11/PyQt6 6.5.0/two tabs/total tab characters > ~12/select second tab during init = first tab disappears bug
                 QP.CallAfter( self._tag_services_notebook.setCurrentWidget, page )
@@ -411,6 +411,18 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         self.widget().setLayout( vbox )
         
+        self._tag_services_notebook.currentChanged.connect( self._ServicePageChanged )
+        
+    
+    def _ServicePageChanged( self ):
+        
+        if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+            
+            current_page = self._tag_services_notebook.currentWidget()
+            
+            CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            
+        
     
     def GetValue( self ):
         
@@ -432,7 +444,7 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent: QW.QWidget, master_service_key: bytes, sibling_applicable_service_keys: typing.Sequence[ bytes ], parent_applicable_service_keys: typing.Sequence[ bytes ] ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._master_service_key = master_service_key
             
@@ -517,6 +529,11 @@ class EditTagDisplayApplication( ClientGUIScrolledPanels.EditPanel ):
             return self._AddService( current_service_keys )
             
         
+        def GetServiceKey( self ):
+            
+            return self._master_service_key
+            
+        
         def GetValue( self ):
             
             return ( self._master_service_key, self._sibling_service_keys_listbox.GetData(), self._parent_service_keys_listbox.GetData() )
@@ -527,7 +544,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, tag_display_manager: ClientTagsHandling.TagDisplayManager ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._original_tag_display_manager = tag_display_manager
         
@@ -590,7 +607,7 @@ class EditTagDisplayManagerPanel( ClientGUIScrolledPanels.EditPanel ):
         
         def __init__( self, parent: QW.QWidget, tag_display_manager: ClientTagsHandling.TagDisplayManager, service_key: bytes ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             single_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SINGLE_MEDIA, service_key )
             selection_tag_filter = tag_display_manager.GetTagFilter( ClientTags.TAG_DISPLAY_SELECTION_LIST, service_key )
@@ -681,7 +698,7 @@ class EditTagFilterPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent, tag_filter, only_show_blacklist = False, namespaces = None, message = None, read_only = False ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._only_show_blacklist = only_show_blacklist
         self._namespaces = namespaces
@@ -1963,7 +1980,7 @@ class IncrementalTaggingPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, service_key: bytes, medias: typing.List[ ClientMedia.MediaSingleton ] ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         self._service_key = service_key
         self._medias = medias
@@ -2275,8 +2292,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
     
     def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_presentation_location: int, medias: typing.List[ ClientMedia.MediaSingleton ], immediate_commit = False, canvas_key = None ):
         
-        ClientGUIScrolledPanels.ManagePanel.__init__( self, parent )
-        CAC.ApplicationCommandProcessorMixin.__init__( self )
+        super().__init__( parent )
         
         self._location_context = location_context
         self._tag_presentation_location = tag_presentation_location
@@ -2594,7 +2610,7 @@ class ManageTagsPanel( CAC.ApplicationCommandProcessorMixin, ClientGUIScrolledPa
         
         def __init__( self, parent, location_context: ClientLocation.LocationContext, tag_service_key, tag_presentation_location: int, media: typing.List[ ClientMedia.MediaSingleton ], immediate_commit, canvas_key = None ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             CAC.ApplicationCommandProcessorMixin.__init__( self )
             
             self._location_context = location_context
@@ -3543,7 +3559,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
         
         def __init__( self, parent, service_key, tags = None ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._current_pertinent_tags = set()
             
@@ -3573,7 +3589,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_PARENTS.ID, self._ConvertPairToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_PARENTS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
             
             self._tag_parents = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_PARENTS.ID, 6, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
@@ -3707,7 +3723,7 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
             return True
             
         
-        def _ConvertPairToListCtrlTuples( self, pair ):
+        def _ConvertPairToDisplayTuple( self, pair ):
             
             ( old, new ) = pair
             
@@ -3733,14 +3749,38 @@ class ManageTagParents( ClientGUIScrolledPanels.ManagePanel ):
                 note = ''
                 
             
-            sign = HydrusData.ConvertStatusToPrefix( status )
+            pretty_status = HydrusData.status_to_prefix.get( status, '(?) ' )
             
-            pretty_status = sign
+            return ( pretty_status, old, new, note )
             
-            display_tuple = ( pretty_status, old, new, note )
-            sort_tuple = ( status, old, new, note )
+        
+        def _ConvertPairToSortTuple( self, pair ):
             
-            return ( display_tuple, sort_tuple )
+            ( old, new ) = pair
+            
+            ( in_pending, in_petitioned, reason ) = self._parent_action_context.GetPairListCtrlInfo( pair )
+            
+            note = reason
+            
+            if in_pending or in_petitioned:
+                
+                if in_pending:
+                    
+                    status = HC.CONTENT_STATUS_PENDING
+                    
+                else:
+                    
+                    status = HC.CONTENT_STATUS_PETITIONED
+                    
+                
+            else:
+                
+                status = HC.CONTENT_STATUS_CURRENT
+                
+                note = ''
+                
+            
+            return ( status, old, new, note )
             
         
         def _DeleteSelectedRows( self ):
@@ -4298,7 +4338,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
         
         def __init__( self, parent, service_key, tags = None ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._current_pertinent_tags = set()
             
@@ -4321,7 +4361,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             
             self._listctrl_panel = ClientGUIListCtrl.BetterListCtrlPanel( self )
             
-            model = ClientGUIListCtrl.HydrusListItemModelBridge( self, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, self._ConvertPairToListCtrlTuples )
+            model = ClientGUIListCtrl.HydrusListItemModel( self, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, self._ConvertPairToDisplayTuple, self._ConvertPairToSortTuple )
             
             self._tag_siblings = ClientGUIListCtrl.BetterListCtrlTreeView( self._listctrl_panel, CGLC.COLUMN_LIST_TAG_SIBLINGS.ID, 14, model, delete_key_callback = self._DeleteSelectedRows, activation_callback = self._DeleteSelectedRows )
             
@@ -4450,7 +4490,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
             return True
             
         
-        def _ConvertPairToListCtrlTuples( self, pair ):
+        def _ConvertPairToDisplayTuple( self, pair ):
             
             ( old, new ) = pair
             
@@ -4476,9 +4516,7 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                 note = ''
                 
             
-            sign = HydrusData.ConvertStatusToPrefix( status )
-            
-            pretty_status = sign
+            pretty_status = HydrusData.status_to_prefix.get( status, '(?) ' )
             
             existing_olds = self._old_siblings.GetTags()
             
@@ -4494,10 +4532,50 @@ class ManageTagSiblings( ClientGUIScrolledPanels.ManagePanel ):
                     
                 
             
-            display_tuple = ( pretty_status, old, new, note )
-            sort_tuple = ( status, old, new, note )
+            return ( pretty_status, old, new, note )
             
-            return ( display_tuple, sort_tuple )
+        
+        def _ConvertPairToSortTuple( self, pair ):
+            
+            ( old, new ) = pair
+            
+            ( in_pending, in_petitioned, reason ) = self._sibling_action_context.GetPairListCtrlInfo( pair )
+            
+            note = reason
+            
+            if in_pending or in_petitioned:
+                
+                if in_pending:
+                    
+                    status = HC.CONTENT_STATUS_PENDING
+                    
+                else:
+                    
+                    status = HC.CONTENT_STATUS_PETITIONED
+                    
+                
+            else:
+                
+                status = HC.CONTENT_STATUS_CURRENT
+                
+                note = ''
+                
+            
+            existing_olds = self._old_siblings.GetTags()
+            
+            if old in existing_olds:
+                
+                if status == HC.CONTENT_STATUS_PENDING:
+                    
+                    note = 'CONFLICT: Will be rescinded on add.'
+                    
+                elif status == HC.CONTENT_STATUS_CURRENT:
+                    
+                    note = 'CONFLICT: Will be petitioned/deleted on add.'
+                    
+                
+            
+            return ( status, old, new, note )
             
         
         def _DeleteSelectedRows( self ):
@@ -4968,7 +5046,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         services = list( CG.client_controller.services_manager.GetServices( HC.REAL_TAG_SERVICES ) )
         
-        select_service_key = services[0].GetServiceKey()
+        default_tag_service_key = CG.client_controller.new_options.GetKey( 'default_tag_service_tab' )
         
         for service in services:
             
@@ -4979,7 +5057,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             
             self._tag_services_notebook.addTab( page, name )
             
-            if service_key == select_service_key:
+            if service_key == default_tag_service_key:
                 
                 QP.CallAfter( self._tag_services_notebook.setCurrentWidget, page )
                 
@@ -5008,6 +5086,18 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         self.widget().setLayout( vbox )
         
         CG.client_controller.sub( self, '_UpdateStatusText', 'notify_new_menu_option' )
+        
+        self._tag_services_notebook.currentChanged.connect( self._ServicePageChanged )
+        
+    
+    def _ServicePageChanged( self ):
+        
+        if CG.client_controller.new_options.GetBoolean( 'save_default_tag_service_tab_on_change' ):
+            
+            current_page = self._tag_services_notebook.currentWidget()
+            
+            CG.client_controller.new_options.SetKey( 'default_tag_service_tab', current_page.GetServiceKey() )
+            
         
     
     def _UpdateStatusText( self ):
@@ -5039,7 +5129,7 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
         
         def __init__( self, parent, service_key ):
             
-            QW.QWidget.__init__( self, parent )
+            super().__init__( parent )
             
             self._service_key = service_key
             
@@ -5220,6 +5310,11 @@ class ReviewTagDisplayMaintenancePanel( ClientGUIScrolledPanels.ReviewPanel ):
             CG.client_controller.tag_display_maintenance_manager.FlipSyncFaster( self._service_key )
             
             self._StartRefresh()
+            
+        
+        def GetServiceKey( self ):
+            
+            return self._service_key
             
         
         def NotifyRefresh( self, service_key ):
@@ -5497,7 +5592,7 @@ class EditTagSummaryGeneratorPanel( ClientGUIScrolledPanels.EditPanel ):
     
     def __init__( self, parent: QW.QWidget, tag_summary_generator: TagSummaryGenerator ):
         
-        ClientGUIScrolledPanels.EditPanel.__init__( self, parent )
+        super().__init__( parent )
         
         show_panel = ClientGUICommon.StaticBox( self, 'shows' )
         

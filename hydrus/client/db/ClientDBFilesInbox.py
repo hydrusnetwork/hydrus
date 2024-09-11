@@ -25,7 +25,7 @@ class ClientDBFilesInbox( ClientDBModule.ClientDBModule ):
         
         self.inbox_hash_ids = set()
         
-        ClientDBModule.ClientDBModule.__init__( self, 'client files inbox', cursor )
+        super().__init__( 'client files inbox', cursor )
         
         self._InitCaches()
         

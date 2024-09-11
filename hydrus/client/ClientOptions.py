@@ -23,7 +23,7 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
     
     def __init__( self ):
         
-        HydrusSerialisable.SerialisableBase.__init__( self )
+        super().__init__()
         
         self._dictionary = HydrusSerialisable.SerialisableDictionary()
         
@@ -260,7 +260,9 @@ class ClientOptions( HydrusSerialisable.SerialisableBase ):
             'command_palette_show_page_of_pages' : False,
             'command_palette_show_main_menu' : False,
             'command_palette_show_media_menu' : False,
-            'disallow_media_drags_on_duration_media' : False
+            'disallow_media_drags_on_duration_media' : False,
+            'show_all_my_files_on_page_chooser' : True,
+            'show_local_files_on_page_chooser' : False
         }
         
         #
