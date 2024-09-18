@@ -20,7 +20,7 @@
       
       
       <link rel="icon" href="assets/favicon.svg">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.34">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.35">
     
     
       
@@ -1905,6 +1905,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#CDPP" class="md-nav__link">
+    <span class="md-ellipsis">
+      Current Deleted Pending Petitioned
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access_management" class="md-nav__link">
     <span class="md-ellipsis">
       Access Management
@@ -3118,6 +3127,15 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#CDPP" class="md-nav__link">
+    <span class="md-ellipsis">
+      Current Deleted Pending Petitioned
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access_management" class="md-nav__link">
     <span class="md-ellipsis">
       Access Management
@@ -4293,6 +4311,119 @@ Accept: application/json
 <p>If you are displaying ratings, don't feel crazy obligated to obey the shape! Show a &#8536;, select from a dropdown list, do whatever you like!</p>
 <p>If you want to know the services in a client, hit up <a href="#get_services">/get_services</a>, which simply gives the above. The same structure has recently been added to <a href="#get_files_file_metadata">/get_files/file_metadata</a> for convenience, since that refers to many different services when it is talking about file locations and ratings and so on.</p>
 <p>Note: If you need to do some quick testing, you should be able to copy the <code>service_key</code> of any service by hitting the 'copy service key' button in <em>review services</em>.</p>
+<h2 id="CDPP">Current Deleted Pending Petitioned<a class="headerlink" href="#CDPP" title="Permanent link">&para;</a></h2>
+<p>The content storage and update pipeline systems in hydrus consider content (e.g. 'on file service x, file y exists', 'on tag service x, file y has tag z', or 'on rating service x, file y has rating z') as existing within a blend of four states:</p>
+<ul>
+<li><strong>Current</strong> - The content exists on the service.</li>
+<li><strong>Deleted</strong> - The content has been removed from on the service.</li>
+<li><strong>Pending</strong> - The content is queued to be added to the service.</li>
+<li><strong>Petitioned</strong> - The content is queued to be removed from the service.</li>
+</ul>
+<p>Where content that has never touched the service has a default 'null status' of no state at all.</p>
+<p>Content may be in two categories at once--for instance, any Petitioned data is always also Current--but some states are mutually exclusive: Current data cannot also be Deleted.</p>
+<p>Let's examine this more carefully specifically. Current, Deleted, and Pending may exist on their own, and Deleted and Pending may exist simultaneously. Read this horizontally to vertically, such that 'Content that is Current may also be Petitioned' while 'Content that is Petitioned must also be Current':</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Current</th>
+<th>Deleted</th>
+<th>Pending</th>
+<th>Petitioned</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Current</strong></td>
+<td>-</td>
+<td>Never</td>
+<td>Never</td>
+<td>May</td>
+</tr>
+<tr>
+<td><strong>Deleted</strong></td>
+<td>Never</td>
+<td>-</td>
+<td>May</td>
+<td>Never</td>
+</tr>
+<tr>
+<td><strong>Pending</strong></td>
+<td>Never</td>
+<td>May</td>
+<td>-</td>
+<td>Never</td>
+</tr>
+<tr>
+<td><strong>Petitioned</strong></td>
+<td>Must</td>
+<td>Never</td>
+<td>Never</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p>Local services have no concept of pending or petitioned, so they generally just have 'add x'/'delete x' verbs to convert content between current and deleted. Remote services like the PTR have a queue of pending changes waiting to be committed by the user to the server, so in these cases I will expose to you the full suite of 'pend x'/'petition x'/'rescind pend x'/'rescind petition x'. Although you might somewhere be able to 'pend'/'petition' content to a local service, these 'pending' changes will be committed instantly so they are synonymous with add/delete.</p>
+<ul>
+<li>When an 'add' is committed, the data is removed from the deleted record and added to the current record.</li>
+<li>When a 'delete' is committed, the data is removed from the current record and added to the deleted record.</li>
+<li>When a 'pend' is committed, the data is removed from the deleted record and added to the current record. (It is also deleted from the pending record!)</li>
+<li>When a 'petition' is committed, the data is removed from the current record and added to the deleted record. (It is also deleted from the petitioned record!)</li>
+<li>When a 'rescind pend' is committed, the data is removed from the pending record.</li>
+<li>When a 'rescind petition' is committed, the data is removed from the petitioned record.</li>
+</ul>
+<p>Let's look at where the verbs make sense. Again, horizontal, so 'Content that is Current can receive a Petition command':</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>Add/Pend</th>
+<th>Delete/Petition</th>
+<th>Rescind Pend</th>
+<th>Rescind Petition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>No state</strong></td>
+<td>May</td>
+<td>May</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>Current</strong></td>
+<td>-</td>
+<td>May</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>Deleted</strong></td>
+<td><em>May</em></td>
+<td>-</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>Pending</strong></td>
+<td>May overwrite an existing reason</td>
+<td>-</td>
+<td>May</td>
+<td>-</td>
+</tr>
+<tr>
+<td><strong>Petitioned</strong></td>
+<td>-</td>
+<td>May overwrite an existing reason</td>
+<td>-</td>
+<td>May</td>
+</tr>
+</tbody>
+</table>
+<p>In hydrus, anything in the content update pipeline that <em>doesn't</em> make sense, here a '-', tends to result in an errorless no-op, so you might not care to do too much filtering on your end of things if you don't need to--don't worry about deleting something twice.</p>
+<p>Note that content that does not yet exist <em>can</em> be pre-emptively petitioned/deleted. A couple of advanced cases enjoy this capability, for instance when you are syncing delete records from one client to another.</p>
+<p>Also, it is often the case that content that is recorded as deleted is more difficult to re-add/re-pend. You might need to be a janitor to re-pend something, or, for this API, set some <code>override_previously_deleted_mappings</code> parameter. This is by design and helps you to stop automatically re-adding something that the user spent slow human time deciding to delete.</p>
 <h2 id="access_management">Access Management<a class="headerlink" href="#access_management" title="Permanent link">&para;</a></h2>
 <h3 id="api_version"><strong>GET <code>/api_version</code></strong><a class="headerlink" href="#api_version" title="Permanent link">&para;</a></h3>
 <p><em>Gets the current API version. This increments every time I alter the API.</em></p>
@@ -5107,6 +5238,7 @@ Accept: application/json
 <li>4 - Petition from a tag repository. (This is special)</li>
 <li>5 - Rescind a petition from a tag repository.</li>
 </ul>
+<p>Read about <a href="#CDPP">Current Deleted Pending Petitioned</a> for more info on these states.</p>
 <p>When you petition a tag from a repository, a 'reason' for the petition is typically needed. If you send a normal list of tags here, a default reason of "Petitioned from API" will be given. If you want to set your own reason, you can instead give a list of [ tag, reason ] pairs.</p>
 </dd>
 <dt>Some example requests:</dt>
@@ -5845,6 +5977,7 @@ Accept: application/json
 <p class="admonition-title">Note</p>
 <p>Since JSON Object keys must be strings, these status numbers are strings, not ints.</p>
 </div>
+<p>Read about <a href="#CDPP">Current Deleted Pending Petitioned</a> for more info on these states.</p>
 <p>While the 'storage_tags' represent the actual tags stored on the database for a file, 'display_tags' reflect how tags appear in the UI, after siblings are collapsed and parents are added. If you want to edit a file's tags, refer to the storage tags. If you want to render to the user, use the display tags. The display tag calculation logic is very complicated; if the storage tags change, do not try to guess the new display tags yourself--just ask the API again. </p>
 <h4 id="ratings">ratings<a class="headerlink" href="#ratings" title="Permanent link">&para;</a></h4>
 <p>The <code>ratings</code> structure is simple, but it holds different data types. For each service:</p>
@@ -7388,7 +7521,7 @@ This request will also return any cookies for subdomains. The session system in 
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 11, 2024</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date">September 18, 2024</span>
   </span>
 
     
@@ -7512,7 +7645,7 @@ This request will also return any cookies for subdomains. The session system in 
     </div>
     
     
-    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.07f07601.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
+    <script id="__config" type="application/json">{"base": ".", "features": ["navigation.tracking", "navigation.sections", "navigation.tabs", "content.tabs.link", "navigation.top", "search.suggest", "content.code.annotate", "navigation.instant", "content.action.edit"], "search": "assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
       <script src="assets/javascripts/bundle.56dfad97.min.js"></script>
